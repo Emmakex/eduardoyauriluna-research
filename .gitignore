@@ -1,0 +1,28 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+
+# WordPress/local
+wp-config.php
+wp-content/uploads/
+
+# Dependencies/build
+node_modules/
+vendor/
+dist/
+build/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Logs/temp
+*.log
+tmp/
+temp/
