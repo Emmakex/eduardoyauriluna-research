@@ -1,0 +1,29 @@
+{
+  "canonical_name": "Eduardo Jose Yauri Luna",
+  "canonical_domain": "https://eduardoyauriluna.com",
+  "primary_language": "en",
+  "secondary_language": "es",
+  "research_positioning": "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
+  "identifiers": {
+    "orcid": null,
+    "google_scholar": null,
+    "openalex": null,
+    "semantic_scholar": null,
+    "researcherid": null,
+    "scopus_author_id": null
+  },
+  "profiles": {
+    "zenodo": null,
+    "github": "https://github.com/Emmakex",
+    "researchgate": null,
+    "linkedin": "https://www.linkedin.com/in/eduardoyauriluna/"
+  },
+  "connections": {
+    "orcid": "planned",
+    "google_scholar": "planned",
+    "zenodo": "planned",
+    "openalex": "planned",
+    "crossref": "planned",
+    "github": "active"
+  }
+}
