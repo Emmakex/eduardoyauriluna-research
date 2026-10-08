@@ -1,0 +1,86 @@
+{
+  "orcid": {
+    "enabled": false,
+    "mode": "oauth",
+    "data_direction": "read",
+    "environment": "sandbox",
+    "identifier": null,
+    "client_id_env": "ORCID_CLIENT_ID",
+    "client_secret_env": "ORCID_CLIENT_SECRET",
+    "redirect_uri": null,
+    "capabilities": [
+      "authenticate_researcher",
+      "read_public_profile",
+      "read_public_works",
+      "reconcile_works"
+    ],
+    "write_enabled": false,
+    "notes": "Writing to ORCID requires appropriate Member API access and explicit researcher permission."
+  },
+  "google_scholar": {
+    "enabled": false,
+    "mode": "manual_link",
+    "data_direction": "manual",
+    "profile_id": null,
+    "profile_url": null,
+    "capabilities": [
+      "profile_link",
+      "academic_meta_rendering",
+      "bibtex_import",
+      "csv_import"
+    ],
+    "scraping_enabled": false
+  },
+  "zenodo": {
+    "enabled": false,
+    "mode": "api_key",
+    "data_direction": "read",
+    "environment": "sandbox",
+    "access_token_env": "ZENODO_ACCESS_TOKEN",
+    "capabilities": [
+      "search_records",
+      "fetch_record",
+      "link_record",
+      "store_doi"
+    ],
+    "external_publish_requires_confirmation": true
+  },
+  "openalex": {
+    "enabled": false,
+    "mode": "public_api",
+    "data_direction": "read",
+    "author_id": null,
+    "api_key_env": "OPENALEX_API_KEY",
+    "capabilities": [
+      "fetch_author",
+      "discover_candidate_works",
+      "reconcile_works",
+      "read_citation_metadata"
+    ],
+    "auto_claim_author": false
+  },
+  "crossref": {
+    "enabled": true,
+    "mode": "public_api",
+    "data_direction": "read",
+    "mailto_env": "CROSSREF_MAILTO",
+    "capabilities": [
+      "doi_lookup",
+      "doi_agency_check",
+      "metadata_hydration"
+    ]
+  },
+  "github": {
+    "enabled": true,
+    "mode": "manual_link",
+    "data_direction": "read",
+    "account": "Emmakex",
+    "capabilities": [
+      "repository_link",
+      "release_link",
+      "citation_cff_detection",
+      "research_software_selection"
+    ],
+    "auto_publish_repositories": false
+  }
+}
