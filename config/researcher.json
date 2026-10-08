@@ -3,7 +3,29 @@
   "canonical_domain": "https://eduardoyauriluna.com",
   "primary_language": "en",
   "secondary_language": "es",
+  "research_headline": "Researcher in Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
   "research_positioning": "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
+  "canonical_description": "Applied research on AI agents, digital transformation and human–AI systems for real-world business processes.",
+  "research_interests": [
+    "Artificial Intelligence",
+    "Autonomous AI Agents",
+    "Agentic AI",
+    "Digital Transformation",
+    "Business Process Automation",
+    "Human–AI Collaboration",
+    "SME Digitalization",
+    "AI Governance",
+    "Generative Search",
+    "Information Retrieval",
+    "Generative Engine Optimization",
+    "Research Software"
+  ],
+  "primary_research_lines": [
+    "Autonomous AI Agents for Business Processes",
+    "AI-Enabled Digital Transformation in SMEs",
+    "Human–AI Collaboration and Responsible Automation",
+    "Generative Search, Information Visibility and AI-Mediated Discovery"
+  ],
   "identifiers": {
     "orcid": null,
     "google_scholar": null,
