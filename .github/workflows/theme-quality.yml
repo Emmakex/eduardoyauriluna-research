@@ -15,16 +15,50 @@ permissions:
   contents: read
 
 jobs:
-  php-lint:
+  quality:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: ${{ matrix.php }}
           coverage: none
-      - name: Lint theme PHP
+      - name: Verify required Theme files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f wordpress/themes/eduardo-research/style.css
+          test -f wordpress/themes/eduardo-research/functions.php
+          test -f wordpress/themes/eduardo-research/index.php
+          test -f wordpress/themes/eduardo-research/theme.json
+      - name: Lint Theme PHP
         shell: bash
         run: |
           set -euo pipefail
           find wordpress/themes/eduardo-research -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validate Theme JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -r 'json_decode(file_get_contents("wordpress/themes/eduardo-research/theme.json"), true, 512, JSON_THROW_ON_ERROR); echo "theme.json valid\n";'
+
+  package:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build installable Theme ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cd wordpress/themes
+          zip -r ../../dist/eduardo-research.zip eduardo-research -x '*/.DS_Store' '*.map'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eduardo-research-theme
+          path: dist/eduardo-research.zip
+          if-no-files-found: error
