@@ -173,7 +173,8 @@ jobs:
           update_post_meta($hidden, "_research_language", "en"); update_post_meta($hidden, "_research_evidence_status", "unverified"); update_post_meta($hidden, "_research_order", "2");
           if ("http://research.test/research/lines/verified-line/" !== get_permalink($line)) { fwrite(STDERR, get_permalink($line) . "\n"); exit(1); }
           $query = new WP_Query(eduardo_research_verified_line_query_args("en", 20));
-          if (! in_array($line, $query->posts, true) || in_array($hidden, $query->posts, true)) { exit(1); }
+          $line_ids = wp_list_pluck($query->posts, "ID");
+          if (! in_array($line, $line_ids, true) || in_array($hidden, $line_ids, true)) { exit(1); }
           $paper = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Structured Evidence Paper","post_name"=>"structured-evidence-paper","post_excerpt"=>"Paper abstract"]);
           update_post_meta($paper, "_research_output_type", "journal_article"); update_post_meta($paper, "_research_output_type_verified", "1"); update_post_meta($paper, "_research_review_status", "peer_reviewed"); update_post_meta($paper, "_research_publication_date", "2026-10-09"); update_post_meta($paper, "_research_venue", "Research Systems Journal"); update_post_meta($paper, "_research_doi", "10.1234/example.1"); update_post_meta($paper, "_research_doi_verified", "1"); update_post_meta($paper, "_research_authors", [["display_name"=>"Eduardo Jose Yauri Luna","is_site_researcher"=>true],["display_name"=>"Example Coauthor"]]);
           if ("ScholarlyArticle" !== eduardo_research_output_schema_type($paper)) { exit(1); }
