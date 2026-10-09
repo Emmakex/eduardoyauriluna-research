@@ -1,0 +1,35 @@
+/*
+Theme Name: Eduardo Research
+Theme URI: https://eduardoyauriluna.com/
+Author: Eduardo Jose Yauri Luna
+Description: Theme-owned academic research frontend built on the SEO/GEO Theme architecture.
+Version: 0.1.0
+Requires at least: 6.6
+Requires PHP: 8.1
+Text Domain: eduardo-research
+*/
+
+:root {
+  --research-bg: #f7f8f6;
+  --research-surface: #ffffff;
+  --research-ink: #14211d;
+  --research-muted: #52615c;
+  --research-accent: #0b6b57;
+  --research-line: #dce4e0;
+  --research-radius: 1rem;
+  --research-content: 76rem;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--research-bg); color: var(--research-ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+a { color: var(--research-accent); }
+.research-shell { width: min(calc(100% - 2rem), var(--research-content)); margin-inline: auto; }
+.research-section { padding-block: clamp(3rem, 7vw, 7rem); }
+.research-hero { display: grid; gap: 1.5rem; align-items: end; min-height: 62vh; padding-block: clamp(5rem, 12vw, 10rem); }
+.research-eyebrow { font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--research-accent); }
+.research-title { max-width: 15ch; margin: 0; font-size: clamp(2.8rem, 8vw, 7rem); line-height: .96; letter-spacing: -.055em; }
+.research-lead { max-width: 52rem; margin: 0; color: var(--research-muted); font-size: clamp(1.05rem, 2vw, 1.35rem); }
+.research-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; }
+.research-card { padding: 1.5rem; background: var(--research-surface); border: 1px solid var(--research-line); border-radius: var(--research-radius); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
