@@ -18,6 +18,26 @@ function eduardo_research_discovery_vars(array $vars): array {
 }
 add_filter('query_vars', 'eduardo_research_discovery_vars');
 
+function eduardo_research_discovery_relations(WP_Post $post): array {
+    if ('research_line' === $post->post_type) {
+        $query = eduardo_research_related_objects_query_for_line((int) $post->ID, 100);
+        $items = array();
+        foreach ($query->posts as $related) {
+            if (! $related instanceof WP_Post) { continue; }
+            $items[] = array('type'=>$related->post_type,'title'=>get_the_title($related),'url'=>get_permalink($related));
+        }
+        return array('related_objects'=>$items);
+    }
+    if (in_array($post->post_type, eduardo_research_relation_object_types(), true)) {
+        $lines = array();
+        foreach (eduardo_research_post_line_ids((int) $post->ID) as $line_id) {
+            $lines[] = array('title'=>get_the_title($line_id),'url'=>get_permalink($line_id));
+        }
+        return array('research_lines'=>$lines);
+    }
+    return array();
+}
+
 function eduardo_research_discovery_template(): void {
     $language = eduardo_research_current_language();
     if ((int) get_query_var('eduardo_research_llms') === 1) {
@@ -60,13 +80,14 @@ function eduardo_research_discovery_template(): void {
             foreach ($posts as $post) {
                 $modified = get_post_modified_time('U', true, $post);
                 $latest = max($latest, (int) $modified);
-                $items[] = array(
+                $item = array(
                     'type'=>$type,
                     'language'=>eduardo_research_post_language((int) $post->ID),
                     'title'=>get_the_title($post),
                     'url'=>get_permalink($post),
                     'modified'=>get_post_modified_time(DATE_W3C, true, $post),
                 );
+                $items[] = array_merge($item, eduardo_research_discovery_relations($post));
             }
         }
         $identity = eduardo_research_identity();
