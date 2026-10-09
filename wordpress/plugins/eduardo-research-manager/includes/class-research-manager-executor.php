@@ -157,13 +157,13 @@ final class Eduardo_Research_Manager_Executor {
         if ('create_page' === $action['type']) {
             return $this->read_page_creation_state($action);
         }
+        if ('create_insight' === $action['type']) {
+            return $this->read_insight_creation_state($action);
+        }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
-    /**
-     * Read the persisted private meta value without Theme presentation filters.
-     * The Manager verifies storage; the Theme independently decides what is safe to expose publicly.
-     */
+    /** Read persisted private meta without Theme presentation filters. */
     private function read_post_meta_storage(int $post_id, string $key): array {
         global $wpdb;
         $raw = $wpdb->get_var($wpdb->prepare(
@@ -205,6 +205,35 @@ final class Eduardo_Research_Manager_Executor {
         );
     }
 
+    private function read_insight_creation_state(array $action): array {
+        $post = $this->find_post_by_creation_token((string) $action['creation_token'], 'post');
+        if (! $post instanceof WP_Post) {
+            $post = $this->find_post_by_slug((string) $action['slug'], 'post');
+        }
+        if (! $post instanceof WP_Post) {
+            return array('exists'=>false,'value'=>null);
+        }
+        $language = $this->read_post_meta_storage((int) $post->ID, '_research_language');
+        $insight_type = $this->read_post_meta_storage((int) $post->ID, '_research_insight_type');
+        $token = $this->read_post_meta_storage((int) $post->ID, '_eduardo_research_manager_creation_token');
+        return array(
+            'exists'=>true,
+            'value'=>array(
+                'post_id'=>(int) $post->ID,
+                'post_type'=>(string) $post->post_type,
+                'status'=>(string) $post->post_status,
+                'slug'=>(string) $post->post_name,
+                'title'=>(string) $post->post_title,
+                'excerpt'=>(string) $post->post_excerpt,
+                'content'=>(string) $post->post_content,
+                'language'=>! empty($language['exists']) ? (string) $language['value'] : 'en',
+                'insight_type'=>! empty($insight_type['exists']) ? (string) $insight_type['value'] : 'research_note',
+                'creation_token'=>! empty($token['exists']) ? (string) $token['value'] : '',
+                'url'=>(string) get_permalink($post),
+            ),
+        );
+    }
+
     private function write_action(array $action): bool|WP_Error {
         if ('option' === $action['type']) {
             update_option((string) $action['key'], $action['value'], false);
@@ -215,6 +244,9 @@ final class Eduardo_Research_Manager_Executor {
             if (is_wp_error($result)) { return $result; }
         } elseif ('create_page' === $action['type']) {
             $created = $this->create_page($action);
+            if (is_wp_error($created)) { return $created; }
+        } elseif ('create_insight' === $action['type']) {
+            $created = $this->create_insight($action);
             if (is_wp_error($created)) { return $created; }
         } else {
             return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
@@ -233,7 +265,7 @@ final class Eduardo_Research_Manager_Executor {
         if ($collision instanceof WP_Post) {
             return new WP_Error('research_manager_page_creation_conflict', 'A WordPress Page already occupies the Theme-controlled slug. Nothing was overwritten.');
         }
-        if ($this->find_page_by_creation_token((string) $action['creation_token']) instanceof WP_Post) {
+        if ($this->find_post_by_creation_token((string) $action['creation_token'], 'page') instanceof WP_Post) {
             return new WP_Error('research_manager_creation_token_collision', 'The Page creation provenance token is already in use.');
         }
 
@@ -261,6 +293,34 @@ final class Eduardo_Research_Manager_Executor {
         return true;
     }
 
+    private function create_insight(array $action): bool|WP_Error {
+        if ($this->find_post_by_slug((string) $action['slug'], 'post') instanceof WP_Post) {
+            return new WP_Error('research_manager_insight_creation_conflict', 'A WordPress post already occupies the planned Insight slug. Nothing was overwritten.');
+        }
+        if ($this->find_post_by_creation_token((string) $action['creation_token'], 'post') instanceof WP_Post) {
+            return new WP_Error('research_manager_creation_token_collision', 'The Insight creation provenance token is already in use.');
+        }
+
+        $post_id = wp_insert_post(array(
+            'post_type'=>'post',
+            'post_status'=>(string) $action['status'],
+            'post_name'=>(string) $action['slug'],
+            'post_title'=>(string) $action['title'],
+            'post_excerpt'=>(string) $action['excerpt'],
+            'post_content'=>(string) $action['content'],
+            'meta_input'=>array(
+                '_research_language'=>(string) $action['language'],
+                '_research_insight_type'=>(string) $action['insight_type'],
+                '_eduardo_research_manager_creation_token'=>(string) $action['creation_token'],
+            ),
+        ), true);
+        if (is_wp_error($post_id)) { return $post_id; }
+
+        clean_post_cache((int) $post_id);
+        $this->refresh_theme_routes();
+        return true;
+    }
+
     private function restore_records(array $records): bool|WP_Error {
         foreach (array_reverse($records) as $record) {
             if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { continue; }
@@ -278,6 +338,9 @@ final class Eduardo_Research_Manager_Executor {
             } elseif ('create_page' === $action['type']) {
                 $restored_page = $this->restore_page_creation($action, $state);
                 if (is_wp_error($restored_page)) { return $restored_page; }
+            } elseif ('create_insight' === $action['type']) {
+                $restored_insight = $this->restore_insight_creation($action, $state);
+                if (is_wp_error($restored_insight)) { return $restored_insight; }
             }
 
             $restored = $this->read_state($action);
@@ -291,7 +354,7 @@ final class Eduardo_Research_Manager_Executor {
 
     private function restore_page_creation(array $action, array $state): bool|WP_Error {
         if (empty($state['exists'])) {
-            $owned = $this->find_page_by_creation_token((string) $action['creation_token']);
+            $owned = $this->find_post_by_creation_token((string) $action['creation_token'], 'page');
             if ($owned instanceof WP_Post) {
                 $deleted = wp_delete_post((int) $owned->ID, true);
                 if (! $deleted) {
@@ -313,30 +376,67 @@ final class Eduardo_Research_Manager_Executor {
         return true;
     }
 
-    private function desired_value(array $action): mixed {
-        if ('create_page' !== (string) ($action['type'] ?? '')) {
-            return $action['value'] ?? null;
+    private function restore_insight_creation(array $action, array $state): bool|WP_Error {
+        if (empty($state['exists'])) {
+            $owned = $this->find_post_by_creation_token((string) $action['creation_token'], 'post');
+            if ($owned instanceof WP_Post) {
+                $deleted = wp_delete_post((int) $owned->ID, true);
+                if (! $deleted) {
+                    return new WP_Error('research_manager_insight_rollback_failed', 'The Manager could not delete the Insight it created.');
+                }
+            } else {
+                $occupant = $this->find_post_by_slug((string) $action['slug'], 'post');
+                if ($occupant instanceof WP_Post) {
+                    return new WP_Error('research_manager_insight_rollback_conflict', 'Rollback found an Insight slug occupied without this Manager provenance token. It was not deleted.');
+                }
+            }
         }
-        return array(
-            'post_type'=>'page',
-            'status'=>'publish',
-            'wp_slug'=>(string) $action['wp_slug'],
-            'title'=>(string) $action['title'],
-            'role'=>(string) $action['role'],
-            'model'=>(string) $action['model'],
-            'creation_token'=>(string) $action['creation_token'],
-            'front_page'=>! empty($action['front_page']),
-        );
+        $this->refresh_theme_routes();
+        return true;
+    }
+
+    private function desired_value(array $action): mixed {
+        $type = (string) ($action['type'] ?? '');
+        if ('create_page' === $type) {
+            return array(
+                'post_type'=>'page',
+                'status'=>'publish',
+                'wp_slug'=>(string) $action['wp_slug'],
+                'title'=>(string) $action['title'],
+                'role'=>(string) $action['role'],
+                'model'=>(string) $action['model'],
+                'creation_token'=>(string) $action['creation_token'],
+                'front_page'=>! empty($action['front_page']),
+            );
+        }
+        if ('create_insight' === $type) {
+            return array(
+                'post_type'=>'post',
+                'status'=>(string) $action['status'],
+                'slug'=>(string) $action['slug'],
+                'title'=>(string) $action['title'],
+                'excerpt'=>(string) $action['excerpt'],
+                'content'=>(string) $action['content'],
+                'language'=>(string) $action['language'],
+                'insight_type'=>(string) $action['insight_type'],
+                'creation_token'=>(string) $action['creation_token'],
+            );
+        }
+        return $action['value'] ?? null;
     }
 
     private function state_matches_action(array $state, array $action): bool {
-        if ('create_page' !== (string) ($action['type'] ?? '')) {
+        $type = (string) ($action['type'] ?? '');
+        if ('create_page' !== $type && 'create_insight' !== $type) {
             return ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $action['value'] ?? null);
         }
         if (empty($state['exists']) || ! is_array($state['value'] ?? null)) { return false; }
         $stored = $state['value'];
         $desired = $this->desired_value($action);
-        foreach (array('post_type','status','wp_slug','title','role','model','creation_token','front_page') as $key) {
+        $keys = 'create_page' === $type
+            ? array('post_type','status','wp_slug','title','role','model','creation_token','front_page')
+            : array('post_type','status','slug','title','excerpt','content','language','insight_type','creation_token');
+        foreach ($keys as $key) {
             if (! array_key_exists($key, $stored) || ! array_key_exists($key, $desired) || $stored[$key] !== $desired[$key]) {
                 return false;
             }
@@ -360,16 +460,16 @@ final class Eduardo_Research_Manager_Executor {
     }
 
     private function find_page_for_creation_action(array $action): ?WP_Post {
-        $owned = $this->find_page_by_creation_token((string) $action['creation_token']);
+        $owned = $this->find_post_by_creation_token((string) $action['creation_token'], 'page');
         if ($owned instanceof WP_Post) { return $owned; }
         $page = get_page_by_path((string) $action['wp_slug'], OBJECT, 'page');
         return $page instanceof WP_Post ? $page : null;
     }
 
-    private function find_page_by_creation_token(string $token): ?WP_Post {
+    private function find_post_by_creation_token(string $token, string $post_type): ?WP_Post {
         if ('' === $token) { return null; }
         $posts = get_posts(array(
-            'post_type'=>'page',
+            'post_type'=>$post_type,
             'post_status'=>'any',
             'posts_per_page'=>2,
             'orderby'=>'ID',
@@ -381,9 +481,24 @@ final class Eduardo_Research_Manager_Executor {
         return isset($posts[0]) && $posts[0] instanceof WP_Post ? $posts[0] : null;
     }
 
+    private function find_post_by_slug(string $slug, string $post_type): ?WP_Post {
+        if ('' === $slug) { return null; }
+        $posts = get_posts(array(
+            'post_type'=>$post_type,
+            'post_status'=>'any',
+            'name'=>$slug,
+            'posts_per_page'=>1,
+            'suppress_filters'=>true,
+        ));
+        return isset($posts[0]) && $posts[0] instanceof WP_Post ? $posts[0] : null;
+    }
+
     private function refresh_theme_routes(): void {
         if (function_exists('eduardo_research_multilingual_rewrites')) {
             eduardo_research_multilingual_rewrites();
+        }
+        if (function_exists('eduardo_research_content_language_rewrites')) {
+            eduardo_research_content_language_rewrites();
         }
         flush_rewrite_rules(false);
     }

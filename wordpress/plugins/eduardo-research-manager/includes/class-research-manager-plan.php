@@ -18,6 +18,9 @@ final class Eduardo_Research_Manager_Plan {
     );
 
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order');
+    private const MAX_TITLE_BYTES = 200;
+    private const MAX_EXCERPT_BYTES = 1000;
+    private const MAX_CONTENT_BYTES = 60000;
 
     public static function create(string $intent, array $actions, array $context = array()): array|WP_Error {
         $intent = sanitize_text_field($intent);
@@ -115,7 +118,9 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     public static function action_risk(array $action): string {
-        if ('create_page' === (string) ($action['type'] ?? '')) { return 'standard'; }
+        $type = (string) ($action['type'] ?? '');
+        if ('create_page' === $type) { return 'standard'; }
+        if ('create_insight' === $type) { return 'editorial-review'; }
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         foreach (array('doi','review_status','output_type','identifier','evidence','affiliation','award','grant') as $needle) {
             if (str_contains($key, $needle)) { return 'evidence-required'; }
@@ -157,11 +162,17 @@ final class Eduardo_Research_Manager_Plan {
             if (! in_array($field, self::ALLOWED_POST_FIELDS, true)) {
                 return new WP_Error('research_manager_post_field_not_allowed', 'This post field cannot be mutated by the Manager foundation.');
             }
-            return array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>self::sanitize_post_field_value($field, $action['value'] ?? ''));
+            $value = self::sanitize_post_field_value($field, $action['value'] ?? '');
+            $bounded = self::validate_post_field_length($field, $value);
+            if (is_wp_error($bounded)) { return $bounded; }
+            return array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>$value);
         }
 
         if ('create_page' === $type) {
             return self::normalize_page_creation($action);
+        }
+        if ('create_insight' === $type) {
+            return self::normalize_insight_creation($action);
         }
 
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
@@ -198,7 +209,7 @@ final class Eduardo_Research_Manager_Plan {
         if ($front_page !== ! empty($action['front_page'])) {
             return new WP_Error('research_manager_front_page_contract_mismatch', 'Front-page creation state must match the active Research Theme role.');
         }
-        if (! preg_match('/^[a-f0-9-]{32,64}$/i', $creation_token)) {
+        if (! self::valid_creation_token($creation_token)) {
             return new WP_Error('research_manager_invalid_creation_token', 'Page creation requires a stable UUID-like provenance token.');
         }
 
@@ -211,6 +222,56 @@ final class Eduardo_Research_Manager_Plan {
             'model'=>$model,
             'creation_token'=>$creation_token,
             'front_page'=>$front_page,
+        );
+    }
+
+    private static function normalize_insight_creation(array $action): array|WP_Error {
+        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_insight_types')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required for Insight creation.');
+        }
+        $preset = eduardo_research_preset();
+        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
+        $types = eduardo_research_insight_types('en');
+        $types = is_array($types) ? $types : array();
+
+        $title = sanitize_text_field((string) ($action['title'] ?? ''));
+        $slug = sanitize_title((string) ($action['slug'] ?? ''));
+        $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
+        $content = wp_kses_post((string) ($action['content'] ?? ''));
+        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $insight_type = sanitize_key((string) ($action['insight_type'] ?? 'research_note'));
+        $status = sanitize_key((string) ($action['status'] ?? 'draft'));
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+
+        if ('' === $title || '' === $slug || '' === $creation_token) {
+            return new WP_Error('research_manager_invalid_insight_creation', 'Insight creation requires a title, slug and provenance token.');
+        }
+        if (strlen($title) > self::MAX_TITLE_BYTES || strlen($excerpt) > self::MAX_EXCERPT_BYTES || strlen($content) > self::MAX_CONTENT_BYTES) {
+            return new WP_Error('research_manager_insight_content_too_large', 'Insight title, excerpt or body exceeds the bounded editorial contract.');
+        }
+        if (! in_array($language, $languages, true)) {
+            return new WP_Error('research_manager_unknown_language', 'Insight language is outside the active Research preset.');
+        }
+        if (! array_key_exists($insight_type, $types)) {
+            return new WP_Error('research_manager_unknown_insight_type', 'Insight type is outside the active Research Theme editorial contract.');
+        }
+        if (! in_array($status, array('draft','publish'), true)) {
+            return new WP_Error('research_manager_invalid_insight_status', 'Insight creation only permits draft or publish status.');
+        }
+        if (! self::valid_creation_token($creation_token)) {
+            return new WP_Error('research_manager_invalid_creation_token', 'Insight creation requires a stable UUID-like provenance token.');
+        }
+
+        return array(
+            'type'=>'create_insight',
+            'title'=>$title,
+            'slug'=>$slug,
+            'excerpt'=>$excerpt,
+            'content'=>$content,
+            'language'=>$language,
+            'insight_type'=>$insight_type,
+            'status'=>$status,
+            'creation_token'=>$creation_token,
         );
     }
 
@@ -231,7 +292,21 @@ final class Eduardo_Research_Manager_Plan {
     private static function sanitize_post_field_value(string $field, mixed $value): mixed {
         if ('menu_order' === $field) { return (int) $value; }
         if ('post_content' === $field) { return wp_kses_post((string) $value); }
+        if ('post_excerpt' === $field) { return sanitize_textarea_field((string) $value); }
         return sanitize_text_field((string) $value);
+    }
+
+    private static function validate_post_field_length(string $field, mixed $value): bool|WP_Error {
+        if (! is_string($value)) { return true; }
+        $limit = 'post_title' === $field ? self::MAX_TITLE_BYTES : ('post_excerpt' === $field ? self::MAX_EXCERPT_BYTES : ('post_content' === $field ? self::MAX_CONTENT_BYTES : 0));
+        if ($limit > 0 && strlen($value) > $limit) {
+            return new WP_Error('research_manager_post_field_too_large', sprintf('The planned %s value exceeds the bounded Manager contract.', $field));
+        }
+        return true;
+    }
+
+    private static function valid_creation_token(string $token): bool {
+        return 1 === preg_match('/^[a-f0-9-]{32,64}$/i', $token);
     }
 
     private static function target_signature(array $action): string {
@@ -239,6 +314,7 @@ final class Eduardo_Research_Manager_Plan {
         if ('post_meta' === $action['type']) { return 'post_meta:' . $action['post_id'] . ':' . $action['key']; }
         if ('post_field' === $action['type']) { return 'post_field:' . $action['post_id'] . ':' . $action['field']; }
         if ('create_page' === $action['type']) { return 'create_page:' . $action['wp_slug']; }
+        if ('create_insight' === $action['type']) { return 'create_insight:' . $action['slug']; }
         return 'unknown:' . md5((string) wp_json_encode($action));
     }
 

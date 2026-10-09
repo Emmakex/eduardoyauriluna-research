@@ -4,73 +4,99 @@ Independent WordPress control plane for the Eduardo Research Theme. The Manager 
 
 ## Current version
 
-`0.3.0`
+`0.4.0`
 
-The safe mutation/readiness kernel now includes two Page capabilities: **structured hydration of existing Theme-owned Pages** and **explicit reversible creation of missing Page resources**.
+The Manager now includes the safe mutation/readiness kernel, Theme-owned Page hydration/creation, and a bounded **Insight Resource Service** for research notes and editorial content.
 
 ## Control-plane kernel
 
 The Manager can inspect the active Research preset, diagnose missing or misaligned resources, build checksummed mutation plans, Preview stored-state changes, Apply authorised writes, Verify persisted state and Rollback from bounded snapshots.
 
-Evidence-sensitive academic keys are classified as `evidence-required`. Apply requires both explicit evidence confirmation and a non-empty source/verification reference inside the checksummed plan.
+Evidence-sensitive academic keys remain `evidence-required`: Apply requires explicit evidence confirmation plus a source/verification reference inside the checksummed plan. Editorial prose is handled separately as `editorial-review`; writing an Insight does not by itself assert a verified DOI, peer-review state, affiliation, award, grant or metric.
 
 ## Page Resource Service
 
-`Eduardo_Research_Manager_Page_Resource` operates on preset page keys rather than arbitrary WordPress pages.
+`Eduardo_Research_Manager_Page_Resource` works with preset page keys rather than arbitrary WordPress pages. It can inspect role/model contracts, hydrate EN/ES Theme slots, repair role/model drift, explicitly create missing Theme-owned Pages and safely rollback only resources carrying the matching Manager provenance token.
 
-It can:
+Page creation leaves `post_content` empty. The Theme continues to own Page composition and layout; Gutenberg is not the Page layout engine.
 
-- inspect a Theme-controlled Page and its role/model contract;
-- discover the allowed slot schema directly from the active Theme;
-- read effective EN or ES slot state;
-- prepare a hydration plan for only allowed slots;
-- repair incorrect `_eduardo_research_role` and `_eduardo_research_model` metadata in the same reversible plan;
-- verify stored hydration after Apply;
-- build an explicit creation plan when an expected Page is missing;
-- verify the created Page, role, model, route, publication state and provenance token;
-- preserve the Theme as layout/rendering authority throughout.
+## Insight Resource Service
 
-Home uses the Theme model options:
+`Eduardo_Research_Manager_Insight_Resource` works with the Theme editorial contract for WordPress `post` records.
 
-- `eduardo_research_model`
-- `eduardo_research_model_es`
+Theme-supported Insight types are read directly from `eduardo_research_insight_types()`:
 
-Interior surfaces use the bounded Theme options `eduardo_research_surface_<page-key>` and their `_es` counterparts. Only preset-defined Research surfaces are permitted by the generic mutation-plan whitelist.
+- `research_note`
+- `explainer`
+- `method_note`
+- `working_note`
+- `commentary`
 
-Hydration of Theme copy/model options is classified as `editorial-review`; it is visible in Preview but does not claim academic evidence by itself.
+Language is restricted to the active Research preset (`en` / `es`). The Theme continues to own localized routes, filtering and `Article` schema.
 
-## Explicit Page creation
+### Explicit Insight creation
 
-Missing Pages are never recreated as a side effect of diagnostics or hydration. Creation must be requested explicitly through `build_creation_plan()`.
+`build_creation_plan()` creates a dedicated `create_insight` action. It supports only:
 
-A `create_page` action is accepted only when its Page key, canonical WordPress slug, role, model and front-page status match the **active Theme preset contract**. The Manager generates a unique provenance token and stores it in `_eduardo_research_manager_creation_token`.
+- title;
+- slug;
+- excerpt;
+- bounded long-form body;
+- language;
+- Theme Insight type;
+- initial status `draft` or `publish`;
+- Manager provenance token.
 
-The lifecycle is:
+The creation action is `editorial-review`. Preview never creates a post. Apply refuses to overwrite an existing slug or reuse a provenance token. Rollback permanently deletes only the Manager-created Insight carrying the matching token.
 
-1. Preview confirms the Theme-controlled slug is missing and performs no write.
-2. Apply creates one published WordPress Page with empty body content, Theme role/model metadata and the provenance token.
-3. Home creation also assigns the new Page as WordPress static front page.
-4. Verify checks the persisted Page against the original checksummed plan.
-5. Rollback permanently deletes only the Page carrying the matching Manager provenance token and restores the previous front-page routing state.
+Publishing permission is **not** added to the generic `post_field` mutation contract. `draft` / `publish` is accepted only as part of the dedicated creation action.
 
-If another Page occupies the slug before Apply, creation stops with a conflict instead of overwriting it. Rollback refuses to delete a Page whose provenance token does not match the plan.
+### Bounded Insight updates
 
-The creation operation does **not** move layout into Gutenberg and does not populate `post_content`; structured copy remains a separate hydration operation through the Theme model.
+`build_update_plan()` can update an existing Insight only through these fields:
 
-## Diagnostics
+- `title`
+- `excerpt`
+- `content`
+- `language`
+- `insight_type`
 
-Readiness checks map failures to actionable classes such as `create-resource`, `hydrate`, `auto-fix-candidate`, `manual-review` and `configuration-required`. The contract covers the Research Theme/preset, expected Pages, Page role/model assignment, Research CPTs, languages, Home routing and evidence-store shape.
+It intentionally does not expose generic status changes or slug changes in 0.4.0. Existing updates reuse the checksummed mutation executor and therefore support Preview, Apply, Verify and Rollback.
 
-## Mutation contract
+Current bounds enforced before a plan can be created:
 
-The foundation remains deliberately narrow:
+- title: 200 bytes;
+- excerpt: 1,000 bytes;
+- body: 60,000 bytes.
+
+The body is sanitized with WordPress `wp_kses_post()`. This is the intended bounded Gutenberg/editorial zone inside the Theme-owned single Insight shell; it does not transfer frontend layout authority to the editor.
+
+### EN / ES behavior
+
+The Manager stores `_research_language` and `_research_insight_type`; the Theme decides how those values affect public behavior. At present the Theme owns:
+
+- `/insights/<slug>/` for English;
+- `/es/notas/<slug>/` for Spanish;
+- language-restricted Insight queries;
+- localized permalink generation;
+- Insight cards and filters;
+- `Article` structured data.
+
+The Manager verifies persisted editorial state and a non-empty Theme-generated route, but does not duplicate route or schema generation.
+
+## Diagnostics and mutation discipline
+
+Readiness failures map to action classes such as `create-resource`, `hydrate`, `auto-fix-candidate`, `manual-review` and `configuration-required`.
+
+The generic mutation surface remains deliberately narrow:
 
 - approved Research options and bounded Theme Page-model options;
 - Theme/Research post metadata (`_eduardo_research_*`, `_research_*`);
 - bounded post fields: title, excerpt, body content and menu order;
-- Theme-contract-bound `create_page` actions.
+- contract-bound `create_page` actions;
+- contract-bound `create_insight` actions.
 
-Publishing status is still not a generic writable post field. Page publication is permitted only inside the dedicated Theme-controlled creation action. Arbitrary WordPress options and arbitrary post fields remain outside the whitelist. Every plan is checksummed and may target each stored field/resource only once.
+Every plan is checksummed and may target each stored field/resource only once.
 
 ## Preview → Apply → Verify → Rollback
 
@@ -82,9 +108,8 @@ WordPress → Tools → Research Manager shows the readiness/control-plane state
 
 ## Next implementation blocks
 
-1. Insight creation/update service with bounded body content.
-2. Publication and Research Project services using evidence-aware metadata schemas.
-3. Rendered-frontend verification adapters.
-4. Readiness remediation plans wired to Preview/Apply.
-5. EN/ES record pairing and translation operations.
-6. External academic connectors behind explicit authorization and additional evidence gates.
+1. Publication and Research Project services using evidence-aware metadata schemas.
+2. Rendered-frontend verification adapters.
+3. Readiness remediation plans wired to Preview/Apply.
+4. EN/ES record pairing and translation operations.
+5. External academic connectors behind explicit authorization and additional evidence gates.
