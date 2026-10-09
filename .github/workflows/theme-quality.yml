@@ -32,6 +32,7 @@ jobs:
           set -euo pipefail
           test -f wordpress/themes/eduardo-research/style.css
           test -f wordpress/themes/eduardo-research/functions.php
+          test -f wordpress/themes/eduardo-research/front-page.php
           test -f wordpress/themes/eduardo-research/index.php
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
@@ -45,8 +46,59 @@ jobs:
           set -euo pipefail
           php -r 'json_decode(file_get_contents("wordpress/themes/eduardo-research/theme.json"), true, 512, JSON_THROW_ON_ERROR); echo "theme.json valid\n";'
 
+  runtime-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli
+          coverage: none
+          tools: wp-cli
+      - name: Install clean WordPress and activate Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/research-wp
+          cd /tmp/research-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://research.test --title='Research Test' --admin_user=admin --admin_password='research-test-password' --admin_email=research@example.test --skip-email --allow-root
+          wp option update permalink_structure '/%postname%/' --allow-root
+          mkdir -p wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+      - name: Verify Research bootstrap contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          test "$(wp option get show_on_front --allow-root)" = "page"
+          test "$(wp option get page_on_front --allow-root)" -gt 0
+          test "$(wp option get wp_page_for_privacy_policy --allow-root)" -gt 0
+          for slug in home about research publications projects software datasets cv insights contact privacy-policy legal-notice; do
+            test -n "$(wp post list --post_type=page --name="$slug" --field=ID --format=ids --allow-root)"
+          done
+          wp eval 'foreach (["research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
+          wp eval '$page = get_page_by_path("publications"); if (! $page || "output-index" !== get_post_meta($page->ID, "_eduardo_research_role", true)) { exit(1); }' --allow-root
+          wp eval 'if ("CreativeWork" !== eduardo_research_output_schema_type(0)) { exit(1); } foreach (["about","research","publications","projects","software","datasets","cv","insights","contact"] as $key) { if ("" === eduardo_research_page_url($key)) { exit(1); } }' --allow-root
+
   package:
-    needs: quality
+    needs: [quality, runtime-smoke]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
