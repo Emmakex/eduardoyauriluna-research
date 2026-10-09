@@ -37,9 +37,11 @@ jobs:
           test -f wordpress/themes/eduardo-research/inc/research-language.php
           test -f wordpress/themes/eduardo-research/inc/research-content-language.php
           test -f wordpress/themes/eduardo-research/inc/research-evidence.php
+          test -f wordpress/themes/eduardo-research/inc/research-objects.php
           test -f wordpress/themes/eduardo-research/inc/research-surface-layouts.php
           test -f wordpress/themes/eduardo-research/inc/research-sitemap.php
           test -f wordpress/themes/eduardo-research/assets/interior-surfaces.css
+          test -f wordpress/themes/eduardo-research/assets/research-objects.css
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
         shell: bash
@@ -99,7 +101,7 @@ jobs:
           for slug in home about research publications projects software datasets cv insights contact privacy-policy legal-notice; do
             test -n "$(wp post list --post_type=page --name="$slug" --field=ID --format=ids --allow-root)"
           done
-          wp eval 'foreach (["research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
+          wp eval 'foreach (["research_line","research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
           wp eval '$page = get_page_by_path("publications"); if (! $page || "output-index" !== get_post_meta($page->ID, "_eduardo_research_role", true)) { exit(1); }' --allow-root
           wp eval 'if ("CreativeWork" !== eduardo_research_output_schema_type(0)) { exit(1); } foreach (["about","research","publications","projects","software","datasets","cv","insights","contact"] as $key) { if ("" === eduardo_research_page_url($key)) { exit(1); } }' --allow-root
       - name: Verify native EN ES contract
@@ -159,6 +161,29 @@ jobs:
           ob_start(); eduardo_research_render_structured_surface("about"); $html = ob_get_clean();
           if (false === strpos($html, "Verified organisation") || false !== strpos($html, "Hidden profile")) { exit(1); }
           ' --allow-root
+      - name: Verify research-line and academic output contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          wp eval '
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Verified line","post_name"=>"verified-line","post_excerpt"=>"Line summary"]);
+          $hidden = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Hidden line object","post_name"=>"hidden-line"]);
+          update_post_meta($line, "_research_language", "en"); update_post_meta($line, "_research_evidence_status", "verified"); update_post_meta($line, "_research_order", "1"); update_post_meta($line, "_research_central_question", "How can structured evidence improve digital systems?");
+          update_post_meta($hidden, "_research_language", "en"); update_post_meta($hidden, "_research_evidence_status", "unverified"); update_post_meta($hidden, "_research_order", "2");
+          if ("http://research.test/research/lines/verified-line/" !== get_permalink($line)) { fwrite(STDERR, get_permalink($line) . "\n"); exit(1); }
+          $query = new WP_Query(eduardo_research_verified_line_query_args("en", 20));
+          if (! in_array($line, $query->posts, true) || in_array($hidden, $query->posts, true)) { exit(1); }
+          $paper = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Structured Evidence Paper","post_name"=>"structured-evidence-paper","post_excerpt"=>"Paper abstract"]);
+          update_post_meta($paper, "_research_output_type", "journal_article"); update_post_meta($paper, "_research_output_type_verified", "1"); update_post_meta($paper, "_research_review_status", "peer_reviewed"); update_post_meta($paper, "_research_publication_date", "2026-10-09"); update_post_meta($paper, "_research_venue", "Research Systems Journal"); update_post_meta($paper, "_research_doi", "10.1234/example.1"); update_post_meta($paper, "_research_doi_verified", "1"); update_post_meta($paper, "_research_authors", [["display_name"=>"Eduardo Jose Yauri Luna","is_site_researcher"=>true],["display_name"=>"Example Coauthor"]]);
+          if ("ScholarlyArticle" !== eduardo_research_output_schema_type($paper)) { exit(1); }
+          if (! eduardo_research_is_scholar_output($paper)) { exit(1); }
+          $GLOBALS["wp_query"] = new WP_Query(["p"=>$paper,"post_type"=>"research_output"]); if (! have_posts()) { exit(1); } the_post();
+          ob_start(); eduardo_research_citation_meta(); $meta = ob_get_clean(); wp_reset_postdata();
+          if (false === strpos($meta, "citation_title") || false === strpos($meta, "citation_author") || false === strpos($meta, "citation_doi")) { fwrite(STDERR, $meta . "\n"); exit(1); }
+          ' --allow-root
+          wp rewrite list --allow-root --format=csv | grep -F '^research/lines/([^/]+)/?$'
+          wp rewrite list --allow-root --format=csv | grep -F '^es/investigacion/lineas/([^/]+)/?$'
 
   package:
     needs: [quality, runtime-smoke]
