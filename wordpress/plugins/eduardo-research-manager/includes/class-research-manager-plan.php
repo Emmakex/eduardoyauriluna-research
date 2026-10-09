@@ -17,6 +17,10 @@ final class Eduardo_Research_Manager_Plan {
         'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
     );
 
+    private const ALLOWED_PAGE_KEYS = array(
+        'home','about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
+    );
+
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order');
 
     public static function create(string $intent, array $actions, array $context = array()): array|WP_Error {
@@ -115,6 +119,7 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     public static function action_risk(array $action): string {
+        if ('create_page' === (string) ($action['type'] ?? '')) { return 'standard'; }
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         foreach (array('doi','review_status','output_type','identifier','evidence','affiliation','award','grant') as $needle) {
             if (str_contains($key, $needle)) { return 'evidence-required'; }
@@ -159,6 +164,31 @@ final class Eduardo_Research_Manager_Plan {
             return array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>self::sanitize_post_field_value($field, $action['value'] ?? ''));
         }
 
+        if ('create_page' === $type) {
+            $page_key = sanitize_key((string) ($action['page_key'] ?? ''));
+            $wp_slug = sanitize_title((string) ($action['wp_slug'] ?? ''));
+            $title = sanitize_text_field((string) ($action['title'] ?? ''));
+            $role = sanitize_key((string) ($action['role'] ?? ''));
+            $model = sanitize_key((string) ($action['model'] ?? ''));
+            $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+            if (! in_array($page_key, self::ALLOWED_PAGE_KEYS, true)) {
+                return new WP_Error('research_manager_page_key_not_allowed', 'This Page key is outside the Research preset creation contract.');
+            }
+            if ('' === $wp_slug || '' === $title || '' === $role || '' === $model || '' === $creation_token) {
+                return new WP_Error('research_manager_invalid_page_creation', 'Page creation requires key, slug, title, role, model and a provenance token.');
+            }
+            return array(
+                'type'=>'create_page',
+                'page_key'=>$page_key,
+                'wp_slug'=>$wp_slug,
+                'title'=>$title,
+                'role'=>$role,
+                'model'=>$model,
+                'creation_token'=>$creation_token,
+                'front_page'=>! empty($action['front_page']),
+            );
+        }
+
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
@@ -185,7 +215,9 @@ final class Eduardo_Research_Manager_Plan {
     private static function target_signature(array $action): string {
         if ('option' === $action['type']) { return 'option:' . $action['key']; }
         if ('post_meta' === $action['type']) { return 'post_meta:' . $action['post_id'] . ':' . $action['key']; }
-        return 'post_field:' . $action['post_id'] . ':' . $action['field'];
+        if ('post_field' === $action['type']) { return 'post_field:' . $action['post_id'] . ':' . $action['field']; }
+        if ('create_page' === $action['type']) { return 'create_page:' . $action['wp_slug']; }
+        return 'unknown:' . md5((string) wp_json_encode($action));
     }
 
     private static function checksum(array $payload): string {
