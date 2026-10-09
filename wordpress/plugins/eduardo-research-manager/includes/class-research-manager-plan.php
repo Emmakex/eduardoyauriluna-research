@@ -14,7 +14,7 @@ final class Eduardo_Research_Manager_Plan {
 
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order');
 
-    public static function create(string $intent, array $actions): array|WP_Error {
+    public static function create(string $intent, array $actions, array $context = array()): array|WP_Error {
         $intent = sanitize_text_field($intent);
         if ('' === $intent) {
             return new WP_Error('research_manager_missing_intent', 'A human-readable mutation intent is required.');
@@ -25,6 +25,7 @@ final class Eduardo_Research_Manager_Plan {
 
         $clean = array();
         $targets = array();
+        $risk = 'standard';
         foreach ($actions as $index => $action) {
             if (! is_array($action)) {
                 return new WP_Error('research_manager_invalid_action', sprintf('Action %d must be an array.', $index));
@@ -36,13 +37,21 @@ final class Eduardo_Research_Manager_Plan {
                 return new WP_Error('research_manager_duplicate_target', 'A mutation plan may change each target only once.');
             }
             $targets[$signature] = true;
+            $action_risk = self::action_risk($normalized);
+            if ('evidence-required' === $action_risk) { $risk = 'evidence-required'; }
+            elseif ('standard' === $risk && 'editorial-review' === $action_risk) { $risk = 'editorial-review'; }
             $clean[] = $normalized;
         }
 
+        $evidence_confirmed = ! empty($context['evidence_confirmed']);
+        $evidence_reference = sanitize_text_field((string) ($context['evidence_reference'] ?? ''));
         $payload = array(
             'version'=>1,
             'intent'=>$intent,
             'actions'=>$clean,
+            'risk'=>$risk,
+            'evidence_confirmed'=>$evidence_confirmed,
+            'evidence_reference'=>$evidence_reference,
         );
         $checksum = self::checksum($payload);
         return array(
@@ -50,22 +59,44 @@ final class Eduardo_Research_Manager_Plan {
             'version'=>1,
             'intent'=>$intent,
             'actions'=>$clean,
+            'risk'=>$risk,
+            'evidence_confirmed'=>$evidence_confirmed,
+            'evidence_reference'=>$evidence_reference,
             'checksum'=>$checksum,
             'created_at'=>gmdate(DATE_W3C),
         );
     }
 
     public static function validate(array $plan): bool|WP_Error {
-        $required = array('id','version','intent','actions','checksum');
+        $required = array('id','version','intent','actions','risk','evidence_confirmed','evidence_reference','checksum');
         foreach ($required as $key) {
             if (! array_key_exists($key, $plan)) {
                 return new WP_Error('research_manager_invalid_plan', 'Mutation plan is missing a required field: ' . $key);
             }
         }
-        $rebuilt = self::create((string) $plan['intent'], is_array($plan['actions']) ? $plan['actions'] : array());
+        $rebuilt = self::create(
+            (string) $plan['intent'],
+            is_array($plan['actions']) ? $plan['actions'] : array(),
+            array(
+                'evidence_confirmed'=>! empty($plan['evidence_confirmed']),
+                'evidence_reference'=>(string) $plan['evidence_reference'],
+            )
+        );
         if (is_wp_error($rebuilt)) { return $rebuilt; }
         if (! hash_equals((string) $rebuilt['checksum'], (string) $plan['checksum'])) {
             return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum does not match its contents. Re-preview the change.');
+        }
+        return true;
+    }
+
+    public static function apply_gate(array $plan): bool|WP_Error {
+        $valid = self::validate($plan);
+        if (is_wp_error($valid)) { return $valid; }
+        if ('evidence-required' === (string) $plan['risk'] && empty($plan['evidence_confirmed'])) {
+            return new WP_Error(
+                'research_manager_evidence_required',
+                'This mutation changes an evidence-sensitive academic claim. Confirm evidence and rebuild the plan before Apply.'
+            );
         }
         return true;
     }
