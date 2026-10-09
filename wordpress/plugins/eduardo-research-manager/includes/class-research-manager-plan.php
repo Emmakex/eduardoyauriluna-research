@@ -115,6 +115,7 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     public static function action_risk(array $action): string {
+        if ('create_page' === (string) ($action['type'] ?? '')) { return 'standard'; }
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         foreach (array('doi','review_status','output_type','identifier','evidence','affiliation','award','grant') as $needle) {
             if (str_contains($key, $needle)) { return 'evidence-required'; }
@@ -159,7 +160,58 @@ final class Eduardo_Research_Manager_Plan {
             return array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>self::sanitize_post_field_value($field, $action['value'] ?? ''));
         }
 
+        if ('create_page' === $type) {
+            return self::normalize_page_creation($action);
+        }
+
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
+    }
+
+    private static function normalize_page_creation(array $action): array|WP_Error {
+        if (! function_exists('eduardo_research_preset')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required for Page creation.');
+        }
+        $preset = eduardo_research_preset();
+        $pages = is_array($preset['pages'] ?? null) ? $preset['pages'] : array();
+        $page_key = sanitize_key((string) ($action['page_key'] ?? ''));
+        $contract = is_array($pages[$page_key] ?? null) ? $pages[$page_key] : array();
+        if (! $contract) {
+            return new WP_Error('research_manager_page_key_not_allowed', 'This Page key is outside the active Research preset creation contract.');
+        }
+
+        $wp_slug = sanitize_title((string) ($action['wp_slug'] ?? ''));
+        $title = sanitize_text_field((string) ($action['title'] ?? ''));
+        $role = sanitize_key((string) ($action['role'] ?? ''));
+        $model = sanitize_key((string) ($action['model'] ?? ''));
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+        $expected_slug = sanitize_title((string) ($contract['wp_slug'] ?? $contract['slug'] ?? $page_key));
+        $expected_role = sanitize_key((string) ($contract['role'] ?? ''));
+        $expected_model = sanitize_key((string) ($contract['model'] ?? ''));
+        $front_page = 'front-page' === $expected_role;
+
+        if ('' === $wp_slug || '' === $title || '' === $role || '' === $model || '' === $creation_token) {
+            return new WP_Error('research_manager_invalid_page_creation', 'Page creation requires key, slug, title, role, model and a provenance token.');
+        }
+        if ($wp_slug !== $expected_slug || $role !== $expected_role || $model !== $expected_model) {
+            return new WP_Error('research_manager_page_contract_mismatch', 'Page creation must match the active Research Theme contract exactly.');
+        }
+        if ($front_page !== ! empty($action['front_page'])) {
+            return new WP_Error('research_manager_front_page_contract_mismatch', 'Front-page creation state must match the active Research Theme role.');
+        }
+        if (! preg_match('/^[a-f0-9-]{32,64}$/i', $creation_token)) {
+            return new WP_Error('research_manager_invalid_creation_token', 'Page creation requires a stable UUID-like provenance token.');
+        }
+
+        return array(
+            'type'=>'create_page',
+            'page_key'=>$page_key,
+            'wp_slug'=>$wp_slug,
+            'title'=>$title,
+            'role'=>$role,
+            'model'=>$model,
+            'creation_token'=>$creation_token,
+            'front_page'=>$front_page,
+        );
     }
 
     private static function allowed_option_key(string $key): bool {
@@ -185,7 +237,9 @@ final class Eduardo_Research_Manager_Plan {
     private static function target_signature(array $action): string {
         if ('option' === $action['type']) { return 'option:' . $action['key']; }
         if ('post_meta' === $action['type']) { return 'post_meta:' . $action['post_id'] . ':' . $action['key']; }
-        return 'post_field:' . $action['post_id'] . ':' . $action['field'];
+        if ('post_field' === $action['type']) { return 'post_field:' . $action['post_id'] . ':' . $action['field']; }
+        if ('create_page' === $action['type']) { return 'create_page:' . $action['wp_slug']; }
+        return 'unknown:' . md5((string) wp_json_encode($action));
     }
 
     private static function checksum(array $payload): string {
