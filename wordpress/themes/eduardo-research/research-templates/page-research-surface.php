@@ -51,17 +51,18 @@ $title = eduardo_research_page_label($key);
    </div>
   </section>
  <?php elseif (in_array($key, array('publications','projects','software','datasets'), true)) :
-   $map = array('publications'=>'research_output','projects'=>'research_project','software'=>'research_software','datasets'=>'research_dataset');
-   $args = eduardo_research_localized_query_args(array('post_type'=>$map[$key], 'post_status'=>'publish', 'posts_per_page'=>24, 'no_found_rows'=>true), $language);
-   $query = new WP_Query($args); ?>
+   $query = eduardo_research_collection_query($key, $language); ?>
   <section class="research-section research-object-index" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell">
-    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Registros estructurados' : 'Structured records'); ?></span><p><?php echo esc_html('es' === $language ? 'Cada elemento dispone de URL estable y metadatos específicos de su tipo.' : 'Every item has a stable URL and type-specific metadata.'); ?></p></div>
+    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Registros estructurados' : 'Structured records'); ?></span><p><?php echo esc_html('es' === $language ? 'Filtra por línea de investigación y metadatos académicos sin alterar la URL canónica de la colección.' : 'Filter by Research Line and academic metadata without changing the collection canonical URL.'); ?></p></div>
+    <?php eduardo_research_render_collection_filters($key); ?>
+    <?php eduardo_research_render_collection_summary($key, $query); ?>
     <div class="research-grid research-grid-editorial">
      <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_collection_card(get_the_ID(), $key); endwhile; else : ?>
-      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html(eduardo_research_t('evidence_index')); ?></h2><p><?php echo esc_html(eduardo_research_t('no_records')); ?></p></article>
+      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'No hay resultados para estos filtros' : 'No records match these filters'); ?></h2><p><?php echo esc_html('es' === $language ? 'Prueba a limpiar uno o más filtros. El Theme nunca crea registros para rellenar un resultado vacío.' : 'Clear one or more filters. The Theme never invents records to fill an empty result set.'); ?></p></article>
      <?php endif; wp_reset_postdata(); ?>
     </div>
+    <?php eduardo_research_render_collection_pagination($key, $query); ?>
    </div>
   </section>
  <?php elseif ('insights' === $key) :

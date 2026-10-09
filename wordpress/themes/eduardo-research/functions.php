@@ -10,6 +10,7 @@ require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-evidence.php';
 require_once get_template_directory() . '/inc/research-objects.php';
 require_once get_template_directory() . '/inc/research-relations.php';
+require_once get_template_directory() . '/inc/research-collections.php';
 require_once get_template_directory() . '/inc/research-surface-layouts.php';
 require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
@@ -49,6 +50,12 @@ function eduardo_research_assets(): void {
     if (is_readable($objects_path)) {
         $objects_version = substr((string) hash_file('sha256', $objects_path), 0, 16);
         wp_enqueue_style('eduardo-research-objects', get_stylesheet_directory_uri() . '/assets/research-objects.css', array('eduardo-research'), $objects_version);
+    }
+
+    $collections_path = get_stylesheet_directory() . '/assets/research-collections.css';
+    if (is_readable($collections_path)) {
+        $collections_version = substr((string) hash_file('sha256', $collections_path), 0, 16);
+        wp_enqueue_style('eduardo-research-collections', get_stylesheet_directory_uri() . '/assets/research-collections.css', array('eduardo-research'), $collections_version);
     }
 }
 add_action('wp_enqueue_scripts', 'eduardo_research_assets');
