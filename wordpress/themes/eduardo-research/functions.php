@@ -9,6 +9,7 @@ require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
 require_once get_template_directory() . '/inc/research-discovery.php';
 require_once get_template_directory() . '/inc/research-breadcrumbs.php';
+require_once get_template_directory() . '/inc/research-install.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
@@ -16,6 +17,7 @@ function eduardo_research_setup(): void {
     add_theme_support('post-thumbnails');
     add_theme_support('responsive-embeds');
     add_theme_support('html5', array('search-form', 'gallery', 'caption', 'style', 'script'));
+    remove_action('wp_head', 'rel_canonical');
 }
 add_action('after_setup_theme', 'eduardo_research_setup');
 
@@ -38,8 +40,8 @@ function eduardo_research_register_content_types(): void {
             'labels' => array('name' => $labels[0], 'singular_name' => $labels[1]),
             'public' => true,
             'show_in_rest' => true,
-            'has_archive' => true,
-            'rewrite' => array('slug' => $labels[3]),
+            'has_archive' => false,
+            'rewrite' => array('slug' => $labels[3], 'with_front' => false),
             'menu_icon' => $labels[2],
             'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'),
         ));
