@@ -39,6 +39,13 @@ get_header(); ?>
    <div class="research-prose"><?php the_content(); ?></div>
   </div></section>
 
+  <?php if ('research_line' === $type) : ?>
+    <?php eduardo_research_render_related_objects($post_id); ?>
+  <?php elseif (in_array($type, eduardo_research_relation_object_types(), true)) : ?>
+    <?php eduardo_research_render_research_context($post_id); ?>
+    <?php eduardo_research_render_related_objects($post_id); ?>
+  <?php endif; ?>
+
   <?php
   $links = array();
   if ('research_output' === $type) {
