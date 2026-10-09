@@ -5,14 +5,13 @@ if (! defined('ABSPATH')) { exit; }
 get_header();
 $language = eduardo_research_current_language();
 $model = eduardo_research_model();
-$content_guard = 'es' === $language ? array('post__in'=>array(0)) : array();
-$recent_outputs = new WP_Query(array_merge(array(
+$recent_outputs = new WP_Query(eduardo_research_localized_query_args(array(
     'post_type'=>array('research_output','research_project','research_software','research_dataset'),
     'post_status'=>'publish','posts_per_page'=>6,'orderby'=>'modified','order'=>'DESC','no_found_rows'=>true,
-), $content_guard));
-$insights = new WP_Query(array_merge(array(
+), $language));
+$insights = new WP_Query(eduardo_research_localized_query_args(array(
     'post_type'=>'post','post_status'=>'publish','posts_per_page'=>3,'orderby'=>'date','order'=>'DESC','no_found_rows'=>true,
-), $content_guard));
+), $language));
 $research_lines = eduardo_research_verified_localized_evidence('research_lines');
 $identifiers = eduardo_research_verified_localized_evidence('identifiers');
 $identity_lead = 'es' === $language
@@ -70,7 +69,7 @@ $identity_lead = 'es' === $language
    <?php if ($recent_outputs->have_posts()) : while ($recent_outputs->have_posts()) : $recent_outputs->the_post(); $type = get_post_type_object(get_post_type()); ?>
     <article class="research-card research-card-output"><p class="research-card-kicker"><?php echo esc_html((string) ($type->labels->singular_name ?? 'Research')); ?></p><h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3><?php if (has_excerpt()) : ?><p><?php echo esc_html(get_the_excerpt()); ?></p><?php endif; ?><span class="research-card-arrow" aria-hidden="true">↗</span></article>
    <?php endwhile; else : $collections=array('publications','projects','software','datasets'); foreach ($collections as $i=>$key) : $label=eduardo_research_page_label($key); ?>
-    <article class="research-card research-collection-card"><div class="research-collection-index"><?php echo esc_html(str_pad((string) ($i+1),2,'0',STR_PAD_LEFT)); ?></div><p class="research-card-kicker"><?php echo esc_html(eduardo_research_t('research_collection')); ?></p><h3><?php echo esc_html($label); ?></h3><a href="<?php echo esc_url(eduardo_research_page_url($key)); ?>"><?php echo esc_html(eduardo_research_t('explore') . ' ' . mb_strtolower($label)); ?> <span aria-hidden="true">↗</span></a></article>
+    <article class="research-card research-collection-card"><div class="research-collection-index"><?php echo esc_html(str_pad((string) ($i+1),2,'0',STR_PAD_LEFT)); ?></div><p class="research-card-kicker"><?php echo esc_html(eduardo_research_t('research_collection')); ?></p><h3><?php echo esc_html($label); ?></h3><a href="<?php echo esc_url(eduardo_research_page_url($key)); ?>"><?php echo esc_html(eduardo_research_t('explore') . ' ' . strtolower($label)); ?> <span aria-hidden="true">↗</span></a></article>
    <?php endforeach; endif; wp_reset_postdata(); ?>
   </div>
  </div></section>
