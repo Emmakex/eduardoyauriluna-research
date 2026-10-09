@@ -26,6 +26,17 @@ function eduardo_research_assets(): void {
     $path = get_stylesheet_directory() . '/style.css';
     $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '0.1.0';
     wp_enqueue_style('eduardo-research', get_stylesheet_uri(), array(), $version);
+
+    $polish_path = get_stylesheet_directory() . '/assets/visual-polish.css';
+    if (is_readable($polish_path)) {
+        $polish_version = substr((string) hash_file('sha256', $polish_path), 0, 16);
+        wp_enqueue_style(
+            'eduardo-research-visual-polish',
+            get_stylesheet_directory_uri() . '/assets/visual-polish.css',
+            array('eduardo-research'),
+            $polish_version
+        );
+    }
 }
 add_action('wp_enqueue_scripts', 'eduardo_research_assets');
 
