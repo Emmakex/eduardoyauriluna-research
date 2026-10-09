@@ -12,6 +12,7 @@ require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
 require_once get_template_directory() . '/inc/research-discovery.php';
 require_once get_template_directory() . '/inc/research-breadcrumbs.php';
+require_once get_template_directory() . '/inc/research-sitemap.php';
 require_once get_template_directory() . '/inc/research-install.php';
 
 function eduardo_research_setup(): void {
