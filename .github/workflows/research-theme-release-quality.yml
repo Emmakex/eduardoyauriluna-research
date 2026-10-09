@@ -1,0 +1,151 @@
+name: Research Theme Release Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-theme-release-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-theme-release-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Verify 1.0 product metadata and release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          THEME=wordpress/themes/eduardo-research
+          grep -F 'Author: Emmake by Kairoseth' "$THEME/style.css"
+          grep -F 'Author URI: https://kairoseth.com/' "$THEME/style.css"
+          grep -F 'Version: 1.0.0' "$THEME/style.css"
+          grep -F "research-hardening.php" "$THEME/functions.php"
+          grep -F "research-navigation.css" "$THEME/functions.php"
+          grep -F "research-navigation.js" "$THEME/functions.php"
+          grep -F 'aria-controls="research-primary-panel"' "$THEME/header.php"
+          grep -F 'aria-expanded="false"' "$THEME/header.php"
+          grep -F 'Escape' "$THEME/assets/research-navigation.js"
+          test -s "$THEME/assets/research-navigation.css"
+          test -s "$THEME/inc/research-hardening.php"
+          php -l "$THEME/inc/research-hardening.php"
+
+      - name: Install clean WordPress and Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/research-release-wp
+          cd /tmp/research-release-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://release.test --title='Research Release Test' --admin_user=admin --admin_password='research-release-password' --admin_email=research@example.test --skip-email --allow-root
+          wp option update permalink_structure '/%postname%/' --allow-root
+          mkdir -p wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+
+      - name: Verify installed Theme reports 1.0.0 ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-release-wp
+          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.0.0"
+          wp eval '$theme=wp_get_theme("eduardo-research"); if ("Emmake by Kairoseth" !== $theme->get("Author")) { fwrite(STDERR, $theme->get("Author") . "\n"); exit(1); } if ("https://kairoseth.com/" !== $theme->get("AuthorURI")) { exit(1); }' --allow-root
+
+      - name: Verify public academic evidence gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-release-wp
+          wp eval '
+          $verified = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Verified paper"]);
+          $unverified = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Unverified paper"]);
+          foreach ([$verified,$unverified] as $id) {
+              update_post_meta($id,"_research_language","en");
+              update_post_meta($id,"_research_output_type","journal_article");
+              update_post_meta($id,"_research_review_status","peer_reviewed");
+          }
+          update_post_meta($verified,"_research_output_type_verified","1");
+          update_post_meta($verified,"_research_review_status_verified","1");
+          update_post_meta($unverified,"_research_output_type_verified","0");
+          update_post_meta($unverified,"_research_review_status_verified","0");
+
+          if ("journal_article" !== get_post_meta($verified,"_research_output_type",true)) { exit(1); }
+          if ("peer_reviewed" !== get_post_meta($verified,"_research_review_status",true)) { exit(1); }
+          if ("" !== get_post_meta($unverified,"_research_output_type",true)) { exit(1); }
+          if ("" !== get_post_meta($unverified,"_research_review_status",true)) { exit(1); }
+
+          $q = new WP_Query([
+              "post_type"=>"research_output",
+              "post_status"=>"publish",
+              "fields"=>"ids",
+              "posts_per_page"=>20,
+              "meta_query"=>[
+                  "relation"=>"AND",
+                  ["key"=>"_research_output_type","value"=>"journal_article","compare"=>"="],
+                  ["key"=>"_research_review_status","value"=>"peer_reviewed","compare"=>"="],
+              ],
+          ]);
+          if (! in_array($verified,$q->posts,true) || in_array($unverified,$q->posts,true)) {
+              fwrite(STDERR, json_encode($q->posts) . "\n"); exit(1);
+          }
+          ' --allow-root
+
+      - name: Verify exploration views are noindex follow
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-release-wp
+          wp eval '
+          $page = get_page_by_path("publications");
+          if (! $page) { exit(1); }
+          $_GET["output_type"] = "journal_article";
+          $GLOBALS["wp_query"] = new WP_Query(["page_id"=>$page->ID]);
+          if ("publications" !== eduardo_research_current_page_key()) { exit(1); }
+          $robots = eduardo_research_exploration_robots(["index"=>true]);
+          if (empty($robots["noindex"]) || empty($robots["follow"]) || isset($robots["index"])) { exit(1); }
+          unset($_GET["output_type"]);
+          wp_reset_query();
+          ' --allow-root
+
+      - name: Build versioned installable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cd wordpress/themes
+          zip -r ../../dist/eduardo-research-1.0.0.zip eduardo-research -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-1.0.0.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eduardo-research-theme-1.0.0
+          path: dist/eduardo-research-1.0.0.zip
+          if-no-files-found: error
