@@ -34,3 +34,10 @@ function eduardo_research_register_language_sitemap($sitemaps): void {
     $sitemaps->registry->add_provider('research-languages', new Eduardo_Research_Language_Sitemap_Provider());
 }
 add_action('wp_sitemaps_init', 'eduardo_research_register_language_sitemap');
+
+function eduardo_research_sitemap_post_query_args(array $args, string $post_type): array {
+    if ('research_line' !== $post_type) { return $args; }
+    $args['meta_query'] = array(array('key'=>'_research_evidence_status','value'=>'verified','compare'=>'='));
+    return $args;
+}
+add_filter('wp_sitemaps_posts_query_args', 'eduardo_research_sitemap_post_query_args', 10, 2);
