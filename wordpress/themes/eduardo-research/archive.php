@@ -25,7 +25,7 @@ $title = $type_object ? (string) $type_object->labels->name : wp_strip_all_tags(
      </article>
     <?php endwhile; else : ?><article class="research-card research-empty"><h2>No verified records published yet</h2><p>The archive is active and ready for evidence-backed research objects.</p></article><?php endif; ?>
    </div>
-   <?php if (have_posts()) : ?><nav class="research-pagination" aria-label="<?php esc_attr_e('Archive pagination', 'eduardo-research'); ?>"><?php the_posts_pagination(array('mid_size'=>1,'prev_text'=>'Previous','next_text'=>'Next')); ?></nav><?php endif; ?>
+   <nav class="research-pagination" aria-label="<?php esc_attr_e('Archive pagination', 'eduardo-research'); ?>"><?php the_posts_pagination(array('mid_size'=>1,'prev_text'=>'Previous','next_text'=>'Next')); ?></nav>
   </div>
  </section>
 </main>
