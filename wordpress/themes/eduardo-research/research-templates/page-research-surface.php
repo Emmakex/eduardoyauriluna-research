@@ -17,10 +17,16 @@ $title = eduardo_research_page_label($key);
   <p class="research-lead"><?php echo esc_html((string) ($model['lead'] ?? '')); ?></p>
  </header>
 
- <?php if (in_array($key, array('about','cv','contact'), true)) : ?>
+ <?php if (in_array($key, array('about','contact'), true)) : ?>
   <section class="research-interior" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell research-interior-stack">
     <?php eduardo_research_render_structured_surface($key); ?>
+   </div>
+  </section>
+ <?php elseif ('cv' === $key) : ?>
+  <section class="research-interior research-cv-page" aria-label="<?php echo esc_attr($title); ?>">
+   <div class="research-shell">
+    <?php eduardo_research_render_cv_surface(); ?>
    </div>
   </section>
  <?php elseif ('research' === $key) :
@@ -65,14 +71,18 @@ $title = eduardo_research_page_label($key);
     <?php eduardo_research_render_collection_pagination($key, $query); ?>
    </div>
   </section>
- <?php elseif ('insights' === $key) :
-   $args = eduardo_research_localized_query_args(array('post_type'=>'post','post_status'=>'publish','posts_per_page'=>12,'no_found_rows'=>true), $language);
-   $query = new WP_Query($args); ?>
-  <section class="research-section" aria-label="<?php echo esc_attr($title); ?>">
+ <?php elseif ('insights' === $key) : $query = eduardo_research_insight_query($language); ?>
+  <section class="research-section research-insight-index" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell">
-    <div class="research-grid">
-     <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); ?><article class="research-card"><p class="research-card-kicker"><?php echo esc_html(eduardo_research_t('insight')); ?></p><h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2><?php if (has_excerpt()) : ?><p><?php echo esc_html(get_the_excerpt()); ?></p><?php endif; ?></article><?php endwhile; else : ?><article class="research-card research-empty"><h2><?php echo esc_html(eduardo_research_t('editorial_ready')); ?></h2><p><?php echo esc_html(eduardo_research_t('editorial_ready_body')); ?></p></article><?php endif; wp_reset_postdata(); ?>
+    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Sistema editorial' : 'Editorial system'); ?></span><p><?php echo esc_html('es' === $language ? 'Notas de investigación, explicadores, métodos y comentarios con URL propia y separación estricta por idioma.' : 'Research notes, explainers, methods and commentary with stable URLs and strict language separation.'); ?></p></div>
+    <?php eduardo_research_render_insight_filters(); ?>
+    <div class="research-collection-summary"><strong><?php echo esc_html(sprintf('es' === $language ? '%d notas' : '%d notes', (int) $query->found_posts)); ?></strong><span><?php echo esc_html('es' === $language ? 'Resultados editoriales publicados.' : 'Published editorial results.'); ?></span></div>
+    <div class="research-grid research-grid-editorial research-insight-grid">
+     <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_insight_card(get_the_ID()); endwhile; else : ?>
+      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'No hay notas para esta búsqueda' : 'No research notes match this search'); ?></h2><p><?php echo esc_html('es' === $language ? 'Prueba con otro término o limpia el tipo editorial seleccionado.' : 'Try another term or clear the selected editorial type.'); ?></p></article>
+     <?php endif; wp_reset_postdata(); ?>
     </div>
+    <?php eduardo_research_render_insight_pagination($query); ?>
    </div>
   </section>
  <?php endif; ?>
