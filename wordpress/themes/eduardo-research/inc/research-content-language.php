@@ -36,12 +36,14 @@ function eduardo_research_content_language_rewrites(): void {
         $slug = preg_quote(eduardo_research_page_slug($key, 'es'), '#');
         add_rewrite_rule('^es/' . $slug . '/([^/]+)/?$', 'index.php?post_type=' . $type . '&name=$matches[1]&research_lang=es', 'top');
     }
+    add_rewrite_rule('^insights/([^/]+)/?$', 'index.php?post_type=post&name=$matches[1]&research_lang=en', 'top');
     $insights = preg_quote(eduardo_research_page_slug('insights', 'es'), '#');
     add_rewrite_rule('^es/' . $insights . '/([^/]+)/?$', 'index.php?post_type=post&name=$matches[1]&research_lang=es', 'top');
 }
 add_action('init', 'eduardo_research_content_language_rewrites', 13);
 
-function eduardo_research_spanish_record_url(WP_Post $post): string {
+function eduardo_research_record_url(WP_Post $post, ?string $language = null): string {
+    $language = $language ?: eduardo_research_post_language((int) $post->ID);
     $map = array(
         'research_output'=>'publications',
         'research_project'=>'projects',
@@ -51,32 +53,33 @@ function eduardo_research_spanish_record_url(WP_Post $post): string {
     );
     $key = $map[$post->post_type] ?? null;
     if (! $key) { return ''; }
-    return home_url('/es/' . trim(eduardo_research_page_slug($key, 'es'), '/') . '/' . $post->post_name . '/');
+    $slug = trim(eduardo_research_page_slug($key, $language), '/');
+    $prefix = 'es' === $language ? 'es/' : '';
+    return home_url('/' . $prefix . $slug . '/' . $post->post_name . '/');
 }
 
 function eduardo_research_post_type_link(string $url, WP_Post $post): string {
     if ('es' !== eduardo_research_post_language((int) $post->ID)) { return $url; }
-    $localized = eduardo_research_spanish_record_url($post);
+    $localized = eduardo_research_record_url($post, 'es');
     return '' !== $localized ? $localized : $url;
 }
 add_filter('post_type_link', 'eduardo_research_post_type_link', 20, 2);
 
 function eduardo_research_post_link(string $url, WP_Post $post): string {
-    if ('post' !== $post->post_type || 'es' !== eduardo_research_post_language((int) $post->ID)) { return $url; }
-    $localized = eduardo_research_spanish_record_url($post);
+    if ('post' !== $post->post_type) { return $url; }
+    $localized = eduardo_research_record_url($post, eduardo_research_post_language((int) $post->ID));
     return '' !== $localized ? $localized : $url;
 }
 add_filter('post_link', 'eduardo_research_post_link', 20, 2);
 
 function eduardo_research_restrict_spanish_singular_query(WP_Query $query): void {
-    if (is_admin() || ! $query->is_main_query() || 'es' !== eduardo_research_request_language()) { return; }
+    if (is_admin() || ! $query->is_main_query()) { return; }
     $type = $query->get('post_type');
     $supported = array('research_output','research_project','research_software','research_dataset','post');
     if (is_array($type)) { $matched = (bool) array_intersect($supported, $type); }
     else { $matched = in_array((string) $type, $supported, true); }
-    if ($matched && '' !== (string) $query->get('name')) {
-        $query->set('meta_query', eduardo_research_content_language_meta_query('es'));
-    }
+    if (! $matched || '' === (string) $query->get('name')) { return; }
+    $query->set('meta_query', eduardo_research_content_language_meta_query(eduardo_research_request_language()));
 }
 add_action('pre_get_posts', 'eduardo_research_restrict_spanish_singular_query');
 
@@ -100,7 +103,7 @@ function eduardo_research_enforce_record_locale(): void {
     $post_id = get_queried_object_id();
     if ($post_id <= 0) { return; }
     $record_language = eduardo_research_post_language($post_id);
-    if ('es' === $record_language && 'es' !== eduardo_research_current_language()) {
+    if ($record_language !== eduardo_research_current_language()) {
         $target = get_permalink($post_id);
         if ($target) { wp_safe_redirect($target, 301); exit; }
     }
