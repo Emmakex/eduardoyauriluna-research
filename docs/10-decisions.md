@@ -103,3 +103,19 @@ Gutenberg may be enabled only as a bounded rich-text editor where useful, such a
 **Reference:** `docs/14-theme-owned-frontend.md`
 
 **Status:** Accepted
+
+---
+
+## ADR-012 — Apply the SEO/GEO Theme operating model end-to-end
+
+**Decision:** The Research implementation must inherit the operating model learned from SEO/GEO Theme: reusable preset contracts, deterministic Theme rendering, structured models/slots, Theme-native SEO/GEO authority, rendered verification, readiness diagnostics and controlled mutations.
+
+The Research Manager is the site control plane. It must be designed to create, modify, hydrate, optimise and verify Pages, Posts/Insights and research entities through structured sources rather than manual layout editing.
+
+Manager changes must follow the established safety workflow where applicable: **Preview → Apply → Verify → Rollback**. Optimisation must cover structure, content, navigation, SEO, GEO, academic discoverability, media and multilingual consistency.
+
+**Reason:** This architecture is the reason for using the SEO/GEO Theme path: it increases development speed, makes frontend output reproducible, centralises optimisation, prevents page-by-page drift and lets improvements be reused across installations.
+
+**Reference:** `docs/15-manager-control-plane.md`
+
+**Status:** Accepted
