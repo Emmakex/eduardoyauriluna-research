@@ -50,7 +50,7 @@ jobs:
           grep -F "research-hardening.php" "$THEME/functions.php"
           grep -F "research-navigation.css" "$THEME/functions.php"
           grep -F "research-navigation.js" "$THEME/functions.php"
-          grep -F 'aria-controls="research-primary-panel"' "$THEME/header.php"
+          grep -F 'aria-controls="research-header-actions"' "$THEME/header.php"
           grep -F 'aria-expanded="false"' "$THEME/header.php"
           grep -F 'Escape' "$THEME/assets/research-navigation.js"
           test -s "$THEME/assets/research-navigation.css"
