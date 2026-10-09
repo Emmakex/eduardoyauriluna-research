@@ -19,12 +19,11 @@ final class Eduardo_Research_Manager_Executor {
         foreach ($plan['actions'] as $action) {
             $before = $this->read_state($action);
             if (is_wp_error($before)) { return $before; }
-            $expected = $this->expected_value($action);
             $rows[] = array(
                 'action'=>$action,
                 'before'=>$before,
-                'after'=>$expected,
-                'changed'=>! $this->state_matches_value($before, $expected),
+                'after'=>$this->desired_value($action),
+                'changed'=>! $this->state_matches_action($before, $action),
                 'risk'=>Eduardo_Research_Manager_Plan::action_risk($action),
             );
         }
@@ -103,10 +102,13 @@ final class Eduardo_Research_Manager_Executor {
         foreach ($plan['actions'] as $action) {
             $state = $this->read_state($action);
             if (is_wp_error($state)) { return $state; }
-            $expected = $this->expected_value($action);
-            $matches = $this->state_matches_value($state, $expected);
+            $matches = $this->state_matches_action($state, $action);
             $verified = $verified && $matches;
-            $results[] = array('action'=>$action,'matches'=>$matches,'stored'=>$state['value'] ?? null);
+            $results[] = array(
+                'action'=>$action,
+                'matches'=>$matches,
+                'stored'=>$state['value'] ?? null,
+            );
         }
         return array('verified'=>$verified,'plan_id'=>$plan['id'],'actions'=>$results,'verified_at'=>gmdate(DATE_W3C));
     }
@@ -153,7 +155,7 @@ final class Eduardo_Research_Manager_Executor {
             return array('exists'=>property_exists($post, $field),'value'=>$post->{$field} ?? null);
         }
         if ('create_page' === $action['type']) {
-            return $this->read_created_page_state($action);
+            return $this->read_page_creation_state($action);
         }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
@@ -172,44 +174,35 @@ final class Eduardo_Research_Manager_Executor {
         return array('exists'=>null !== $raw,'value'=>null === $raw ? null : maybe_unserialize($raw));
     }
 
-    private function read_created_page_state(array $action): array {
-        $routing = array(
+    private function read_page_creation_state(array $action): array {
+        $page = $this->find_page_for_creation_action($action);
+        $site_front = array(
             'show_on_front'=>(string) get_option('show_on_front', 'posts'),
             'page_on_front'=>(int) get_option('page_on_front', 0),
         );
-        $page = get_page_by_path((string) $action['wp_slug'], OBJECT, 'page');
         if (! $page instanceof WP_Post) {
-            return array('exists'=>false,'value'=>null,'id'=>0,'routing'=>$routing);
+            return array('exists'=>false,'value'=>null,'site_front'=>$site_front);
         }
+
+        $role = $this->read_post_meta_storage((int) $page->ID, '_eduardo_research_role');
+        $model = $this->read_post_meta_storage((int) $page->ID, '_eduardo_research_model');
+        $token = $this->read_post_meta_storage((int) $page->ID, '_eduardo_research_manager_creation_token');
         return array(
             'exists'=>true,
-            'id'=>(int) $page->ID,
-            'routing'=>$routing,
             'value'=>array(
-                'post_name'=>(string) $page->post_name,
-                'post_status'=>(string) $page->post_status,
-                'post_title'=>(string) $page->post_title,
-                'role'=>(string) get_post_meta($page->ID, '_eduardo_research_role', true),
-                'model'=>(string) get_post_meta($page->ID, '_eduardo_research_model', true),
-                'creation_token'=>(string) get_post_meta($page->ID, '_eduardo_research_manager_creation_token', true),
-                'front_page'=>'page' === $routing['show_on_front'] && (int) $page->ID === (int) $routing['page_on_front'],
+                'post_id'=>(int) $page->ID,
+                'post_type'=>(string) $page->post_type,
+                'status'=>(string) $page->post_status,
+                'wp_slug'=>(string) $page->post_name,
+                'title'=>(string) $page->post_title,
+                'role'=>! empty($role['exists']) ? (string) $role['value'] : '',
+                'model'=>! empty($model['exists']) ? (string) $model['value'] : '',
+                'creation_token'=>! empty($token['exists']) ? (string) $token['value'] : '',
+                'front_page'=>'page' === $site_front['show_on_front'] && (int) $page->ID === $site_front['page_on_front'],
+                'url'=>(string) get_permalink($page),
             ),
+            'site_front'=>$site_front,
         );
-    }
-
-    private function expected_value(array $action): mixed {
-        if ('create_page' === $action['type']) {
-            return array(
-                'post_name'=>(string) $action['wp_slug'],
-                'post_status'=>'publish',
-                'post_title'=>(string) $action['title'],
-                'role'=>(string) $action['role'],
-                'model'=>(string) $action['model'],
-                'creation_token'=>(string) $action['creation_token'],
-                'front_page'=>! empty($action['front_page']),
-            );
-        }
-        return $action['value'] ?? null;
     }
 
     private function write_action(array $action): bool|WP_Error {
@@ -229,66 +222,42 @@ final class Eduardo_Research_Manager_Executor {
 
         $state = $this->read_state($action);
         if (is_wp_error($state)) { return $state; }
-        if (! $this->state_matches_value($state, $this->expected_value($action))) {
+        if (! $this->state_matches_action($state, $action)) {
             return new WP_Error('research_manager_write_failed', 'WordPress did not persist the planned value.');
         }
         return true;
     }
 
-    private function create_page(array $action): int|WP_Error {
-        $contract_valid = $this->validate_create_page_contract($action);
-        if (is_wp_error($contract_valid)) { return $contract_valid; }
-        $current = $this->read_created_page_state($action);
-        if (! empty($current['exists'])) {
-            return new WP_Error('research_manager_page_creation_conflict', 'A Page already occupies the planned Theme slug. Re-run diagnostics before applying this plan.');
+    private function create_page(array $action): bool|WP_Error {
+        $collision = get_page_by_path((string) $action['wp_slug'], OBJECT, 'page');
+        if ($collision instanceof WP_Post) {
+            return new WP_Error('research_manager_page_creation_conflict', 'A WordPress Page already occupies the Theme-controlled slug. Nothing was overwritten.');
+        }
+        if ($this->find_page_by_creation_token((string) $action['creation_token']) instanceof WP_Post) {
+            return new WP_Error('research_manager_creation_token_collision', 'The Page creation provenance token is already in use.');
         }
 
-        $id = wp_insert_post(array(
+        $page_id = wp_insert_post(array(
             'post_type'=>'page',
             'post_status'=>'publish',
-            'post_title'=>(string) $action['title'],
             'post_name'=>(string) $action['wp_slug'],
+            'post_title'=>(string) $action['title'],
             'post_content'=>'',
             'post_excerpt'=>'',
+            'meta_input'=>array(
+                '_eduardo_research_role'=>(string) $action['role'],
+                '_eduardo_research_model'=>(string) $action['model'],
+                '_eduardo_research_manager_creation_token'=>(string) $action['creation_token'],
+            ),
         ), true);
-        if (is_wp_error($id)) { return $id; }
-        $id = (int) $id;
+        if (is_wp_error($page_id)) { return $page_id; }
 
-        update_post_meta($id, '_eduardo_research_manager_creation_token', (string) $action['creation_token']);
-        update_post_meta($id, '_eduardo_research_role', (string) $action['role']);
-        update_post_meta($id, '_eduardo_research_model', (string) $action['model']);
         if (! empty($action['front_page'])) {
             update_option('show_on_front', 'page');
-            update_option('page_on_front', $id);
+            update_option('page_on_front', (int) $page_id);
         }
-        flush_rewrite_rules(false);
-        return $id;
-    }
-
-    private function validate_create_page_contract(array $action): bool|WP_Error {
-        if (! function_exists('eduardo_research_preset')) {
-            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required to create Theme-owned Pages.');
-        }
-        $preset = eduardo_research_preset();
-        $definition = is_array($preset['pages'][$action['page_key']] ?? null) ? $preset['pages'][$action['page_key']] : array();
-        if (! $definition) {
-            return new WP_Error('research_manager_page_contract_missing', 'The requested Page is not defined by the active Research preset.');
-        }
-        $expected_slug = (string) ($definition['wp_slug'] ?? $definition['slug'] ?? $action['page_key']);
-        $labels = is_array($definition['labels'] ?? null) ? $definition['labels'] : array();
-        $expected_title = (string) ($labels['en'] ?? $definition['label'] ?? ucfirst((string) $action['page_key']));
-        $expected_role = (string) ($definition['role'] ?? '');
-        $expected_model = (string) ($definition['model'] ?? '');
-        $expected_front = 'home' === (string) $action['page_key'];
-        if (
-            $expected_slug !== (string) $action['wp_slug']
-            || $expected_title !== (string) $action['title']
-            || $expected_role !== (string) $action['role']
-            || $expected_model !== (string) $action['model']
-            || $expected_front !== ! empty($action['front_page'])
-        ) {
-            return new WP_Error('research_manager_page_contract_changed', 'Page creation plan no longer matches the active Research Theme contract. Re-preview the resource.');
-        }
+        clean_post_cache((int) $page_id);
+        $this->refresh_theme_routes();
         return true;
     }
 
@@ -307,7 +276,7 @@ final class Eduardo_Research_Manager_Executor {
                 $result = wp_update_post(array('ID'=>(int) $action['post_id'],(string) $action['field']=>$state['value']), true);
                 if (is_wp_error($result)) { return $result; }
             } elseif ('create_page' === $action['type']) {
-                $restored_page = $this->restore_created_page($action, $state);
+                $restored_page = $this->restore_page_creation($action, $state);
                 if (is_wp_error($restored_page)) { return $restored_page; }
             }
 
@@ -320,38 +289,103 @@ final class Eduardo_Research_Manager_Executor {
         return true;
     }
 
-    private function restore_created_page(array $action, array $state): bool|WP_Error {
+    private function restore_page_creation(array $action, array $state): bool|WP_Error {
         if (empty($state['exists'])) {
-            $current = $this->read_created_page_state($action);
-            if (! empty($current['exists'])) {
-                $token = (string) ($current['value']['creation_token'] ?? '');
-                if (! hash_equals((string) $action['creation_token'], $token)) {
-                    return new WP_Error('research_manager_page_rollback_conflict', 'Rollback refused to delete a Page whose provenance token does not match this Manager plan.');
+            $owned = $this->find_page_by_creation_token((string) $action['creation_token']);
+            if ($owned instanceof WP_Post) {
+                $deleted = wp_delete_post((int) $owned->ID, true);
+                if (! $deleted) {
+                    return new WP_Error('research_manager_page_rollback_failed', 'The Manager could not delete the Page it created.');
                 }
-                $deleted = wp_delete_post((int) $current['id'], true);
-                if (! $deleted instanceof WP_Post) {
-                    return new WP_Error('research_manager_page_rollback_failed', 'Manager-created Page could not be deleted during rollback.');
+            } else {
+                $occupant = get_page_by_path((string) $action['wp_slug'], OBJECT, 'page');
+                if ($occupant instanceof WP_Post) {
+                    return new WP_Error('research_manager_page_rollback_conflict', 'Rollback found a Page at the controlled slug without the Manager provenance token. It was not deleted.');
                 }
             }
         }
 
-        if (isset($state['routing']) && is_array($state['routing'])) {
-            update_option('show_on_front', (string) ($state['routing']['show_on_front'] ?? 'posts'));
-            update_option('page_on_front', (int) ($state['routing']['page_on_front'] ?? 0));
+        if (! empty($action['front_page']) && is_array($state['site_front'] ?? null)) {
+            update_option('show_on_front', (string) ($state['site_front']['show_on_front'] ?? 'posts'));
+            update_option('page_on_front', (int) ($state['site_front']['page_on_front'] ?? 0));
         }
-        flush_rewrite_rules(false);
+        $this->refresh_theme_routes();
         return true;
     }
 
-    private function state_matches_value(array $state, mixed $value): bool {
-        return ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $value);
+    private function desired_value(array $action): mixed {
+        if ('create_page' !== (string) ($action['type'] ?? '')) {
+            return $action['value'] ?? null;
+        }
+        return array(
+            'post_type'=>'page',
+            'status'=>'publish',
+            'wp_slug'=>(string) $action['wp_slug'],
+            'title'=>(string) $action['title'],
+            'role'=>(string) $action['role'],
+            'model'=>(string) $action['model'],
+            'creation_token'=>(string) $action['creation_token'],
+            'front_page'=>! empty($action['front_page']),
+        );
+    }
+
+    private function state_matches_action(array $state, array $action): bool {
+        if ('create_page' !== (string) ($action['type'] ?? '')) {
+            return ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $action['value'] ?? null);
+        }
+        if (empty($state['exists']) || ! is_array($state['value'] ?? null)) { return false; }
+        $stored = $state['value'];
+        $desired = $this->desired_value($action);
+        foreach (array('post_type','status','wp_slug','title','role','model','creation_token','front_page') as $key) {
+            if (! array_key_exists($key, $stored) || ! array_key_exists($key, $desired) || $stored[$key] !== $desired[$key]) {
+                return false;
+            }
+        }
+        return '' !== (string) ($stored['url'] ?? '');
     }
 
     private function states_equal(array $left, array $right): bool {
         if (! empty($left['exists']) !== ! empty($right['exists'])) { return false; }
-        if (! empty($left['exists']) && ! $this->values_equal($left['value'] ?? null, $right['value'] ?? null)) { return false; }
-        if (array_key_exists('routing', $right) && ! $this->values_equal($left['routing'] ?? null, $right['routing'])) { return false; }
+        if (empty($left['exists'])) {
+            if (array_key_exists('site_front', $right)) {
+                return $this->values_equal($left['site_front'] ?? null, $right['site_front'] ?? null);
+            }
+            return true;
+        }
+        if (! $this->values_equal($left['value'] ?? null, $right['value'] ?? null)) { return false; }
+        if (array_key_exists('site_front', $right)) {
+            return $this->values_equal($left['site_front'] ?? null, $right['site_front'] ?? null);
+        }
         return true;
+    }
+
+    private function find_page_for_creation_action(array $action): ?WP_Post {
+        $owned = $this->find_page_by_creation_token((string) $action['creation_token']);
+        if ($owned instanceof WP_Post) { return $owned; }
+        $page = get_page_by_path((string) $action['wp_slug'], OBJECT, 'page');
+        return $page instanceof WP_Post ? $page : null;
+    }
+
+    private function find_page_by_creation_token(string $token): ?WP_Post {
+        if ('' === $token) { return null; }
+        $posts = get_posts(array(
+            'post_type'=>'page',
+            'post_status'=>'any',
+            'posts_per_page'=>2,
+            'orderby'=>'ID',
+            'order'=>'ASC',
+            'meta_key'=>'_eduardo_research_manager_creation_token',
+            'meta_value'=>$token,
+            'suppress_filters'=>true,
+        ));
+        return isset($posts[0]) && $posts[0] instanceof WP_Post ? $posts[0] : null;
+    }
+
+    private function refresh_theme_routes(): void {
+        if (function_exists('eduardo_research_multilingual_rewrites')) {
+            eduardo_research_multilingual_rewrites();
+        }
+        flush_rewrite_rules(false);
     }
 
     private function values_equal(mixed $left, mixed $right): bool {
