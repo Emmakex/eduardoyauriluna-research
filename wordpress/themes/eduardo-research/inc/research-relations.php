@@ -176,7 +176,7 @@ function eduardo_research_insert_migrated_line(array $record, string $language, 
     update_post_meta($id, '_research_language', $language);
     update_post_meta($id, '_research_evidence_status', 'verified');
     update_post_meta($id, '_research_order', (string) $order);
-    foreach (array('question'=>'_research_central_question','central_question'=>'_research_central_question','status'=>'_research_status') as $source => $target) {
+    foreach (array('question'=>'_research_central_question','central_question'=>'_research_central_question','research_status'=>'_research_status') as $source => $target) {
         if (isset($localized[$source]) && is_scalar($localized[$source]) && '' !== trim((string) $localized[$source])) { update_post_meta($id, $target, sanitize_text_field((string) $localized[$source])); }
     }
     foreach (array('topics'=>'_research_topics','methods'=>'_research_methods') as $source => $target) {
