@@ -62,6 +62,14 @@ function eduardo_research_multilingual_rewrites(): void {
 }
 add_action('init', 'eduardo_research_multilingual_rewrites', 12);
 
+function eduardo_research_preserve_localized_canonical($redirect, string $requested) {
+    if (false === $redirect || 'es' !== eduardo_research_request_language()) { return $redirect; }
+    $target_path = trim((string) wp_parse_url((string) $redirect, PHP_URL_PATH), '/');
+    if ('es' !== $target_path && ! str_starts_with($target_path, 'es/')) { return false; }
+    return $redirect;
+}
+add_filter('redirect_canonical', 'eduardo_research_preserve_localized_canonical', 20, 2);
+
 function eduardo_research_translation_url(string $language, ?string $key = null): string {
     $language = isset(eduardo_research_languages()[$language]) ? $language : eduardo_research_default_language();
     $key = $key ?: eduardo_research_current_page_key();
