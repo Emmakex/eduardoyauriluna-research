@@ -47,6 +47,26 @@ function eduardo_research_output_schema_type(int $post_id): string {
     return $map[$type] ?? 'CreativeWork';
 }
 
+function eduardo_research_alternate_urls(): array {
+    $key = eduardo_research_current_page_key();
+    if ($key) {
+        return array('en'=>eduardo_research_page_url($key, 'en'), 'es'=>eduardo_research_page_url($key, 'es'));
+    }
+
+    if (is_singular(array('research_output','research_project','research_software','research_dataset','post'))) {
+        $post_id = get_queried_object_id();
+        if ($post_id <= 0 || ! function_exists('eduardo_research_post_language')) { return array(); }
+        $record_language = eduardo_research_post_language($post_id);
+        $urls = array($record_language=>(string) get_permalink($post_id));
+        $other = 'es' === $record_language ? 'en' : 'es';
+        $alternate = eduardo_research_record_translation_url($post_id, $other);
+        if ('' !== $alternate) { $urls[$other] = $alternate; }
+        return $urls;
+    }
+
+    return array();
+}
+
 function eduardo_research_head_metadata(): void {
     if (is_admin()) { return; }
     $url = eduardo_research_current_url();
@@ -54,14 +74,14 @@ function eduardo_research_head_metadata(): void {
     $title = wp_get_document_title();
     $language = eduardo_research_current_language();
     $locale = eduardo_research_current_locale();
-    $key = eduardo_research_current_page_key();
+    $alternates = eduardo_research_alternate_urls();
 
     if ('' !== $url) { echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n"; }
-    if ($key) {
-        foreach (array('en','es') as $alternate) {
-            echo '<link rel="alternate" hreflang="' . esc_attr($alternate) . '" href="' . esc_url(eduardo_research_page_url($key, $alternate)) . '">' . "\n";
-        }
-        echo '<link rel="alternate" hreflang="x-default" href="' . esc_url(eduardo_research_page_url($key, 'en')) . '">' . "\n";
+    foreach ($alternates as $code => $alternate_url) {
+        echo '<link rel="alternate" hreflang="' . esc_attr((string) $code) . '" href="' . esc_url((string) $alternate_url) . '">' . "\n";
+    }
+    if (isset($alternates['en'])) {
+        echo '<link rel="alternate" hreflang="x-default" href="' . esc_url((string) $alternates['en']) . '">' . "\n";
     }
     if ('' !== $description) { echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n"; }
     $article = is_singular(array('research_output','post'));
@@ -69,7 +89,10 @@ function eduardo_research_head_metadata(): void {
     echo '<meta property="og:title" content="' . esc_attr($title) . '">' . "\n";
     echo '<meta property="og:site_name" content="' . esc_attr((string) get_bloginfo('name')) . '">' . "\n";
     echo '<meta property="og:locale" content="' . esc_attr($locale) . '">' . "\n";
-    echo '<meta property="og:locale:alternate" content="' . esc_attr('es' === $language ? 'en_US' : 'es_ES') . '">' . "\n";
+    $other = 'es' === $language ? 'en' : 'es';
+    if (isset($alternates[$other])) {
+        echo '<meta property="og:locale:alternate" content="' . esc_attr('es' === $language ? 'en_US' : 'es_ES') . '">' . "\n";
+    }
     if ('' !== $url) { echo '<meta property="og:url" content="' . esc_url($url) . '">' . "\n"; }
     if ('' !== $description) { echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n"; }
     echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
