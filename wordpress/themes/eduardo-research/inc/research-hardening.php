@@ -28,27 +28,48 @@ function eduardo_research_gate_public_academic_meta($value, int $object_id, stri
 }
 add_filter('get_post_metadata', 'eduardo_research_gate_public_academic_meta', 20, 4);
 
-function eduardo_research_publication_filter_verification_clauses(): array {
-    $clauses = array();
-    if (isset($_GET['output_type']) && '' !== sanitize_key((string) wp_unslash($_GET['output_type']))) {
-        $clauses[] = array('key'=>'_research_output_type_verified','value'=>'1','compare'=>'=');
+function eduardo_research_meta_query_has_key(array $meta_query, string $key): bool {
+    foreach ($meta_query as $clause_key => $clause) {
+        if ('relation' === $clause_key) { continue; }
+        if (! is_array($clause)) { continue; }
+        if (isset($clause['key']) && $key === (string) $clause['key']) { return true; }
+        if (eduardo_research_meta_query_has_key($clause, $key)) { return true; }
     }
-    if (isset($_GET['review_status']) && '' !== sanitize_key((string) wp_unslash($_GET['review_status']))) {
-        $clauses[] = array('key'=>'_research_review_status_verified','value'=>'1','compare'=>'=');
+    return false;
+}
+
+/**
+ * Build mandatory evidence clauses from the query itself rather than from the request.
+ * This protects every public Research Output query, not only the collection form.
+ */
+function eduardo_research_publication_query_verification_clauses(array $meta_query): array {
+    $clauses = array();
+    $requirements = array(
+        '_research_output_type'=>'_research_output_type_verified',
+        '_research_review_status'=>'_research_review_status_verified',
+    );
+    foreach ($requirements as $claim_key => $verified_key) {
+        if (! eduardo_research_meta_query_has_key($meta_query, $claim_key)) { continue; }
+        if (eduardo_research_meta_query_has_key($meta_query, $verified_key)) { continue; }
+        $clauses[] = array('key'=>$verified_key,'value'=>'1','compare'=>'=');
     }
     return $clauses;
 }
 
 /** Prevent filtered collection counts/results from revealing unverified academic claims. */
 function eduardo_research_harden_publication_filter_query(WP_Query $query): void {
-    if (is_admin() || (defined('WP_CLI') && WP_CLI)) { return; }
+    if (is_admin()) { return; }
     $type = $query->get('post_type');
-    if ('research_output' !== $type) { return; }
-    $clauses = eduardo_research_publication_filter_verification_clauses();
-    if (! $clauses) { return; }
+    $is_output_query = 'research_output' === $type || (is_array($type) && in_array('research_output', $type, true));
+    if (! $is_output_query) { return; }
+
     $existing = $query->get('meta_query');
+    $existing = is_array($existing) ? $existing : array();
+    $clauses = eduardo_research_publication_query_verification_clauses($existing);
+    if (! $clauses) { return; }
+
     $combined = array('relation'=>'AND');
-    if (is_array($existing) && $existing) { $combined[] = $existing; }
+    if ($existing) { $combined[] = $existing; }
     foreach ($clauses as $clause) { $combined[] = $clause; }
     $query->set('meta_query', $combined);
 }
