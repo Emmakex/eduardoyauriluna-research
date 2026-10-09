@@ -1,0 +1,191 @@
+name: Research Manager Readiness Remediation
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-manager-remediation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-manager-remediation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remediation:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-remediation
+          mkdir -p /tmp/research-manager-remediation
+          cd /tmp/research-manager-remediation
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://remediation.test --title='Research Remediation Test' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/plugins/eduardo-research-manager wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp eval '
+          if (! Eduardo_Research_Manager::remediation() instanceof Eduardo_Research_Manager_Remediation) { exit(1); }
+          $report = Eduardo_Research_Manager::diagnostics()->run();
+          if (empty($report["ready"])) { fwrite(STDERR, wp_json_encode($report)); exit(1); }
+          ' --allow-root
+
+      - name: Repair missing Theme Page and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remediation
+          wp eval '
+          wp_set_current_user(1);
+          $remediation = Eduardo_Research_Manager::remediation();
+          $executor = Eduardo_Research_Manager::executor();
+          $id = Eduardo_Research_Manager::contract()->page_id("legal-notice");
+          if ($id <= 0 || ! wp_delete_post($id, true)) { exit(1); }
+
+          $before = $remediation->verify("page-legal-notice");
+          if (is_wp_error($before) || ! empty($before["verified"]) || "fail" !== $before["status"]) { fwrite(STDERR, wp_json_encode($before)); exit(1); }
+          $plan = $remediation->build_plan("page-legal-notice");
+          if (is_wp_error($plan) || "standard" !== $plan["risk"] || "create_page" !== $plan["actions"][0]["type"]) { fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() : wp_json_encode($plan)); exit(1); }
+          $preview = $executor->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"])) { exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+          $after = $remediation->verify("page-legal-notice");
+          if (is_wp_error($after) || empty($after["verified"])) { fwrite(STDERR, wp_json_encode($after)); exit(1); }
+          $rolled = $executor->rollback((string) $applied["snapshot_id"]);
+          if (is_wp_error($rolled)) { exit(1); }
+          $restored = $remediation->verify("page-legal-notice");
+          if (is_wp_error($restored) || ! empty($restored["verified"])) { exit(1); }
+          ' --allow-root
+
+      - name: Repair Page publication role model drift and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remediation
+          wp eval '
+          wp_set_current_user(1);
+          $contract = Eduardo_Research_Manager::contract();
+          $remediation = Eduardo_Research_Manager::remediation();
+          $executor = Eduardo_Research_Manager::executor();
+          $id = $contract->page_id("about");
+          $definition = $contract->pages()["about"];
+          wp_update_post(["ID"=>$id,"post_status"=>"draft"]);
+          update_post_meta($id, "_eduardo_research_role", "wrong-role");
+          update_post_meta($id, "_eduardo_research_model", "wrong-model");
+
+          $plan = $remediation->build_plan("page-about");
+          if (is_wp_error($plan) || "standard" !== $plan["risk"] || count($plan["actions"]) !== 3) { fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() : wp_json_encode($plan)); exit(1); }
+          $types = [];
+          foreach ($plan["actions"] as $action) { $types[] = $action["type"] . ":" . ($action["field"] ?? $action["key"] ?? ""); }
+          if (! in_array("post_field:post_status", $types, true) || ! in_array("post_meta:_eduardo_research_role", $types, true) || ! in_array("post_meta:_eduardo_research_model", $types, true)) { exit(1); }
+
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+          $verified = $remediation->verify("page-about");
+          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified)); exit(1); }
+          $rolled = $executor->rollback((string) $applied["snapshot_id"]);
+          if (is_wp_error($rolled)) { exit(1); }
+          $post = get_post($id);
+          if (! $post instanceof WP_Post || "draft" !== $post->post_status || "wrong-role" !== get_post_meta($id, "_eduardo_research_role", true) || "wrong-model" !== get_post_meta($id, "_eduardo_research_model", true)) { exit(1); }
+
+          wp_update_post(["ID"=>$id,"post_status"=>"publish"]);
+          update_post_meta($id, "_eduardo_research_role", (string) $definition["role"]);
+          update_post_meta($id, "_eduardo_research_model", (string) $definition["model"]);
+          ' --allow-root
+
+      - name: Repair static front page and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remediation
+          wp eval '
+          wp_set_current_user(1);
+          $remediation = Eduardo_Research_Manager::remediation();
+          $executor = Eduardo_Research_Manager::executor();
+          update_option("show_on_front", "posts");
+          update_option("page_on_front", 0);
+          $plan = $remediation->build_plan("front-page");
+          if (is_wp_error($plan) || "standard" !== $plan["risk"] || count($plan["actions"]) !== 2) { exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+          $verified = $remediation->verify("front-page");
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          if (is_wp_error($executor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+          if ("posts" !== get_option("show_on_front") || 0 !== (int) get_option("page_on_front")) { exit(1); }
+          ' --allow-root
+
+      - name: Repair native language contract and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remediation
+          wp eval '
+          wp_set_current_user(1);
+          $remediation = Eduardo_Research_Manager::remediation();
+          $executor = Eduardo_Research_Manager::executor();
+          $broken = ["default"=>"en","enabled"=>["en"]];
+          update_option("eduardo_research_native_languages", $broken, false);
+          $plan = $remediation->build_plan("language-contract");
+          if (is_wp_error($plan) || "standard" !== $plan["risk"]) { exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { exit(1); }
+          $verified = $remediation->verify("language-contract");
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          $value = get_option("eduardo_research_native_languages");
+          if (! is_array($value) || ["en","es"] !== array_values($value["enabled"] ?? [])) { exit(1); }
+          if (is_wp_error($executor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+          if (maybe_serialize($broken) !== maybe_serialize(get_option("eduardo_research_native_languages"))) { exit(1); }
+          ' --allow-root
+
+      - name: Reject manual-only and arbitrary structural mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remediation
+          wp eval '
+          wp_set_current_user(1);
+          $remediation = Eduardo_Research_Manager::remediation();
+          update_option("eduardo_research_evidence", "broken", false);
+          $manual = $remediation->build_plan("evidence-store");
+          if (! is_wp_error($manual) || "research_manager_remediation_manual_only" !== $manual->get_error_code()) { exit(1); }
+          update_option("eduardo_research_evidence", [], false);
+
+          $bad_front = Eduardo_Research_Manager_Plan::create("Unsafe front option", [["type"=>"option","key"=>"show_on_front","value"=>"posts"]]);
+          if (! is_wp_error($bad_front) || "research_manager_front_page_option_not_allowed" !== $bad_front->get_error_code()) { exit(1); }
+          $bad_page = Eduardo_Research_Manager_Plan::create("Unsafe front id", [["type"=>"option","key"=>"page_on_front","value"=>999999]]);
+          if (! is_wp_error($bad_page) || "research_manager_front_page_option_not_allowed" !== $bad_page->get_error_code()) { exit(1); }
+          $post_id = wp_insert_post(["post_type"=>"post","post_status"=>"draft","post_title"=>"Not Theme owned"]);
+          $bad_status = Eduardo_Research_Manager_Plan::create("Unsafe publish", [["type"=>"post_field","post_id"=>$post_id,"field"=>"post_status","value"=>"publish"]]);
+          if (! is_wp_error($bad_status) || "research_manager_post_status_not_allowed" !== $bad_status->get_error_code()) { exit(1); }
+          wp_delete_post($post_id, true);
+          ' --allow-root
