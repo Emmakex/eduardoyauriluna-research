@@ -46,3 +46,13 @@ function eduardo_research_install(): void {
     update_option('eduardo_research_native_languages', array('default'=>'en','enabled'=>array('en','es')));
 }
 add_action('after_switch_theme', 'eduardo_research_install');
+
+function eduardo_research_maybe_upgrade(): void {
+    if ((int) get_option('eduardo_research_theme_bootstrap_version', 0) >= 3) { return; }
+    eduardo_research_multilingual_rewrites();
+    eduardo_research_discovery_rewrites();
+    flush_rewrite_rules(false);
+    update_option('eduardo_research_theme_bootstrap_version', '3');
+    update_option('eduardo_research_native_languages', array('default'=>'en','enabled'=>array('en','es')));
+}
+add_action('init', 'eduardo_research_maybe_upgrade', 30);
