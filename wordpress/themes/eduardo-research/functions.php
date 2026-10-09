@@ -9,6 +9,7 @@ require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
 require_once get_template_directory() . '/inc/research-discovery.php';
 require_once get_template_directory() . '/inc/research-breadcrumbs.php';
+require_once get_template_directory() . '/inc/research-install.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
@@ -16,6 +17,7 @@ function eduardo_research_setup(): void {
     add_theme_support('post-thumbnails');
     add_theme_support('responsive-embeds');
     add_theme_support('html5', array('search-form', 'gallery', 'caption', 'style', 'script'));
+    remove_action('wp_head', 'rel_canonical');
 }
 add_action('after_setup_theme', 'eduardo_research_setup');
 
