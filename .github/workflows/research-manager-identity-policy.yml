@@ -1,0 +1,127 @@
+name: Research Manager Identity Policy
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - '.github/workflows/research-manager-identity-policy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - '.github/workflows/research-manager-identity-policy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  structured-title-evidence:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install clean WordPress with Theme and Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-identity
+          mkdir -p /tmp/research-manager-identity
+          cd /tmp/research-manager-identity
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://identity.test --title='Research Identity Test' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/plugins/eduardo-research-manager wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Verify structured titles require evidence and rollback safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-identity
+          wp eval '
+          wp_set_current_user(1);
+          $executor = Eduardo_Research_Manager::executor();
+          $types = ["research_output","research_project","research_software","research_dataset"];
+
+          foreach ($types as $type) {
+              $original = "Original " . $type;
+              $changed = "Verified title " . $type;
+              $id = wp_insert_post(["post_type"=>$type,"post_status"=>"publish","post_title"=>$original,"post_name"=>sanitize_title($original)]);
+              if ($id <= 0) { exit(1); }
+
+              $action = [["type"=>"post_field","post_id"=>$id,"field"=>"post_title","value"=>$changed]];
+              $blocked_plan = Eduardo_Research_Manager_Plan::create("Rename structured research object", $action);
+              if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { fwrite(STDERR, $type . ": wrong risk\n"); exit(1); }
+
+              $preview = $executor->preview($blocked_plan);
+              if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { fwrite(STDERR, $type . ": preview gate failed\n"); exit(1); }
+              $blocked = $executor->apply($blocked_plan);
+              if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { fwrite(STDERR, $type . ": apply was not blocked\n"); exit(1); }
+              if ($original !== get_the_title($id)) { fwrite(STDERR, $type . ": blocked mutation changed title\n"); exit(1); }
+
+              $plan = Eduardo_Research_Manager_Plan::create("Rename structured research object", $action, [
+                  "evidence_confirmed"=>true,
+                  "evidence_reference"=>"CI verified identity source for " . $type,
+              ]);
+              if (is_wp_error($plan) || "evidence-required" !== $plan["risk"]) { exit(1); }
+              $applied = $executor->apply($plan);
+              if (is_wp_error($applied) || $changed !== get_the_title($id)) { fwrite(STDERR, $type . ": evidenced rename failed\n"); exit(1); }
+              $rolled = $executor->rollback((string) $applied["snapshot_id"]);
+              if (is_wp_error($rolled) || $original !== get_the_title($id)) { fwrite(STDERR, $type . ": rollback failed\n"); exit(1); }
+              wp_delete_post($id, true);
+          }
+          ' --allow-root
+
+      - name: Verify editorial titles and narrative edits remain editorial
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-identity
+          wp eval '
+          wp_set_current_user(1);
+          $executor = Eduardo_Research_Manager::executor();
+
+          foreach (["post","page"] as $type) {
+              $id = wp_insert_post(["post_type"=>$type,"post_status"=>"publish","post_title"=>"Editorial original " . $type]);
+              $plan = Eduardo_Research_Manager_Plan::create("Editorial title update", [[
+                  "type"=>"post_field","post_id"=>$id,"field"=>"post_title","value"=>"Editorial changed " . $type,
+              ]]);
+              if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { fwrite(STDERR, $type . ": editorial title was over-gated\n"); exit(1); }
+              $preview = $executor->preview($plan);
+              if (is_wp_error($preview) || empty($preview["apply_allowed"])) { exit(1); }
+              $applied = $executor->apply($plan);
+              if (is_wp_error($applied)) { exit(1); }
+              if (is_wp_error($executor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+              wp_delete_post($id, true);
+          }
+
+          $id = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Structured output","post_excerpt"=>"Original excerpt"]);
+          $plan = Eduardo_Research_Manager_Plan::create("Narrative excerpt update", [[
+              "type"=>"post_field","post_id"=>$id,"field"=>"post_excerpt","value"=>"Editorial excerpt update",
+          ]]);
+          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { fwrite(STDERR, "Narrative edit was over-gated\n"); exit(1); }
+          $preview = $executor->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"])) { exit(1); }
+          wp_delete_post($id, true);
+          ' --allow-root
