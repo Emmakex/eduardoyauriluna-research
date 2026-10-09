@@ -4,7 +4,7 @@ Independent WordPress control plane for the Eduardo Research Theme. The Manager 
 
 ## Current version
 
-`0.8.0`
+`0.9.0`
 
 The Manager now covers:
 
@@ -14,7 +14,8 @@ The Manager now covers:
 - evidence-aware Research Output / Publication creation and updates;
 - evidence-aware Research Project creation and updates;
 - evidence-aware Research Software creation and updates;
-- evidence-aware Research Dataset creation and updates.
+- evidence-aware Research Dataset creation and updates;
+- rendered-frontend verification over the real public HTTP response.
 
 ## Evidence discipline
 
@@ -37,7 +38,7 @@ A dedicated `create_dataset` action supports:
 - validated http/https repository and documentation URLs;
 - DOI with Manager-controlled `_research_doi_verified` flag;
 - license;
-- Theme-controlled access level: `open`, `restricted`, `embargoed`, `on_request`;
+- Theme-controlled access level: `open`, `restricted`, `embargoed`, `request_access`, `closed`;
 - structured formats list;
 - methodology and provenance statements;
 - dataset size description;
@@ -54,6 +55,25 @@ Creation rollback deletes only the `research_dataset` carrying the matching Mana
 ## Research-object executor registry
 
 From 0.8.0 the executor uses a common internal registry for Research Outputs, Projects, Software and Datasets. Each resource still has its own service/validation contract, but creation, stored-state verification and provenance-safe rollback share the same execution path. This reduces duplicate mutation logic without weakening resource-specific evidence gates.
+
+## Rendered frontend verification
+
+`Eduardo_Research_Manager_Frontend_Verifier` adds a read-only verification layer after stored-state verification.
+
+The verifier can inspect Theme-owned surfaces and supported research/editorial records through their real public HTTP response. It checks:
+
+- HTTP `200`;
+- an HTML response;
+- the Research Theme body marker;
+- canonical presence and equality with the requested public URL;
+- absence of a `noindex` robots directive;
+- expected EN/ES `<html lang>` state;
+- resource title presence in the document title where applicable;
+- expected Schema.org `@type` for Theme surfaces and structured research objects.
+
+HTTP verification is deliberately restricted to the current WordPress origin. External URLs are rejected before any request is made, so this adapter cannot be used as a generic SSRF-capable fetcher.
+
+`Eduardo_Research_Manager::frontend()` exposes the verifier without making it part of Theme rendering. The Theme remains the only frontend authority; the Manager only inspects what the Theme actually emitted.
 
 ## Other resource services
 
@@ -79,7 +99,8 @@ WordPress → Tools → Research Manager exposes readiness/control-plane state. 
 
 ## Next implementation blocks
 
-1. Rendered-frontend verification adapters.
-2. Readiness remediation plans wired to Preview/Apply.
-3. EN/ES record pairing and translation operations.
-4. External academic connectors behind explicit authorization and additional evidence gates.
+1. Wire rendered-frontend verification into post-Apply resource workflows.
+2. Cross-resource evidence policy hardening for structured-object title changes.
+3. Readiness remediation plans wired to Preview/Apply.
+4. EN/ES record pairing and translation operations.
+5. External academic connectors behind explicit authorization and additional evidence gates.
