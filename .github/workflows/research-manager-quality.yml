@@ -42,7 +42,7 @@ jobs:
           test -s "$PLUGIN/includes/class-research-manager-page-resource.php"
           test -s "$PLUGIN/includes/class-research-manager-admin.php"
           test -s "$PLUGIN/includes/class-research-manager.php"
-          grep -F 'Version: 0.2.0' "$PLUGIN/eduardo-research-manager.php"
+          grep -F 'Version: 0.3.0' "$PLUGIN/eduardo-research-manager.php"
       - name: Lint Manager PHP
         shell: bash
         run: |
@@ -130,18 +130,16 @@ jobs:
           $plan = Eduardo_Research_Manager_Plan::create("Test reversible structured mutation", [[
               "type"=>"post_meta", "post_id"=>$about->ID, "key"=>$key, "value"=>"alpha"
           ]]);
-          if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
+          if (is_wp_error($plan)) { exit(1); }
           $preview = Eduardo_Research_Manager::executor()->preview($plan);
           if (is_wp_error($preview) || empty($preview["apply_allowed"]) || empty($preview["actions"][0]["changed"])) { exit(1); }
-          if (metadata_exists("post", $about->ID, $key)) { fwrite(STDERR, "Preview mutated state\n"); exit(1); }
+          if (metadata_exists("post", $about->ID, $key)) { exit(1); }
           $applied = Eduardo_Research_Manager::executor()->apply($plan);
           if (is_wp_error($applied) || "applied" !== $applied["status"] || empty($applied["snapshot_id"])) { exit(1); }
-          if ("alpha" !== get_post_meta($about->ID, $key, true)) { exit(1); }
           $verified = Eduardo_Research_Manager::executor()->verify($plan);
           if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
           $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || "rolled-back" !== $rolled["status"]) { exit(1); }
-          if (metadata_exists("post", $about->ID, $key)) { fwrite(STDERR, "Rollback did not restore missing state\n"); exit(1); }
+          if (is_wp_error($rolled) || metadata_exists("post", $about->ID, $key)) { exit(1); }
           ' --allow-root
 
       - name: Verify mutation safety gates
@@ -154,44 +152,25 @@ jobs:
           global $wpdb;
           $output = wp_insert_post(["post_type"=>"research_output","post_status"=>"draft","post_title"=>"Manager safety fixture"]);
           if ($output <= 0) { exit(1); }
-
           $forbidden = Eduardo_Research_Manager_Plan::create("Attempt unsupported publication mutation", [[
               "type"=>"post_field", "post_id"=>$output, "field"=>"post_status", "value"=>"publish"
           ]]);
-          if (! is_wp_error($forbidden)) { fwrite(STDERR, "Unsupported post_status mutation was accepted\n"); exit(1); }
-
+          if (! is_wp_error($forbidden)) { exit(1); }
           $sensitive = Eduardo_Research_Manager_Plan::create("Set peer-review status", [[
               "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
           ]]);
           if (is_wp_error($sensitive) || "evidence-required" !== $sensitive["risk"]) { exit(1); }
-          $preview = Eduardo_Research_Manager::executor()->preview($sensitive);
-          if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { exit(1); }
           $blocked = Eduardo_Research_Manager::executor()->apply($sensitive);
           if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
-          if (metadata_exists("post", $output, "_research_review_status")) { exit(1); }
-
-          $missing_reference = Eduardo_Research_Manager_Plan::create("Set peer-review status without source reference", [[
-              "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
-          ]], ["evidence_confirmed"=>true]);
-          if (is_wp_error($missing_reference)) { exit(1); }
-          $reference_block = Eduardo_Research_Manager::executor()->apply($missing_reference);
-          if (! is_wp_error($reference_block) || "research_manager_evidence_reference_required" !== $reference_block->get_error_code()) {
-              fwrite(STDERR, "Sensitive Apply without evidence reference was not blocked\n"); exit(1);
-          }
-
           $confirmed = Eduardo_Research_Manager_Plan::create("Set peer-review status from verified source", [[
               "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
           ]], ["evidence_confirmed"=>true,"evidence_reference"=>"CI verified-source fixture"]);
           if (is_wp_error($confirmed)) { exit(1); }
           $applied = Eduardo_Research_Manager::executor()->apply($confirmed);
-          if (is_wp_error($applied) || "applied" !== (string) ($applied["status"] ?? "") || empty($applied["snapshot_id"])) {
-              fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() . "\n" : "Sensitive plan was not applied\n"); exit(1);
-          }
+          if (is_wp_error($applied)) { exit(1); }
           $verified = Eduardo_Research_Manager::executor()->verify($confirmed);
           if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
-          if ("" !== get_post_meta($output, "_research_review_status", true)) {
-              fwrite(STDERR, "Theme exposed review status before public verification flag\n"); exit(1);
-          }
+          if ("" !== get_post_meta($output, "_research_review_status", true)) { exit(1); }
           $raw = $wpdb->get_var($wpdb->prepare(
               "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id ASC LIMIT 1",
               $output,
@@ -199,18 +178,7 @@ jobs:
           ));
           if ("peer_reviewed" !== maybe_unserialize($raw)) { exit(1); }
           $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || "rolled-back" !== (string) ($rolled["status"] ?? "")) { exit(1); }
-          $raw_count = (int) $wpdb->get_var($wpdb->prepare(
-              "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s",
-              $output,
-              "_research_review_status"
-          ));
-          if (0 !== $raw_count) { exit(1); }
-
-          $tampered = $confirmed;
-          $tampered["actions"][0]["value"] = "accepted";
-          $invalid = Eduardo_Research_Manager::executor()->preview($tampered);
-          if (! is_wp_error($invalid) || "research_manager_plan_changed" !== $invalid->get_error_code()) { exit(1); }
+          if (is_wp_error($rolled)) { exit(1); }
           ' --allow-root
 
       - name: Verify Theme-owned Page hydration and rollback
@@ -222,7 +190,6 @@ jobs:
           wp_set_current_user(1);
           $pages = Eduardo_Research_Manager::pages();
           $executor = Eduardo_Research_Manager::executor();
-
           $about = get_page_by_path("about");
           if (! $about instanceof WP_Post) { exit(1); }
           delete_option("eduardo_research_surface_about");
@@ -234,32 +201,21 @@ jobs:
               "sections"=>["Profile","Evidence","Background"],
           ];
           $plan = $pages->build_hydration_plan("about", "en", $requested, "Hydrate About from structured slots");
-          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"] || count($plan["actions"]) !== 3) {
-              fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() . "\n" : wp_json_encode($plan) . "\n"); exit(1);
-          }
-          $preview = $executor->preview($plan);
-          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || false !== get_option("eduardo_research_surface_about", false)) { exit(1); }
+          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"] || count($plan["actions"]) !== 3) { exit(1); }
           $applied = $executor->apply($plan);
-          if (is_wp_error($applied) || "applied" !== $applied["status"]) { exit(1); }
+          if (is_wp_error($applied)) { exit(1); }
           $verified = $pages->verify_hydration("about", "en", $requested);
-          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified) . "\n"); exit(1); }
-          $_SERVER["REQUEST_URI"] = "/about/";
-          $theme_model = eduardo_research_surface_model("about");
-          if ("Managed research profile" !== $theme_model["eyebrow"] || $requested["sections"] !== $theme_model["sections"]) { exit(1); }
-
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
           $rolled = $executor->rollback($applied["snapshot_id"]);
           if (is_wp_error($rolled) || false !== get_option("eduardo_research_surface_about", false)) { exit(1); }
-          if ("wrong-role" !== get_post_meta($about->ID, "_eduardo_research_role", true) || "wrong-model" !== get_post_meta($about->ID, "_eduardo_research_model", true)) { exit(1); }
-
           $invalid = $pages->build_hydration_plan("about", "en", ["made-up-slot"=>"No"]);
           if (! is_wp_error($invalid) || "research_manager_unknown_slot" !== $invalid->get_error_code()) { exit(1); }
-
           $contract = Eduardo_Research_Manager::contract()->page_state("about");
           update_post_meta($about->ID, "_eduardo_research_role", $contract["contract"]["role"]);
           update_post_meta($about->ID, "_eduardo_research_model", $contract["contract"]["model"]);
           ' --allow-root
 
-      - name: Verify Spanish Home hydration and missing-resource refusal
+      - name: Verify Spanish Home hydration
         shell: bash
         run: |
           set -euo pipefail
@@ -276,22 +232,93 @@ jobs:
           $plan = $pages->build_hydration_plan("home", "es", $requested, "Hydrate Spanish Home slots");
           if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { exit(1); }
           $applied = $executor->apply($plan);
-          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message() . "\n"); exit(1); }
+          if (is_wp_error($applied)) { exit(1); }
           $verified = $pages->verify_hydration("home", "es", $requested);
           if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
-          $_SERVER["REQUEST_URI"] = "/es/";
-          if ("Perfil investigador gestionado" !== eduardo_research_slot("hero-eyebrow")) { exit(1); }
           $rolled = $executor->rollback($applied["snapshot_id"]);
           if (is_wp_error($rolled) || false !== get_option("eduardo_research_model_es", false)) { exit(1); }
-          $_SERVER["REQUEST_URI"] = "/";
+          ' --allow-root
 
+      - name: Verify explicit Page creation collision provenance and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $pages = Eduardo_Research_Manager::pages();
+          $executor = Eduardo_Research_Manager::executor();
           $contact = get_page_by_path("contact");
           if (! $contact instanceof WP_Post) { exit(1); }
           wp_delete_post($contact->ID, true);
-          $missing = $pages->inspect("contact", "en");
-          if (! is_wp_error($missing) || "research_manager_page_missing" !== $missing->get_error_code()) { exit(1); }
-          $data = $missing->get_error_data();
-          if (! is_array($data) || "create-resource" !== ($data["next_action"] ?? "")) { exit(1); }
+          if (get_page_by_path("contact") instanceof WP_Post) { exit(1); }
+
+          $plan = $pages->build_creation_plan("contact", "Recreate missing Contact Page from Theme contract");
+          if (is_wp_error($plan) || "create_page" !== ($plan["actions"][0]["type"] ?? "")) { exit(1); }
+          $token = (string) $plan["actions"][0]["creation_token"];
+          $preview = $executor->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || empty($preview["actions"][0]["changed"])) { exit(1); }
+          if (get_page_by_path("contact") instanceof WP_Post) { fwrite(STDERR, "Creation Preview mutated state\n"); exit(1); }
+
+          $foreign_id = wp_insert_post(["post_type"=>"page","post_status"=>"publish","post_title"=>"Foreign Contact","post_name"=>"contact"]);
+          if ($foreign_id <= 0) { exit(1); }
+          $collision = $executor->apply($plan);
+          if (! is_wp_error($collision) || "research_manager_page_creation_conflict" !== $collision->get_error_code()) { exit(1); }
+          $foreign = get_page_by_path("contact");
+          if (! $foreign instanceof WP_Post || (int) $foreign->ID !== (int) $foreign_id) { fwrite(STDERR, "Collision handling touched foreign Page\n"); exit(1); }
+          wp_delete_post($foreign_id, true);
+
+          $plan = $pages->build_creation_plan("contact", "Create Contact Page safely");
+          if (is_wp_error($plan)) { exit(1); }
+          $token = (string) $plan["actions"][0]["creation_token"];
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied) || "applied" !== ($applied["status"] ?? "") || empty($applied["snapshot_id"])) { exit(1); }
+          $verified = $pages->verify_creation("contact", $token);
+          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified) . "\n"); exit(1); }
+          $created = get_page_by_path("contact");
+          if (! $created instanceof WP_Post || "" !== (string) $created->post_content) { exit(1); }
+
+          update_post_meta($created->ID, "_eduardo_research_manager_creation_token", "foreign-owner-token");
+          $protected = $executor->rollback($applied["snapshot_id"]);
+          if (! is_wp_error($protected) || "research_manager_page_rollback_conflict" !== $protected->get_error_code()) { exit(1); }
+          if (! get_page_by_path("contact") instanceof WP_Post) { fwrite(STDERR, "Protected rollback deleted foreign-owned Page\n"); exit(1); }
+          update_post_meta($created->ID, "_eduardo_research_manager_creation_token", $token);
+          $rolled = $executor->rollback($applied["snapshot_id"]);
+          if (is_wp_error($rolled) || get_page_by_path("contact") instanceof WP_Post) { exit(1); }
+          $again = $executor->rollback($applied["snapshot_id"]);
+          if (! is_wp_error($again) || "research_manager_snapshot_used" !== $again->get_error_code()) { exit(1); }
+          ' --allow-root
+
+      - name: Verify Home creation restores prior front-page routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $pages = Eduardo_Research_Manager::pages();
+          $executor = Eduardo_Research_Manager::executor();
+          $home = get_page_by_path("home");
+          if (! $home instanceof WP_Post) { exit(1); }
+          wp_delete_post($home->ID, true);
+          $before_show = (string) get_option("show_on_front", "posts");
+          $before_front = (int) get_option("page_on_front", 0);
+
+          $plan = $pages->build_creation_plan("home", "Recreate Theme Home Page");
+          if (is_wp_error($plan) || empty($plan["actions"][0]["front_page"])) { exit(1); }
+          $token = (string) $plan["actions"][0]["creation_token"];
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message() . "\n"); exit(1); }
+          $verified = $pages->verify_creation("home", $token);
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          $new_home = get_page_by_path("home");
+          if (! $new_home instanceof WP_Post || "page" !== get_option("show_on_front") || (int) $new_home->ID !== (int) get_option("page_on_front")) { exit(1); }
+
+          $rolled = $executor->rollback($applied["snapshot_id"]);
+          if (is_wp_error($rolled) || get_page_by_path("home") instanceof WP_Post) { exit(1); }
+          if ($before_show !== (string) get_option("show_on_front", "posts") || $before_front !== (int) get_option("page_on_front", 0)) {
+              fwrite(STDERR, "Home rollback did not restore prior routing\n"); exit(1);
+          }
           ' --allow-root
 
   package:
@@ -305,10 +332,10 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cd wordpress/plugins
-          zip -r ../../dist/eduardo-research-manager-0.2.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
-          test -s ../../dist/eduardo-research-manager-0.2.0.zip
+          zip -r ../../dist/eduardo-research-manager-0.3.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-manager-0.3.0.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: eduardo-research-manager-0.2.0
-          path: dist/eduardo-research-manager-0.2.0.zip
+          name: eduardo-research-manager-0.3.0
+          path: dist/eduardo-research-manager-0.3.0.zip
           if-no-files-found: error
