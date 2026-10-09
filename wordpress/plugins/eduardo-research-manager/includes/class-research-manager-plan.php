@@ -17,10 +17,6 @@ final class Eduardo_Research_Manager_Plan {
         'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
     );
 
-    private const ALLOWED_PAGE_KEYS = array(
-        'home','about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
-    );
-
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order');
 
     public static function create(string $intent, array $actions, array $context = array()): array|WP_Error {
@@ -165,31 +161,57 @@ final class Eduardo_Research_Manager_Plan {
         }
 
         if ('create_page' === $type) {
-            $page_key = sanitize_key((string) ($action['page_key'] ?? ''));
-            $wp_slug = sanitize_title((string) ($action['wp_slug'] ?? ''));
-            $title = sanitize_text_field((string) ($action['title'] ?? ''));
-            $role = sanitize_key((string) ($action['role'] ?? ''));
-            $model = sanitize_key((string) ($action['model'] ?? ''));
-            $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
-            if (! in_array($page_key, self::ALLOWED_PAGE_KEYS, true)) {
-                return new WP_Error('research_manager_page_key_not_allowed', 'This Page key is outside the Research preset creation contract.');
-            }
-            if ('' === $wp_slug || '' === $title || '' === $role || '' === $model || '' === $creation_token) {
-                return new WP_Error('research_manager_invalid_page_creation', 'Page creation requires key, slug, title, role, model and a provenance token.');
-            }
-            return array(
-                'type'=>'create_page',
-                'page_key'=>$page_key,
-                'wp_slug'=>$wp_slug,
-                'title'=>$title,
-                'role'=>$role,
-                'model'=>$model,
-                'creation_token'=>$creation_token,
-                'front_page'=>! empty($action['front_page']),
-            );
+            return self::normalize_page_creation($action);
         }
 
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
+    }
+
+    private static function normalize_page_creation(array $action): array|WP_Error {
+        if (! function_exists('eduardo_research_preset')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required for Page creation.');
+        }
+        $preset = eduardo_research_preset();
+        $pages = is_array($preset['pages'] ?? null) ? $preset['pages'] : array();
+        $page_key = sanitize_key((string) ($action['page_key'] ?? ''));
+        $contract = is_array($pages[$page_key] ?? null) ? $pages[$page_key] : array();
+        if (! $contract) {
+            return new WP_Error('research_manager_page_key_not_allowed', 'This Page key is outside the active Research preset creation contract.');
+        }
+
+        $wp_slug = sanitize_title((string) ($action['wp_slug'] ?? ''));
+        $title = sanitize_text_field((string) ($action['title'] ?? ''));
+        $role = sanitize_key((string) ($action['role'] ?? ''));
+        $model = sanitize_key((string) ($action['model'] ?? ''));
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+        $expected_slug = sanitize_title((string) ($contract['wp_slug'] ?? $contract['slug'] ?? $page_key));
+        $expected_role = sanitize_key((string) ($contract['role'] ?? ''));
+        $expected_model = sanitize_key((string) ($contract['model'] ?? ''));
+        $front_page = 'front-page' === $expected_role;
+
+        if ('' === $wp_slug || '' === $title || '' === $role || '' === $model || '' === $creation_token) {
+            return new WP_Error('research_manager_invalid_page_creation', 'Page creation requires key, slug, title, role, model and a provenance token.');
+        }
+        if ($wp_slug !== $expected_slug || $role !== $expected_role || $model !== $expected_model) {
+            return new WP_Error('research_manager_page_contract_mismatch', 'Page creation must match the active Research Theme contract exactly.');
+        }
+        if ($front_page !== ! empty($action['front_page'])) {
+            return new WP_Error('research_manager_front_page_contract_mismatch', 'Front-page creation state must match the active Research Theme role.');
+        }
+        if (! preg_match('/^[a-f0-9-]{32,64}$/i', $creation_token)) {
+            return new WP_Error('research_manager_invalid_creation_token', 'Page creation requires a stable UUID-like provenance token.');
+        }
+
+        return array(
+            'type'=>'create_page',
+            'page_key'=>$page_key,
+            'wp_slug'=>$wp_slug,
+            'title'=>$title,
+            'role'=>$role,
+            'model'=>$model,
+            'creation_token'=>$creation_token,
+            'front_page'=>$front_page,
+        );
     }
 
     private static function allowed_option_key(string $key): bool {
