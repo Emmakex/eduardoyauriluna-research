@@ -149,6 +149,7 @@ jobs:
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
+          global $wpdb;
           $output = wp_insert_post(["post_type"=>"research_output","post_status"=>"draft","post_title"=>"Manager safety fixture"]);
           if ($output <= 0) { exit(1); }
 
@@ -167,14 +168,49 @@ jobs:
           if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
           if (metadata_exists("post", $output, "_research_review_status")) { exit(1); }
 
+          $missing_reference = Eduardo_Research_Manager_Plan::create("Set peer-review status without source reference", [[
+              "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
+          ]], ["evidence_confirmed"=>true]);
+          if (is_wp_error($missing_reference)) { exit(1); }
+          $reference_block = Eduardo_Research_Manager::executor()->apply($missing_reference);
+          if (! is_wp_error($reference_block) || "research_manager_evidence_reference_required" !== $reference_block->get_error_code()) {
+              fwrite(STDERR, "Sensitive Apply without evidence reference was not blocked\n"); exit(1);
+          }
+
           $confirmed = Eduardo_Research_Manager_Plan::create("Set peer-review status from verified source", [[
               "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
           ]], ["evidence_confirmed"=>true,"evidence_reference"=>"CI verified-source fixture"]);
           if (is_wp_error($confirmed)) { exit(1); }
           $applied = Eduardo_Research_Manager::executor()->apply($confirmed);
-          if (is_wp_error($applied) || "peer_reviewed" !== get_post_meta($output, "_research_review_status", true)) { exit(1); }
+          if (is_wp_error($applied) || "applied" !== (string) ($applied["status"] ?? "") || empty($applied["snapshot_id"])) {
+              fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() . "\n" : "Sensitive plan was not applied\n"); exit(1);
+          }
+
+          $verified = Eduardo_Research_Manager::executor()->verify($confirmed);
+          if (is_wp_error($verified) || empty($verified["verified"])) {
+              fwrite(STDERR, "Manager could not verify private stored academic state\n"); exit(1);
+          }
+
+          if ("" !== get_post_meta($output, "_research_review_status", true)) {
+              fwrite(STDERR, "Theme exposed review status before public verification flag\n"); exit(1);
+          }
+          $raw = $wpdb->get_var($wpdb->prepare(
+              "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id ASC LIMIT 1",
+              $output,
+              "_research_review_status"
+          ));
+          if ("peer_reviewed" !== maybe_unserialize($raw)) {
+              fwrite(STDERR, "Private stored review status does not match the Manager plan\n"); exit(1);
+          }
+
           $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || metadata_exists("post", $output, "_research_review_status")) { exit(1); }
+          if (is_wp_error($rolled) || "rolled-back" !== (string) ($rolled["status"] ?? "")) { exit(1); }
+          $raw_count = (int) $wpdb->get_var($wpdb->prepare(
+              "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s",
+              $output,
+              "_research_review_status"
+          ));
+          if (0 !== $raw_count) { fwrite(STDERR, "Rollback left private academic metadata behind\n"); exit(1); }
 
           $tampered = $confirmed;
           $tampered["actions"][0]["value"] = "accepted";
