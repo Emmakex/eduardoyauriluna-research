@@ -6,9 +6,29 @@
     "layout": { "contentSize": "760px", "wideSize": "1216px" },
     "spacing": { "units": ["px", "rem", "vw"] },
     "typography": { "fluid": true, "dropCap": false },
-    "color": { "custom": false, "customGradient": false, "defaultGradients": false }
+    "color": {
+      "custom": false,
+      "customGradient": false,
+      "defaultGradients": false,
+      "defaultPalette": false,
+      "palette": [
+        { "slug": "academic-midnight", "name": "Academic Midnight", "color": "#0B1820" },
+        { "slug": "deep-petrol", "name": "Deep Petrol", "color": "#123A3A" },
+        { "slug": "research-teal", "name": "Research Teal", "color": "#087F76" },
+        { "slug": "signal-mint", "name": "Signal Mint", "color": "#61D6C6" },
+        { "slug": "warm-ivory", "name": "Warm Ivory", "color": "#F5F5F0" },
+        { "slug": "paper-white", "name": "Paper White", "color": "#FCFCFA" },
+        { "slug": "graphite", "name": "Graphite", "color": "#293638" },
+        { "slug": "research-grey", "name": "Research Grey", "color": "#8B9897" },
+        { "slug": "academic-cobalt", "name": "Academic Cobalt", "color": "#4169A8" }
+      ]
+    }
   },
   "styles": {
+    "color": {
+      "background": "#F5F5F0",
+      "text": "#293638"
+    },
     "typography": { "lineHeight": "1.65" }
   }
 }
