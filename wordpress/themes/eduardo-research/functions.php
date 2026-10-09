@@ -5,6 +5,7 @@ if (! defined('ABSPATH')) { exit; }
 
 require_once get_template_directory() . '/inc/research-preset.php';
 require_once get_template_directory() . '/inc/research-language.php';
+require_once get_template_directory() . '/inc/research-content-language.php';
 require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-evidence.php';
 require_once get_template_directory() . '/inc/research-router.php';
