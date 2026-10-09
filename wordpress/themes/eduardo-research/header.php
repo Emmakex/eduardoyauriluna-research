@@ -10,10 +10,10 @@
 <a class="screen-reader-text" href="#main"><?php esc_html_e('Skip to content', 'eduardo-research'); ?></a>
 <header class="research-site-header" role="banner">
  <div class="research-shell research-header-inner">
-  <a class="research-brand" href="<?php echo esc_url(home_url('/')); ?>" rel="home"><?php bloginfo('name'); ?></a>
+  <a class="research-brand" href="<?php echo esc_url(eduardo_research_page_url('home')); ?>" rel="home"><?php bloginfo('name'); ?></a>
   <nav class="research-nav" aria-label="<?php esc_attr_e('Primary navigation', 'eduardo-research'); ?>">
    <?php $preset = eduardo_research_preset(); foreach ($preset['primary_navigation'] as $key) : $page = $preset['pages'][$key]; ?>
-    <a href="<?php echo esc_url(home_url('/' . $page['slug'] . '/')); ?>"><?php echo esc_html($page['label']); ?></a>
+    <a href="<?php echo esc_url(eduardo_research_page_url((string) $key)); ?>"><?php echo esc_html($page['label']); ?></a>
    <?php endforeach; ?>
   </nav>
  </div>
