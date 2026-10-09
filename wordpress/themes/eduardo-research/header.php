@@ -21,8 +21,15 @@
     <?php endforeach; ?>
    </nav>
    <nav class="research-language-switcher" aria-label="<?php echo esc_attr(eduardo_research_t('language_nav')); ?>">
-    <?php $current_language = eduardo_research_current_language(); foreach (eduardo_research_languages() as $code => $language) : ?>
-     <a hreflang="<?php echo esc_attr((string) $code); ?>" lang="<?php echo esc_attr((string) $code); ?>" href="<?php echo esc_url(eduardo_research_translation_url((string) $code)); ?>"<?php echo $current_language === $code ? ' aria-current="true"' : ''; ?>><?php echo esc_html((string) $language['short']); ?></a>
+    <?php $current_language = eduardo_research_current_language(); foreach (eduardo_research_languages() as $code => $language) :
+      if (is_singular('research_line')) {
+          $translation_url = eduardo_research_record_translation_url(get_queried_object_id(), (string) $code);
+          if ('' === $translation_url) { $translation_url = eduardo_research_page_url('research', (string) $code); }
+      } else {
+          $translation_url = eduardo_research_translation_url((string) $code);
+      }
+    ?>
+     <a hreflang="<?php echo esc_attr((string) $code); ?>" lang="<?php echo esc_attr((string) $code); ?>" href="<?php echo esc_url($translation_url); ?>"<?php echo $current_language === $code ? ' aria-current="true"' : ''; ?>><?php echo esc_html((string) $language['short']); ?></a>
     <?php endforeach; ?>
    </nav>
   </div>
