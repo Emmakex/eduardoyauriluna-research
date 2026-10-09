@@ -17,10 +17,31 @@ $title = eduardo_research_page_label($key);
   <p class="research-lead"><?php echo esc_html((string) ($model['lead'] ?? '')); ?></p>
  </header>
 
- <?php if (in_array($key, array('about','research','cv','contact'), true)) : ?>
+ <?php if (in_array($key, array('about','cv','contact'), true)) : ?>
   <section class="research-interior" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell research-interior-stack">
     <?php eduardo_research_render_structured_surface($key); ?>
+   </div>
+  </section>
+ <?php elseif ('research' === $key) :
+   $lines = new WP_Query(eduardo_research_verified_line_query_args($language, 24));
+   $layout = eduardo_research_surface_layout('research');
+   $sections = is_array($layout['sections'] ?? null) ? $layout['sections'] : array(); ?>
+  <section class="research-interior" aria-label="<?php echo esc_attr($title); ?>">
+   <div class="research-shell research-interior-stack">
+    <section class="research-interior-block research-lines-index" data-evidence-group="research_lines">
+     <header class="research-interior-block-heading">
+      <span class="research-section-number">01</span>
+      <div><div class="research-eyebrow"><?php echo esc_html('es' === $language ? 'Objeto de investigación' : 'Research object'); ?></div><h2><?php echo esc_html('es' === $language ? 'Líneas de investigación' : 'Research lines'); ?></h2><p><?php echo esc_html('es' === $language ? 'Líneas verificadas con pregunta central, temas, métodos y URL estable.' : 'Verified lines with a central question, topics, methods and a stable URL.'); ?></p></div>
+     </header>
+     <div class="research-grid research-grid-editorial">
+      <?php if ($lines->have_posts()) : while ($lines->have_posts()) : $lines->the_post(); eduardo_research_render_research_line_card(get_the_ID()); endwhile; else : ?>
+       <article class="research-card research-empty research-empty-wide"><p class="research-card-kicker"><?php echo esc_html('es' === $language ? 'Preparado para evidencia' : 'Evidence ready'); ?></p><h3><?php echo esc_html('es' === $language ? 'Las líneas verificadas aparecerán aquí' : 'Verified research lines will appear here'); ?></h3><p><?php echo esc_html('es' === $language ? 'No se publica ninguna línea hasta que su estado de evidencia sea verified.' : 'No research line is published here until its evidence status is verified.'); ?></p></article>
+      <?php endif; wp_reset_postdata(); ?>
+     </div>
+    </section>
+    <?php foreach (array_slice($sections, 1) as $index => $section) { if (is_array($section)) { eduardo_research_render_evidence_section($section, $index + 2); } } ?>
+    <?php eduardo_research_render_surface_links(is_array($layout['links'] ?? null) ? $layout['links'] : array()); ?>
    </div>
   </section>
  <?php elseif (in_array($key, array('privacy-policy','legal-notice'), true)) : ?>
@@ -33,12 +54,13 @@ $title = eduardo_research_page_label($key);
    $map = array('publications'=>'research_output','projects'=>'research_project','software'=>'research_software','datasets'=>'research_dataset');
    $args = eduardo_research_localized_query_args(array('post_type'=>$map[$key], 'post_status'=>'publish', 'posts_per_page'=>24, 'no_found_rows'=>true), $language);
    $query = new WP_Query($args); ?>
-  <section class="research-section" aria-label="<?php echo esc_attr($title); ?>">
+  <section class="research-section research-object-index" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell">
-    <div class="research-grid">
-     <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); ?>
-      <article class="research-card"><p class="research-card-kicker"><?php echo esc_html((string) $model['eyebrow']); ?></p><h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2><?php if (has_excerpt()) : ?><p><?php echo esc_html(get_the_excerpt()); ?></p><?php endif; ?></article>
-     <?php endwhile; else : ?><article class="research-card research-empty"><h2><?php echo esc_html(eduardo_research_t('evidence_index')); ?></h2><p><?php echo esc_html(eduardo_research_t('no_records')); ?></p></article><?php endif; wp_reset_postdata(); ?>
+    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Registros estructurados' : 'Structured records'); ?></span><p><?php echo esc_html('es' === $language ? 'Cada elemento dispone de URL estable y metadatos específicos de su tipo.' : 'Every item has a stable URL and type-specific metadata.'); ?></p></div>
+    <div class="research-grid research-grid-editorial">
+     <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_collection_card(get_the_ID(), $key); endwhile; else : ?>
+      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html(eduardo_research_t('evidence_index')); ?></h2><p><?php echo esc_html(eduardo_research_t('no_records')); ?></p></article>
+     <?php endif; wp_reset_postdata(); ?>
     </div>
    </div>
   </section>
