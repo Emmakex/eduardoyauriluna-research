@@ -13,12 +13,30 @@ Implementation order:
 3. `research` preset
 4. Academic content model
 5. Real site hydration and validation
-6. Research Manager
+6. Research Manager control plane
 7. Academic connections
 8. Research outputs and visibility
 9. Doctoral application 2027
 
-The Theme must remain functional without the Research Manager. The Manager is an enhancement layer for structured administration, automation, synchronization and readiness.
+The Theme must remain functional without the Research Manager. The Manager is the operational control plane for creation, modification, hydration, optimisation, verification, synchronization and readiness.
+
+### Apply everything learned from SEO/GEO Theme
+
+The Research implementation must reuse the existing product model instead of creating a parallel academic stack:
+
+- preset contracts;
+- expected pages and roles;
+- content contracts;
+- structured page models and slots;
+- evidence/verification groups;
+- Theme-native SEO/GEO authority;
+- deterministic Theme rendering;
+- rendered frontend verification;
+- environment/navigation integrity checks;
+- readiness diagnostics;
+- controlled mutations with Preview → Apply → Verify → Rollback.
+
+Reference: `docs/13-seo-geo-theme-inheritance.md` and `docs/15-manager-control-plane.md`.
 
 ### Frontend authority
 
@@ -75,6 +93,8 @@ Reference: `docs/14-theme-owned-frontend.md`.
 - [ ] Define required slots / `required_any`
 - [ ] Define evidence/verification groups
 - [ ] Ensure pages render without Gutenberg layout markup
+- [ ] Preserve Theme-native SEO/GEO authority
+- [ ] Ensure compatibility with existing frontend-verification/readiness mechanisms
 
 ### Design system
 
@@ -116,7 +136,7 @@ Reference: `docs/14-theme-owned-frontend.md`.
 
 ## Phase 3 — Academic content model
 
-**Goal:** define the data contract the theme actually needs, based on the implemented frontend.
+**Goal:** define the data contract the Theme actually needs, based on the implemented frontend.
 
 - [ ] Researcher profile model
 - [ ] Research lines taxonomy/model
@@ -153,12 +173,18 @@ The content model is validated against real rendered templates before the Manage
 - [ ] Accessibility validation
 - [ ] Performance validation
 - [ ] Academic SEO validation
+- [ ] GEO/entity clarity validation
+- [ ] Internal-link graph validation
 
-## Phase 5 — Research Manager
+## Phase 5 — Research Manager control plane
 
-**Goal:** create the administration and orchestration layer only after the theme and data model are proven.
+**Goal:** extend the existing SEO/GEO Manager operating model so the whole Research site can be created, modified, optimised and verified from structured sources.
+
+### Site/content control
 
 - [ ] Overview dashboard
+- [ ] Create/resolve Theme-controlled Pages
+- [ ] Create/update Posts / Insights
 - [ ] Researcher identity editor
 - [ ] Research lines manager
 - [ ] Publications manager
@@ -167,14 +193,52 @@ The content model is validated against real rendered templates before the Manage
 - [ ] Datasets manager
 - [ ] CV/academic profile manager
 - [ ] Academic identifiers manager
-- [ ] Academic SEO/GEO checks
-- [ ] Connection status model
+- [ ] Navigation/internal relationships manager
+- [ ] Media metadata manager
+- [ ] Translation/language relationship control
+
+### Structured hydration
+
+- [ ] Detect preset/page contract
+- [ ] Detect model ID and structured slots
+- [ ] Hydrate required/optional slots
+- [ ] Respect `required_any` groups
+- [ ] Flag evidence-required fields
+- [ ] No Gutenberg layout generation
+
+### SEO/GEO optimisation
+
+- [ ] Title/meta control through Theme-native authority
+- [ ] Canonical control
+- [ ] Robots/indexability
+- [ ] Open Graph
+- [ ] Schema / academic schema
+- [ ] Hreflang
+- [ ] Sitemap rules
+- [ ] Internal-link optimisation
+- [ ] Entity/authorship checks
+- [ ] Extractable summary/direct-answer checks
+- [ ] Academic discoverability checks
+- [ ] Scholar-compatible citation metadata checks
+- [ ] DOI/ORCID identifier completeness
+- [ ] Media/alt/accessibility checks
+
+### Diagnostics and safety
+
+- [ ] Structure diagnostics
+- [ ] Content/slot diagnostics
+- [ ] Navigation/environment leakage diagnostics
+- [ ] Orphan resource detection
+- [ ] Frontend rendered verification
+- [ ] Preview → Apply → Verify → Rollback
 - [ ] Audit log
 - [ ] Permissions/capabilities
 - [ ] Research Readiness dashboard
-- [ ] Structured slot hydration; no Gutenberg layout generation
+- [ ] Actionable next-action mapping: auto-fix / hydrate / review / evidence / external action
 
 Reusable implementation belongs in the main Theme/Manager product repository. This repository remains the source of truth for Eduardo Jose Yauri Luna-specific content, configuration, requirements and decisions.
+
+Reference: `docs/15-manager-control-plane.md`.
 
 ## Phase 6 — Academic connections
 
