@@ -1,0 +1,101 @@
+name: Research Editorial CV Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-editorial-cv-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-editorial-cv-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  editorial-cv-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Install clean WordPress and Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/research-editorial-wp
+          cd /tmp/research-editorial-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://research.test --title='Research Editorial Test' --admin_user=admin --admin_password='research-test-password' --admin_email=research@example.test --skip-email --allow-root
+          wp option update permalink_structure '/%postname%/' --allow-root
+          mkdir -p wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+      - name: Verify bilingual Insight search and type contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-editorial-wp
+          wp eval '
+          $note = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Evidence Systems Note","post_name"=>"evidence-systems-note","post_excerpt"=>"Structured evidence research note"]);
+          $explainer = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Reproducibility Explainer","post_name"=>"reproducibility-explainer"]);
+          $spanish = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Nota de evidencia","post_name"=>"nota-evidencia"]);
+          update_post_meta($note, "_research_language", "en"); update_post_meta($note, "_research_insight_type", "research_note");
+          update_post_meta($explainer, "_research_language", "en"); update_post_meta($explainer, "_research_insight_type", "explainer");
+          update_post_meta($spanish, "_research_language", "es"); update_post_meta($spanish, "_research_insight_type", "research_note");
+          if ("http://research.test/insights/evidence-systems-note/" !== get_permalink($note)) { exit(1); }
+          if ("http://research.test/es/notas/nota-evidencia/" !== get_permalink($spanish)) { exit(1); }
+          $_GET = ["insight_type"=>"research_note","insight_search"=>"Evidence"];
+          $query = eduardo_research_insight_query("en");
+          if ([$note] !== wp_list_pluck($query->posts, "ID")) { exit(1); }
+          $_GET = ["insight_type"=>"research_note"];
+          $es_query = eduardo_research_insight_query("es");
+          if ([$spanish] !== wp_list_pluck($es_query->posts, "ID")) { exit(1); }
+          if ("Nota de investigación" !== eduardo_research_insight_type_label($spanish, "es")) { exit(1); }
+          ' --allow-root
+      - name: Verify CV evidence gate and print surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-editorial-wp
+          wp option update eduardo_research_evidence '{"experience":[{"title":"Visible role","organization":"Verified Lab","period":"2024 — Present","summary":"Verified work","status":"verified"},{"title":"Hidden role","status":"unverified"}],"education":[{"title":"Verified programme","institution":"Verified University","period":"2022","status":"verified"}],"awards":[{"title":"Needs review award","status":"needs-review"}]}' --format=json --allow-root
+          wp eval '
+          ob_start(); eduardo_research_render_cv_surface(); $html = ob_get_clean();
+          foreach (["Visible role","Verified Lab","Verified programme","Verified University","Print / Save PDF"] as $needle) { if (false === strpos($html, $needle)) { fwrite(STDERR, $needle . "\n"); exit(1); } }
+          foreach (["Hidden role","Needs review award"] as $needle) { if (false !== strpos($html, $needle)) { exit(1); } }
+          if ("2024 — Present" !== eduardo_research_cv_record_period(["period"=>"2024 — Present"])) { exit(1); }
+          ' --allow-root
+          test -f wp-content/themes/eduardo-research/assets/research-cv.js
+          grep -F 'window.print()' wp-content/themes/eduardo-research/assets/research-cv.js
+          grep -F '@media print' wp-content/themes/eduardo-research/assets/research-editorial-cv.css
+      - name: Verify required Theme editorial files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-editorial-wp
+          test -f wp-content/themes/eduardo-research/single-post.php
+          test -f wp-content/themes/eduardo-research/inc/research-insights.php
+          test -f wp-content/themes/eduardo-research/inc/research-cv.php
+          php -l wp-content/themes/eduardo-research/single-post.php
+          php -l wp-content/themes/eduardo-research/inc/research-insights.php
+          php -l wp-content/themes/eduardo-research/inc/research-cv.php
