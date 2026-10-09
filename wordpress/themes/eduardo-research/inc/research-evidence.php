@@ -12,41 +12,29 @@ function eduardo_research_evidence_records(string $group, string $status = 'veri
     $store = eduardo_research_evidence_store();
     $records = $store[$group] ?? array();
     if (! is_array($records)) { return array(); }
-
     $filtered = array();
     foreach ($records as $record) {
         if (! is_array($record)) { continue; }
-        $record_status = sanitize_key((string) ($record['status'] ?? 'unverified'));
-        if ($status !== $record_status) { continue; }
+        if ($status !== sanitize_key((string) ($record['status'] ?? 'unverified'))) { continue; }
         $filtered[] = $record;
     }
     return $filtered;
 }
 
-function eduardo_research_verified_evidence(string $group): array {
-    return eduardo_research_evidence_records($group, 'verified');
-}
+function eduardo_research_verified_evidence(string $group): array { return eduardo_research_evidence_records($group, 'verified'); }
 
 function eduardo_research_surface_evidence_groups(string $surface): array {
-    $groups = array(
-        'about' => array(
-            'profile' => 'Profile',
-            'affiliations' => 'Affiliations',
-        ),
-        'research' => array(
-            'research_lines' => 'Research lines',
-            'methods' => 'Methods',
-        ),
-        'cv' => array(
-            'experience' => 'Experience',
-            'education' => 'Education',
-            'affiliations' => 'Affiliations',
-            'awards' => 'Awards',
-        ),
-        'contact' => array(
-            'contact' => 'Research enquiries',
-            'identifiers' => 'Academic profiles',
-        ),
+    $es = function_exists('eduardo_research_current_language') && 'es' === eduardo_research_current_language();
+    $groups = $es ? array(
+        'about'=>array('profile'=>'Perfil','affiliations'=>'Afiliaciones'),
+        'research'=>array('research_lines'=>'Líneas de investigación','methods'=>'Métodos'),
+        'cv'=>array('experience'=>'Experiencia','education'=>'Formación','affiliations'=>'Afiliaciones','awards'=>'Reconocimientos'),
+        'contact'=>array('contact'=>'Consultas de investigación','identifiers'=>'Perfiles académicos'),
+    ) : array(
+        'about'=>array('profile'=>'Profile','affiliations'=>'Affiliations'),
+        'research'=>array('research_lines'=>'Research lines','methods'=>'Methods'),
+        'cv'=>array('experience'=>'Experience','education'=>'Education','affiliations'=>'Affiliations','awards'=>'Awards'),
+        'contact'=>array('contact'=>'Research enquiries','identifiers'=>'Academic profiles'),
     );
     return $groups[$surface] ?? array();
 }
