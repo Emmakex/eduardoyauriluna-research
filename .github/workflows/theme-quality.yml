@@ -37,7 +37,9 @@ jobs:
           test -f wordpress/themes/eduardo-research/inc/research-language.php
           test -f wordpress/themes/eduardo-research/inc/research-content-language.php
           test -f wordpress/themes/eduardo-research/inc/research-evidence.php
+          test -f wordpress/themes/eduardo-research/inc/research-surface-layouts.php
           test -f wordpress/themes/eduardo-research/inc/research-sitemap.php
+          test -f wordpress/themes/eduardo-research/assets/interior-surfaces.css
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
         shell: bash
@@ -139,6 +141,24 @@ jobs:
           cd /tmp/research-wp
           wp option update eduardo_research_evidence '{"research_lines":[{"title":"Hidden line","status":"unverified"},{"title":"Visible line","title_es":"Línea visible","summary":"Verified summary","summary_es":"Resumen verificado","status":"verified"}],"identifiers":[{"label":"Hidden profile","url":"https://example.test/hidden","status":"needs-review"},{"label":"Verified profile","url":"https://example.test/verified","status":"verified"}],"affiliations":[{"title":"Verified organisation","url":"https://example.test/org","status":"verified"}]}' --format=json --allow-root
           wp eval '$lines = eduardo_research_verified_evidence("research_lines"); if (1 !== count($lines) || "Visible line" !== $lines[0]["title"]) { exit(1); } $localized = eduardo_research_localize_record($lines[0], "es"); if ("Línea visible" !== $localized["title"]) { exit(1); } $urls = eduardo_research_verified_identifier_urls(); if (["https://example.test/verified"] !== $urls) { exit(1); } $groups = eduardo_research_surface_evidence_groups("cv"); if (! isset($groups["education"]) || ! isset($groups["experience"])) { exit(1); }' --allow-root
+      - name: Verify interior surface contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          wp eval '
+          $about = eduardo_research_surface_layout("about", "en");
+          $research = eduardo_research_surface_layout("research", "en");
+          $about_groups = array_column($about["sections"], "group");
+          $research_groups = array_column($research["sections"], "group");
+          if (["profile","affiliations","identifiers"] !== $about_groups) { exit(1); }
+          if (["research_lines","research_questions","methods"] !== $research_groups) { exit(1); }
+          if ("ProfilePage" !== eduardo_research_page_schema_type("about")) { exit(1); }
+          if ("CollectionPage" !== eduardo_research_page_schema_type("research")) { exit(1); }
+          if ("WebPage" !== eduardo_research_page_schema_type("cv")) { exit(1); }
+          ob_start(); eduardo_research_render_structured_surface("about"); $html = ob_get_clean();
+          if (false === strpos($html, "Verified organisation") || false !== strpos($html, "Hidden profile")) { exit(1); }
+          ' --allow-root
 
   package:
     needs: [quality, runtime-smoke]
