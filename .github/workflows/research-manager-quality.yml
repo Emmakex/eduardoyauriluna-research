@@ -39,8 +39,10 @@ jobs:
           test -s "$PLUGIN/includes/class-research-manager-plan.php"
           test -s "$PLUGIN/includes/class-research-manager-snapshots.php"
           test -s "$PLUGIN/includes/class-research-manager-executor.php"
+          test -s "$PLUGIN/includes/class-research-manager-page-resource.php"
           test -s "$PLUGIN/includes/class-research-manager-admin.php"
           test -s "$PLUGIN/includes/class-research-manager.php"
+          grep -F 'Version: 0.2.0' "$PLUGIN/eduardo-research-manager.php"
       - name: Lint Manager PHP
         shell: bash
         run: |
@@ -185,12 +187,8 @@ jobs:
           if (is_wp_error($applied) || "applied" !== (string) ($applied["status"] ?? "") || empty($applied["snapshot_id"])) {
               fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() . "\n" : "Sensitive plan was not applied\n"); exit(1);
           }
-
           $verified = Eduardo_Research_Manager::executor()->verify($confirmed);
-          if (is_wp_error($verified) || empty($verified["verified"])) {
-              fwrite(STDERR, "Manager could not verify private stored academic state\n"); exit(1);
-          }
-
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
           if ("" !== get_post_meta($output, "_research_review_status", true)) {
               fwrite(STDERR, "Theme exposed review status before public verification flag\n"); exit(1);
           }
@@ -199,10 +197,7 @@ jobs:
               $output,
               "_research_review_status"
           ));
-          if ("peer_reviewed" !== maybe_unserialize($raw)) {
-              fwrite(STDERR, "Private stored review status does not match the Manager plan\n"); exit(1);
-          }
-
+          if ("peer_reviewed" !== maybe_unserialize($raw)) { exit(1); }
           $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
           if (is_wp_error($rolled) || "rolled-back" !== (string) ($rolled["status"] ?? "")) { exit(1); }
           $raw_count = (int) $wpdb->get_var($wpdb->prepare(
@@ -210,12 +205,93 @@ jobs:
               $output,
               "_research_review_status"
           ));
-          if (0 !== $raw_count) { fwrite(STDERR, "Rollback left private academic metadata behind\n"); exit(1); }
+          if (0 !== $raw_count) { exit(1); }
 
           $tampered = $confirmed;
           $tampered["actions"][0]["value"] = "accepted";
           $invalid = Eduardo_Research_Manager::executor()->preview($tampered);
           if (! is_wp_error($invalid) || "research_manager_plan_changed" !== $invalid->get_error_code()) { exit(1); }
+          ' --allow-root
+
+      - name: Verify Theme-owned Page hydration and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $pages = Eduardo_Research_Manager::pages();
+          $executor = Eduardo_Research_Manager::executor();
+
+          $about = get_page_by_path("about");
+          if (! $about instanceof WP_Post) { exit(1); }
+          delete_option("eduardo_research_surface_about");
+          update_post_meta($about->ID, "_eduardo_research_role", "wrong-role");
+          update_post_meta($about->ID, "_eduardo_research_model", "wrong-model");
+          $requested = [
+              "eyebrow"=>"Managed research profile",
+              "lead"=>"Structured profile copy hydrated by the Research Manager without changing Theme layout.",
+              "sections"=>["Profile","Evidence","Background"],
+          ];
+          $plan = $pages->build_hydration_plan("about", "en", $requested, "Hydrate About from structured slots");
+          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"] || count($plan["actions"]) !== 3) {
+              fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() . "\n" : wp_json_encode($plan) . "\n"); exit(1);
+          }
+          $preview = $executor->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || false !== get_option("eduardo_research_surface_about", false)) { exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied) || "applied" !== $applied["status"]) { exit(1); }
+          $verified = $pages->verify_hydration("about", "en", $requested);
+          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified) . "\n"); exit(1); }
+          $_SERVER["REQUEST_URI"] = "/about/";
+          $theme_model = eduardo_research_surface_model("about");
+          if ("Managed research profile" !== $theme_model["eyebrow"] || $requested["sections"] !== $theme_model["sections"]) { exit(1); }
+
+          $rolled = $executor->rollback($applied["snapshot_id"]);
+          if (is_wp_error($rolled) || false !== get_option("eduardo_research_surface_about", false)) { exit(1); }
+          if ("wrong-role" !== get_post_meta($about->ID, "_eduardo_research_role", true) || "wrong-model" !== get_post_meta($about->ID, "_eduardo_research_model", true)) { exit(1); }
+
+          $invalid = $pages->build_hydration_plan("about", "en", ["made-up-slot"=>"No"]);
+          if (! is_wp_error($invalid) || "research_manager_unknown_slot" !== $invalid->get_error_code()) { exit(1); }
+
+          $contract = Eduardo_Research_Manager::contract()->page_state("about");
+          update_post_meta($about->ID, "_eduardo_research_role", $contract["contract"]["role"]);
+          update_post_meta($about->ID, "_eduardo_research_model", $contract["contract"]["model"]);
+          ' --allow-root
+
+      - name: Verify Spanish Home hydration and missing-resource refusal
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $pages = Eduardo_Research_Manager::pages();
+          $executor = Eduardo_Research_Manager::executor();
+          delete_option("eduardo_research_model_es");
+          $requested = [
+              "hero-eyebrow"=>"Perfil investigador gestionado",
+              "final-cta-heading"=>"Investigación y colaboración verificable",
+          ];
+          $plan = $pages->build_hydration_plan("home", "es", $requested, "Hydrate Spanish Home slots");
+          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message() . "\n"); exit(1); }
+          $verified = $pages->verify_hydration("home", "es", $requested);
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          $_SERVER["REQUEST_URI"] = "/es/";
+          if ("Perfil investigador gestionado" !== eduardo_research_slot("hero-eyebrow")) { exit(1); }
+          $rolled = $executor->rollback($applied["snapshot_id"]);
+          if (is_wp_error($rolled) || false !== get_option("eduardo_research_model_es", false)) { exit(1); }
+          $_SERVER["REQUEST_URI"] = "/";
+
+          $contact = get_page_by_path("contact");
+          if (! $contact instanceof WP_Post) { exit(1); }
+          wp_delete_post($contact->ID, true);
+          $missing = $pages->inspect("contact", "en");
+          if (! is_wp_error($missing) || "research_manager_page_missing" !== $missing->get_error_code()) { exit(1); }
+          $data = $missing->get_error_data();
+          if (! is_array($data) || "create-resource" !== ($data["next_action"] ?? "")) { exit(1); }
           ' --allow-root
 
   package:
@@ -229,10 +305,10 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cd wordpress/plugins
-          zip -r ../../dist/eduardo-research-manager-0.1.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
-          test -s ../../dist/eduardo-research-manager-0.1.0.zip
+          zip -r ../../dist/eduardo-research-manager-0.2.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-manager-0.2.0.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: eduardo-research-manager-0.1.0
-          path: dist/eduardo-research-manager-0.1.0.zip
+          name: eduardo-research-manager-0.2.0
+          path: dist/eduardo-research-manager-0.2.0.zip
           if-no-files-found: error
