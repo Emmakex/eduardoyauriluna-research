@@ -38,18 +38,24 @@ function eduardo_research_discovery_template(): void {
     }
 
     if ((int) get_query_var('eduardo_research_json') === 1) {
-        $types = array('research_output','research_project','research_software','research_dataset');
+        $types = array('research_line','research_output','research_project','research_software','research_dataset');
         $items = array();
         $latest = 0;
         foreach ($types as $type) {
-            $args = eduardo_research_localized_query_args(array(
-                'post_type'=>$type,
-                'post_status'=>'publish',
-                'posts_per_page'=>100,
-                'orderby'=>'modified',
-                'order'=>'DESC',
-                'no_found_rows'=>true,
-            ), $language);
+            if ('research_line' === $type) {
+                $args = eduardo_research_verified_line_query_args($language, 100);
+                $args['orderby'] = 'modified';
+                $args['order'] = 'DESC';
+            } else {
+                $args = eduardo_research_localized_query_args(array(
+                    'post_type'=>$type,
+                    'post_status'=>'publish',
+                    'posts_per_page'=>100,
+                    'orderby'=>'modified',
+                    'order'=>'DESC',
+                    'no_found_rows'=>true,
+                ), $language);
+            }
             $posts = get_posts($args);
             foreach ($posts as $post) {
                 $modified = get_post_modified_time('U', true, $post);
