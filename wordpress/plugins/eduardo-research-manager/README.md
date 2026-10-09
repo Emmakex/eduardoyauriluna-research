@@ -23,6 +23,8 @@ Academic and research claims require explicit evidence confirmation plus a non-e
 
 `Eduardo_Research_Manager_Remediation` turns safe diagnostic failures into the same checksummed mutation plans used by the rest of the control plane.
 
+Readiness remains compatible with the diagnostics contract: `ready=true` means **zero failing checks**. Warnings stay visible in the catalog and are classified as deterministic auto-fix candidates, manual review, or configuration-required conditions instead of silently blocking the whole control plane.
+
 It supports:
 
 - recreating a missing Theme-owned Page from the active Research preset;
