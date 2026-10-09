@@ -5,18 +5,19 @@ if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_languages(): array {
     return array(
-        'en' => array('locale'=>'en_US','label'=>'English','short'=>'EN','prefix'=>''),
-        'es' => array('locale'=>'es_ES','label'=>'Español','short'=>'ES','prefix'=>'es'),
+        'en'=>array('locale'=>'en_US','label'=>'English','short'=>'EN','prefix'=>''),
+        'es'=>array('locale'=>'es_ES','label'=>'Español','short'=>'ES','prefix'=>'es'),
     );
 }
 
 function eduardo_research_default_language(): string { return 'en'; }
 
 function eduardo_research_request_language(): string {
+    $path = trim((string) wp_parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/');
+    if ('es' === $path || str_starts_with($path, 'es/')) { return 'es'; }
     $query = (string) get_query_var('research_lang');
     if (isset(eduardo_research_languages()[$query])) { return $query; }
-    $path = trim((string) wp_parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/');
-    return ('es' === $path || str_starts_with($path, 'es/')) ? 'es' : eduardo_research_default_language();
+    return eduardo_research_default_language();
 }
 
 function eduardo_research_current_language(): string { return eduardo_research_request_language(); }
@@ -24,8 +25,7 @@ function eduardo_research_current_locale(): string { return (string) eduardo_res
 
 function eduardo_research_locale_filter(string $locale): string {
     if (is_admin()) { return $locale; }
-    $lang = eduardo_research_request_language();
-    return (string) eduardo_research_languages()[$lang]['locale'];
+    return (string) eduardo_research_languages()[eduardo_research_request_language()]['locale'];
 }
 add_filter('locale', 'eduardo_research_locale_filter', 20);
 
@@ -63,9 +63,29 @@ function eduardo_research_multilingual_rewrites(): void {
 add_action('init', 'eduardo_research_multilingual_rewrites', 12);
 
 function eduardo_research_translation_url(string $language, ?string $key = null): string {
+    $language = isset(eduardo_research_languages()[$language]) ? $language : eduardo_research_default_language();
     $key = $key ?: eduardo_research_current_page_key();
-    if (! $key) { return 'es' === $language ? home_url('/es/') : home_url('/'); }
-    return eduardo_research_page_url($key, $language);
+    if ($key) { return eduardo_research_page_url($key, $language); }
+
+    if (is_singular(array('research_output','research_project','research_software','research_dataset','post'))) {
+        $post_id = get_queried_object_id();
+        if ($post_id > 0 && function_exists('eduardo_research_post_language')) {
+            $record_language = eduardo_research_post_language($post_id);
+            if ($record_language === $language) { return (string) get_permalink($post_id); }
+            if (function_exists('eduardo_research_record_translation_url')) {
+                $alternate = eduardo_research_record_translation_url($post_id, $language);
+                if ('' !== $alternate) { return $alternate; }
+            }
+            $type_map = array(
+                'research_output'=>'publications','research_project'=>'projects','research_software'=>'software',
+                'research_dataset'=>'datasets','post'=>'insights',
+            );
+            $index = $type_map[get_post_type($post_id)] ?? 'home';
+            return eduardo_research_page_url($index, $language);
+        }
+    }
+
+    return 'es' === $language ? home_url('/es/') : home_url('/');
 }
 
 function eduardo_research_dictionary(): array {
