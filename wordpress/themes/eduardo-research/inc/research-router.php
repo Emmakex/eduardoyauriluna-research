@@ -10,7 +10,8 @@ function eduardo_research_current_page_key(): ?string {
     if (! $post instanceof WP_Post) { return null; }
     $slug = (string) $post->post_name;
     foreach (eduardo_research_preset()['pages'] as $key => $contract) {
-        if (($contract['slug'] ?? null) === $slug) { return (string) $key; }
+        $expected = (string) ($contract['wp_slug'] ?? $contract['slug'] ?? '');
+        if ('' !== $expected && $expected === $slug) { return (string) $key; }
     }
     return null;
 }
