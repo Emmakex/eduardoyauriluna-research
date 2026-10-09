@@ -47,6 +47,13 @@ function eduardo_research_output_schema_type(int $post_id): string {
     return $map[$type] ?? 'CreativeWork';
 }
 
+function eduardo_research_page_schema_type(?string $key = null): string {
+    $key = $key ?: eduardo_research_current_page_key();
+    if ('about' === $key) { return 'ProfilePage'; }
+    if (in_array($key, array('research','publications','projects','software','datasets','insights'), true)) { return 'CollectionPage'; }
+    return 'WebPage';
+}
+
 function eduardo_research_alternate_urls(): array {
     $key = eduardo_research_current_page_key();
     if ($key) {
@@ -106,6 +113,7 @@ function eduardo_research_schema_graph(): void {
     $identity = eduardo_research_identity();
     $url = eduardo_research_current_url();
     $language = eduardo_research_current_language();
+    $key = eduardo_research_current_page_key();
     $person = array('@type'=>'Person','@id'=>home_url('/#researcher'),'name'=>$identity['name'],'url'=>$identity['url']);
     $same_as = eduardo_research_verified_identifier_urls();
     if ($same_as) { $person['sameAs'] = $same_as; }
@@ -120,8 +128,16 @@ function eduardo_research_schema_graph(): void {
     }
     if ($affiliations) { $person['affiliation'] = $affiliations; }
 
+    $topics = array();
+    foreach (eduardo_research_verified_localized_evidence('research_lines') as $record) {
+        $topic = trim((string) ($record['title'] ?? $record['label'] ?? $record['value'] ?? ''));
+        if ('' !== $topic) { $topics[] = $topic; }
+    }
+    if ($topics) { $person['knowsAbout'] = array_values(array_unique($topics)); }
+
     $website = array('@type'=>'WebSite','@id'=>home_url('/#website'),'url'=>home_url('/'),'name'=>get_bloginfo('name'),'inLanguage'=>array('en','es'),'publisher'=>array('@id'=>home_url('/#researcher')));
-    $page = array('@type'=>'WebPage','@id'=>$url . '#webpage','url'=>$url,'name'=>wp_get_document_title(),'inLanguage'=>$language,'isPartOf'=>array('@id'=>home_url('/#website')),'about'=>array('@id'=>home_url('/#researcher')));
+    $page = array('@type'=>eduardo_research_page_schema_type($key),'@id'=>$url . '#webpage','url'=>$url,'name'=>wp_get_document_title(),'inLanguage'=>$language,'isPartOf'=>array('@id'=>home_url('/#website')),'about'=>array('@id'=>home_url('/#researcher')));
+    if ('about' === $key) { $page['mainEntity'] = array('@id'=>home_url('/#researcher')); }
     $graph = array($person,$website,$page);
 
     if (is_singular('research_output')) {
