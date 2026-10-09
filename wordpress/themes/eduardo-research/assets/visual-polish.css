@@ -1,0 +1,24 @@
+/* Screenshot-driven visual polish for the Academic Intelligence palette. Reviewed against the live homepage on 2026-10-09. */
+.research-section{padding-block:clamp(4rem,6.6vw,6.6rem)}
+.research-section-soft{background:linear-gradient(180deg,rgba(232,242,239,.56),rgba(245,245,240,.16))}
+.research-nav a{font-size:.86rem;font-weight:680}
+.research-section-number{color:#6F7F7C;font-size:.78rem}
+.research-section-heading{margin-bottom:2.35rem}
+.research-section-heading>p,.research-card p,.research-lead{line-height:1.72}
+.research-card p{font-size:.96rem}
+.research-card{box-shadow:0 18px 52px rgba(11,24,32,.06)}
+.research-card:hover{box-shadow:0 24px 62px rgba(11,24,32,.095)}
+.research-collection-index{color:#CBD6D2}
+.research-identity-section .research-lead{color:rgba(245,245,240,.86)}
+.research-identity-card p:last-child{color:rgba(245,245,240,.8)}
+.research-verification-card>p:last-of-type{color:rgba(245,245,240,.8)}
+.research-verification-rule span{color:rgba(245,245,240,.7)}
+.research-insights-grid>.research-empty-wide{min-height:11rem;padding-right:clamp(2rem,6vw,6rem);background:linear-gradient(135deg,var(--research-surface) 0 76%,rgba(65,105,168,.045) 76% 100%)}
+.research-insights-grid>.research-empty-wide .research-empty-lines{max-width:28rem;margin-top:1.4rem}
+.research-cta{background:linear-gradient(118deg,var(--research-petrol) 0%,#0F3034 52%,var(--research-ink) 100%)}
+.research-cta:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 10% 50%,rgba(8,127,118,.2),transparent 38%);pointer-events:none}
+.research-cta-inner{position:relative;z-index:1}
+.research-site-footer{font-size:.84rem}
+.research-footer-nav a{font-size:.86rem}
+@media(max-width:900px){.research-section{padding-block:3.75rem}.research-section-heading{margin-bottom:2rem}.research-nav a{font-size:.84rem}}
+@media(max-width:640px){.research-section{padding-block:3.1rem}.research-section-number{font-size:.74rem}.research-insights-grid>.research-empty-wide{padding-right:1.4rem;background:var(--research-surface)}}
