@@ -3,7 +3,7 @@
  * Plugin Name: Research Manager
  * Plugin URI: https://kairoseth.com/
  * Description: Controlled creation, diagnostics and mutation control plane for the Eduardo Research Theme.
- * Version: 0.8.0
+ * Version: 0.9.0
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Author: Emmake by Kairoseth
@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
-define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.8.0');
+define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.9.0');
 define('EDUARDO_RESEARCH_MANAGER_FILE', __FILE__);
 define('EDUARDO_RESEARCH_MANAGER_DIR', plugin_dir_path(__FILE__));
 
@@ -29,6 +29,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-out
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-project-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-software-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-dataset-resource.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rendered-verifier.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
