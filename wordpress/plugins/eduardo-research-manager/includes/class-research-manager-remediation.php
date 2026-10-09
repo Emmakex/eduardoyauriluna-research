@@ -49,7 +49,7 @@ final class Eduardo_Research_Manager_Remediation {
         if (is_wp_error($actions)) { return $actions; }
         if (! $actions) { return new WP_Error('research_manager_no_change', 'This readiness check no longer requires remediation.'); }
         $intent = '' !== trim($intent) ? $intent : 'Remediate readiness check: ' . (string) ($check['label'] ?? $check_id);
-        return Eduardo_Research_Manager_Plan::create($intent, $actions);
+        return Eduardo_Research_Manager_Plan::create($intent, $actions, $this->contract_evidence_context());
     }
 
     public function prepare_safe_batch(string $intent = 'Repair deterministic Research readiness issues'): array|WP_Error {
@@ -98,7 +98,7 @@ final class Eduardo_Research_Manager_Remediation {
                 'message'=>'No deterministic readiness mutations are currently required.',
             );
         }
-        $plan = Eduardo_Research_Manager_Plan::create($intent, $actions);
+        $plan = Eduardo_Research_Manager_Plan::create($intent, $actions, $this->contract_evidence_context());
         if (is_wp_error($plan)) { return $plan; }
         return array('plan'=>$plan,'included'=>$included,'skipped'=>$skipped,'message'=>'Safe readiness batch prepared.');
     }
@@ -197,6 +197,16 @@ final class Eduardo_Research_Manager_Remediation {
             return array(array('type'=>'option','key'=>'eduardo_research_native_languages','value'=>array('default'=>$default,'enabled'=>$languages)));
         }
         return new WP_Error('research_manager_remediation_not_planable', 'This readiness condition does not have a safe mutation recipe.');
+    }
+
+    private function contract_evidence_context(): array {
+        $preset = $this->contract->preset();
+        $id = sanitize_key((string) ($preset['id'] ?? 'research'));
+        $version = (int) ($preset['version'] ?? 0);
+        return array(
+            'evidence_confirmed'=>true,
+            'evidence_reference'=>sprintf('Active Research Theme preset contract: %s v%d', $id, $version),
+        );
     }
 
     private function action_signature(array $action): string {
