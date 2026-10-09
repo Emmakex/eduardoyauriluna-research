@@ -63,13 +63,14 @@ final class Eduardo_Research_Manager_Plan {
         $type = (string) ($action['type'] ?? '');
         if ('create_page' === $type) { return 'standard'; }
         if ('create_insight' === $type) { return 'editorial-review'; }
-        if (in_array($type, array('create_output','create_project','create_software'), true)) { return 'evidence-required'; }
+        if (in_array($type, array('create_output','create_project','create_software','create_dataset'), true)) { return 'evidence-required'; }
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         foreach (array(
             'doi','review_status','output_type','identifier','evidence','affiliation','award','grant',
             'publication_date','venue','publisher','authors','line_ids','project_status','question','role',
             'start_date','end_date','partner','funding','methods','project_url','software_status','software_version',
             'release_date','repository_url','archive_url','documentation_url','programming_languages','license',
+            'dataset_version','repository','access_level','formats','methodology','provenance','ethics_notes','size',
         ) as $needle) { if (str_contains($key, $needle)) { return 'evidence-required'; } }
         if (in_array($key, array('post_title','post_excerpt','post_content','_research_language','_research_insight_type'), true)
             || str_starts_with($key, 'eduardo_research_model') || str_starts_with($key, 'eduardo_research_surface_')) { return 'editorial-review'; }
@@ -102,6 +103,7 @@ final class Eduardo_Research_Manager_Plan {
         if ('create_output' === $type) { return self::normalize_output_creation($action); }
         if ('create_project' === $type) { return self::normalize_project_creation($action); }
         if ('create_software' === $type) { return self::normalize_software_creation($action); }
+        if ('create_dataset' === $type) { return self::normalize_dataset_creation($action); }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
@@ -196,6 +198,38 @@ final class Eduardo_Research_Manager_Plan {
         return array('type'=>'create_software','title'=>$title,'slug'=>$slug,'excerpt'=>$excerpt,'content'=>$content,'language'=>$language,'status'=>$status,'software_status'=>$software_status,'version'=>$version,'release_date'=>$release_date,'repository_url'=>$repository_url,'archive_url'=>$archive_url,'license'=>$license,'documentation_url'=>$documentation_url,'doi'=>$doi,'doi_verified'=>'' !== $doi ? '1' : '0','programming_languages'=>$programming_languages,'line_ids'=>$line_ids,'creation_token'=>$creation_token);
     }
 
+    private static function normalize_dataset_creation(array $action): array|WP_Error {
+        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.'); }
+        $preset = eduardo_research_preset(); $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
+        $options = eduardo_research_collection_options('datasets', 'en'); $access_levels = is_array($options['access_level'] ?? null) ? $options['access_level'] : array();
+        $title = sanitize_text_field((string) ($action['title'] ?? '')); $slug = sanitize_title((string) ($action['slug'] ?? '')); $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? '')); $content = wp_kses_post((string) ($action['content'] ?? ''));
+        $language = sanitize_key((string) ($action['language'] ?? 'en')); $status = sanitize_key((string) ($action['status'] ?? 'draft'));
+        $version = sanitize_text_field((string) ($action['version'] ?? '')); $publication_date = self::normalize_date((string) ($action['publication_date'] ?? ''));
+        $repository = self::normalize_http_url((string) ($action['repository'] ?? '')); $doi = self::normalize_doi((string) ($action['doi'] ?? ''));
+        $license = sanitize_text_field((string) ($action['license'] ?? '')); $access_level = sanitize_key((string) ($action['access_level'] ?? ''));
+        $methodology = sanitize_textarea_field((string) ($action['methodology'] ?? '')); $provenance = sanitize_textarea_field((string) ($action['provenance'] ?? ''));
+        $size = sanitize_text_field((string) ($action['size'] ?? '')); $documentation_url = self::normalize_http_url((string) ($action['documentation_url'] ?? ''));
+        $ethics_notes = sanitize_textarea_field((string) ($action['ethics_notes'] ?? ''));
+        $formats = self::sanitize_string_list($action['formats'] ?? array(), 'research_manager_invalid_dataset_formats', 'Dataset formats must be an array of text values.'); if (is_wp_error($formats)) { return $formats; }
+        $line_ids = self::sanitize_verified_line_ids($action['line_ids'] ?? array(), $language, 'Research Datasets'); if (is_wp_error($line_ids)) { return $line_ids; }
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+        if ('' === $title || '' === $slug || ! self::valid_creation_token($creation_token)) { return new WP_Error('research_manager_invalid_dataset_creation', 'Research Dataset creation requires a title, slug and provenance token.'); }
+        if (strlen($title) > self::MAX_TITLE_BYTES || strlen($excerpt) > self::MAX_EXCERPT_BYTES || strlen($content) > self::MAX_CONTENT_BYTES) { return new WP_Error('research_manager_dataset_content_too_large', 'Research Dataset title, excerpt or body exceeds the bounded contract.'); }
+        if (! in_array($language, $languages, true)) { return new WP_Error('research_manager_unknown_language', 'Research Dataset language is outside the active Research preset.'); }
+        if (! in_array($status, array('draft','publish'), true)) { return new WP_Error('research_manager_invalid_dataset_post_status', 'Research Dataset creation only permits draft or publish status.'); }
+        if ('' !== $access_level && ! array_key_exists($access_level, $access_levels)) { return new WP_Error('research_manager_unknown_access_level', 'Dataset access level is outside the active Theme contract.'); }
+        if ('' !== (string) ($action['publication_date'] ?? '') && '' === $publication_date) { return new WP_Error('research_manager_invalid_dataset_publication_date', 'Dataset publication date must use a real YYYY, YYYY-MM or YYYY-MM-DD date.'); }
+        if ('' !== (string) ($action['repository'] ?? '') && '' === $repository) { return new WP_Error('research_manager_invalid_dataset_repository', 'Dataset repository must be a valid http or https URL.'); }
+        if ('' !== (string) ($action['documentation_url'] ?? '') && '' === $documentation_url) { return new WP_Error('research_manager_invalid_dataset_documentation_url', 'Dataset documentation URL must use http or https.'); }
+        if ('' !== (string) ($action['doi'] ?? '') && '' === $doi) { return new WP_Error('research_manager_invalid_doi', 'DOI must use a valid 10.xxxx/... identifier.'); }
+        return array(
+            'type'=>'create_dataset','title'=>$title,'slug'=>$slug,'excerpt'=>$excerpt,'content'=>$content,'language'=>$language,'status'=>$status,
+            'version'=>$version,'publication_date'=>$publication_date,'repository'=>$repository,'doi'=>$doi,'doi_verified'=>'' !== $doi ? '1' : '0',
+            'license'=>$license,'access_level'=>$access_level,'methodology'=>$methodology,'provenance'=>$provenance,'size'=>$size,
+            'documentation_url'=>$documentation_url,'ethics_notes'=>$ethics_notes,'formats'=>$formats,'line_ids'=>$line_ids,'creation_token'=>$creation_token,
+        );
+    }
+
     private static function sanitize_output_authors($value): array|WP_Error {
         if (null === $value || array() === $value) { return array(); }
         if (! is_array($value)) { return new WP_Error('research_manager_invalid_authors', 'Research Output authors must be an array.'); }
@@ -251,6 +285,7 @@ final class Eduardo_Research_Manager_Plan {
         if ('create_output' === $action['type']) { return 'create_output:' . $action['slug']; }
         if ('create_project' === $action['type']) { return 'create_project:' . $action['slug']; }
         if ('create_software' === $action['type']) { return 'create_software:' . $action['slug']; }
+        if ('create_dataset' === $action['type']) { return 'create_dataset:' . $action['slug']; }
         return 'unknown:' . md5((string) wp_json_encode($action));
     }
     private static function checksum(array $payload): string { return hash('sha256', (string) wp_json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)); }
