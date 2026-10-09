@@ -21,8 +21,7 @@ $evidence_groups = eduardo_research_surface_evidence_groups($key);
   <div class="research-shell">
    <?php if (in_array($key, array('publications','projects','software','datasets'), true)) :
      $map = array('publications'=>'research_output','projects'=>'research_project','software'=>'research_software','datasets'=>'research_dataset');
-     $args = array('post_type'=>$map[$key], 'post_status'=>'publish', 'posts_per_page'=>24, 'no_found_rows'=>true);
-     if ('es' === $language) { $args['post__in'] = array(0); }
+     $args = eduardo_research_localized_query_args(array('post_type'=>$map[$key], 'post_status'=>'publish', 'posts_per_page'=>24, 'no_found_rows'=>true), $language);
      $query = new WP_Query($args); ?>
      <div class="research-grid">
       <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); ?>
@@ -30,8 +29,7 @@ $evidence_groups = eduardo_research_surface_evidence_groups($key);
       <?php endwhile; else : ?><article class="research-card research-empty"><h2><?php echo esc_html(eduardo_research_t('evidence_index')); ?></h2><p><?php echo esc_html(eduardo_research_t('no_records')); ?></p></article><?php endif; wp_reset_postdata(); ?>
      </div>
    <?php elseif ('insights' === $key) :
-     $args = array('post_type'=>'post','post_status'=>'publish','posts_per_page'=>12,'no_found_rows'=>true);
-     if ('es' === $language) { $args['post__in'] = array(0); }
+     $args = eduardo_research_localized_query_args(array('post_type'=>'post','post_status'=>'publish','posts_per_page'=>12,'no_found_rows'=>true), $language);
      $query = new WP_Query($args); ?>
      <div class="research-grid">
       <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); ?><article class="research-card"><p class="research-card-kicker"><?php echo esc_html(eduardo_research_t('insight')); ?></p><h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2><?php if (has_excerpt()) : ?><p><?php echo esc_html(get_the_excerpt()); ?></p><?php endif; ?></article><?php endwhile; else : ?><article class="research-card research-empty"><h2><?php echo esc_html(eduardo_research_t('editorial_ready')); ?></h2><p><?php echo esc_html(eduardo_research_t('editorial_ready_body')); ?></p></article><?php endif; wp_reset_postdata(); ?>
