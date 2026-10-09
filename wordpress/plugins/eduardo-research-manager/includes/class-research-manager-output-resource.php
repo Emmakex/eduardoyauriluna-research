@@ -40,6 +40,12 @@ final class Eduardo_Research_Manager_Output_Resource {
     public function build_creation_plan(array $data, string $intent = '', array $context = array()): array|WP_Error {
         $valid = $this->validate_contract();
         if (is_wp_error($valid)) { return $valid; }
+        if (array_key_exists('authors', $data) && ! is_array($data['authors'])) {
+            return new WP_Error('research_manager_invalid_authors', 'Research Output authors must be supplied as an array.');
+        }
+        if (array_key_exists('line_ids', $data) && ! is_array($data['line_ids'])) {
+            return new WP_Error('research_manager_invalid_line_relations', 'Research Line relations must be supplied as an array of IDs.');
+        }
         $title = is_scalar($data['title'] ?? null) ? (string) $data['title'] : '';
         $action = array(
             'type'=>'create_output','title'=>$title,
@@ -53,8 +59,8 @@ final class Eduardo_Research_Manager_Output_Resource {
             'publication_date'=>is_scalar($data['publication_date'] ?? null) ? (string) $data['publication_date'] : '',
             'venue'=>is_scalar($data['venue'] ?? null) ? (string) $data['venue'] : '',
             'doi'=>is_scalar($data['doi'] ?? null) ? (string) $data['doi'] : '',
-            'authors'=>is_array($data['authors'] ?? null) ? $data['authors'] : array(),
-            'line_ids'=>is_array($data['line_ids'] ?? null) ? $data['line_ids'] : array(),
+            'authors'=>$data['authors'] ?? array(),
+            'line_ids'=>$data['line_ids'] ?? array(),
             'creation_token'=>wp_generate_uuid4(),
         );
         $intent = '' !== trim($intent) ? $intent : sprintf('Create verified Research Output: %s', sanitize_text_field($title));
