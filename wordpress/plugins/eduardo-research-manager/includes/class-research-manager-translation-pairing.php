@@ -47,10 +47,9 @@ final class Eduardo_Research_Manager_Translation_Pairing {
 
         $en_id = 'en' === $first['language'] ? $first_id : $second_id;
         $es_id = 'es' === $first['language'] ? $first_id : $second_id;
-        $this->assert_pair_slot_available($en_id, 'es', $es_id);
-        $slot = $this->assert_pair_slot_available($es_id, 'en', $en_id);
-        if (is_wp_error($slot)) { return $slot; }
         $slot = $this->assert_pair_slot_available($en_id, 'es', $es_id);
+        if (is_wp_error($slot)) { return $slot; }
+        $slot = $this->assert_pair_slot_available($es_id, 'en', $en_id);
         if (is_wp_error($slot)) { return $slot; }
 
         $actions = array();
