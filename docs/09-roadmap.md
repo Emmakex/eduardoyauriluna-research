@@ -4,12 +4,12 @@
 
 `eduardoyauriluna.com` is a greenfield WordPress implementation.
 
-There is no legacy site or installed theme to audit or migrate. We start from a clean WordPress installation, install the reusable base theme, and build the `research` preset directly on top of that foundation.
+There is no legacy site or installed theme to audit or migrate. We start from a clean WordPress installation, install the reusable SEO/GEO Theme, and build the `research` preset directly on top of that foundation.
 
 Implementation order:
 
 1. Clean WordPress installation
-2. Base theme installation
+2. SEO/GEO Theme installation
 3. `research` preset
 4. Academic content model
 5. Real site hydration and validation
@@ -18,7 +18,19 @@ Implementation order:
 8. Research outputs and visibility
 9. Doctoral application 2027
 
-The theme must remain functional without the Research Manager. The Manager is an enhancement layer for structured administration, automation, synchronization and readiness.
+The Theme must remain functional without the Research Manager. The Manager is an enhancement layer for structured administration, automation, synchronization and readiness.
+
+### Frontend authority
+
+The SEO/GEO Theme owns the public frontend. Gutenberg is not the layout authority for controlled preset pages.
+
+- preset pages render through Theme contracts, structured models and slots;
+- WordPress Page records may provide routing/status/translation mapping;
+- controlled pages must not depend on Gutenberg blocks or page-builder markup;
+- Gutenberg may be used only as a bounded content editor where explicitly useful, such as an editorial body slot;
+- the future Manager hydrates structured Theme slots rather than generating Gutenberg layouts.
+
+Reference: `docs/14-theme-owned-frontend.md`.
 
 ## Phase 0 — Research identity foundation ✅
 
@@ -39,12 +51,13 @@ The theme must remain functional without the Research Manager. The Manager is an
 **Goal:** create a clean implementation target for the Research preset.
 
 - [ ] Fresh WordPress installation
-- [ ] Base reusable theme installed from our current Theme project
+- [ ] Reusable SEO/GEO Theme installed from our current Theme project
 - [ ] Minimal required plugins only
 - [ ] English primary / Spanish secondary architecture prepared
 - [ ] Permalink strategy defined
 - [ ] Development/staging workflow defined
-- [ ] No page-builder dependency unless explicitly justified
+- [ ] Theme-controlled frontend; no Gutenberg/page-builder layout dependency
+- [ ] Define where Gutenberg is disabled and where bounded editorial body editing is allowed
 - [ ] Baseline performance, accessibility and security settings
 
 **Important:** no legacy-theme audit, content migration or compatibility layer is required.
@@ -52,6 +65,16 @@ The theme must remain functional without the Research Manager. The Manager is an
 ## Phase 2 — Theme preset: `research`
 
 **Goal:** create the complete academic visual/content presentation layer before building the Manager.
+
+### Theme contract first
+
+- [ ] Register/select `research` as a normal SEO/GEO Theme preset
+- [ ] Define expected pages and page roles
+- [ ] Define `primary_intent`, `required_sections` and `internal_targets`
+- [ ] Define structured page model IDs
+- [ ] Define required slots / `required_any`
+- [ ] Define evidence/verification groups
+- [ ] Ensure pages render without Gutenberg layout markup
 
 ### Design system
 
@@ -109,6 +132,7 @@ The theme must remain functional without the Research Manager. The Manager is an
 - [ ] Stable canonical URLs
 - [ ] Schema.org mappings
 - [ ] Google Scholar-compatible citation metadata
+- [ ] Bounded rich-text/body fields only where the Theme contract permits them
 
 The content model is validated against real rendered templates before the Manager is implemented.
 
@@ -148,6 +172,7 @@ The content model is validated against real rendered templates before the Manage
 - [ ] Audit log
 - [ ] Permissions/capabilities
 - [ ] Research Readiness dashboard
+- [ ] Structured slot hydration; no Gutenberg layout generation
 
 Reusable implementation belongs in the main Theme/Manager product repository. This repository remains the source of truth for Eduardo Jose Yauri Luna-specific content, configuration, requirements and decisions.
 
