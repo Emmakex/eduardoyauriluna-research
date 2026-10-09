@@ -15,7 +15,9 @@ Greenfield WordPress implementation of the `research` preset derived from the SE
 
 ## Current Theme version
 
-`0.4.0` adds the verified-evidence rendering contract on top of the installable Theme foundation.
+`0.5.0` introduces the premium academic visual milestone on top of the verified-evidence foundation.
+
+The Home surface now uses a split editorial hero, a decorative research-system visual, stronger section hierarchy, indexed content sections, richer collection cards, a dark verified-identity surface, an upgraded collaboration CTA and a refined sticky navigation system. Decorative graphics describe the site architecture only; they do not introduce unverified academic claims.
 
 On Theme activation it provisions the structural WordPress pages required by the `research` preset when they do not already exist, assigns the Home page as the static front page, records page role/model metadata, registers the Research content types and refreshes rewrite rules.
 
