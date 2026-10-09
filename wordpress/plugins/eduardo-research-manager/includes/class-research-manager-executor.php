@@ -167,7 +167,7 @@ final class Eduardo_Research_Manager_Executor {
         return array('exists'=>null !== $raw,'value'=>null === $raw ? null : maybe_unserialize($raw));
     }
 
-    private function write_action(array $action): true|WP_Error {
+    private function write_action(array $action): bool|WP_Error {
         if ('option' === $action['type']) {
             update_option((string) $action['key'], $action['value'], false);
         } elseif ('post_meta' === $action['type']) {
@@ -187,7 +187,7 @@ final class Eduardo_Research_Manager_Executor {
         return true;
     }
 
-    private function restore_records(array $records): true|WP_Error {
+    private function restore_records(array $records): bool|WP_Error {
         foreach (array_reverse($records) as $record) {
             if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { continue; }
             $action = $record['action'];
