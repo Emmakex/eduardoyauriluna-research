@@ -1,0 +1,30 @@
+name: Research Theme Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/theme-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/theme-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Lint theme PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress/themes/eduardo-research -type f -name '*.php' -print0 | xargs -0 -n1 php -l
