@@ -1,0 +1,233 @@
+name: Research Manager Translation Pairing
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-manager-translation-pairing.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-manager-translation-pairing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pairing:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-pairing
+          mkdir -p /tmp/research-manager-pairing
+          cd /tmp/research-manager-pairing
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Pairing Test' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/plugins/eduardo-research-manager wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+          wp eval '
+          if (! Eduardo_Research_Manager::translations() instanceof Eduardo_Research_Manager_Translation_Pairing) { exit(1); }
+          ' --allow-root
+
+      - name: Verify structured pairing evidence gates across all object types
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-pairing
+          wp eval '
+          wp_set_current_user(1);
+          $pairing = Eduardo_Research_Manager::translations();
+          $executor = Eduardo_Research_Manager::executor();
+          $types = ["research_output","research_project","research_software","research_dataset"];
+          foreach ($types as $type) {
+              $en = wp_insert_post(["post_type"=>$type,"post_status"=>"publish","post_title"=>"EN " . $type,"post_name"=>"en-" . str_replace("_","-",$type)]);
+              $es = wp_insert_post(["post_type"=>$type,"post_status"=>"publish","post_title"=>"ES " . $type,"post_name"=>"es-" . str_replace("_","-",$type)]);
+              update_post_meta($en, "_research_language", "en"); update_post_meta($es, "_research_language", "es");
+
+              $blocked_plan = $pairing->build_pair_plan($en, $es, "Preview pair");
+              if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { fwrite(STDERR, $type . ": wrong pair risk\n"); exit(1); }
+              $preview = $executor->preview($blocked_plan);
+              if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { exit(1); }
+              $blocked = $executor->apply($blocked_plan);
+              if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
+
+              $reference = "CI translation source " . $type;
+              $plan = $pairing->build_pair_plan($en, $es, "Pair verified translations", ["evidence_confirmed"=>true,"evidence_reference"=>$reference]);
+              if (is_wp_error($plan) || "evidence-required" !== $plan["risk"]) { exit(1); }
+              $applied = $executor->apply($plan);
+              if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+              $verified = $pairing->verify_pair($en, $es);
+              if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified)); exit(1); }
+              if ($reference !== get_post_meta($en, "_eduardo_research_translation_evidence", true) || $reference !== get_post_meta($es, "_eduardo_research_translation_evidence", true)) { exit(1); }
+
+              if ("research_output" === $type) {
+                  update_option("erm_pair_output_en", (int) $en, false);
+                  update_option("erm_pair_output_es", (int) $es, false);
+                  update_option("erm_pair_output_snapshot", (string) $applied["snapshot_id"], false);
+              } else {
+                  $rolled = $executor->rollback((string) $applied["snapshot_id"]);
+                  if (is_wp_error($rolled)) { exit(1); }
+                  $unpaired_en = $pairing->verify_unpaired($en);
+                  $unpaired_es = $pairing->verify_unpaired($es);
+                  if (is_wp_error($unpaired_en) || empty($unpaired_en["verified"]) || is_wp_error($unpaired_es) || empty($unpaired_es["verified"])) { exit(1); }
+              }
+          }
+          ' --allow-root
+
+      - name: Verify Insight pairing is editorial and reversible
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-pairing
+          wp eval '
+          wp_set_current_user(1);
+          $pairing = Eduardo_Research_Manager::translations(); $executor = Eduardo_Research_Manager::executor();
+          $en = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"English paired insight","post_name"=>"english-paired-insight"]);
+          $es = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Insight emparejado español","post_name"=>"insight-emparejado-espanol"]);
+          update_post_meta($en, "_research_language", "en"); update_post_meta($es, "_research_language", "es");
+          update_post_meta($en, "_research_insight_type", "research_note"); update_post_meta($es, "_research_insight_type", "research_note");
+          $plan = $pairing->build_pair_plan($en, $es, "Pair editorial translations");
+          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() : wp_json_encode($plan)); exit(1); }
+          $preview = $executor->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"])) { exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { exit(1); }
+          $verified = $pairing->verify_pair($en, $es);
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          update_option("erm_pair_insight_en", (int) $en, false); update_option("erm_pair_insight_es", (int) $es, false);
+          update_option("erm_pair_insight_snapshot", (string) $applied["snapshot_id"], false);
+          ' --allow-root
+
+      - name: Reject invalid pairing and collisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-pairing
+          wp eval '
+          wp_set_current_user(1);
+          $pairing = Eduardo_Research_Manager::translations();
+          $en1 = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"EN one","post_name"=>"pair-en-one"]);
+          $en2 = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"EN two","post_name"=>"pair-en-two"]);
+          $es1 = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"ES one","post_name"=>"pair-es-one"]);
+          $es2 = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"ES two","post_name"=>"pair-es-two"]);
+          foreach ([$en1,$en2] as $id) { update_post_meta($id, "_research_language", "en"); }
+          foreach ([$es1,$es2] as $id) { update_post_meta($id, "_research_language", "es"); }
+          $same = $pairing->build_pair_plan($en1, $en2);
+          if (! is_wp_error($same) || "research_manager_translation_language_mismatch" !== $same->get_error_code()) { exit(1); }
+          $output = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Cross type","post_name"=>"cross-type-output"]);
+          update_post_meta($output, "_research_language", "es");
+          $cross = $pairing->build_pair_plan($en1, $output);
+          if (! is_wp_error($cross) || "research_manager_translation_type_mismatch" !== $cross->get_error_code()) { exit(1); }
+          $draft = wp_insert_post(["post_type"=>"research_project","post_status"=>"draft","post_title"=>"Draft ES","post_name"=>"draft-es-pair"]);
+          update_post_meta($draft, "_research_language", "es");
+          $not_public = $pairing->build_pair_plan($en1, $draft);
+          if (! is_wp_error($not_public) || "research_manager_translation_not_public" !== $not_public->get_error_code()) { exit(1); }
+          update_post_meta($en1, "_research_translation_es", $es1);
+          update_post_meta($es1, "_research_translation_en", $en1);
+          $collision = $pairing->build_pair_plan($en1, $es2);
+          if (! is_wp_error($collision) || "research_manager_translation_collision" !== $collision->get_error_code()) { exit(1); }
+          if ((int) get_post_meta($en1, "_research_translation_es", true) !== (int) $es1) { exit(1); }
+          ' --allow-root
+
+      - name: Start public WordPress server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-pairing
+          nohup wp server --host=127.0.0.1 --port=8080 --allow-root >/tmp/research-pairing-server.log 2>&1 &
+          echo $! >/tmp/research-pairing-server.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/research-pairing-server.log
+          exit 1
+
+      - name: Verify singular hreflang and OG alternate over real HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-pairing
+          wp eval '
+          $rendered = Eduardo_Research_Manager::rendered();
+          foreach ([["output","en"],["output","es"],["insight","en"],["insight","es"]] as [$kind,$language]) {
+              $id = (int) get_option("erm_pair_" . $kind . "_" . $language, 0);
+              $other = "en" === $language ? "es" : "en";
+              $other_id = (int) get_option("erm_pair_" . $kind . "_" . $other, 0);
+              $url = (string) get_permalink($id); $other_url = (string) get_permalink($other_id);
+              $result = $rendered->verify_url($url, $language, [get_the_title($id)], [], true);
+              if (is_wp_error($result) || empty($result["verified"])) { fwrite(STDERR, wp_json_encode($result)); exit(1); }
+              if (! isset($result["hreflang"][$other]) || untrailingslashit((string) $result["hreflang"][$other]) !== untrailingslashit($other_url)) { fwrite(STDERR, wp_json_encode($result["hreflang"])); exit(1); }
+              if ("en" === $language && (! isset($result["hreflang"]["x-default"]) || untrailingslashit((string) $result["hreflang"]["x-default"]) !== untrailingslashit($url))) { exit(1); }
+          }
+          ' --allow-root
+
+      - name: Verify explicit unpair evidence gate and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-pairing
+          wp eval '
+          wp_set_current_user(1);
+          $pairing = Eduardo_Research_Manager::translations(); $executor = Eduardo_Research_Manager::executor();
+          $en = (int) get_option("erm_pair_output_en", 0); $es = (int) get_option("erm_pair_output_es", 0);
+          $blocked_plan = $pairing->build_unpair_plan($en, "Preview unpair");
+          if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { exit(1); }
+          $blocked = $executor->apply($blocked_plan);
+          if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
+          $plan = $pairing->build_unpair_plan($en, "Unpair verified translations", ["evidence_confirmed"=>true,"evidence_reference"=>"CI verified unpair source"]);
+          if (is_wp_error($plan)) { exit(1); }
+          $applied = $executor->apply($plan); if (is_wp_error($applied)) { exit(1); }
+          $a = $pairing->verify_unpaired($en); $b = $pairing->verify_unpaired($es);
+          if (is_wp_error($a) || empty($a["verified"]) || is_wp_error($b) || empty($b["verified"])) { exit(1); }
+          $rolled = $executor->rollback((string) $applied["snapshot_id"]); if (is_wp_error($rolled)) { exit(1); }
+          $paired = $pairing->verify_pair($en, $es);
+          if (is_wp_error($paired) || empty($paired["verified"])) { exit(1); }
+
+          $insight_snapshot = (string) get_option("erm_pair_insight_snapshot", "");
+          if ("" === $insight_snapshot || is_wp_error($executor->rollback($insight_snapshot))) { exit(1); }
+          $insight_en = (int) get_option("erm_pair_insight_en", 0); $insight_es = (int) get_option("erm_pair_insight_es", 0);
+          $iu1 = $pairing->verify_unpaired($insight_en); $iu2 = $pairing->verify_unpaired($insight_es);
+          if (is_wp_error($iu1) || empty($iu1["verified"]) || is_wp_error($iu2) || empty($iu2["verified"])) { exit(1); }
+
+          $output_snapshot = (string) get_option("erm_pair_output_snapshot", "");
+          if ("" === $output_snapshot || is_wp_error($executor->rollback($output_snapshot))) { exit(1); }
+          ' --allow-root
+
+      - name: Stop public server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/research-pairing-server.pid ]; then kill "$(cat /tmp/research-pairing-server.pid)" || true; fi
