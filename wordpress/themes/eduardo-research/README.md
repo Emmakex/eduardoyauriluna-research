@@ -15,9 +15,23 @@ Greenfield WordPress implementation of the `research` preset derived from the SE
 
 ## Current Theme version
 
-`0.5.0` introduces the premium academic visual milestone on top of the verified-evidence foundation.
+`0.6.0` establishes the official Academic Intelligence visual palette on top of the premium academic layout system.
 
-The Home surface now uses a split editorial hero, a decorative research-system visual, stronger section hierarchy, indexed content sections, richer collection cards, a dark verified-identity surface, an upgraded collaboration CTA and a refined sticky navigation system. Decorative graphics describe the site architecture only; they do not introduce unverified academic claims.
+The palette is intentionally academic and technological rather than generic corporate green:
+
+- Academic Midnight `#0B1820`
+- Deep Petrol `#123A3A`
+- Research Teal `#087F76`
+- Signal Mint `#61D6C6`
+- Warm Ivory `#F5F5F0`
+- Paper White `#FCFCFA`
+- Graphite `#293638`
+- Research Grey `#8B9897`
+- Academic Cobalt `#4169A8` as a limited secondary accent
+
+The global surface is Warm Ivory, reading cards use Paper White, institutional dark sections use Academic Midnight / Deep Petrol, interactions use Research Teal, and verified states use Signal Mint. Research Grey is reserved for non-critical metadata and decorative hierarchy when accessible contrast permits; Graphite is used for essential secondary text.
+
+The Home surface uses a split editorial hero, a decorative research-system visual, stronger section hierarchy, indexed content sections, richer collection cards, a dark verified-identity surface, an upgraded collaboration CTA and a refined sticky navigation system. Decorative graphics describe the site architecture only; they do not introduce unverified academic claims.
 
 On Theme activation it provisions the structural WordPress pages required by the `research` preset when they do not already exist, assigns the Home page as the static front page, records page role/model metadata, registers the Research content types and refreshes rewrite rules.
 
