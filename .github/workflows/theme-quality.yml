@@ -35,6 +35,7 @@ jobs:
           test -f wordpress/themes/eduardo-research/front-page.php
           test -f wordpress/themes/eduardo-research/index.php
           test -f wordpress/themes/eduardo-research/inc/research-language.php
+          test -f wordpress/themes/eduardo-research/inc/research-content-language.php
           test -f wordpress/themes/eduardo-research/inc/research-evidence.php
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
@@ -106,6 +107,29 @@ jobs:
           wp eval 'if ("en" !== eduardo_research_default_language()) { exit(1); } if ("http://research.test/es/investigacion/" !== eduardo_research_page_url("research", "es")) { exit(1); } if ("Investigación" !== eduardo_research_page_label("research", "es")) { exit(1); } $_SERVER["REQUEST_URI"]="/es/investigacion/"; if ("es" !== eduardo_research_request_language()) { exit(1); } $model=eduardo_research_default_model("es"); if ("Agenda de investigación" !== $model["research-lines-heading"]) { exit(1); }' --allow-root
           wp rewrite list --allow-root --format=csv | grep -F '^es/investigacion/?$'
           wp rewrite list --allow-root --format=csv | grep -F '^es/llms\.txt$'
+      - name: Verify translated Research record contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          wp eval '
+          $en = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"English paper","post_name"=>"english-paper"]);
+          $es = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Artículo español","post_name"=>"articulo-es"]);
+          if (! $en || ! $es) { exit(1); }
+          update_post_meta($en, "_research_language", "en");
+          update_post_meta($es, "_research_language", "es");
+          update_post_meta($en, "_research_translation_es", $es);
+          update_post_meta($es, "_research_translation_en", $en);
+          $spanish_url = get_permalink($es);
+          if ("http://research.test/es/publicaciones/articulo-es/" !== $spanish_url) { fwrite(STDERR, $spanish_url . "\n"); exit(1); }
+          if ($spanish_url !== eduardo_research_record_translation_url($en, "es")) { exit(1); }
+          if ((string) get_permalink($en) !== eduardo_research_record_translation_url($es, "en")) { exit(1); }
+          $en_query = new WP_Query(eduardo_research_localized_query_args(["post_type"=>"research_output","post_status"=>"publish","fields"=>"ids","posts_per_page"=>20], "en"));
+          $es_query = new WP_Query(eduardo_research_localized_query_args(["post_type"=>"research_output","post_status"=>"publish","fields"=>"ids","posts_per_page"=>20], "es"));
+          if (! in_array($en, $en_query->posts, true) || in_array($es, $en_query->posts, true)) { exit(1); }
+          if (! in_array($es, $es_query->posts, true) || in_array($en, $es_query->posts, true)) { exit(1); }
+          ' --allow-root
+          wp rewrite list --allow-root --format=csv | grep -F '^es/publicaciones/([^/]+)/?$'
       - name: Verify evidence visibility contract
         shell: bash
         run: |
