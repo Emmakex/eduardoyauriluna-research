@@ -42,7 +42,10 @@ function eduardo_research_identity(): array {
 function eduardo_research_output_schema_type(int $post_id): string {
     $verified = '1' === (string) get_post_meta($post_id, '_research_output_type_verified', true);
     if (! $verified) { return 'CreativeWork'; }
-    $map = array('scholarly_article'=>'ScholarlyArticle','article'=>'Article','report'=>'Report');
+    $map = array(
+        'journal_article'=>'ScholarlyArticle','conference_paper'=>'ScholarlyArticle','preprint'=>'ScholarlyArticle','working_paper'=>'ScholarlyArticle',
+        'book'=>'Book','book_chapter'=>'Chapter','technical_report'=>'Report','article'=>'Article','scholarly_article'=>'ScholarlyArticle','report'=>'Report',
+    );
     $type = sanitize_key((string) get_post_meta($post_id, '_research_output_type', true));
     return $map[$type] ?? 'CreativeWork';
 }
@@ -60,7 +63,7 @@ function eduardo_research_alternate_urls(): array {
         return array('en'=>eduardo_research_page_url($key, 'en'), 'es'=>eduardo_research_page_url($key, 'es'));
     }
 
-    if (is_singular(array('research_output','research_project','research_software','research_dataset','post'))) {
+    if (is_singular(array('research_line','research_output','research_project','research_software','research_dataset','post'))) {
         $post_id = get_queried_object_id();
         if ($post_id <= 0 || ! function_exists('eduardo_research_post_language')) { return array(); }
         $record_language = eduardo_research_post_language($post_id);
@@ -129,6 +132,11 @@ function eduardo_research_schema_graph(): void {
     if ($affiliations) { $person['affiliation'] = $affiliations; }
 
     $topics = array();
+    $line_query = new WP_Query(eduardo_research_verified_line_query_args($language, 50));
+    foreach ($line_query->posts as $line_post) {
+        if ($line_post instanceof WP_Post && '' !== trim($line_post->post_title)) { $topics[] = $line_post->post_title; }
+    }
+    wp_reset_postdata();
     foreach (eduardo_research_verified_localized_evidence('research_lines') as $record) {
         $topic = trim((string) ($record['title'] ?? $record['label'] ?? $record['value'] ?? ''));
         if ('' !== $topic) { $topics[] = $topic; }
@@ -140,16 +148,60 @@ function eduardo_research_schema_graph(): void {
     if ('about' === $key) { $page['mainEntity'] = array('@id'=>home_url('/#researcher')); }
     $graph = array($person,$website,$page);
 
-    if (is_singular('research_output')) {
+    if (is_singular('research_line')) {
         $post_id = get_queried_object_id();
-        $output = array('@type'=>eduardo_research_output_schema_type($post_id),'@id'=>get_permalink() . '#research-output','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'author'=>array('@id'=>home_url('/#researcher')),'mainEntityOfPage'=>array('@id'=>get_permalink() . '#webpage'),'datePublished'=>get_the_date(DATE_W3C),'dateModified'=>get_the_modified_date(DATE_W3C));
-        $doi = trim((string) get_post_meta($post_id, '_research_doi', true));
-        if ('' !== $doi && '1' === (string) get_post_meta($post_id, '_research_doi_verified', true)) { $output['identifier'] = array('@type'=>'PropertyValue','propertyID'=>'DOI','value'=>$doi); }
+        $line = array('@type'=>'CreativeWork','@id'=>get_permalink() . '#research-line','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'mainEntityOfPage'=>array('@id'=>get_permalink() . '#webpage'));
+        if (has_excerpt($post_id)) { $line['description'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
+        $question = eduardo_research_meta_value($post_id, '_research_central_question');
+        if ($question) { $line['abstract'] = $question; }
+        $keywords = eduardo_research_meta_list($post_id, '_research_topics');
+        if ($keywords) { $line['keywords'] = $keywords; }
+        $graph[] = $line;
+    } elseif (is_singular('research_output')) {
+        $post_id = get_queried_object_id();
+        $output = array('@type'=>eduardo_research_output_schema_type($post_id),'@id'=>get_permalink() . '#research-output','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'mainEntityOfPage'=>array('@id'=>get_permalink() . '#webpage'),'dateModified'=>get_the_modified_date(DATE_W3C));
+        if (has_excerpt($post_id)) { $output['abstract'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
+        $publication_date = eduardo_research_meta_value($post_id, '_research_publication_date');
+        if ($publication_date) { $output['datePublished'] = $publication_date; }
+        $authors = array();
+        foreach (eduardo_research_output_authors($post_id) as $author) {
+            $author_node = array('@type'=>'Person','name'=>(string) $author['display_name']);
+            if (! empty($author['orcid'])) { $author_node['sameAs'] = 'https://orcid.org/' . ltrim((string) $author['orcid'], '/'); }
+            if (! empty($author['affiliation'])) { $author_node['affiliation'] = array('@type'=>'Organization','name'=>(string) $author['affiliation']); }
+            $authors[] = $author_node;
+        }
+        if ($authors) { $output['author'] = $authors; }
+        $doi = eduardo_research_meta_value($post_id, '_research_doi');
+        if ('' !== $doi && '1' === eduardo_research_meta_value($post_id, '_research_doi_verified')) { $output['identifier'] = array('@type'=>'PropertyValue','propertyID'=>'DOI','value'=>$doi); }
+        $venue = eduardo_research_meta_value($post_id, '_research_venue');
+        if ($venue) { $output['isPartOf'] = array('@type'=>'CreativeWork','name'=>$venue); }
+        $license = eduardo_research_meta_value($post_id, '_research_license');
+        if ($license) { $output['license'] = $license; }
+        $review = eduardo_research_meta_value($post_id, '_research_review_status');
+        if ($review) { $output['additionalProperty'] = array('@type'=>'PropertyValue','name'=>'reviewStatus','value'=>$review); }
         $graph[] = $output;
     } elseif (is_singular('research_dataset')) {
-        $graph[] = array('@type'=>'Dataset','@id'=>get_permalink() . '#dataset','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'creator'=>array('@id'=>home_url('/#researcher')));
+        $post_id = get_queried_object_id();
+        $dataset = array('@type'=>'Dataset','@id'=>get_permalink() . '#dataset','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language);
+        if (has_excerpt($post_id)) { $dataset['description'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
+        $doi = eduardo_research_meta_value($post_id, '_research_doi');
+        if ($doi && '1' === eduardo_research_meta_value($post_id, '_research_doi_verified')) { $dataset['identifier'] = array('@type'=>'PropertyValue','propertyID'=>'DOI','value'=>$doi); }
+        $license = eduardo_research_meta_value($post_id, '_research_license');
+        if ($license) { $dataset['license'] = $license; }
+        $graph[] = $dataset;
     } elseif (is_singular('research_software')) {
-        $graph[] = array('@type'=>'SoftwareSourceCode','@id'=>get_permalink() . '#software','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'author'=>array('@id'=>home_url('/#researcher')));
+        $post_id = get_queried_object_id();
+        $software = array('@type'=>'SoftwareSourceCode','@id'=>get_permalink() . '#software','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language);
+        if (has_excerpt($post_id)) { $software['description'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
+        $repo = eduardo_research_meta_value($post_id, '_research_repository_url');
+        if ($repo) { $software['codeRepository'] = $repo; }
+        $version = eduardo_research_meta_value($post_id, '_research_software_version');
+        if ($version) { $software['version'] = $version; }
+        $languages = eduardo_research_meta_list($post_id, '_research_programming_languages');
+        if ($languages) { $software['programmingLanguage'] = $languages; }
+        $license = eduardo_research_meta_value($post_id, '_research_license');
+        if ($license) { $software['license'] = $license; }
+        $graph[] = $software;
     }
 
     echo '<script type="application/ld+json">' . wp_json_encode(array('@context'=>'https://schema.org','@graph'=>$graph), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
