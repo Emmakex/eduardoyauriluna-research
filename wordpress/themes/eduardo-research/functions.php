@@ -1,19 +1,12 @@
 <?php
-/**
- * Eduardo Research theme bootstrap.
- *
- * The public frontend is Theme-owned. Gutenberg is deliberately not the
- * composition engine for controlled Research pages.
- */
-
+/** Eduardo Research theme bootstrap. */
 declare(strict_types=1);
-
-if (! defined('ABSPATH')) {
-    exit;
-}
+if (! defined('ABSPATH')) { exit; }
 
 require_once get_template_directory() . '/inc/research-preset.php';
 require_once get_template_directory() . '/inc/research-model.php';
+require_once get_template_directory() . '/inc/research-router.php';
+require_once get_template_directory() . '/inc/research-seo.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
@@ -31,22 +24,20 @@ function eduardo_research_assets(): void {
 }
 add_action('wp_enqueue_scripts', 'eduardo_research_assets');
 
-/** Register research outputs as first-class structured content. */
 function eduardo_research_register_content_types(): void {
     $types = array(
-        'research_output'  => array('Outputs', 'Output', 'dashicons-media-document'),
-        'research_project' => array('Projects', 'Project', 'dashicons-portfolio'),
-        'research_software'=> array('Software', 'Software', 'dashicons-editor-code'),
-        'research_dataset' => array('Datasets', 'Dataset', 'dashicons-database'),
+        'research_output' => array('Outputs', 'Output', 'dashicons-media-document', 'publications'),
+        'research_project' => array('Projects', 'Project', 'dashicons-portfolio', 'projects'),
+        'research_software' => array('Software', 'Software', 'dashicons-editor-code', 'software'),
+        'research_dataset' => array('Datasets', 'Dataset', 'dashicons-database', 'datasets'),
     );
-
     foreach ($types as $type => $labels) {
         register_post_type($type, array(
             'labels' => array('name' => $labels[0], 'singular_name' => $labels[1]),
             'public' => true,
             'show_in_rest' => true,
             'has_archive' => true,
-            'rewrite' => array('slug' => str_replace('research_', '', $type)),
+            'rewrite' => array('slug' => $labels[3]),
             'menu_icon' => $labels[2],
             'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'),
         ));
@@ -54,11 +45,5 @@ function eduardo_research_register_content_types(): void {
 }
 add_action('init', 'eduardo_research_register_content_types');
 
-/**
- * Keep the editor available for bounded narrative fields, while controlled
- * page composition remains entirely Theme-owned.
- */
-function eduardo_research_page_editor_support(): void {
-    remove_post_type_support('page', 'editor');
-}
+function eduardo_research_page_editor_support(): void { remove_post_type_support('page', 'editor'); }
 add_action('init', 'eduardo_research_page_editor_support', 20);
