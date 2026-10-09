@@ -1,0 +1,240 @@
+name: Research Manager Translation Drafts
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-manager-translation-drafts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-manager-translation-drafts.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  translation-drafts:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-translation-drafts
+          mkdir -p /tmp/research-manager-translation-drafts
+          cd /tmp/research-manager-translation-drafts
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://drafts.test --title='Research Translation Draft Test' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/plugins/eduardo-research-manager wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+          wp eval '
+          if (! Eduardo_Research_Manager::translation_drafts() instanceof Eduardo_Research_Manager_Translation_Draft) { exit(1); }
+          ' --allow-root
+
+      - name: Verify structured translation drafts require evidence and copy no claims
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-translation-drafts
+          wp eval '
+          wp_set_current_user(1);
+          $drafts = Eduardo_Research_Manager::translation_drafts();
+          $executor = Eduardo_Research_Manager::executor();
+          $types = ["research_output","research_project","research_software","research_dataset"];
+
+          foreach ($types as $type) {
+              $source = wp_insert_post([
+                  "post_type"=>$type,"post_status"=>"publish",
+                  "post_title"=>"Verified source " . $type,
+                  "post_name"=>"verified-source-" . str_replace("_","-",$type),
+                  "post_excerpt"=>"SOURCE EXCERPT MUST NOT COPY",
+                  "post_content"=>"<p>SOURCE BODY MUST NOT COPY</p>",
+              ]);
+              update_post_meta($source, "_research_language", "en");
+
+              if ("research_output" === $type) {
+                  update_post_meta($source, "_research_output_type", "journal_article");
+                  update_post_meta($source, "_research_review_status", "peer_reviewed");
+                  update_post_meta($source, "_research_publication_date", "2026-10-09");
+                  update_post_meta($source, "_research_venue", "Source Journal");
+                  update_post_meta($source, "_research_doi", "10.1000/source");
+                  update_post_meta($source, "_research_authors", [["display_name"=>"Source Author"]]);
+                  update_post_meta($source, "_research_line_ids", [999]);
+              } elseif ("research_project" === $type) {
+                  update_post_meta($source, "_research_project_status", "active");
+                  update_post_meta($source, "_research_question", "Source question");
+                  update_post_meta($source, "_research_role", "Principal researcher");
+                  update_post_meta($source, "_research_start_date", "2026-01");
+                  update_post_meta($source, "_research_partner", "Source partner");
+                  update_post_meta($source, "_research_funding", "Source funding");
+                  update_post_meta($source, "_research_methods", ["Source method"]);
+                  update_post_meta($source, "_research_line_ids", [999]);
+              } elseif ("research_software" === $type) {
+                  update_post_meta($source, "_research_software_status", "active");
+                  update_post_meta($source, "_research_software_version", "9.9.9");
+                  update_post_meta($source, "_research_release_date", "2026-10-09");
+                  update_post_meta($source, "_research_repository_url", "https://example.test/source");
+                  update_post_meta($source, "_research_license", "Source License");
+                  update_post_meta($source, "_research_doi", "10.1000/source-software");
+                  update_post_meta($source, "_research_programming_languages", ["SourceLang"]);
+                  update_post_meta($source, "_research_line_ids", [999]);
+              } else {
+                  update_post_meta($source, "_research_dataset_version", "9.9");
+                  update_post_meta($source, "_research_publication_date", "2026-10-09");
+                  update_post_meta($source, "_research_repository", "https://example.test/source-data");
+                  update_post_meta($source, "_research_doi", "10.1000/source-data");
+                  update_post_meta($source, "_research_license", "Source License");
+                  update_post_meta($source, "_research_access_level", "restricted");
+                  update_post_meta($source, "_research_formats", ["SOURCE"]);
+                  update_post_meta($source, "_research_methodology", "Source methodology");
+                  update_post_meta($source, "_research_provenance", "Source provenance");
+                  update_post_meta($source, "_research_ethics_notes", "Source ethics");
+                  update_post_meta($source, "_research_line_ids", [999]);
+              }
+
+              $target_title = "Título ES explícito " . $type;
+              $target_slug = "borrador-es-" . str_replace("_","-",$type);
+              $blocked_plan = $drafts->build_creation_plan($source, $target_title, $target_slug, "Preview translation draft");
+              if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { fwrite(STDERR, $type . ": wrong draft risk\n"); exit(1); }
+              $preview = $executor->preview($blocked_plan);
+              if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { exit(1); }
+              $blocked = $executor->apply($blocked_plan);
+              if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
+
+              $plan = $drafts->build_creation_plan($source, $target_title, $target_slug, "Create reviewed translation draft", [
+                  "evidence_confirmed"=>true,
+                  "evidence_reference"=>"CI source identity evidence for " . $type,
+              ]);
+              if (is_wp_error($plan) || "evidence-required" !== $plan["risk"]) { fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() : wp_json_encode($plan)); exit(1); }
+              $token = (string) $plan["actions"][0]["creation_token"];
+              $applied = $executor->apply($plan);
+              if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+
+              $verified = $drafts->verify($source, $token);
+              if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, $type . ":" . wp_json_encode($verified)); exit(1); }
+              $target = (int) $verified["target_id"];
+              if ($target <= 0 || $target_title !== get_the_title($target) || "draft" !== get_post_status($target)) { exit(1); }
+              if ("" !== trim((string) get_post_field("post_excerpt", $target)) || "" !== trim((string) get_post_field("post_content", $target))) { exit(1); }
+              if (0 !== eduardo_research_translation_post_id($source, "es")) { fwrite(STDERR, "Draft leaked into public translation resolver\n"); exit(1); }
+
+              $rolled = $executor->rollback((string) $applied["snapshot_id"]);
+              if (is_wp_error($rolled)) { exit(1); }
+              if (get_post($target) instanceof WP_Post) { fwrite(STDERR, "Translation draft survived rollback\n"); exit(1); }
+              if ("" !== (string) get_post_meta($source, "_eduardo_research_translation_draft_es", true)) { fwrite(STDERR, "Pending token survived rollback\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Verify Insight draft is editorial and copies no prose
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-translation-drafts
+          wp eval '
+          wp_set_current_user(1);
+          $drafts = Eduardo_Research_Manager::translation_drafts(); $executor = Eduardo_Research_Manager::executor();
+          $source = wp_insert_post([
+              "post_type"=>"post","post_status"=>"publish","post_title"=>"English source insight","post_name"=>"english-source-insight",
+              "post_excerpt"=>"SOURCE INSIGHT EXCERPT","post_content"=>"<p>SOURCE INSIGHT BODY</p>",
+          ]);
+          update_post_meta($source, "_research_language", "en"); update_post_meta($source, "_research_insight_type", "method_note");
+          $plan = $drafts->build_creation_plan($source, "Borrador explícito ES", "borrador-explicito-es");
+          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { fwrite(STDERR, is_wp_error($plan) ? $plan->get_error_message() : wp_json_encode($plan)); exit(1); }
+          $preview = $executor->preview($plan); if (is_wp_error($preview) || empty($preview["apply_allowed"])) { exit(1); }
+          $token = (string) $plan["actions"][0]["creation_token"];
+          $applied = $executor->apply($plan); if (is_wp_error($applied)) { exit(1); }
+          $verified = $drafts->verify($source, $token);
+          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified)); exit(1); }
+          $target = (int) $verified["target_id"];
+          if ("method_note" !== get_post_meta($target, "_research_insight_type", true)) { exit(1); }
+          if ("" !== trim((string) get_post_field("post_excerpt", $target)) || "" !== trim((string) get_post_field("post_content", $target))) { exit(1); }
+          if (0 !== eduardo_research_translation_post_id($source, "es")) { exit(1); }
+          if (is_wp_error($executor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+          ' --allow-root
+
+      - name: Reject invalid source existing pair duplicate pending and slug conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-translation-drafts
+          wp eval '
+          wp_set_current_user(1);
+          $drafts = Eduardo_Research_Manager::translation_drafts(); $executor = Eduardo_Research_Manager::executor();
+
+          $page = get_page_by_path("about");
+          $unsupported = $drafts->build_creation_plan((int) $page->ID, "No permitido");
+          if (! is_wp_error($unsupported) || "research_manager_translation_resource_unsupported" !== $unsupported->get_error_code()) { exit(1); }
+
+          $draft_source = wp_insert_post(["post_type"=>"research_project","post_status"=>"draft","post_title"=>"Draft source"]);
+          update_post_meta($draft_source, "_research_language", "en");
+          $not_public = $drafts->build_creation_plan($draft_source, "Destino ES");
+          if (! is_wp_error($not_public) || "research_manager_translation_source_not_public" !== $not_public->get_error_code()) { exit(1); }
+
+          $source = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"Source pair block","post_name"=>"source-pair-block"]);
+          $paired = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"Paired ES","post_name"=>"paired-es"]);
+          update_post_meta($source, "_research_language", "en"); update_post_meta($paired, "_research_language", "es");
+          update_post_meta($source, "_research_translation_es", (string) $paired);
+          $already = $drafts->build_creation_plan($source, "Otro ES");
+          if (! is_wp_error($already) || "research_manager_translation_already_paired" !== $already->get_error_code()) { exit(1); }
+
+          delete_post_meta($source, "_research_translation_es");
+          $plan = $drafts->build_creation_plan($source, "Pendiente ES", "pendiente-es", "Create pending", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
+          if (is_wp_error($plan)) { exit(1); }
+          $applied = $executor->apply($plan); if (is_wp_error($applied)) { exit(1); }
+          $duplicate = $drafts->build_creation_plan($source, "Segundo pendiente ES", "segundo-pendiente-es", "Duplicate pending", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
+          if (! is_wp_error($duplicate) || "research_manager_translation_draft_exists" !== $duplicate->get_error_code()) { exit(1); }
+          if (is_wp_error($executor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+
+          $occupied = wp_insert_post(["post_type"=>"research_project","post_status"=>"draft","post_title"=>"Occupied","post_name"=>"occupied-target-slug"]);
+          $conflict = $drafts->build_creation_plan($source, "Conflict ES", "occupied-target-slug", "Slug conflict", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
+          if (! is_wp_error($conflict) || "research_manager_translation_draft_slug_conflict" !== $conflict->get_error_code()) { exit(1); }
+          wp_delete_post($occupied, true);
+          ' --allow-root
+
+      - name: Clear only stale pending tokens reversibly
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-translation-drafts
+          wp eval '
+          wp_set_current_user(1);
+          $drafts = Eduardo_Research_Manager::translation_drafts(); $executor = Eduardo_Research_Manager::executor();
+          $source = wp_insert_post(["post_type"=>"research_dataset","post_status"=>"publish","post_title"=>"Stale token source","post_name"=>"stale-token-source"]);
+          update_post_meta($source, "_research_language", "en");
+          update_post_meta($source, "_eduardo_research_translation_draft_es", "stale-token-that-resolves-nowhere");
+          $plan = $drafts->build_clear_stale_plan($source);
+          if (is_wp_error($plan) || "standard" !== $plan["risk"]) { exit(1); }
+          $applied = $executor->apply($plan); if (is_wp_error($applied)) { exit(1); }
+          if ("" !== (string) get_post_meta($source, "_eduardo_research_translation_draft_es", true)) { exit(1); }
+          if (is_wp_error($executor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+          if ("stale-token-that-resolves-nowhere" !== (string) get_post_meta($source, "_eduardo_research_translation_draft_es", true)) { exit(1); }
+          ' --allow-root
