@@ -8,8 +8,13 @@ final class Eduardo_Research_Manager_Plan {
     private const ALLOWED_OPTIONS = array(
         'eduardo_research_evidence',
         'eduardo_research_model',
+        'eduardo_research_model_es',
         'eduardo_research_identity',
         'eduardo_research_native_languages',
+    );
+
+    private const ALLOWED_SURFACE_KEYS = array(
+        'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
     );
 
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order');
@@ -114,7 +119,9 @@ final class Eduardo_Research_Manager_Plan {
         foreach (array('doi','review_status','output_type','identifier','evidence','affiliation','award','grant') as $needle) {
             if (str_contains($key, $needle)) { return 'evidence-required'; }
         }
-        if ('post_content' === $key) { return 'editorial-review'; }
+        if ('post_content' === $key || str_starts_with($key, 'eduardo_research_model') || str_starts_with($key, 'eduardo_research_surface_')) {
+            return 'editorial-review';
+        }
         return 'standard';
     }
 
@@ -122,7 +129,7 @@ final class Eduardo_Research_Manager_Plan {
         $type = sanitize_key((string) ($action['type'] ?? ''));
         if ('option' === $type) {
             $key = sanitize_key((string) ($action['key'] ?? ''));
-            if (! in_array($key, self::ALLOWED_OPTIONS, true)) {
+            if (! self::allowed_option_key($key)) {
                 return new WP_Error('research_manager_option_not_allowed', 'This WordPress option is outside the Research Manager mutation contract.');
             }
             return array('type'=>'option','key'=>$key,'value'=>$action['value'] ?? null);
@@ -153,6 +160,16 @@ final class Eduardo_Research_Manager_Plan {
         }
 
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
+    }
+
+    private static function allowed_option_key(string $key): bool {
+        if (in_array($key, self::ALLOWED_OPTIONS, true)) { return true; }
+        foreach (self::ALLOWED_SURFACE_KEYS as $surface) {
+            if ('eduardo_research_surface_' . $surface === $key || 'eduardo_research_surface_' . $surface . '_es' === $key) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static function allowed_meta_key(string $key): bool {

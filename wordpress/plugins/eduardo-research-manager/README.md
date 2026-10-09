@@ -1,97 +1,72 @@
 # Research Manager
 
-Independent WordPress control plane for the Eduardo Research Theme.
+Independent WordPress control plane for the Eduardo Research Theme. The Manager does **not** render the public frontend; the Theme remains the deterministic rendering, SEO/GEO, Schema and accessibility authority.
 
-## Boundary
+## Current version
 
-The Manager does **not** render the public frontend. The Research Theme remains the deterministic rendering, SEO/GEO, Schema and accessibility authority.
+`0.2.0`
 
-The Manager controls structured lifecycle operations:
+The safe mutation/readiness kernel from 0.1.0 now includes the first resource-specific service: **Theme-owned Pages and structured slot hydration**.
 
-- inspect the active Research preset contract;
-- diagnose missing/misaligned resources;
-- prepare structured mutation plans;
-- preview stored-state changes;
-- apply authorised mutations;
-- verify persisted state;
-- rollback reversible mutations from bounded snapshots.
+## Control-plane kernel
 
-## Foundation version
+The Manager can inspect the active Research preset, diagnose missing or misaligned resources, build checksummed mutation plans, Preview stored-state changes, Apply authorised writes, Verify persisted state and Rollback from bounded snapshots.
 
-`0.1.0`
+Evidence-sensitive academic keys are classified as `evidence-required`. Apply requires both explicit evidence confirmation and a non-empty source/verification reference inside the checksummed plan.
 
-This version establishes the safe mutation and readiness kernel. It does not yet expose full resource-creation forms or external academic-provider writes.
+## Page Resource Service
+
+`Eduardo_Research_Manager_Page_Resource` operates on preset page keys rather than arbitrary WordPress pages.
+
+It can:
+
+- inspect a Theme-controlled page and its role/model contract;
+- discover the allowed slot schema from the active Theme;
+- read effective EN or ES slot state;
+- prepare a hydration plan for only allowed slots;
+- repair incorrect `_eduardo_research_role` and `_eduardo_research_model` metadata in the same reversible plan;
+- verify stored hydration after Apply;
+- preserve the Theme as layout/rendering authority.
+
+Home uses the Theme model options:
+
+- `eduardo_research_model`
+- `eduardo_research_model_es`
+
+Interior surfaces use the bounded Theme options `eduardo_research_surface_<page-key>` and their `_es` counterparts. Only preset-defined Research surfaces are permitted by the generic mutation-plan whitelist.
+
+Hydration of Theme copy/model options is classified as `editorial-review`; it is visible in Preview but does not claim academic evidence by itself.
+
+If the expected WordPress page does not exist, the Page Resource Service returns `research_manager_page_missing` with next action `create-resource`. It does **not** recreate or publish a missing page implicitly. Explicit reversible resource creation is the next Page milestone.
 
 ## Diagnostics
 
-`Eduardo_Research_Manager_Diagnostics` returns actionable checks rather than a score alone. Each failing/warning check maps to a next-action class such as:
-
-- `create-resource`
-- `hydrate`
-- `auto-fix-candidate`
-- `manual-review`
-- `configuration-required`
-
-The first contract covers:
-
-- compatible Research Theme/preset;
-- expected Theme-controlled pages;
-- page role/model assignment;
-- Research CPT registration;
-- native language configuration;
-- static Home routing;
-- evidence-store shape.
+Readiness checks map failures to actionable classes such as `create-resource`, `hydrate`, `auto-fix-candidate`, `manual-review` and `configuration-required`. The contract covers the Research Theme/preset, expected pages, page role/model assignment, Research CPTs, languages, Home routing and evidence-store shape.
 
 ## Mutation contract
 
-Supported foundation actions are deliberately narrow:
+The foundation remains deliberately narrow:
 
-- approved Research options;
+- approved Research options and bounded Theme page-model options;
 - Theme/Research post metadata (`_eduardo_research_*`, `_research_*`);
 - bounded post fields: title, excerpt, body content and menu order.
 
-Publishing status, arbitrary WordPress options and arbitrary post fields are outside the foundation whitelist.
-
-Every plan is checksummed. A target may appear only once in a plan.
-
-## Evidence gate
-
-Evidence-sensitive keys — including DOI, review status, output classification, academic identifiers, affiliations, awards, grants and the evidence store — are classified as `evidence-required`.
-
-Preview remains possible so a proposed change can be inspected. Apply is blocked unless the plan was created with explicit `evidence_confirmed=true`; that confirmation is part of the checksummed plan payload.
-
-This prevents a caller from previewing a harmless-looking plan and later changing its evidence status without invalidating the plan.
+Publishing status, arbitrary WordPress options and arbitrary post fields remain outside the whitelist. Every plan is checksummed and may target each stored field only once.
 
 ## Preview → Apply → Verify → Rollback
 
-```text
-intent + structured actions
-          ↓
-        Preview
-          ↓
-    evidence gate
-          ↓
-         Apply
-          ↓
-    stored-state Verify
-          ↓
- rollback snapshot retained
-```
-
-Before Apply, the Manager records the previous supported state in a bounded, non-autoloaded WordPress option. If a write or verification fails, it attempts immediate restoration. An authorised user can also explicitly rollback a successful mutation once.
-
-The snapshot store retains at most 25 recent mutations in this foundation.
+Before Apply, the Manager stores previous supported state in a bounded, non-autoloaded snapshot store. A failed write or verification triggers restoration. An authorised user may explicitly rollback a successful mutation once. The foundation retains at most 25 recent snapshots.
 
 ## Admin surface
 
-WordPress → Tools → Research Manager shows the contract/readiness report and mutation discipline. It intentionally does not expose raw write controls yet; mutation UX will be added resource-by-resource on top of the verified kernel.
+WordPress → Tools → Research Manager shows the readiness/control-plane state. Raw mutation controls are intentionally not exposed yet; resource UX will be added only on top of verified services.
 
 ## Next implementation blocks
 
-1. Resource service for Theme-controlled Pages and structured slot hydration.
+1. Explicit reversible creation of missing Theme-controlled Page resources.
 2. Insight creation/update service with bounded body content.
 3. Publication and Research Project services using evidence-aware metadata schemas.
 4. Rendered-frontend verification adapters.
 5. Readiness remediation plans wired to Preview/Apply.
-6. EN/ES resource pairing and translation operations.
-7. External academic connectors only behind explicit authorization and additional gates.
+6. EN/ES record pairing and translation operations.
+7. External academic connectors behind explicit authorization and additional evidence gates.
