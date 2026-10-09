@@ -154,7 +154,7 @@ final class Eduardo_Research_Manager_Page_Resource {
         return 'eduardo_research_surface_' . sanitize_key($key) . ('es' === $language ? '_es' : '');
     }
 
-    private function validate_target(string $key, string $language): true|WP_Error {
+    private function validate_target(string $key, string $language): bool|WP_Error {
         if (! $this->contract->compatible()) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required.');
         }
