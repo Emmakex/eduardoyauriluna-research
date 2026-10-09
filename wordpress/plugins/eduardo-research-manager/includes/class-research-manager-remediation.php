@@ -24,8 +24,7 @@ final class Eduardo_Research_Manager_Remediation {
         $items = array();
         foreach ((array) ($report['checks'] ?? array()) as $check) {
             if (! is_array($check)) { continue; }
-            $classification = $this->classification($check);
-            $items[] = array_merge($check, $classification);
+            $items[] = array_merge($check, $this->classification($check));
         }
         return array(
             'ready'=>(bool) ($report['ready'] ?? false),
@@ -135,6 +134,13 @@ final class Eduardo_Research_Manager_Remediation {
         $resource = (string) ($check['resource'] ?? '');
         $next = (string) ($check['next_action'] ?? '');
 
+        if ('front-page' === $id) {
+            return array(
+                'class'=>'manual-review','planable'=>false,
+                'reason'=>'Static front-page routing is a WordPress core routing setting. This release reports the drift but does not open generic core-option mutation.'
+            );
+        }
+
         if (str_starts_with($resource, 'page:')) {
             $key = substr($resource, 5);
             $state = $this->contract->page_state($key);
@@ -143,9 +149,6 @@ final class Eduardo_Research_Manager_Remediation {
             }
             if ('publish' !== (string) ($state['status'] ?? '')) {
                 return array('class'=>'manual-review','planable'=>false,'reason'=>'The Page exists but is not published. The Manager will not change publication state automatically.');
-            }
-            if ('front-page' === $id) {
-                return array('class'=>'auto-fix','planable'=>true,'reason'=>'Static front-page routing can be restored to the existing contract Home Page.');
             }
             if (str_starts_with($id, 'page-')) {
                 return array('class'=>'auto-fix','planable'=>true,'reason'=>'Role/model drift can be repaired from the immutable preset contract.');
@@ -163,6 +166,9 @@ final class Eduardo_Research_Manager_Remediation {
     private function actions_for_check(array $check): array|WP_Error {
         $id = (string) ($check['id'] ?? '');
         $resource = (string) ($check['resource'] ?? '');
+        if ('front-page' === $id) {
+            return new WP_Error('research_manager_manual_review_required', 'Front-page routing is intentionally outside the generic remediation mutation contract.');
+        }
         if (str_starts_with($resource, 'page:')) {
             $key = substr($resource, 5);
             $state = $this->contract->page_state($key);
@@ -173,14 +179,6 @@ final class Eduardo_Research_Manager_Remediation {
             }
             if ('publish' !== (string) ($state['status'] ?? '')) {
                 return new WP_Error('research_manager_manual_review_required', 'Existing unpublished Pages require manual review before publication.');
-            }
-            if ('front-page' === $id) {
-                $home_id = $this->contract->page_id('home');
-                if ($home_id <= 0) { return new WP_Error('research_manager_home_missing', 'Research Home must exist before front-page routing can be repaired.'); }
-                return array(
-                    array('type'=>'option','key'=>'show_on_front','value'=>'page'),
-                    array('type'=>'option','key'=>'page_on_front','value'=>$home_id),
-                );
             }
             $contract = is_array($state['contract'] ?? null) ? $state['contract'] : array();
             $actions = array();
