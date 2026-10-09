@@ -40,8 +40,8 @@ function eduardo_research_register_content_types(): void {
             'labels' => array('name' => $labels[0], 'singular_name' => $labels[1]),
             'public' => true,
             'show_in_rest' => true,
-            'has_archive' => true,
-            'rewrite' => array('slug' => $labels[3]),
+            'has_archive' => false,
+            'rewrite' => array('slug' => $labels[3], 'with_front' => false),
             'menu_icon' => $labels[2],
             'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'),
         ));
