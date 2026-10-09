@@ -87,3 +87,19 @@ This file records durable project decisions. New decisions should be appended ra
 **Decision:** Never commit academic-platform credentials or website secrets to Git.
 
 **Status:** Accepted
+
+---
+
+## ADR-011 — Theme owns the frontend; Gutenberg is not the layout authority
+
+**Decision:** The SEO/GEO Theme controls the complete public layout, component structure, responsive behaviour, semantic hierarchy and SEO/GEO rendering of Research preset pages. Gutenberg must not be used as the page-layout engine for Theme-controlled preset surfaces.
+
+WordPress Page records may be used for routing, status, translation mapping and Theme contract resolution. Structured Theme models/slots and research entities provide the rendered data.
+
+Gutenberg may be enabled only as a bounded rich-text editor where useful, such as the body of an Insight or a narrative field inside a Theme-defined single template. It may edit content inside a controlled slot, but it does not own the surrounding page layout.
+
+**Reason:** Avoid fighting Gutenberg markup/CSS, layout drift, duplicated components and conflicts with Manager slot hydration. The same `research` preset must render deterministically across installations from Theme contracts and structured data.
+
+**Reference:** `docs/14-theme-owned-frontend.md`
+
+**Status:** Accepted
