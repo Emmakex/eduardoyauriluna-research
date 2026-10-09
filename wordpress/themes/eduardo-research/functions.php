@@ -1,0 +1,64 @@
+<?php
+/**
+ * Eduardo Research theme bootstrap.
+ *
+ * The public frontend is Theme-owned. Gutenberg is deliberately not the
+ * composition engine for controlled Research pages.
+ */
+
+declare(strict_types=1);
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+require_once get_template_directory() . '/inc/research-preset.php';
+require_once get_template_directory() . '/inc/research-model.php';
+
+function eduardo_research_setup(): void {
+    load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
+    add_theme_support('title-tag');
+    add_theme_support('post-thumbnails');
+    add_theme_support('responsive-embeds');
+    add_theme_support('html5', array('search-form', 'gallery', 'caption', 'style', 'script'));
+}
+add_action('after_setup_theme', 'eduardo_research_setup');
+
+function eduardo_research_assets(): void {
+    $path = get_stylesheet_directory() . '/style.css';
+    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '0.1.0';
+    wp_enqueue_style('eduardo-research', get_stylesheet_uri(), array(), $version);
+}
+add_action('wp_enqueue_scripts', 'eduardo_research_assets');
+
+/** Register research outputs as first-class structured content. */
+function eduardo_research_register_content_types(): void {
+    $types = array(
+        'research_output'  => array('Outputs', 'Output', 'dashicons-media-document'),
+        'research_project' => array('Projects', 'Project', 'dashicons-portfolio'),
+        'research_software'=> array('Software', 'Software', 'dashicons-editor-code'),
+        'research_dataset' => array('Datasets', 'Dataset', 'dashicons-database'),
+    );
+
+    foreach ($types as $type => $labels) {
+        register_post_type($type, array(
+            'labels' => array('name' => $labels[0], 'singular_name' => $labels[1]),
+            'public' => true,
+            'show_in_rest' => true,
+            'has_archive' => true,
+            'rewrite' => array('slug' => str_replace('research_', '', $type)),
+            'menu_icon' => $labels[2],
+            'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'),
+        ));
+    }
+}
+add_action('init', 'eduardo_research_register_content_types');
+
+/**
+ * Keep the editor available for bounded narrative fields, while controlled
+ * page composition remains entirely Theme-owned.
+ */
+function eduardo_research_page_editor_support(): void {
+    remove_post_type_support('page', 'editor');
+}
+add_action('init', 'eduardo_research_page_editor_support', 20);
