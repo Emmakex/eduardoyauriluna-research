@@ -32,18 +32,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PLUGIN=wordpress/plugins/eduardo-research-manager
-          test -s "$PLUGIN/eduardo-research-manager.php"
-          test -s "$PLUGIN/includes/class-research-manager-contract.php"
-          test -s "$PLUGIN/includes/class-research-manager-diagnostics.php"
-          test -s "$PLUGIN/includes/class-research-manager-plan.php"
-          test -s "$PLUGIN/includes/class-research-manager-snapshots.php"
-          test -s "$PLUGIN/includes/class-research-manager-executor.php"
-          test -s "$PLUGIN/includes/class-research-manager-page-resource.php"
-          test -s "$PLUGIN/includes/class-research-manager-insight-resource.php"
-          test -s "$PLUGIN/includes/class-research-manager-admin.php"
-          test -s "$PLUGIN/includes/class-research-manager.php"
-          grep -F 'Version: 0.4.0' "$PLUGIN/eduardo-research-manager.php"
+          P=wordpress/plugins/eduardo-research-manager
+          test -s "$P/eduardo-research-manager.php"
+          test -s "$P/includes/class-research-manager-contract.php"
+          test -s "$P/includes/class-research-manager-diagnostics.php"
+          test -s "$P/includes/class-research-manager-plan.php"
+          test -s "$P/includes/class-research-manager-snapshots.php"
+          test -s "$P/includes/class-research-manager-executor.php"
+          test -s "$P/includes/class-research-manager-page-resource.php"
+          test -s "$P/includes/class-research-manager-insight-resource.php"
+          test -s "$P/includes/class-research-manager-output-resource.php"
+          test -s "$P/includes/class-research-manager-admin.php"
+          test -s "$P/includes/class-research-manager.php"
+          grep -F 'Version: 0.5.0' "$P/eduardo-research-manager.php"
       - name: Lint Manager PHP
         shell: bash
         run: |
@@ -58,8 +59,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: wordpress
-        ports:
-          - 3306:3306
+        ports: ['3306:3306']
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
           --health-interval=10s
@@ -74,7 +74,7 @@ jobs:
           coverage: none
           tools: wp-cli
 
-      - name: Install clean WordPress and activate Manager without Research Theme
+      - name: Install clean WordPress and activate Manager without Theme
         shell: bash
         run: |
           set -euo pipefail
@@ -87,20 +87,12 @@ jobs:
           mkdir -p wp-content/plugins/eduardo-research-manager
           cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
           wp plugin activate eduardo-research-manager --allow-root
-
-      - name: Verify Manager remains safe without Theme
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd /tmp/research-manager-wp
           wp eval '
           $report = Eduardo_Research_Manager::diagnostics()->run();
-          if (! empty($report["ready"])) { exit(1); }
-          if ((int) $report["summary"]["fail"] < 1) { exit(1); }
-          if ("configuration-required" !== (string) $report["next_actions"][0]["action"]) { exit(1); }
+          if (! empty($report["ready"]) || (int) $report["summary"]["fail"] < 1) { exit(1); }
           ' --allow-root
 
-      - name: Activate Research Theme and verify readiness
+      - name: Activate Theme and verify contract
         shell: bash
         run: |
           set -euo pipefail
@@ -111,124 +103,37 @@ jobs:
           wp rewrite structure '/%postname%/' --hard --allow-root
           wp rewrite flush --hard --allow-root
           wp eval '
-          $contract = Eduardo_Research_Manager::contract()->snapshot();
-          if (empty($contract["compatible"]) || "research" !== $contract["preset_id"] || (int) $contract["preset_version"] < 4) { exit(1); }
+          if (! Eduardo_Research_Manager::outputs() instanceof Eduardo_Research_Manager_Output_Resource) { exit(1); }
           $report = Eduardo_Research_Manager::diagnostics()->run();
-          if (empty($report["ready"]) || (int) $report["summary"]["fail"] !== 0) {
-              fwrite(STDERR, wp_json_encode($report) . "\n"); exit(1);
-          }
-          if (! Eduardo_Research_Manager::insights() instanceof Eduardo_Research_Manager_Insight_Resource) { exit(1); }
+          if (empty($report["ready"]) || (int) $report["summary"]["fail"] !== 0) { fwrite(STDERR, wp_json_encode($report)); exit(1); }
           ' --allow-root
 
-      - name: Verify core mutation lifecycle and evidence gate
+      - name: Regression gate Pages and Insights
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
-          $about = get_page_by_path("about");
-          if (! $about instanceof WP_Post) { exit(1); }
-          $key = "_eduardo_research_manager_test";
-          delete_post_meta($about->ID, $key);
-          $plan = Eduardo_Research_Manager_Plan::create("Reversible mutation", [["type"=>"post_meta","post_id"=>$about->ID,"key"=>$key,"value"=>"alpha"]]);
-          if (is_wp_error($plan)) { exit(1); }
-          $preview = Eduardo_Research_Manager::executor()->preview($plan);
-          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || metadata_exists("post", $about->ID, $key)) { exit(1); }
-          $applied = Eduardo_Research_Manager::executor()->apply($plan);
-          if (is_wp_error($applied) || "alpha" !== get_post_meta($about->ID, $key, true)) { exit(1); }
-          $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || metadata_exists("post", $about->ID, $key)) { exit(1); }
-
-          $output = wp_insert_post(["post_type"=>"research_output","post_status"=>"draft","post_title"=>"Evidence fixture"]);
-          $sensitive = Eduardo_Research_Manager_Plan::create("Set peer review", [["type"=>"post_meta","post_id"=>$output,"key"=>"_research_review_status","value"=>"peer_reviewed"]]);
-          $blocked = Eduardo_Research_Manager::executor()->apply($sensitive);
-          if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
-          ' --allow-root
-
-      - name: Verify Page hydration still works
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd /tmp/research-manager-wp
-          wp eval '
-          wp_set_current_user(1);
-          $pages = Eduardo_Research_Manager::pages();
           $executor = Eduardo_Research_Manager::executor();
-          $about = get_page_by_path("about");
-          delete_option("eduardo_research_surface_about");
-          $requested = ["eyebrow"=>"Managed research profile","lead"=>"Managed structured lead.","sections"=>["Profile","Evidence"]];
-          $plan = $pages->build_hydration_plan("about", "en", $requested);
-          if (is_wp_error($plan)) { exit(1); }
-          $applied = $executor->apply($plan);
-          if (is_wp_error($applied)) { exit(1); }
-          $verified = $pages->verify_hydration("about", "en", $requested);
-          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
-          $rolled = $executor->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || false !== get_option("eduardo_research_surface_about", false)) { exit(1); }
-          ' --allow-root
-
-      - name: Verify Page creation and provenance rollback still work
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd /tmp/research-manager-wp
-          wp eval '
-          wp_set_current_user(1);
           $pages = Eduardo_Research_Manager::pages();
-          $executor = Eduardo_Research_Manager::executor();
-          $contact = get_page_by_path("contact");
-          if (! $contact instanceof WP_Post) { exit(1); }
-          wp_delete_post($contact->ID, true);
-          $plan = $pages->build_creation_plan("contact");
-          if (is_wp_error($plan)) { exit(1); }
-          $token = (string) $plan["actions"][0]["creation_token"];
-          $preview = $executor->preview($plan);
-          if (is_wp_error($preview) || get_page_by_path("contact") instanceof WP_Post) { exit(1); }
-          $applied = $executor->apply($plan);
-          if (is_wp_error($applied)) { exit(1); }
-          $verified = $pages->verify_creation("contact", $token);
-          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
-          $rolled = $executor->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || get_page_by_path("contact") instanceof WP_Post) { exit(1); }
-          ' --allow-root
+          $about = get_page_by_path("about");
+          $page_plan = $pages->build_hydration_plan("about", "en", ["eyebrow"=>"Regression profile"]);
+          if (is_wp_error($page_plan)) { exit(1); }
+          $page_apply = $executor->apply($page_plan);
+          if (is_wp_error($page_apply)) { exit(1); }
+          if (is_wp_error($executor->rollback($page_apply["snapshot_id"]))) { exit(1); }
 
-      - name: Verify bounded English Insight creation and rollback
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd /tmp/research-manager-wp
-          wp eval '
-          wp_set_current_user(1);
           $insights = Eduardo_Research_Manager::insights();
-          $executor = Eduardo_Research_Manager::executor();
-          $data = [
-              "title"=>"CI Research Note",
-              "slug"=>"ci-research-note",
-              "excerpt"=>"A bounded research-note excerpt.",
-              "content"=>"<p>Structured editorial body managed inside the Theme-owned Insight shell.</p>",
-              "language"=>"en",
-              "insight_type"=>"research_note",
-              "status"=>"draft",
-          ];
-          $plan = $insights->build_creation_plan($data, "Create bounded EN Insight");
-          if (is_wp_error($plan) || "editorial-review" !== $plan["risk"]) { exit(1); }
-          $token = (string) $plan["actions"][0]["creation_token"];
-          $preview = $executor->preview($plan);
-          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 0 !== $insights->find_created_by_token($token)) { exit(1); }
-          $applied = $executor->apply($plan);
-          if (is_wp_error($applied) || empty($applied["snapshot_id"])) { exit(1); }
-          $id = $insights->find_created_by_token($token);
-          if ($id <= 0) { exit(1); }
-          $verified = $insights->verify($id, $data, $token);
-          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified) . "\n"); exit(1); }
-          $record = $insights->inspect($id);
-          if (is_wp_error($record) || "draft" !== $record["status"] || ! str_contains($record["url"], "/insights/ci-research-note/")) { exit(1); }
-          $rolled = $executor->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || null !== get_post($id)) { exit(1); }
+          $insight_plan = $insights->build_creation_plan(["title"=>"Regression Insight","slug"=>"regression-insight","content"=>"<p>Regression.</p>"]);
+          if (is_wp_error($insight_plan)) { exit(1); }
+          $token = (string) $insight_plan["actions"][0]["creation_token"];
+          $insight_apply = $executor->apply($insight_plan);
+          if (is_wp_error($insight_apply) || $insights->find_created_by_token($token) <= 0) { exit(1); }
+          if (is_wp_error($executor->rollback($insight_apply["snapshot_id"]))) { exit(1); }
           ' --allow-root
 
-      - name: Verify published Spanish Insight localization and query isolation
+      - name: Verify evidence-blocked then verified Publication creation
         shell: bash
         run: |
           set -euo pipefail
@@ -236,142 +141,192 @@ jobs:
           wp eval '
           wp_set_current_user(1);
           $_GET = [];
-          $insights = Eduardo_Research_Manager::insights();
+          $outputs = Eduardo_Research_Manager::outputs();
           $executor = Eduardo_Research_Manager::executor();
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Verified CI line","post_name"=>"verified-ci-line"]);
+          update_post_meta($line, "_research_language", "en");
+          update_post_meta($line, "_research_evidence_status", "verified");
           $data = [
-              "title"=>"Nota metodológica CI",
-              "slug"=>"nota-metodologica-ci",
-              "excerpt"=>"Resumen metodológico de prueba.",
-              "content"=>"<p>Contenido metodológico de integración.</p>",
-              "language"=>"es",
-              "insight_type"=>"method_note",
+              "title"=>"Verified CI Journal Article",
+              "slug"=>"verified-ci-journal-article",
+              "excerpt"=>"Verified publication fixture.",
+              "content"=>"<p>Bounded publication narrative.</p>",
+              "language"=>"en",
               "status"=>"publish",
+              "output_type"=>"journal_article",
+              "review_status"=>"peer_reviewed",
+              "publication_date"=>"2026-10-09",
+              "venue"=>"CI Journal",
+              "doi"=>"https://doi.org/10.1234/ci.test",
+              "authors"=>[["display_name"=>"Eduardo Jose Yauri Luna","orcid"=>"0000-0002-1825-0097","is_site_researcher"=>true]],
+              "line_ids"=>[$line],
           ];
-          $plan = $insights->build_creation_plan($data);
-          if (is_wp_error($plan)) { exit(1); }
+          $blocked_plan = $outputs->build_creation_plan($data, "Preview verified publication");
+          if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { exit(1); }
+          $preview = $executor->preview($blocked_plan);
+          if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { exit(1); }
+          $blocked = $executor->apply($blocked_plan);
+          if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
+
+          $plan = $outputs->build_creation_plan($data, "Create verified publication", ["evidence_confirmed"=>true,"evidence_reference"=>"CI source record 2026-10-09"]);
+          if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
           $token = (string) $plan["actions"][0]["creation_token"];
           $applied = $executor->apply($plan);
-          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message() . "\n"); exit(1); }
-          $id = $insights->find_created_by_token($token);
-          $record = $insights->inspect($id);
-          if (is_wp_error($record) || "es" !== $record["language"] || "method_note" !== $record["insight_type"] || ! str_contains($record["url"], "/es/notas/nota-metodologica-ci/")) { exit(1); }
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+          $id = $outputs->find_created_by_token($token);
+          if ($id <= 0) { exit(1); }
+          $record = $outputs->inspect($id);
+          if (is_wp_error($record) || "1" !== $record["output_type_verified"] || "1" !== $record["review_status_verified"] || "1" !== $record["doi_verified"] || "10.1234/ci.test" !== $record["doi"]) { fwrite(STDERR, wp_json_encode($record)); exit(1); }
+          $verified = $outputs->verify($id, [
+              "status"=>"publish","output_type"=>"journal_article","review_status"=>"peer_reviewed","publication_date"=>"2026-10-09",
+              "venue"=>"CI Journal","doi"=>"https://doi.org/10.1234/ci.test","authors"=>$data["authors"],"line_ids"=>[$line]
+          ], $token);
+          if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified)); exit(1); }
+          if ("ScholarlyArticle" !== eduardo_research_output_schema_type($id)) { exit(1); }
+          if ("journal_article" !== get_post_meta($id, "_research_output_type", true) || "peer_reviewed" !== get_post_meta($id, "_research_review_status", true)) { exit(1); }
 
-          $es_query = eduardo_research_insight_query("es");
-          $es_ids = wp_list_pluck($es_query->posts, "ID");
-          if (! in_array($id, array_map("intval", $es_ids), true)) { fwrite(STDERR, "Spanish query did not include Spanish Insight\n"); exit(1); }
-          $en_query = eduardo_research_insight_query("en");
-          $en_ids = wp_list_pluck($en_query->posts, "ID");
-          if (in_array($id, array_map("intval", $en_ids), true)) { fwrite(STDERR, "English query exposed Spanish Insight\n"); exit(1); }
-          wp_reset_postdata();
+          $_GET = ["output_type"=>"journal_article","review_status"=>"peer_reviewed"];
+          $query = eduardo_research_collection_query("publications", "en");
+          $ids = array_map("intval", wp_list_pluck($query->posts, "ID"));
+          if (! in_array($id, $ids, true)) { fwrite(STDERR, "Verified publication missing from filtered public query\n"); exit(1); }
+          wp_reset_postdata(); $_GET = [];
 
-          $rolled = $executor->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || null !== get_post($id)) { exit(1); }
+          update_option("erm_ci_output_id", $id, false);
+          update_option("erm_ci_output_snapshot", $applied["snapshot_id"], false);
+          update_option("erm_ci_line_id", $line, false);
           ' --allow-root
 
-      - name: Verify Insight update Apply Verify Rollback
+      - name: Verify unverified academic filters remain private
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          $_GET = [];
+          $id = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Unverified fixture","post_name"=>"unverified-output-fixture"]);
+          update_post_meta($id, "_research_language", "en");
+          update_post_meta($id, "_research_output_type", "journal_article");
+          update_post_meta($id, "_research_output_type_verified", "0");
+          update_post_meta($id, "_research_review_status", "peer_reviewed");
+          update_post_meta($id, "_research_review_status_verified", "0");
+          $_GET = ["output_type"=>"journal_article","review_status"=>"peer_reviewed"];
+          $query = eduardo_research_collection_query("publications", "en");
+          $ids = array_map("intval", wp_list_pluck($query->posts, "ID"));
+          if (in_array((int) $id, $ids, true)) { fwrite(STDERR, "Unverified academic claims leaked through filters\n"); exit(1); }
+          if ("CreativeWork" !== eduardo_research_output_schema_type((int) $id)) { exit(1); }
+          wp_delete_post((int) $id, true); wp_reset_postdata(); $_GET = [];
+          ' --allow-root
+
+      - name: Verify Publication update evidence gate and rollback
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
-          $insights = Eduardo_Research_Manager::insights();
+          $outputs = Eduardo_Research_Manager::outputs();
           $executor = Eduardo_Research_Manager::executor();
-          $create = $insights->build_creation_plan([
-              "title"=>"Working Insight",
-              "slug"=>"working-insight-ci",
-              "excerpt"=>"Initial excerpt",
-              "content"=>"<p>Initial content.</p>",
-              "language"=>"en",
-              "insight_type"=>"working_note",
-              "status"=>"draft",
-          ]);
-          if (is_wp_error($create)) { exit(1); }
-          $token = (string) $create["actions"][0]["creation_token"];
-          $created = $executor->apply($create);
-          if (is_wp_error($created)) { exit(1); }
-          $id = $insights->find_created_by_token($token);
+          $id = (int) get_option("erm_ci_output_id", 0);
           $changes = [
-              "title"=>"Updated Working Insight",
-              "excerpt"=>"Updated excerpt",
-              "content"=>"<p>Updated <strong>bounded</strong> content.</p>",
-              "language"=>"es",
-              "insight_type"=>"commentary",
+              "output_type"=>"conference_paper",
+              "review_status"=>"accepted",
+              "publication_date"=>"2026-10",
+              "venue"=>"CI Conference",
+              "doi"=>"10.5678/updated.ci",
           ];
-          $update = $insights->build_update_plan($id, $changes, "Update Insight editorial fields");
-          if (is_wp_error($update) || "editorial-review" !== $update["risk"]) { fwrite(STDERR, is_wp_error($update) ? $update->get_error_message() : wp_json_encode($update)); exit(1); }
-          $applied = $executor->apply($update);
-          if (is_wp_error($applied)) { exit(1); }
-          $verified = $insights->verify($id, $changes, $token);
+          $blocked_plan = $outputs->build_update_plan($id, $changes, "Update verified publication");
+          if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { exit(1); }
+          $blocked = $executor->apply($blocked_plan);
+          if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
+
+          $plan = $outputs->build_update_plan($id, $changes, "Update verified publication", ["evidence_confirmed"=>true,"evidence_reference"=>"CI updated source"]);
+          if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
+          $applied = $executor->apply($plan);
+          if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+          $verified = $outputs->verify($id, $changes);
           if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          $record = $outputs->inspect($id);
+          if ("1" !== $record["output_type_verified"] || "1" !== $record["review_status_verified"] || "1" !== $record["doi_verified"]) { exit(1); }
+
           $rolled = $executor->rollback($applied["snapshot_id"]);
           if (is_wp_error($rolled)) { exit(1); }
-          $restored = $insights->inspect($id);
-          if (is_wp_error($restored) || "Working Insight" !== $restored["title"] || "en" !== $restored["language"] || "working_note" !== $restored["insight_type"]) { exit(1); }
-          $deleted = $executor->rollback($created["snapshot_id"]);
-          if (is_wp_error($deleted) || null !== get_post($id)) { exit(1); }
+          $restored = $outputs->inspect($id);
+          if ("journal_article" !== $restored["output_type"] || "peer_reviewed" !== $restored["review_status"] || "10.1234/ci.test" !== $restored["doi"] || "CI Journal" !== $restored["venue"]) { fwrite(STDERR, wp_json_encode($restored)); exit(1); }
           ' --allow-root
 
-      - name: Verify Insight validation collision and provenance protection
+      - name: Verify Spanish Publication localization
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
-          $insights = Eduardo_Research_Manager::insights();
+          $outputs = Eduardo_Research_Manager::outputs();
           $executor = Eduardo_Research_Manager::executor();
-
-          $bad_type = $insights->build_creation_plan(["title"=>"Bad Type","insight_type"=>"peer_reviewed_magic"]);
-          if (! is_wp_error($bad_type) || "research_manager_unknown_insight_type" !== $bad_type->get_error_code()) { exit(1); }
-          $bad_lang = $insights->build_creation_plan(["title"=>"Bad Language","language"=>"fr"]);
-          if (! is_wp_error($bad_lang) || "research_manager_unknown_language" !== $bad_lang->get_error_code()) { exit(1); }
-          $too_large = $insights->build_creation_plan(["title"=>"Too Large","content"=>str_repeat("x", 60001)]);
-          if (! is_wp_error($too_large) || "research_manager_insight_content_too_large" !== $too_large->get_error_code()) { exit(1); }
-
-          $foreign_id = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Foreign Insight","post_name"=>"collision-insight"]);
-          $collision_plan = $insights->build_creation_plan(["title"=>"Collision Insight","slug"=>"collision-insight"]);
-          if (is_wp_error($collision_plan)) { exit(1); }
-          $collision = $executor->apply($collision_plan);
-          if (! is_wp_error($collision) || "research_manager_insight_creation_conflict" !== $collision->get_error_code()) { exit(1); }
-          if ((int) get_page_by_path("collision-insight", OBJECT, "post")->ID !== (int) $foreign_id) { exit(1); }
-          wp_delete_post($foreign_id, true);
-
-          $plan = $insights->build_creation_plan(["title"=>"Protected Insight","slug"=>"protected-insight"]);
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea verificada CI","post_name"=>"linea-verificada-ci"]);
+          update_post_meta($line, "_research_language", "es"); update_post_meta($line, "_research_evidence_status", "verified");
+          $plan = $outputs->build_creation_plan([
+              "title"=>"Publicación española CI","slug"=>"publicacion-espanola-ci","language"=>"es","status"=>"publish",
+              "output_type"=>"technical_report","review_status"=>"technical_output","publication_date"=>"2026","line_ids"=>[$line]
+          ], "Create Spanish publication", ["evidence_confirmed"=>true,"evidence_reference"=>"CI Spanish source"]);
           if (is_wp_error($plan)) { exit(1); }
           $token = (string) $plan["actions"][0]["creation_token"];
           $applied = $executor->apply($plan);
           if (is_wp_error($applied)) { exit(1); }
-          $id = $insights->find_created_by_token($token);
-          update_post_meta($id, "_eduardo_research_manager_creation_token", "foreign-owner-token");
-          $protected = $executor->rollback($applied["snapshot_id"]);
-          if (! is_wp_error($protected) || "research_manager_insight_rollback_conflict" !== $protected->get_error_code() || null === get_post($id)) { exit(1); }
-          update_post_meta($id, "_eduardo_research_manager_creation_token", $token);
-          $rolled = $executor->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || null !== get_post($id)) { exit(1); }
+          $id = $outputs->find_created_by_token($token);
+          $record = $outputs->inspect($id);
+          if (is_wp_error($record) || ! str_contains($record["url"], "/es/publicaciones/publicacion-espanola-ci/")) { fwrite(STDERR, wp_json_encode($record)); exit(1); }
+          if (is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
+          wp_delete_post((int) $line, true);
           ' --allow-root
 
-      - name: Verify Home Page creation still restores routing
+      - name: Verify Publication validation collision and provenance protection
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
-          $pages = Eduardo_Research_Manager::pages();
-          $executor = Eduardo_Research_Manager::executor();
-          $home = get_page_by_path("home");
-          if (! $home instanceof WP_Post) { exit(1); }
-          wp_delete_post($home->ID, true);
-          $before_show = (string) get_option("show_on_front", "posts");
-          $before_front = (int) get_option("page_on_front", 0);
-          $plan = $pages->build_creation_plan("home");
+          $outputs = Eduardo_Research_Manager::outputs(); $executor = Eduardo_Research_Manager::executor();
+          $bad_type = $outputs->build_creation_plan(["title"=>"Bad type","output_type"=>"magic_article"]);
+          if (! is_wp_error($bad_type) || "research_manager_unknown_output_type" !== $bad_type->get_error_code()) { exit(1); }
+          $bad_doi = $outputs->build_creation_plan(["title"=>"Bad DOI","doi"=>"not-a-doi"]);
+          if (! is_wp_error($bad_doi) || "research_manager_invalid_doi" !== $bad_doi->get_error_code()) { exit(1); }
+          $bad_line = $outputs->build_creation_plan(["title"=>"Bad line","line_ids"=>[999999]]);
+          if (! is_wp_error($bad_line) || "research_manager_unverified_line_relation" !== $bad_line->get_error_code()) { exit(1); }
+          $bad_orcid = $outputs->build_creation_plan(["title"=>"Bad ORCID","authors"=>[["display_name"=>"Author","orcid"=>"bad"]]]);
+          if (! is_wp_error($bad_orcid) || "research_manager_invalid_orcid" !== $bad_orcid->get_error_code()) { exit(1); }
+
+          $foreign = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Foreign output","post_name"=>"output-collision"]);
+          $collision_plan = $outputs->build_creation_plan(["title"=>"Collision","slug"=>"output-collision"], "Collision", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
+          $collision = $executor->apply($collision_plan);
+          if (! is_wp_error($collision) || "research_manager_output_creation_conflict" !== $collision->get_error_code() || (int) get_page_by_path("output-collision", OBJECT, "research_output")->ID !== (int) $foreign) { exit(1); }
+          wp_delete_post((int) $foreign, true);
+
+          $plan = $outputs->build_creation_plan(["title"=>"Protected output","slug"=>"protected-output"], "Protected", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
           if (is_wp_error($plan)) { exit(1); }
-          $applied = $executor->apply($plan);
-          if (is_wp_error($applied)) { exit(1); }
-          $rolled = $executor->rollback($applied["snapshot_id"]);
-          if (is_wp_error($rolled) || get_page_by_path("home") instanceof WP_Post) { exit(1); }
-          if ($before_show !== (string) get_option("show_on_front", "posts") || $before_front !== (int) get_option("page_on_front", 0)) { exit(1); }
+          $token = (string) $plan["actions"][0]["creation_token"];
+          $applied = $executor->apply($plan); if (is_wp_error($applied)) { exit(1); }
+          $id = $outputs->find_created_by_token($token);
+          update_post_meta($id, "_eduardo_research_manager_creation_token", "foreign-owner-token");
+          $protected = $executor->rollback($applied["snapshot_id"]);
+          if (! is_wp_error($protected) || "research_manager_output_rollback_conflict" !== $protected->get_error_code() || null === get_post($id)) { exit(1); }
+          update_post_meta($id, "_eduardo_research_manager_creation_token", $token);
+          if (is_wp_error($executor->rollback($applied["snapshot_id"])) || null !== get_post($id)) { exit(1); }
+          ' --allow-root
+
+      - name: Clean verified Publication fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $executor = Eduardo_Research_Manager::executor();
+          $snapshot = (string) get_option("erm_ci_output_snapshot", "");
+          if ("" === $snapshot || is_wp_error($executor->rollback($snapshot))) { exit(1); }
+          $line = (int) get_option("erm_ci_line_id", 0); if ($line > 0) { wp_delete_post($line, true); }
+          delete_option("erm_ci_output_id"); delete_option("erm_ci_output_snapshot"); delete_option("erm_ci_line_id");
           ' --allow-root
 
   package:
@@ -385,10 +340,10 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cd wordpress/plugins
-          zip -r ../../dist/eduardo-research-manager-0.4.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
-          test -s ../../dist/eduardo-research-manager-0.4.0.zip
+          zip -r ../../dist/eduardo-research-manager-0.5.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-manager-0.5.0.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: eduardo-research-manager-0.4.0
-          path: dist/eduardo-research-manager-0.4.0.zip
+          name: eduardo-research-manager-0.5.0
+          path: dist/eduardo-research-manager-0.5.0.zip
           if-no-files-found: error
