@@ -111,6 +111,14 @@ function eduardo_research_head_metadata(): void {
 }
 add_action('wp_head', 'eduardo_research_head_metadata', 5);
 
+function eduardo_research_schema_line_refs(int $post_id): array {
+    $refs = array();
+    foreach (eduardo_research_post_line_ids($post_id) as $line_id) {
+        $refs[] = array('@id'=>get_permalink($line_id) . '#research-line');
+    }
+    return $refs;
+}
+
 function eduardo_research_schema_graph(): void {
     if (is_admin() || is_404()) { return; }
     $identity = eduardo_research_identity();
@@ -131,15 +139,11 @@ function eduardo_research_schema_graph(): void {
     }
     if ($affiliations) { $person['affiliation'] = $affiliations; }
 
+    // Research Lines are the sole public authority for the research agenda.
     $topics = array();
     $line_query = new WP_Query(eduardo_research_verified_line_query_args($language, 50));
     foreach ($line_query->posts as $line_post) {
         if ($line_post instanceof WP_Post && '' !== trim($line_post->post_title)) { $topics[] = $line_post->post_title; }
-    }
-    wp_reset_postdata();
-    foreach (eduardo_research_verified_localized_evidence('research_lines') as $record) {
-        $topic = trim((string) ($record['title'] ?? $record['label'] ?? $record['value'] ?? ''));
-        if ('' !== $topic) { $topics[] = $topic; }
     }
     if ($topics) { $person['knowsAbout'] = array_values(array_unique($topics)); }
 
@@ -156,10 +160,17 @@ function eduardo_research_schema_graph(): void {
         if ($question) { $line['abstract'] = $question; }
         $keywords = eduardo_research_meta_list($post_id, '_research_topics');
         if ($keywords) { $line['keywords'] = $keywords; }
+        $related_query = eduardo_research_related_objects_query_for_line($post_id, 50);
+        $subject_of = array();
+        foreach ($related_query->posts as $related_post) {
+            if (! $related_post instanceof WP_Post) { continue; }
+            $subject_of[] = array('@id'=>get_permalink($related_post) . '#research-object');
+        }
+        if ($subject_of) { $line['subjectOf'] = $subject_of; }
         $graph[] = $line;
     } elseif (is_singular('research_output')) {
         $post_id = get_queried_object_id();
-        $output = array('@type'=>eduardo_research_output_schema_type($post_id),'@id'=>get_permalink() . '#research-output','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'mainEntityOfPage'=>array('@id'=>get_permalink() . '#webpage'),'dateModified'=>get_the_modified_date(DATE_W3C));
+        $output = array('@type'=>eduardo_research_output_schema_type($post_id),'@id'=>get_permalink() . '#research-object','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'mainEntityOfPage'=>array('@id'=>get_permalink() . '#webpage'),'dateModified'=>get_the_modified_date(DATE_W3C));
         if (has_excerpt($post_id)) { $output['abstract'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
         $publication_date = eduardo_research_meta_value($post_id, '_research_publication_date');
         if ($publication_date) { $output['datePublished'] = $publication_date; }
@@ -179,19 +190,32 @@ function eduardo_research_schema_graph(): void {
         if ($license) { $output['license'] = $license; }
         $review = eduardo_research_meta_value($post_id, '_research_review_status');
         if ($review) { $output['additionalProperty'] = array('@type'=>'PropertyValue','name'=>'reviewStatus','value'=>$review); }
+        $line_refs = eduardo_research_schema_line_refs($post_id);
+        if ($line_refs) { $output['about'] = $line_refs; }
         $graph[] = $output;
+    } elseif (is_singular('research_project')) {
+        $post_id = get_queried_object_id();
+        $project = array('@type'=>'CreativeWork','@id'=>get_permalink() . '#research-object','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language,'mainEntityOfPage'=>array('@id'=>get_permalink() . '#webpage'));
+        if (has_excerpt($post_id)) { $project['description'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
+        $question = eduardo_research_meta_value($post_id, '_research_question');
+        if ($question) { $project['abstract'] = $question; }
+        $line_refs = eduardo_research_schema_line_refs($post_id);
+        if ($line_refs) { $project['about'] = $line_refs; }
+        $graph[] = $project;
     } elseif (is_singular('research_dataset')) {
         $post_id = get_queried_object_id();
-        $dataset = array('@type'=>'Dataset','@id'=>get_permalink() . '#dataset','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language);
+        $dataset = array('@type'=>'Dataset','@id'=>get_permalink() . '#research-object','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language);
         if (has_excerpt($post_id)) { $dataset['description'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
         $doi = eduardo_research_meta_value($post_id, '_research_doi');
         if ($doi && '1' === eduardo_research_meta_value($post_id, '_research_doi_verified')) { $dataset['identifier'] = array('@type'=>'PropertyValue','propertyID'=>'DOI','value'=>$doi); }
         $license = eduardo_research_meta_value($post_id, '_research_license');
         if ($license) { $dataset['license'] = $license; }
+        $line_refs = eduardo_research_schema_line_refs($post_id);
+        if ($line_refs) { $dataset['about'] = $line_refs; }
         $graph[] = $dataset;
     } elseif (is_singular('research_software')) {
         $post_id = get_queried_object_id();
-        $software = array('@type'=>'SoftwareSourceCode','@id'=>get_permalink() . '#software','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language);
+        $software = array('@type'=>'SoftwareSourceCode','@id'=>get_permalink() . '#research-object','name'=>get_the_title(),'url'=>get_permalink(),'inLanguage'=>$language);
         if (has_excerpt($post_id)) { $software['description'] = wp_strip_all_tags(get_the_excerpt($post_id)); }
         $repo = eduardo_research_meta_value($post_id, '_research_repository_url');
         if ($repo) { $software['codeRepository'] = $repo; }
@@ -201,6 +225,8 @@ function eduardo_research_schema_graph(): void {
         if ($languages) { $software['programmingLanguage'] = $languages; }
         $license = eduardo_research_meta_value($post_id, '_research_license');
         if ($license) { $software['license'] = $license; }
+        $line_refs = eduardo_research_schema_line_refs($post_id);
+        if ($line_refs) { $software['about'] = $line_refs; }
         $graph[] = $software;
     }
 
