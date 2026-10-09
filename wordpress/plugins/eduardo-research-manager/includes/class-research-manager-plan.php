@@ -86,12 +86,13 @@ final class Eduardo_Research_Manager_Plan {
         $type = (string) ($action['type'] ?? '');
         if ('create_page' === $type) { return 'standard'; }
         if ('create_insight' === $type) { return 'editorial-review'; }
-        if ('create_output' === $type) { return 'evidence-required'; }
+        if (in_array($type, array('create_output','create_project'), true)) { return 'evidence-required'; }
 
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         foreach (array(
             'doi','review_status','output_type','identifier','evidence','affiliation','award','grant',
-            'publication_date','venue','publisher','authors','line_ids',
+            'publication_date','venue','publisher','authors','line_ids','project_status','question','role',
+            'start_date','end_date','partner','funding','methods','project_url',
         ) as $needle) {
             if (str_contains($key, $needle)) { return 'evidence-required'; }
         }
@@ -129,6 +130,7 @@ final class Eduardo_Research_Manager_Plan {
         if ('create_page' === $type) { return self::normalize_page_creation($action); }
         if ('create_insight' === $type) { return self::normalize_insight_creation($action); }
         if ('create_output' === $type) { return self::normalize_output_creation($action); }
+        if ('create_project' === $type) { return self::normalize_project_creation($action); }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
@@ -196,12 +198,12 @@ final class Eduardo_Research_Manager_Plan {
         $status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $output_type = sanitize_key((string) ($action['output_type'] ?? ''));
         $review_status = sanitize_key((string) ($action['review_status'] ?? ''));
-        $publication_date = self::normalize_publication_date((string) ($action['publication_date'] ?? ''));
+        $publication_date = self::normalize_date((string) ($action['publication_date'] ?? ''));
         $venue = sanitize_text_field((string) ($action['venue'] ?? ''));
         $doi = self::normalize_doi((string) ($action['doi'] ?? ''));
         $authors = self::sanitize_output_authors($action['authors'] ?? array());
         if (is_wp_error($authors)) { return $authors; }
-        $line_ids = self::sanitize_verified_line_ids($action['line_ids'] ?? array(), $language);
+        $line_ids = self::sanitize_verified_line_ids($action['line_ids'] ?? array(), $language, 'Research Outputs');
         if (is_wp_error($line_ids)) { return $line_ids; }
         $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
 
@@ -220,6 +222,52 @@ final class Eduardo_Research_Manager_Plan {
             'publication_date'=>$publication_date,'venue'=>$venue,'doi'=>$doi,'authors'=>$authors,'line_ids'=>$line_ids,
             'output_type_verified'=>'' !== $output_type ? '1' : '0','review_status_verified'=>'' !== $review_status ? '1' : '0',
             'doi_verified'=>'' !== $doi ? '1' : '0','creation_token'=>$creation_token,
+        );
+    }
+
+    private static function normalize_project_creation(array $action): array|WP_Error {
+        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme project contract is required.');
+        }
+        $preset = eduardo_research_preset();
+        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
+        $options = eduardo_research_collection_options('projects', 'en');
+        $project_statuses = is_array($options['project_status'] ?? null) ? $options['project_status'] : array();
+
+        $title = sanitize_text_field((string) ($action['title'] ?? ''));
+        $slug = sanitize_title((string) ($action['slug'] ?? ''));
+        $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
+        $content = wp_kses_post((string) ($action['content'] ?? ''));
+        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $status = sanitize_key((string) ($action['status'] ?? 'draft'));
+        $project_status = sanitize_key((string) ($action['project_status'] ?? ''));
+        $question = sanitize_textarea_field((string) ($action['question'] ?? ''));
+        $role = sanitize_text_field((string) ($action['role'] ?? ''));
+        $start_date = self::normalize_date((string) ($action['start_date'] ?? ''));
+        $end_date = self::normalize_date((string) ($action['end_date'] ?? ''));
+        $partner = sanitize_text_field((string) ($action['partner'] ?? ''));
+        $funding = sanitize_text_field((string) ($action['funding'] ?? ''));
+        $project_url = self::normalize_http_url((string) ($action['project_url'] ?? ''));
+        $methods = self::sanitize_string_list($action['methods'] ?? array(), 'research_manager_invalid_project_methods', 'Project methods must be an array of text values.');
+        if (is_wp_error($methods)) { return $methods; }
+        $line_ids = self::sanitize_verified_line_ids($action['line_ids'] ?? array(), $language, 'Research Projects');
+        if (is_wp_error($line_ids)) { return $line_ids; }
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+
+        if ('' === $title || '' === $slug || ! self::valid_creation_token($creation_token)) { return new WP_Error('research_manager_invalid_project_creation', 'Research Project creation requires a title, slug and provenance token.'); }
+        if (strlen($title) > self::MAX_TITLE_BYTES || strlen($excerpt) > self::MAX_EXCERPT_BYTES || strlen($content) > self::MAX_CONTENT_BYTES) { return new WP_Error('research_manager_project_content_too_large', 'Research Project title, excerpt or body exceeds the bounded contract.'); }
+        if (! in_array($language, $languages, true)) { return new WP_Error('research_manager_unknown_language', 'Research Project language is outside the active Research preset.'); }
+        if (! in_array($status, array('draft','publish'), true)) { return new WP_Error('research_manager_invalid_project_post_status', 'Research Project creation only permits draft or publish status.'); }
+        if ('' !== $project_status && ! array_key_exists($project_status, $project_statuses)) { return new WP_Error('research_manager_unknown_project_status', 'Research Project status is outside the active Theme contract.'); }
+        if ('' !== (string) ($action['start_date'] ?? '') && '' === $start_date) { return new WP_Error('research_manager_invalid_project_start_date', 'Project start date must use a real YYYY, YYYY-MM or YYYY-MM-DD date.'); }
+        if ('' !== (string) ($action['end_date'] ?? '') && '' === $end_date) { return new WP_Error('research_manager_invalid_project_end_date', 'Project end date must use a real YYYY, YYYY-MM or YYYY-MM-DD date.'); }
+        if ('' !== (string) ($action['project_url'] ?? '') && '' === $project_url) { return new WP_Error('research_manager_invalid_project_url', 'Project URL must be a valid http or https URL.'); }
+
+        return array(
+            'type'=>'create_project','title'=>$title,'slug'=>$slug,'excerpt'=>$excerpt,'content'=>$content,
+            'language'=>$language,'status'=>$status,'project_status'=>$project_status,'question'=>$question,'role'=>$role,
+            'start_date'=>$start_date,'end_date'=>$end_date,'partner'=>$partner,'funding'=>$funding,'project_url'=>$project_url,
+            'methods'=>$methods,'line_ids'=>$line_ids,'creation_token'=>$creation_token,
         );
     }
 
@@ -249,23 +297,37 @@ final class Eduardo_Research_Manager_Plan {
         return $authors;
     }
 
-    private static function sanitize_verified_line_ids($value, string $language): array|WP_Error {
+    private static function sanitize_verified_line_ids($value, string $language, string $resource_label): array|WP_Error {
         if (null === $value || array() === $value) { return array(); }
         if (! is_array($value)) { return new WP_Error('research_manager_invalid_line_relations', 'Research line relations must be an array of IDs.'); }
         $ids = array_values(array_unique(array_filter(array_map('absint', $value))));
         foreach ($ids as $id) {
             if (! function_exists('eduardo_research_line_is_verified_public') || ! eduardo_research_line_is_verified_public($id, $language)) {
-                return new WP_Error('research_manager_unverified_line_relation', 'Research Outputs may only relate to verified Research Lines in the same language.');
+                return new WP_Error('research_manager_unverified_line_relation', $resource_label . ' may only relate to verified Research Lines in the same language.');
             }
         }
         return $ids;
     }
 
-    private static function normalize_publication_date(string $value): string {
+    private static function sanitize_string_list($value, string $error_code, string $error_message): array|WP_Error {
+        if (null === $value || array() === $value) { return array(); }
+        if (! is_array($value)) { return new WP_Error($error_code, $error_message); }
+        $clean = array();
+        foreach ($value as $item) {
+            if (! is_scalar($item)) { return new WP_Error($error_code, $error_message); }
+            $item = sanitize_text_field((string) $item);
+            if ('' !== $item) { $clean[] = $item; }
+        }
+        return array_values(array_unique($clean));
+    }
+
+    private static function normalize_date(string $value): string {
         $value = trim($value);
         if ('' === $value) { return ''; }
-        if (1 !== preg_match('/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/', $value)) { return ''; }
-        return $value;
+        if (1 === preg_match('/^\d{4}$/', $value)) { return $value; }
+        if (1 === preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $value)) { return $value; }
+        if (1 !== preg_match('/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', $value, $parts)) { return ''; }
+        return checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]) ? $value : '';
     }
 
     private static function normalize_doi(string $value): string {
@@ -274,6 +336,15 @@ final class Eduardo_Research_Manager_Plan {
         $value = preg_replace('#^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)#i', '', $value) ?? '';
         $value = trim($value);
         return 1 === preg_match('/^10\.\d{4,9}\/\S+$/i', $value) ? $value : '';
+    }
+
+    private static function normalize_http_url(string $value): string {
+        $value = trim($value);
+        if ('' === $value) { return ''; }
+        $url = esc_url_raw($value, array('http','https'));
+        if ('' === $url) { return ''; }
+        $scheme = strtolower((string) wp_parse_url($url, PHP_URL_SCHEME));
+        return in_array($scheme, array('http','https'), true) ? $url : '';
     }
 
     private static function allowed_option_key(string $key): bool {
@@ -304,6 +375,7 @@ final class Eduardo_Research_Manager_Plan {
         if ('create_page' === $action['type']) { return 'create_page:' . $action['wp_slug']; }
         if ('create_insight' === $action['type']) { return 'create_insight:' . $action['slug']; }
         if ('create_output' === $action['type']) { return 'create_output:' . $action['slug']; }
+        if ('create_project' === $action['type']) { return 'create_project:' . $action['slug']; }
         return 'unknown:' . md5((string) wp_json_encode($action));
     }
     private static function checksum(array $payload): string { return hash('sha256', (string) wp_json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)); }
