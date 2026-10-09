@@ -7,6 +7,7 @@ require_once get_template_directory() . '/inc/research-preset.php';
 require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
+require_once get_template_directory() . '/inc/research-discovery.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
