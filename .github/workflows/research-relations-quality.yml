@@ -1,0 +1,110 @@
+name: Research Relationship Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-relations-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-relations-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  relationship-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Install clean WordPress and Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/research-relations-wp
+          cd /tmp/research-relations-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://research.test --title='Research Relations Test' --admin_user=admin --admin_password='research-test-password' --admin_email=research@example.test --skip-email --allow-root
+          wp option update permalink_structure '/%postname%/' --allow-root
+          mkdir -p wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+      - name: Verify bidirectional Research relationships
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-relations-wp
+          wp eval '
+          if (! function_exists("eduardo_research_post_line_ids")) { exit(1); }
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Verified Systems Line","post_name"=>"verified-systems-line"]);
+          $hidden = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Hidden Line","post_name"=>"hidden-line"]);
+          update_post_meta($line, "_research_language", "en"); update_post_meta($line, "_research_evidence_status", "verified");
+          update_post_meta($hidden, "_research_language", "en"); update_post_meta($hidden, "_research_evidence_status", "unverified");
+          $paper = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Related Paper","post_name"=>"related-paper"]);
+          $project = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"Related Project","post_name"=>"related-project"]);
+          $dataset = wp_insert_post(["post_type"=>"research_dataset","post_status"=>"publish","post_title"=>"Unrelated Dataset","post_name"=>"unrelated-dataset"]);
+          foreach ([$paper,$project,$dataset] as $id) { update_post_meta($id, "_research_language", "en"); }
+          update_post_meta($paper, "_research_line_ids", [$line,$hidden]);
+          update_post_meta($project, "_research_line_ids", [$line]);
+          if ([$line] !== eduardo_research_post_line_ids($paper, "en")) { exit(1); }
+          $line_query = eduardo_research_related_objects_query_for_line($line, 20);
+          $line_ids = wp_list_pluck($line_query->posts, "ID");
+          if (! in_array($paper, $line_ids, true) || ! in_array($project, $line_ids, true) || in_array($dataset, $line_ids, true)) { exit(1); }
+          $paper_query = eduardo_research_related_objects_query_for_post($paper, 20);
+          $paper_ids = wp_list_pluck($paper_query->posts, "ID");
+          if (! in_array($project, $paper_ids, true) || in_array($paper, $paper_ids, true)) { exit(1); }
+          $refs = eduardo_research_schema_line_refs($paper);
+          if (1 !== count($refs) || false === strpos($refs[0]["@id"], "verified-systems-line")) { exit(1); }
+          ob_start(); eduardo_research_render_research_context($paper); $context = ob_get_clean();
+          if (false === strpos($context, "Verified Systems Line") || false !== strpos($context, "Hidden Line")) { exit(1); }
+          ' --allow-root
+      - name: Verify legacy Research Line migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-relations-wp
+          wp eval '
+          delete_option("eduardo_research_legacy_lines_migrated_v1");
+          update_option("eduardo_research_evidence", [
+            "research_lines"=>[
+              ["title"=>"Legacy verified line","title_es"=>"Línea verificada heredada","summary"=>"Legacy summary","summary_es"=>"Resumen heredado","status"=>"verified"],
+              ["title"=>"Legacy hidden line","status"=>"unverified"]
+            ],
+            "identifiers"=>[["label"=>"Verified profile","url"=>"https://example.test/profile","status"=>"verified"]]
+          ]);
+          eduardo_research_maybe_migrate_legacy_lines();
+          $store = eduardo_research_evidence_store();
+          if (isset($store["research_lines"])) { exit(1); }
+          if (! isset($store["identifiers"]) || 1 !== count($store["identifiers"])) { exit(1); }
+          $backup = get_option("eduardo_research_legacy_research_lines_v1", []);
+          if (2 !== count($backup)) { exit(1); }
+          $query = new WP_Query(eduardo_research_verified_line_query_args("en", 50));
+          $titles = wp_list_pluck($query->posts, "post_title");
+          if (! in_array("Legacy verified line", $titles, true) || in_array("Legacy hidden line", $titles, true)) { exit(1); }
+          $spanish = new WP_Query(eduardo_research_verified_line_query_args("es", 50));
+          $spanish_titles = wp_list_pluck($spanish->posts, "post_title");
+          if (! in_array("Línea verificada heredada", $spanish_titles, true)) { exit(1); }
+          if (1 !== (int) get_option("eduardo_research_legacy_lines_migrated_count_v1", 0)) { exit(1); }
+          ' --allow-root

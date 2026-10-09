@@ -12,7 +12,7 @@ $recent_outputs = new WP_Query(eduardo_research_localized_query_args(array(
 $insights = new WP_Query(eduardo_research_localized_query_args(array(
     'post_type'=>'post','post_status'=>'publish','posts_per_page'=>3,'orderby'=>'date','order'=>'DESC','no_found_rows'=>true,
 ), $language));
-$research_lines = eduardo_research_verified_localized_evidence('research_lines');
+$research_lines = new WP_Query(eduardo_research_verified_line_query_args($language, 6));
 $identifiers = eduardo_research_verified_localized_evidence('identifiers');
 $identity_lead = 'es' === $language
     ? 'Los identificadores académicos y las afiliaciones solo se muestran cuando su estado de evidencia está verificado.'
@@ -54,9 +54,7 @@ $identity_lead = 'es' === $language
   <div class="research-shell">
    <div class="research-section-heading"><div><span class="research-section-number">01</span><div class="research-eyebrow"><?php echo esc_html(eduardo_research_t('research')); ?></div><h2 id="research-agenda"><?php echo esc_html($model['research-lines-heading']); ?></h2></div><p class="research-lead"><?php echo esc_html($model['research-lines-intro']); ?></p></div>
    <div class="research-grid research-grid-editorial">
-    <?php if ($research_lines) : foreach (array_slice($research_lines, 0, 6) as $line) : ?>
-     <article class="research-card research-card-feature"><p class="research-card-kicker"><?php echo esc_html('es' === $language ? 'Línea de investigación verificada' : 'Verified research line'); ?></p><h3><?php echo esc_html((string) ($line['title'] ?? $line['label'] ?? ('es' === $language ? 'Línea de investigación' : 'Research line'))); ?></h3><?php if (! empty($line['summary'])) : ?><p><?php echo esc_html((string) $line['summary']); ?></p><?php endif; ?><span class="research-card-arrow" aria-hidden="true">↗</span></article>
-    <?php endforeach; else : ?>
+    <?php if ($research_lines->have_posts()) : while ($research_lines->have_posts()) : $research_lines->the_post(); eduardo_research_render_research_line_card(get_the_ID()); endwhile; wp_reset_postdata(); else : ?>
      <article class="research-card research-empty research-empty-wide"><p class="research-card-kicker"><?php echo esc_html(eduardo_research_t('evidence_ready')); ?></p><h3><?php echo esc_html(eduardo_research_t('research_ready_title')); ?></h3><p><?php echo esc_html(eduardo_research_t('research_ready_body')); ?></p><div class="research-empty-signal" aria-hidden="true"><span></span><span></span><span></span><span></span></div></article>
     <?php endif; ?>
    </div>
