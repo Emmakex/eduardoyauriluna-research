@@ -57,6 +57,25 @@ The Theme must remain functional without the Manager. The Manager is the control
 
 ---
 
+## 2.1 Theme owns the frontend
+
+The Research preset inherits a strict frontend-authority rule: **the SEO/GEO Theme controls the public page composition**.
+
+For controlled preset pages:
+
+- Gutenberg is not the layout engine;
+- page structure, section order, components and responsive behaviour come from the Theme;
+- WordPress Page records may exist for routing, status, translation mapping and contract resolution;
+- `post_content` is not required to produce the expected public layout;
+- Theme structured models and slots provide page data;
+- the future Manager hydrates those structured slots rather than generating block layouts.
+
+Gutenberg may be retained only as a bounded content editor where explicitly useful, for example a long-form Insight body or narrative body field rendered inside a Theme-defined slot. It never owns the surrounding page structure.
+
+Detailed rule: `docs/14-theme-owned-frontend.md`.
+
+---
+
 ## 3. Research preset contract
 
 The existing Theme already resolves preset pages and associates each page with a role, expected slug/title, content contract and optional structured model.
@@ -271,6 +290,8 @@ Minimum verification surfaces:
 
 Verification should check rendered output rather than relying only on stored WordPress fields.
 
+A controlled preset page should pass frontend verification even when its Gutenberg `post_content` is empty/minimal, provided the required structured Theme slots are hydrated.
+
 ---
 
 ## 10. Readiness model
@@ -423,6 +444,7 @@ The Content Kit does not invent missing research credentials or outputs.
 ### SEO/GEO Theme owns
 
 - rendering;
+- full frontend page composition;
 - preset/page contracts;
 - structured models and slots;
 - native SEO/GEO output;
@@ -435,13 +457,15 @@ The Content Kit does not invent missing research credentials or outputs.
 ### SEO/GEO Manager owns
 
 - diagnostics;
-- hydration;
+- structured-slot hydration;
 - evidence requirements;
 - preview/apply/verify/rollback;
 - readiness;
 - connection health;
 - imports/reconciliation;
 - audited external synchronization.
+
+The Manager does not own page layout and does not generate Gutenberg compositions.
 
 ### `eduardoyauriluna-research` owns
 
@@ -468,4 +492,6 @@ The `research` preset is compliant when:
 7. Research Readiness extends, rather than replaces, existing launch/readiness diagnostics.
 8. All mutations follow Preview → Apply → Verify → Rollback.
 9. The site renders correctly without the Manager installed.
-10. No Eduardo-specific content is hardcoded into reusable Theme or Manager code.
+10. Controlled preset pages render correctly without Gutenberg layout markup.
+11. Gutenberg, where enabled, is bounded to Theme-defined content slots.
+12. No Eduardo-specific content is hardcoded into reusable Theme or Manager code.
