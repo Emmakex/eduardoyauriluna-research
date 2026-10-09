@@ -17,6 +17,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Rendered_Verifier $rendered = null;
     private static ?Eduardo_Research_Manager_Remediation $remediation = null;
     private static ?Eduardo_Research_Manager_Translation_Pairing $translations = null;
+    private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -31,11 +32,16 @@ final class Eduardo_Research_Manager {
         self::$rendered = new Eduardo_Research_Manager_Rendered_Verifier(self::$contract);
         self::$remediation = new Eduardo_Research_Manager_Remediation(self::$contract, self::$diagnostics, self::$pages);
         self::$translations = new Eduardo_Research_Manager_Translation_Pairing();
+        self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
     public static function mode(): array {
         return Eduardo_Research_Manager_Mode::describe();
+    }
+    public static function greenfield(): Eduardo_Research_Manager_Greenfield {
+        if (! self::$greenfield) { self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::contract()); }
+        return self::$greenfield;
     }
     public static function contract(): Eduardo_Research_Manager_Contract {
         if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); }
