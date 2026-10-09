@@ -1,114 +1,115 @@
 # Research Manager
 
-Independent WordPress control plane for the Eduardo Research Theme. The Manager does **not** render the public frontend; the Theme remains the deterministic rendering, SEO/GEO, Schema and accessibility authority.
+Independent WordPress control plane for the Eduardo Research Theme. The Manager never becomes the public renderer: the Theme remains the layout, route, SEO/GEO, Schema and accessibility authority.
 
 ## Current version
 
-`0.4.0`
+`0.5.0`
 
-The Manager now includes the safe mutation/readiness kernel, Theme-owned Page hydration/creation, and a bounded **Insight Resource Service** for research notes and editorial content.
+The Manager now covers:
 
-## Control-plane kernel
+- safe diagnostics and checksummed `Preview → Apply → Verify → Rollback`;
+- Theme-owned Page hydration and reversible creation;
+- bounded EN/ES Insight creation and updates;
+- evidence-aware Research Output / Publication creation and updates.
 
-The Manager can inspect the active Research preset, diagnose missing or misaligned resources, build checksummed mutation plans, Preview stored-state changes, Apply authorised writes, Verify persisted state and Rollback from bounded snapshots.
+## Evidence discipline
 
-Evidence-sensitive academic keys remain `evidence-required`: Apply requires explicit evidence confirmation plus a source/verification reference inside the checksummed plan. Editorial prose is handled separately as `editorial-review`; writing an Insight does not by itself assert a verified DOI, peer-review state, affiliation, award, grant or metric.
+Academic claims are not inferred from prose or accepted merely because WordPress can store them. Plans touching DOI, publication type, review state, publication date, venue, publisher, authors/affiliations, grants, awards, identifiers or Research Line relations are `evidence-required`.
 
-## Page Resource Service
+Evidence-sensitive Apply requires both:
 
-`Eduardo_Research_Manager_Page_Resource` works with preset page keys rather than arbitrary WordPress pages. It can inspect role/model contracts, hydrate EN/ES Theme slots, repair role/model drift, explicitly create missing Theme-owned Pages and safely rollback only resources carrying the matching Manager provenance token.
+- `evidence_confirmed=true`;
+- a non-empty `evidence_reference` included in the checksummed plan.
 
-Page creation leaves `post_content` empty. The Theme continues to own Page composition and layout; Gutenberg is not the Page layout engine.
+Preview remains available before evidence is confirmed so a proposed mutation can be inspected safely. Changing confirmation/reference after Preview changes the checksum and requires a new Preview.
 
-## Insight Resource Service
+## Pages
 
-`Eduardo_Research_Manager_Insight_Resource` works with the Theme editorial contract for WordPress `post` records.
+`Eduardo_Research_Manager_Page_Resource` works from the active Research preset. It hydrates only Theme-defined EN/ES slots, repairs role/model drift and can explicitly create missing Theme-owned Pages with provenance-safe rollback. Page `post_content` remains empty; Gutenberg is not the Page layout engine.
 
-Theme-supported Insight types are read directly from `eduardo_research_insight_types()`:
+## Insights
 
-- `research_note`
-- `explainer`
-- `method_note`
-- `working_note`
-- `commentary`
+`Eduardo_Research_Manager_Insight_Resource` manages Theme editorial `post` records. Creation supports only Theme Insight types, EN/ES, bounded title/excerpt/body and initial `draft` or `publish`. Updates are limited to title, excerpt, body, language and Insight type. Generic status/slug mutation remains unavailable.
 
-Language is restricted to the active Research preset (`en` / `es`). The Theme continues to own localized routes, filtering and `Article` schema.
+The long-form Insight body is the bounded editorial zone inside the Theme-owned single shell.
 
-### Explicit Insight creation
+## Research Outputs / Publications
 
-`build_creation_plan()` creates a dedicated `create_insight` action. It supports only:
+`Eduardo_Research_Manager_Output_Resource` manages `research_output` records against the Theme academic object contract.
 
-- title;
-- slug;
-- excerpt;
-- bounded long-form body;
-- language;
-- Theme Insight type;
-- initial status `draft` or `publish`;
+### Creation
+
+A dedicated `create_output` action supports:
+
+- title, slug, excerpt and bounded narrative body;
+- EN/ES language;
+- initial `draft` or `publish` state;
+- Theme publication type;
+- Theme academic review status;
+- publication date (`YYYY`, `YYYY-MM` or `YYYY-MM-DD`);
+- venue;
+- normalized DOI (`10.xxxx/...`);
+- structured authors;
+- verified Research Line relations;
 - Manager provenance token.
 
-The creation action is `editorial-review`. Preview never creates a post. Apply refuses to overwrite an existing slug or reuse a provenance token. Rollback permanently deletes only the Manager-created Insight carrying the matching token.
+**Every `create_output` plan is `evidence-required`.** Creating a Research Output asserts the existence and identity of an academic/research result even if the WordPress record begins as a draft.
 
-Publishing permission is **not** added to the generic `post_field` mutation contract. `draft` / `publish` is accepted only as part of the dedicated creation action.
+### Verified public claims
 
-### Bounded Insight updates
+The Theme already gates public academic metadata with verification flags. The Manager owns these flags during controlled Publication operations:
 
-`build_update_plan()` can update an existing Insight only through these fields:
+- `_research_output_type_verified`
+- `_research_review_status_verified`
+- `_research_doi_verified`
 
-- `title`
-- `excerpt`
-- `content`
-- `language`
-- `insight_type`
+When a non-empty type, review state or DOI is accepted through an evidence-confirmed Manager plan, its corresponding flag is stored as `1`. Clearing the claim stores `0`.
 
-It intentionally does not expose generic status changes or slug changes in 0.4.0. Existing updates reuse the checksummed mutation executor and therefore support Preview, Apply, Verify and Rollback.
+This preserves the Theme behavior:
 
-Current bounds enforced before a plan can be created:
+- unverified type/review values remain private;
+- filtered public Publication queries require their verification flags;
+- DOI is emitted publicly only when verified;
+- Schema falls back to `CreativeWork` until the output type is verified.
 
-- title: 200 bytes;
-- excerpt: 1,000 bytes;
-- body: 60,000 bytes.
+### Authors
 
-The body is sanitized with WordPress `wp_kses_post()`. This is the intended bounded Gutenberg/editorial zone inside the Theme-owned single Insight shell; it does not transfer frontend layout authority to the editor.
+Authors are normalized into structured records with `display_name` and optional `given_name`, `family_name`, `affiliation`, ORCID and `is_site_researcher`. ORCID must use the canonical `0000-0000-0000-0000` shape. Because author identity and affiliation are academic claims, Publication creation/update requires evidence.
 
-### EN / ES behavior
+### Research Line relationships
 
-The Manager stores `_research_language` and `_research_insight_type`; the Theme decides how those values affect public behavior. At present the Theme owns:
+`_research_line_ids` may only contain published, evidence-verified Research Lines in the same language as the Publication. The Manager rejects an unverified, missing or cross-language line rather than creating a relationship the Theme would later hide.
 
-- `/insights/<slug>/` for English;
-- `/es/notas/<slug>/` for Spanish;
-- language-restricted Insight queries;
-- localized permalink generation;
-- Insight cards and filters;
-- `Article` structured data.
+### Updates
 
-The Manager verifies persisted editorial state and a non-empty Theme-generated route, but does not duplicate route or schema generation.
+The Publication service can prepare updates for:
 
-## Diagnostics and mutation discipline
+- title, excerpt and body;
+- language;
+- publication type;
+- review status;
+- publication date;
+- venue;
+- DOI;
+- authors;
+- Research Line relations.
 
-Readiness failures map to action classes such as `create-resource`, `hydrate`, `auto-fix-candidate`, `manual-review` and `configuration-required`.
+Status and slug are intentionally not generic update fields in 0.5.0. Type/review/DOI updates also update their verification flags in the same reversible plan.
 
-The generic mutation surface remains deliberately narrow:
+## Mutation boundaries
 
-- approved Research options and bounded Theme Page-model options;
-- Theme/Research post metadata (`_eduardo_research_*`, `_research_*`);
-- bounded post fields: title, excerpt, body content and menu order;
-- contract-bound `create_page` actions;
-- contract-bound `create_insight` actions.
+Generic mutations remain narrow: approved Research options, Theme/Research metadata and bounded title/excerpt/body/menu-order fields. Dedicated creation actions exist for Pages, Insights and Research Outputs; they do not grant generic `post_status` writes to arbitrary content.
 
-Every plan is checksummed and may target each stored field/resource only once.
-
-## Preview → Apply → Verify → Rollback
-
-Before Apply, the Manager stores previous supported state in a bounded, non-autoloaded snapshot store. A failed write or verification triggers restoration. An authorised user may explicitly rollback a successful mutation once. The foundation retains at most 25 recent snapshots.
+Snapshots are non-autoloaded, bounded and one-shot for rollback. Creation rollback deletes only a resource carrying the matching Manager provenance token; a conflicting resource is never overwritten or deleted.
 
 ## Admin surface
 
-WordPress → Tools → Research Manager shows the readiness/control-plane state. Raw mutation controls are intentionally not exposed yet; resource UX will be added only on top of verified services.
+WordPress → Tools → Research Manager exposes readiness/control-plane state. Raw write controls remain intentionally absent until each resource workflow has a verified service behind it.
 
 ## Next implementation blocks
 
-1. Publication and Research Project services using evidence-aware metadata schemas.
+1. Research Project resource service.
 2. Rendered-frontend verification adapters.
 3. Readiness remediation plans wired to Preview/Apply.
 4. EN/ES record pairing and translation operations.
