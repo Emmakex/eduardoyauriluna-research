@@ -4,9 +4,9 @@ Independent WordPress control plane for the Eduardo Research Theme. The Manager 
 
 ## Current version
 
-`0.2.0`
+`0.3.0`
 
-The safe mutation/readiness kernel from 0.1.0 now includes the first resource-specific service: **Theme-owned Pages and structured slot hydration**.
+The safe mutation/readiness kernel now includes two Page capabilities: **structured hydration of existing Theme-owned Pages** and **explicit reversible creation of missing Page resources**.
 
 ## Control-plane kernel
 
@@ -20,13 +20,15 @@ Evidence-sensitive academic keys are classified as `evidence-required`. Apply re
 
 It can:
 
-- inspect a Theme-controlled page and its role/model contract;
-- discover the allowed slot schema from the active Theme;
+- inspect a Theme-controlled Page and its role/model contract;
+- discover the allowed slot schema directly from the active Theme;
 - read effective EN or ES slot state;
 - prepare a hydration plan for only allowed slots;
 - repair incorrect `_eduardo_research_role` and `_eduardo_research_model` metadata in the same reversible plan;
 - verify stored hydration after Apply;
-- preserve the Theme as layout/rendering authority.
+- build an explicit creation plan when an expected Page is missing;
+- verify the created Page, role, model, route, publication state and provenance token;
+- preserve the Theme as layout/rendering authority throughout.
 
 Home uses the Theme model options:
 
@@ -37,21 +39,38 @@ Interior surfaces use the bounded Theme options `eduardo_research_surface_<page-
 
 Hydration of Theme copy/model options is classified as `editorial-review`; it is visible in Preview but does not claim academic evidence by itself.
 
-If the expected WordPress page does not exist, the Page Resource Service returns `research_manager_page_missing` with next action `create-resource`. It does **not** recreate or publish a missing page implicitly. Explicit reversible resource creation is the next Page milestone.
+## Explicit Page creation
+
+Missing Pages are never recreated as a side effect of diagnostics or hydration. Creation must be requested explicitly through `build_creation_plan()`.
+
+A `create_page` action is accepted only when its Page key, canonical WordPress slug, role, model and front-page status match the **active Theme preset contract**. The Manager generates a unique provenance token and stores it in `_eduardo_research_manager_creation_token`.
+
+The lifecycle is:
+
+1. Preview confirms the Theme-controlled slug is missing and performs no write.
+2. Apply creates one published WordPress Page with empty body content, Theme role/model metadata and the provenance token.
+3. Home creation also assigns the new Page as WordPress static front page.
+4. Verify checks the persisted Page against the original checksummed plan.
+5. Rollback permanently deletes only the Page carrying the matching Manager provenance token and restores the previous front-page routing state.
+
+If another Page occupies the slug before Apply, creation stops with a conflict instead of overwriting it. Rollback refuses to delete a Page whose provenance token does not match the plan.
+
+The creation operation does **not** move layout into Gutenberg and does not populate `post_content`; structured copy remains a separate hydration operation through the Theme model.
 
 ## Diagnostics
 
-Readiness checks map failures to actionable classes such as `create-resource`, `hydrate`, `auto-fix-candidate`, `manual-review` and `configuration-required`. The contract covers the Research Theme/preset, expected pages, page role/model assignment, Research CPTs, languages, Home routing and evidence-store shape.
+Readiness checks map failures to actionable classes such as `create-resource`, `hydrate`, `auto-fix-candidate`, `manual-review` and `configuration-required`. The contract covers the Research Theme/preset, expected Pages, Page role/model assignment, Research CPTs, languages, Home routing and evidence-store shape.
 
 ## Mutation contract
 
 The foundation remains deliberately narrow:
 
-- approved Research options and bounded Theme page-model options;
+- approved Research options and bounded Theme Page-model options;
 - Theme/Research post metadata (`_eduardo_research_*`, `_research_*`);
-- bounded post fields: title, excerpt, body content and menu order.
+- bounded post fields: title, excerpt, body content and menu order;
+- Theme-contract-bound `create_page` actions.
 
-Publishing status, arbitrary WordPress options and arbitrary post fields remain outside the whitelist. Every plan is checksummed and may target each stored field only once.
+Publishing status is still not a generic writable post field. Page publication is permitted only inside the dedicated Theme-controlled creation action. Arbitrary WordPress options and arbitrary post fields remain outside the whitelist. Every plan is checksummed and may target each stored field/resource only once.
 
 ## Preview → Apply → Verify → Rollback
 
@@ -63,10 +82,9 @@ WordPress → Tools → Research Manager shows the readiness/control-plane state
 
 ## Next implementation blocks
 
-1. Explicit reversible creation of missing Theme-controlled Page resources.
-2. Insight creation/update service with bounded body content.
-3. Publication and Research Project services using evidence-aware metadata schemas.
-4. Rendered-frontend verification adapters.
-5. Readiness remediation plans wired to Preview/Apply.
-6. EN/ES record pairing and translation operations.
-7. External academic connectors behind explicit authorization and additional evidence gates.
+1. Insight creation/update service with bounded body content.
+2. Publication and Research Project services using evidence-aware metadata schemas.
+3. Rendered-frontend verification adapters.
+4. Readiness remediation plans wired to Preview/Apply.
+5. EN/ES record pairing and translation operations.
+6. External academic connectors behind explicit authorization and additional evidence gates.
