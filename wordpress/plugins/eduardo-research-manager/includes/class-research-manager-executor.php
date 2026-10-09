@@ -112,6 +112,7 @@ final class Eduardo_Research_Manager_Executor {
         if ('create_page' === $type) { return $this->read_page_creation_state($action); }
         if ('create_insight' === $type) { return $this->read_insight_creation_state($action); }
         if ('create_output' === $type) { return $this->read_output_creation_state($action); }
+        if ('create_project' === $type) { return $this->read_project_creation_state($action); }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
@@ -174,6 +175,29 @@ final class Eduardo_Research_Manager_Executor {
         ));
     }
 
+    private function read_project_creation_state(array $action): array {
+        $post = $this->find_post_by_creation_token((string) $action['creation_token'], 'research_project');
+        if (! $post instanceof WP_Post) { $post = $this->find_post_by_slug((string) $action['slug'], 'research_project'); }
+        if (! $post instanceof WP_Post) { return array('exists'=>false,'value'=>null); }
+        return array('exists'=>true,'value'=>array(
+            'post_id'=>(int) $post->ID,'post_type'=>(string) $post->post_type,'status'=>(string) $post->post_status,
+            'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,'content'=>(string) $post->post_content,
+            'language'=>$this->private_meta_string((int) $post->ID, '_research_language', 'en'),
+            'project_status'=>$this->private_meta_string((int) $post->ID, '_research_project_status'),
+            'question'=>$this->private_meta_string((int) $post->ID, '_research_question'),
+            'role'=>$this->private_meta_string((int) $post->ID, '_research_role'),
+            'start_date'=>$this->private_meta_string((int) $post->ID, '_research_start_date'),
+            'end_date'=>$this->private_meta_string((int) $post->ID, '_research_end_date'),
+            'partner'=>$this->private_meta_string((int) $post->ID, '_research_partner'),
+            'funding'=>$this->private_meta_string((int) $post->ID, '_research_funding'),
+            'project_url'=>$this->private_meta_string((int) $post->ID, '_research_project_url'),
+            'methods'=>$this->private_meta_value((int) $post->ID, '_research_methods', array()),
+            'line_ids'=>$this->private_meta_value((int) $post->ID, '_research_line_ids', array()),
+            'creation_token'=>$this->private_meta_string((int) $post->ID, '_eduardo_research_manager_creation_token'),
+            'url'=>(string) get_permalink($post),
+        ));
+    }
+
     private function write_action(array $action): bool|WP_Error {
         $type = (string) ($action['type'] ?? '');
         if ('option' === $type) { update_option((string) $action['key'], $action['value'], false); }
@@ -185,6 +209,7 @@ final class Eduardo_Research_Manager_Executor {
         elseif ('create_page' === $type) { $result = $this->create_page($action); if (is_wp_error($result)) { return $result; } }
         elseif ('create_insight' === $type) { $result = $this->create_insight($action); if (is_wp_error($result)) { return $result; } }
         elseif ('create_output' === $type) { $result = $this->create_output($action); if (is_wp_error($result)) { return $result; } }
+        elseif ('create_project' === $type) { $result = $this->create_project($action); if (is_wp_error($result)) { return $result; } }
         else { return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.'); }
 
         $state = $this->read_state($action);
@@ -231,6 +256,24 @@ final class Eduardo_Research_Manager_Executor {
         clean_post_cache((int) $id); $this->refresh_theme_routes(); return true;
     }
 
+    private function create_project(array $action): bool|WP_Error {
+        if ($this->find_post_by_slug((string) $action['slug'], 'research_project') instanceof WP_Post) { return new WP_Error('research_manager_project_creation_conflict', 'A Research Project already occupies the planned slug. Nothing was overwritten.'); }
+        if ($this->find_post_by_creation_token((string) $action['creation_token'], 'research_project') instanceof WP_Post) { return new WP_Error('research_manager_creation_token_collision', 'The Research Project provenance token is already in use.'); }
+        $id = wp_insert_post(array(
+            'post_type'=>'research_project','post_status'=>$action['status'],'post_name'=>$action['slug'],'post_title'=>$action['title'],
+            'post_excerpt'=>$action['excerpt'],'post_content'=>$action['content'],'meta_input'=>array(
+                '_research_language'=>$action['language'],'_research_project_status'=>$action['project_status'],
+                '_research_question'=>$action['question'],'_research_role'=>$action['role'],
+                '_research_start_date'=>$action['start_date'],'_research_end_date'=>$action['end_date'],
+                '_research_partner'=>$action['partner'],'_research_funding'=>$action['funding'],
+                '_research_project_url'=>$action['project_url'],'_research_methods'=>$action['methods'],
+                '_research_line_ids'=>$action['line_ids'],'_eduardo_research_manager_creation_token'=>$action['creation_token'],
+            ),
+        ), true);
+        if (is_wp_error($id)) { return $id; }
+        clean_post_cache((int) $id); $this->refresh_theme_routes(); return true;
+    }
+
     private function restore_records(array $records): bool|WP_Error {
         foreach (array_reverse($records) as $record) {
             if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { continue; }
@@ -241,6 +284,7 @@ final class Eduardo_Research_Manager_Executor {
             elseif ('create_page' === $type) { $result = $this->restore_created_resource($action, $state, 'page'); if (is_wp_error($result)) { return $result; } if (! empty($action['front_page']) && is_array($state['site_front'] ?? null)) { update_option('show_on_front', (string) ($state['site_front']['show_on_front'] ?? 'posts')); update_option('page_on_front', (int) ($state['site_front']['page_on_front'] ?? 0)); } $this->refresh_theme_routes(); }
             elseif ('create_insight' === $type) { $result = $this->restore_created_resource($action, $state, 'post'); if (is_wp_error($result)) { return $result; } $this->refresh_theme_routes(); }
             elseif ('create_output' === $type) { $result = $this->restore_created_resource($action, $state, 'research_output'); if (is_wp_error($result)) { return $result; } $this->refresh_theme_routes(); }
+            elseif ('create_project' === $type) { $result = $this->restore_created_resource($action, $state, 'research_project'); if (is_wp_error($result)) { return $result; } $this->refresh_theme_routes(); }
 
             $restored = $this->read_state($action);
             if (is_wp_error($restored)) { return $restored; }
@@ -259,7 +303,9 @@ final class Eduardo_Research_Manager_Executor {
         $slug = (string) ($action['wp_slug'] ?? $action['slug'] ?? '');
         $occupant = 'page' === $post_type ? get_page_by_path($slug, OBJECT, 'page') : $this->find_post_by_slug($slug, $post_type);
         if ($occupant instanceof WP_Post) {
-            $code = 'research_output' === $post_type ? 'research_manager_output_rollback_conflict' : ('post' === $post_type ? 'research_manager_insight_rollback_conflict' : 'research_manager_page_rollback_conflict');
+            $code = 'research_output' === $post_type ? 'research_manager_output_rollback_conflict'
+                : ('research_project' === $post_type ? 'research_manager_project_rollback_conflict'
+                : ('post' === $post_type ? 'research_manager_insight_rollback_conflict' : 'research_manager_page_rollback_conflict'));
             return new WP_Error($code, 'Rollback found the planned slug occupied without this Manager provenance token. It was not deleted.');
         }
         return true;
@@ -276,17 +322,29 @@ final class Eduardo_Research_Manager_Executor {
             'publication_date'=>$action['publication_date'],'venue'=>$action['venue'],'doi'=>$action['doi'],'doi_verified'=>$action['doi_verified'],
             'authors'=>$action['authors'],'line_ids'=>$action['line_ids'],'creation_token'=>$action['creation_token'],
         );
+        if ('create_project' === $type) return array(
+            'post_type'=>'research_project','status'=>$action['status'],'slug'=>$action['slug'],'title'=>$action['title'],'excerpt'=>$action['excerpt'],'content'=>$action['content'],
+            'language'=>$action['language'],'project_status'=>$action['project_status'],'question'=>$action['question'],'role'=>$action['role'],
+            'start_date'=>$action['start_date'],'end_date'=>$action['end_date'],'partner'=>$action['partner'],'funding'=>$action['funding'],
+            'project_url'=>$action['project_url'],'methods'=>$action['methods'],'line_ids'=>$action['line_ids'],'creation_token'=>$action['creation_token'],
+        );
         return $action['value'] ?? null;
     }
 
     private function state_matches_action(array $state, array $action): bool {
         $type = (string) ($action['type'] ?? '');
-        if (! in_array($type, array('create_page','create_insight','create_output'), true)) { return ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $action['value'] ?? null); }
+        if (! in_array($type, array('create_page','create_insight','create_output','create_project'), true)) { return ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $action['value'] ?? null); }
         if (empty($state['exists']) || ! is_array($state['value'] ?? null)) { return false; }
         $stored = $state['value']; $desired = $this->desired_value($action);
-        $keys = 'create_page' === $type ? array('post_type','status','wp_slug','title','role','model','creation_token','front_page')
-            : ('create_insight' === $type ? array('post_type','status','slug','title','excerpt','content','language','insight_type','creation_token')
-            : array('post_type','status','slug','title','excerpt','content','language','output_type','output_type_verified','review_status','review_status_verified','publication_date','venue','doi','doi_verified','authors','line_ids','creation_token'));
+        if ('create_page' === $type) {
+            $keys = array('post_type','status','wp_slug','title','role','model','creation_token','front_page');
+        } elseif ('create_insight' === $type) {
+            $keys = array('post_type','status','slug','title','excerpt','content','language','insight_type','creation_token');
+        } elseif ('create_output' === $type) {
+            $keys = array('post_type','status','slug','title','excerpt','content','language','output_type','output_type_verified','review_status','review_status_verified','publication_date','venue','doi','doi_verified','authors','line_ids','creation_token');
+        } else {
+            $keys = array('post_type','status','slug','title','excerpt','content','language','project_status','question','role','start_date','end_date','partner','funding','project_url','methods','line_ids','creation_token');
+        }
         foreach ($keys as $key) { if (! array_key_exists($key, $stored) || ! array_key_exists($key, $desired) || ! $this->values_equal($stored[$key], $desired[$key])) { return false; } }
         return '' !== (string) ($stored['url'] ?? '');
     }
