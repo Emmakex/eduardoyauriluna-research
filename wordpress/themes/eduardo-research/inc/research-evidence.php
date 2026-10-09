@@ -26,13 +26,13 @@ function eduardo_research_verified_evidence(string $group): array { return eduar
 function eduardo_research_surface_evidence_groups(string $surface): array {
     $es = function_exists('eduardo_research_current_language') && 'es' === eduardo_research_current_language();
     $groups = $es ? array(
-        'about'=>array('profile'=>'Perfil','affiliations'=>'Afiliaciones'),
-        'research'=>array('research_lines'=>'Líneas de investigación','methods'=>'Métodos'),
+        'about'=>array('profile'=>'Perfil','affiliations'=>'Afiliaciones','identifiers'=>'Identidad académica'),
+        'research'=>array('research_lines'=>'Líneas de investigación','research_questions'=>'Preguntas de investigación','methods'=>'Métodos'),
         'cv'=>array('experience'=>'Experiencia','education'=>'Formación','affiliations'=>'Afiliaciones','awards'=>'Reconocimientos'),
         'contact'=>array('contact'=>'Consultas de investigación','identifiers'=>'Perfiles académicos'),
     ) : array(
-        'about'=>array('profile'=>'Profile','affiliations'=>'Affiliations'),
-        'research'=>array('research_lines'=>'Research lines','methods'=>'Methods'),
+        'about'=>array('profile'=>'Profile','affiliations'=>'Affiliations','identifiers'=>'Academic identity'),
+        'research'=>array('research_lines'=>'Research lines','research_questions'=>'Research questions','methods'=>'Methods'),
         'cv'=>array('experience'=>'Experience','education'=>'Education','affiliations'=>'Affiliations','awards'=>'Awards'),
         'contact'=>array('contact'=>'Research enquiries','identifiers'=>'Academic profiles'),
     );
