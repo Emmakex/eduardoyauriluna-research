@@ -1,4 +1,4 @@
-/* Screenshot-driven visual polish for the Academic Intelligence palette. */
+/* Screenshot-driven visual polish for the Academic Intelligence palette. Reviewed against the live homepage on 2026-10-09. */
 .research-section{padding-block:clamp(4rem,6.6vw,6.6rem)}
 .research-section-soft{background:linear-gradient(180deg,rgba(232,242,239,.56),rgba(245,245,240,.16))}
 .research-nav a{font-size:.86rem;font-weight:680}
