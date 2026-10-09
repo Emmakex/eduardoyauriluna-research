@@ -34,6 +34,9 @@ final class Eduardo_Research_Manager {
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
+    public static function mode(): array {
+        return Eduardo_Research_Manager_Mode::describe();
+    }
     public static function contract(): Eduardo_Research_Manager_Contract {
         if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); }
         return self::$contract;
