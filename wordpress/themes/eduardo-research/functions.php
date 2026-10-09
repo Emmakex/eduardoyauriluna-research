@@ -8,6 +8,7 @@ require_once get_template_directory() . '/inc/research-language.php';
 require_once get_template_directory() . '/inc/research-content-language.php';
 require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-evidence.php';
+require_once get_template_directory() . '/inc/research-objects.php';
 require_once get_template_directory() . '/inc/research-surface-layouts.php';
 require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
@@ -42,25 +43,34 @@ function eduardo_research_assets(): void {
         $interior_version = substr((string) hash_file('sha256', $interior_path), 0, 16);
         wp_enqueue_style('eduardo-research-interior-surfaces', get_stylesheet_directory_uri() . '/assets/interior-surfaces.css', array('eduardo-research'), $interior_version);
     }
+
+    $objects_path = get_stylesheet_directory() . '/assets/research-objects.css';
+    if (is_readable($objects_path)) {
+        $objects_version = substr((string) hash_file('sha256', $objects_path), 0, 16);
+        wp_enqueue_style('eduardo-research-objects', get_stylesheet_directory_uri() . '/assets/research-objects.css', array('eduardo-research'), $objects_version);
+    }
 }
 add_action('wp_enqueue_scripts', 'eduardo_research_assets');
 
 function eduardo_research_register_content_types(): void {
     $types = array(
+        'research_line' => array('Research Lines', 'Research Line', 'dashicons-networking', false),
         'research_output' => array('Outputs', 'Output', 'dashicons-media-document', 'publications'),
         'research_project' => array('Projects', 'Project', 'dashicons-portfolio', 'projects'),
         'research_software' => array('Software', 'Software', 'dashicons-editor-code', 'software'),
         'research_dataset' => array('Datasets', 'Dataset', 'dashicons-database', 'datasets'),
     );
     foreach ($types as $type => $labels) {
+        $supports = array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields');
+        if ('research_line' === $type) { $supports[] = 'page-attributes'; }
         register_post_type($type, array(
             'labels' => array('name' => $labels[0], 'singular_name' => $labels[1]),
             'public' => true,
             'show_in_rest' => true,
             'has_archive' => false,
-            'rewrite' => array('slug' => $labels[3], 'with_front' => false),
+            'rewrite' => false === $labels[3] ? false : array('slug' => $labels[3], 'with_front' => false),
             'menu_icon' => $labels[2],
-            'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'),
+            'supports' => $supports,
         ));
     }
 }
