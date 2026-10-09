@@ -80,7 +80,7 @@ This gives three useful properties:
 
 A source cannot create a second pending draft while its current token still resolves to an existing record.
 
-A stale token whose target no longer exists can be cleared through an explicit reversible `build_clear_stale_plan()` operation.
+If a token is stale because its target was removed outside the Manager, it does not block a new draft. The next valid creation plan atomically replaces that stale token; rolling that plan back restores the exact previous stale token. No separate metadata-delete privilege is required.
 
 ## Public translation boundary
 
@@ -102,8 +102,7 @@ Primary operations:
 
 - `inspect($source_id)` — source/pending-draft state;
 - `build_creation_plan($source_id, $target_title, $target_slug, $intent, $context)` — atomic draft + source provenance plan;
-- `verify($source_id, $expected_token)` — verifies target type/status/language/provenance and zero-copy constraints;
-- `build_clear_stale_plan($source_id)` — removes only a token that no longer resolves to an existing target.
+- `verify($source_id, $expected_token)` — verifies target type/status/language/provenance and zero-copy constraints.
 
 All writes use the existing checksummed `Preview → Apply → Verify → Rollback` executor.
 
@@ -118,6 +117,7 @@ This milestone does not:
 - infer a target title;
 - overwrite an existing public counterpart;
 - create multiple simultaneous pending counterparts for one source/language;
+- add a generic metadata-delete action;
 - bypass evidence requirements for structured research objects.
 
 The following microphase can add an explicit reviewed publication transition for Manager-owned translation drafts; public pairing remains a separate final action after publication.
