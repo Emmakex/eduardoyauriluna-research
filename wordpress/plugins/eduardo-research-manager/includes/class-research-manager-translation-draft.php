@@ -135,8 +135,7 @@ final class Eduardo_Research_Manager_Translation_Draft {
 
         if ($target instanceof WP_Post && in_array($source['post_type'], self::STRUCTURED_TYPES, true)) {
             foreach ($this->sensitive_meta_keys($source['post_type']) as $key) {
-                $value = get_post_meta((int) $target->ID, $key, true);
-                $checks['empty:' . $key] = '' === $value || array() === $value || '0' === (string) $value;
+                $checks['empty:' . $key] = $this->is_empty_meta_value(get_post_meta((int) $target->ID, $key, true));
             }
             $checks['empty_excerpt'] = '' === trim((string) $target->post_excerpt);
             $checks['empty_content'] = '' === trim((string) $target->post_content);
@@ -154,22 +153,6 @@ final class Eduardo_Research_Manager_Translation_Draft {
             'checks'=>$checks,
             'verified_at'=>gmdate(DATE_W3C),
         );
-    }
-
-    public function build_clear_stale_plan(int $source_id, string $intent = ''): array|WP_Error {
-        $source = $this->source_record($source_id, false);
-        if (is_wp_error($source)) { return $source; }
-        $target_language = $this->opposite_language($source['language']);
-        $key = $this->pending_key($target_language);
-        $token = trim((string) get_post_meta($source_id, $key, true));
-        if ('' === $token) { return new WP_Error('research_manager_translation_draft_not_pending', 'This source record has no pending translation-draft token.'); }
-        if ($this->find_by_creation_token($token, $source['post_type']) instanceof WP_Post) {
-            return new WP_Error('research_manager_translation_draft_not_stale', 'The pending translation draft still exists and cannot be cleared as stale.');
-        }
-        $intent = '' !== trim($intent) ? $intent : sprintf('Clear stale translation-draft token for %s #%d', $source['post_type'], $source_id);
-        return Eduardo_Research_Manager_Plan::create($intent, array(
-            array('type'=>'post_meta','post_id'=>$source_id,'key'=>$key,'value'=>''),
-        ));
     }
 
     private function resource_creation_plan(array $source, string $language, string $title, string $slug, array $context): array|WP_Error {
@@ -258,5 +241,13 @@ final class Eduardo_Research_Manager_Translation_Draft {
             'research_dataset' => array('_research_dataset_version','_research_publication_date','_research_repository','_research_doi','_research_license','_research_access_level','_research_formats','_research_methodology','_research_provenance','_research_size','_research_documentation_url','_research_ethics_notes','_research_line_ids'),
             default => array(),
         };
+    }
+
+    private function is_empty_meta_value(mixed $value): bool {
+        if (is_array($value)) { return array() === $value; }
+        if (null === $value || false === $value) { return true; }
+        if (! is_scalar($value)) { return false; }
+        $string = trim((string) $value);
+        return '' === $string || '0' === $string;
     }
 }
