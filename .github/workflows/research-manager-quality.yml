@@ -1,0 +1,202 @@
+name: Research Manager Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-manager-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-manager-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Verify Manager plugin files
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLUGIN=wordpress/plugins/eduardo-research-manager
+          test -s "$PLUGIN/eduardo-research-manager.php"
+          test -s "$PLUGIN/includes/class-research-manager-contract.php"
+          test -s "$PLUGIN/includes/class-research-manager-diagnostics.php"
+          test -s "$PLUGIN/includes/class-research-manager-plan.php"
+          test -s "$PLUGIN/includes/class-research-manager-snapshots.php"
+          test -s "$PLUGIN/includes/class-research-manager-executor.php"
+          test -s "$PLUGIN/includes/class-research-manager-admin.php"
+          test -s "$PLUGIN/includes/class-research-manager.php"
+      - name: Lint Manager PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress/plugins/eduardo-research-manager -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  runtime-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install clean WordPress and activate Manager without Research Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/research-manager-wp
+          cd /tmp/research-manager-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://manager.test --title='Research Manager Test' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Verify Manager remains safe without Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          $report = Eduardo_Research_Manager::diagnostics()->run();
+          if (! empty($report["ready"])) { exit(1); }
+          if ((int) $report["summary"]["fail"] < 1) { exit(1); }
+          if ("configuration-required" !== (string) $report["next_actions"][0]["action"]) { exit(1); }
+          ' --allow-root
+
+      - name: Activate Research Theme and verify contract readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          mkdir -p wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+          wp rewrite flush --allow-root
+          wp eval '
+          $contract = Eduardo_Research_Manager::contract()->snapshot();
+          if (empty($contract["compatible"]) || "research" !== $contract["preset_id"] || (int) $contract["preset_version"] < 4) { exit(1); }
+          $report = Eduardo_Research_Manager::diagnostics()->run();
+          if (empty($report["ready"]) || (int) $report["summary"]["fail"] !== 0) {
+              fwrite(STDERR, wp_json_encode($report) . "\n"); exit(1);
+          }
+          ' --allow-root
+
+      - name: Verify Preview Apply Verify Rollback lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $about = get_page_by_path("about");
+          if (! $about instanceof WP_Post) { exit(1); }
+          $key = "_eduardo_research_manager_test";
+          delete_post_meta($about->ID, $key);
+          $plan = Eduardo_Research_Manager_Plan::create("Test reversible structured mutation", [[
+              "type"=>"post_meta", "post_id"=>$about->ID, "key"=>$key, "value"=>"alpha"
+          ]]);
+          if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
+          $preview = Eduardo_Research_Manager::executor()->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || empty($preview["actions"][0]["changed"])) { exit(1); }
+          if (metadata_exists("post", $about->ID, $key)) { fwrite(STDERR, "Preview mutated state\n"); exit(1); }
+          $applied = Eduardo_Research_Manager::executor()->apply($plan);
+          if (is_wp_error($applied) || "applied" !== $applied["status"] || empty($applied["snapshot_id"])) { exit(1); }
+          if ("alpha" !== get_post_meta($about->ID, $key, true)) { exit(1); }
+          $verified = Eduardo_Research_Manager::executor()->verify($plan);
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
+          if (is_wp_error($rolled) || "rolled-back" !== $rolled["status"]) { exit(1); }
+          if (metadata_exists("post", $about->ID, $key)) { fwrite(STDERR, "Rollback did not restore missing state\n"); exit(1); }
+          ' --allow-root
+
+      - name: Verify mutation safety gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-wp
+          wp eval '
+          wp_set_current_user(1);
+          $output = wp_insert_post(["post_type"=>"research_output","post_status"=>"draft","post_title"=>"Manager safety fixture"]);
+          if ($output <= 0) { exit(1); }
+
+          $forbidden = Eduardo_Research_Manager_Plan::create("Attempt unsupported publication mutation", [[
+              "type"=>"post_field", "post_id"=>$output, "field"=>"post_status", "value"=>"publish"
+          ]]);
+          if (! is_wp_error($forbidden)) { fwrite(STDERR, "Unsupported post_status mutation was accepted\n"); exit(1); }
+
+          $sensitive = Eduardo_Research_Manager_Plan::create("Set peer-review status", [[
+              "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
+          ]]);
+          if (is_wp_error($sensitive) || "evidence-required" !== $sensitive["risk"]) { exit(1); }
+          $preview = Eduardo_Research_Manager::executor()->preview($sensitive);
+          if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { exit(1); }
+          $blocked = Eduardo_Research_Manager::executor()->apply($sensitive);
+          if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
+          if (metadata_exists("post", $output, "_research_review_status")) { exit(1); }
+
+          $confirmed = Eduardo_Research_Manager_Plan::create("Set peer-review status from verified source", [[
+              "type"=>"post_meta", "post_id"=>$output, "key"=>"_research_review_status", "value"=>"peer_reviewed"
+          ]], ["evidence_confirmed"=>true,"evidence_reference"=>"CI verified-source fixture"]);
+          if (is_wp_error($confirmed)) { exit(1); }
+          $applied = Eduardo_Research_Manager::executor()->apply($confirmed);
+          if (is_wp_error($applied) || "peer_reviewed" !== get_post_meta($output, "_research_review_status", true)) { exit(1); }
+          $rolled = Eduardo_Research_Manager::executor()->rollback($applied["snapshot_id"]);
+          if (is_wp_error($rolled) || metadata_exists("post", $output, "_research_review_status")) { exit(1); }
+
+          $tampered = $confirmed;
+          $tampered["actions"][0]["value"] = "accepted";
+          $invalid = Eduardo_Research_Manager::executor()->preview($tampered);
+          if (! is_wp_error($invalid) || "research_manager_plan_changed" !== $invalid->get_error_code()) { exit(1); }
+          ' --allow-root
+
+  package:
+    needs: [quality, runtime-smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build installable Manager ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cd wordpress/plugins
+          zip -r ../../dist/eduardo-research-manager-0.1.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-manager-0.1.0.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eduardo-research-manager-0.1.0
+          path: dist/eduardo-research-manager-0.1.0.zip
+          if-no-files-found: error
