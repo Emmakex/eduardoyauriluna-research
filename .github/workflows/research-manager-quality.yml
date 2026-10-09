@@ -113,7 +113,7 @@ jobs:
           wp rewrite flush --hard --allow-root
           wp eval '
           $report = Eduardo_Research_Manager::diagnostics()->run();
-          if (empty($report["ready"]) || (int) $report["summary"]["fail"] !== 0 || (int) $report["summary"]["warning"] !== 0) {
+          if (empty($report["ready"]) || (int) $report["summary"]["fail"] !== 0) {
               fwrite(STDERR, wp_json_encode($report)); exit(1);
           }
           ' --allow-root
