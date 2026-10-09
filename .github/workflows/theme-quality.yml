@@ -37,6 +37,7 @@ jobs:
           test -f wordpress/themes/eduardo-research/inc/research-language.php
           test -f wordpress/themes/eduardo-research/inc/research-content-language.php
           test -f wordpress/themes/eduardo-research/inc/research-evidence.php
+          test -f wordpress/themes/eduardo-research/inc/research-sitemap.php
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
         shell: bash
@@ -104,7 +105,8 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/research-wp
-          wp eval 'if ("en" !== eduardo_research_default_language()) { exit(1); } if ("http://research.test/es/investigacion/" !== eduardo_research_page_url("research", "es")) { exit(1); } if ("Investigación" !== eduardo_research_page_label("research", "es")) { exit(1); } $_SERVER["REQUEST_URI"]="/es/investigacion/"; if ("es" !== eduardo_research_request_language()) { exit(1); } $model=eduardo_research_default_model("es"); if ("Agenda de investigación" !== $model["research-lines-heading"]) { exit(1); }' --allow-root
+          wp eval 'if ("en" !== eduardo_research_default_language()) { exit(1); } if ("http://research.test/es/investigacion/" !== eduardo_research_page_url("research", "es")) { exit(1); } if ("Investigación" !== eduardo_research_page_label("research", "es")) { exit(1); } $_SERVER["REQUEST_URI"]="/es/investigacion/"; if ("es" !== eduardo_research_request_language()) { exit(1); } if (false !== eduardo_research_preserve_localized_canonical("http://research.test/research/", "http://research.test/es/investigacion/")) { exit(1); } $model=eduardo_research_default_model("es"); if ("Agenda de investigación" !== $model["research-lines-heading"]) { exit(1); }' --allow-root
+          wp eval '$provider = new Eduardo_Research_Language_Sitemap_Provider(); $urls = array_column($provider->get_url_list(1), "loc"); if (! in_array("http://research.test/es/investigacion/", $urls, true) || ! in_array("http://research.test/es/publicaciones/", $urls, true)) { exit(1); }' --allow-root
           wp rewrite list --allow-root --format=csv | grep -F '^es/investigacion/?$'
           wp rewrite list --allow-root --format=csv | grep -F '^es/llms\.txt$'
       - name: Verify translated Research record contract
