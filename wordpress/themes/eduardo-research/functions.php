@@ -7,6 +7,8 @@ require_once get_template_directory() . '/inc/research-preset.php';
 require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
+require_once get_template_directory() . '/inc/research-discovery.php';
+require_once get_template_directory() . '/inc/research-breadcrumbs.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
@@ -44,6 +46,5 @@ function eduardo_research_register_content_types(): void {
     }
 }
 add_action('init', 'eduardo_research_register_content_types');
-
 function eduardo_research_page_editor_support(): void { remove_post_type_support('page', 'editor'); }
 add_action('init', 'eduardo_research_page_editor_support', 20);
