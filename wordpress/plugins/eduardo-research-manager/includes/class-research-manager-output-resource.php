@@ -46,6 +46,9 @@ final class Eduardo_Research_Manager_Output_Resource {
         if (array_key_exists('line_ids', $data) && ! is_array($data['line_ids'])) {
             return new WP_Error('research_manager_invalid_line_relations', 'Research Line relations must be supplied as an array of IDs.');
         }
+        if (array_key_exists('publication_date', $data) && is_scalar($data['publication_date']) && ! $this->valid_publication_date((string) $data['publication_date'])) {
+            return new WP_Error('research_manager_invalid_publication_date', 'Publication date must be a real YYYY, YYYY-MM or YYYY-MM-DD date.');
+        }
         $title = is_scalar($data['title'] ?? null) ? (string) $data['title'] : '';
         $action = array(
             'type'=>'create_output','title'=>$title,
@@ -75,6 +78,15 @@ final class Eduardo_Research_Manager_Output_Resource {
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_output_field_not_allowed', 'Research Output update contains fields outside the bounded contract: ' . implode(', ', array_map('sanitize_key', $unknown)));
+        }
+        if (array_key_exists('authors', $changes) && ! is_array($changes['authors'])) {
+            return new WP_Error('research_manager_invalid_authors', 'Research Output authors must be supplied as an array.');
+        }
+        if (array_key_exists('line_ids', $changes) && ! is_array($changes['line_ids'])) {
+            return new WP_Error('research_manager_invalid_line_relations', 'Research Line relations must be supplied as an array of IDs.');
+        }
+        if (array_key_exists('publication_date', $changes) && (! is_scalar($changes['publication_date']) || ! $this->valid_publication_date((string) $changes['publication_date']))) {
+            return new WP_Error('research_manager_invalid_publication_date', 'Publication date must be a real YYYY, YYYY-MM or YYYY-MM-DD date.');
         }
 
         $synthetic = array(
@@ -130,6 +142,9 @@ final class Eduardo_Research_Manager_Output_Resource {
         $allowed = array('status','slug','title','excerpt','content','language','output_type','review_status','publication_date','venue','doi','authors','line_ids');
         $unknown = array_diff(array_keys($expected), $allowed);
         if ($unknown) { return new WP_Error('research_manager_output_field_not_allowed', 'Research Output verification requested unsupported fields.'); }
+        if (array_key_exists('publication_date', $expected) && (! is_scalar($expected['publication_date']) || ! $this->valid_publication_date((string) $expected['publication_date']))) {
+            return new WP_Error('research_manager_invalid_publication_date', 'Publication date must be a real YYYY, YYYY-MM or YYYY-MM-DD date.');
+        }
 
         $synthetic = array(
             'type'=>'create_output','title'=>$record['title'],'slug'=>$record['slug'],'excerpt'=>$record['excerpt'],'content'=>$record['content'],
@@ -166,6 +181,15 @@ final class Eduardo_Research_Manager_Output_Resource {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme publication contract is required.');
         }
         return true;
+    }
+
+    private function valid_publication_date(string $value): bool {
+        $value = trim($value);
+        if ('' === $value) { return true; }
+        if (1 === preg_match('/^\d{4}$/', $value)) { return true; }
+        if (1 === preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $value)) { return true; }
+        if (1 !== preg_match('/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', $value, $parts)) { return false; }
+        return checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]);
     }
 
     private function private_meta_value(int $post_id, string $key, mixed $default = null): mixed {
