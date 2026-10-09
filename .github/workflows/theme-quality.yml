@@ -34,6 +34,7 @@ jobs:
           test -f wordpress/themes/eduardo-research/functions.php
           test -f wordpress/themes/eduardo-research/front-page.php
           test -f wordpress/themes/eduardo-research/index.php
+          test -f wordpress/themes/eduardo-research/inc/research-language.php
           test -f wordpress/themes/eduardo-research/inc/research-evidence.php
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
@@ -67,7 +68,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          extensions: mysqli
+          extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
       - name: Install clean WordPress and activate Theme
@@ -97,13 +98,21 @@ jobs:
           wp eval 'foreach (["research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
           wp eval '$page = get_page_by_path("publications"); if (! $page || "output-index" !== get_post_meta($page->ID, "_eduardo_research_role", true)) { exit(1); }' --allow-root
           wp eval 'if ("CreativeWork" !== eduardo_research_output_schema_type(0)) { exit(1); } foreach (["about","research","publications","projects","software","datasets","cv","insights","contact"] as $key) { if ("" === eduardo_research_page_url($key)) { exit(1); } }' --allow-root
+      - name: Verify native EN ES contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          wp eval 'if ("en" !== eduardo_research_default_language()) { exit(1); } if ("http://research.test/es/investigacion/" !== eduardo_research_page_url("research", "es")) { exit(1); } if ("Investigación" !== eduardo_research_page_label("research", "es")) { exit(1); } $_SERVER["REQUEST_URI"]="/es/investigacion/"; if ("es" !== eduardo_research_request_language()) { exit(1); } $model=eduardo_research_default_model("es"); if ("Agenda de investigación" !== $model["research-lines-heading"]) { exit(1); }' --allow-root
+          wp rewrite list --allow-root --format=csv | grep -F '^es/investigacion/?$'
+          wp rewrite list --allow-root --format=csv | grep -F '^es/llms\.txt$'
       - name: Verify evidence visibility contract
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-wp
-          wp option update eduardo_research_evidence '{"research_lines":[{"title":"Hidden line","status":"unverified"},{"title":"Visible line","summary":"Verified summary","status":"verified"}],"identifiers":[{"label":"Hidden profile","url":"https://example.test/hidden","status":"needs-review"},{"label":"Verified profile","url":"https://example.test/verified","status":"verified"}],"affiliations":[{"title":"Verified organisation","url":"https://example.test/org","status":"verified"}]}' --format=json --allow-root
-          wp eval '$lines = eduardo_research_verified_evidence("research_lines"); if (1 !== count($lines) || "Visible line" !== $lines[0]["title"]) { exit(1); } $urls = eduardo_research_verified_identifier_urls(); if (["https://example.test/verified"] !== $urls) { exit(1); } $groups = eduardo_research_surface_evidence_groups("cv"); if (! isset($groups["education"]) || ! isset($groups["experience"])) { exit(1); }' --allow-root
+          wp option update eduardo_research_evidence '{"research_lines":[{"title":"Hidden line","status":"unverified"},{"title":"Visible line","title_es":"Línea visible","summary":"Verified summary","summary_es":"Resumen verificado","status":"verified"}],"identifiers":[{"label":"Hidden profile","url":"https://example.test/hidden","status":"needs-review"},{"label":"Verified profile","url":"https://example.test/verified","status":"verified"}],"affiliations":[{"title":"Verified organisation","url":"https://example.test/org","status":"verified"}]}' --format=json --allow-root
+          wp eval '$lines = eduardo_research_verified_evidence("research_lines"); if (1 !== count($lines) || "Visible line" !== $lines[0]["title"]) { exit(1); } $localized = eduardo_research_localize_record($lines[0], "es"); if ("Línea visible" !== $localized["title"]) { exit(1); } $urls = eduardo_research_verified_identifier_urls(); if (["https://example.test/verified"] !== $urls) { exit(1); } $groups = eduardo_research_surface_evidence_groups("cv"); if (! isset($groups["education"]) || ! isset($groups["experience"])) { exit(1); }' --allow-root
 
   package:
     needs: [quality, runtime-smoke]
