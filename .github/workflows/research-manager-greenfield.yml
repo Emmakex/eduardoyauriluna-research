@@ -1,0 +1,31 @@
+name: Research Manager Greenfield
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'docs/11-greenfield-runtime-contract.md'
+      - '.github/workflows/research-manager-greenfield.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-manager-greenfield.yml'
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
+      - name: Greenfield is explicit default
+        run: |
+          grep -F "public const GREENFIELD = 'greenfield';" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
+          grep -F "get_option('eduardo_research_manager_mode', self::GREENFIELD)" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
+          grep -F "'legacy_discovery' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
+          grep -F "'legacy_mapping' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
