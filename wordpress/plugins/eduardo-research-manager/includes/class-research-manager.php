@@ -17,6 +17,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Rendered_Verifier $rendered = null;
     private static ?Eduardo_Research_Manager_Remediation $remediation = null;
     private static ?Eduardo_Research_Manager_Translation_Pairing $translations = null;
+    private static ?Eduardo_Research_Manager_Translation_Draft $translation_drafts = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -31,6 +32,14 @@ final class Eduardo_Research_Manager {
         self::$rendered = new Eduardo_Research_Manager_Rendered_Verifier(self::$contract);
         self::$remediation = new Eduardo_Research_Manager_Remediation(self::$contract, self::$diagnostics, self::$pages);
         self::$translations = new Eduardo_Research_Manager_Translation_Pairing();
+        self::$translation_drafts = new Eduardo_Research_Manager_Translation_Draft(
+            self::$contract,
+            self::$outputs,
+            self::$projects,
+            self::$software,
+            self::$datasets,
+            self::$insights
+        );
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
@@ -81,5 +90,13 @@ final class Eduardo_Research_Manager {
     public static function translations(): Eduardo_Research_Manager_Translation_Pairing {
         if (! self::$translations) { self::$translations = new Eduardo_Research_Manager_Translation_Pairing(); }
         return self::$translations;
+    }
+    public static function translation_drafts(): Eduardo_Research_Manager_Translation_Draft {
+        if (! self::$translation_drafts) {
+            self::$translation_drafts = new Eduardo_Research_Manager_Translation_Draft(
+                self::contract(), self::outputs(), self::projects(), self::software(), self::datasets(), self::insights()
+            );
+        }
+        return self::$translation_drafts;
     }
 }
