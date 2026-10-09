@@ -21,6 +21,7 @@ require_once get_template_directory() . '/inc/research-discovery.php';
 require_once get_template_directory() . '/inc/research-breadcrumbs.php';
 require_once get_template_directory() . '/inc/research-sitemap.php';
 require_once get_template_directory() . '/inc/research-install.php';
+require_once get_template_directory() . '/inc/research-hardening.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
@@ -34,7 +35,7 @@ add_action('after_setup_theme', 'eduardo_research_setup');
 
 function eduardo_research_assets(): void {
     $path = get_stylesheet_directory() . '/style.css';
-    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '0.1.0';
+    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '1.0.0';
     wp_enqueue_style('eduardo-research', get_stylesheet_uri(), array(), $version);
 
     $styles = array(
@@ -43,12 +44,19 @@ function eduardo_research_assets(): void {
         'eduardo-research-objects'=>'assets/research-objects.css',
         'eduardo-research-collections'=>'assets/research-collections.css',
         'eduardo-research-editorial-cv'=>'assets/research-editorial-cv.css',
+        'eduardo-research-navigation'=>'assets/research-navigation.css',
     );
     foreach ($styles as $handle => $relative) {
         $asset_path = get_stylesheet_directory() . '/' . $relative;
         if (! is_readable($asset_path)) { continue; }
         $asset_version = substr((string) hash_file('sha256', $asset_path), 0, 16);
         wp_enqueue_style($handle, get_stylesheet_directory_uri() . '/' . $relative, array('eduardo-research'), $asset_version);
+    }
+
+    $navigation_path = get_stylesheet_directory() . '/assets/research-navigation.js';
+    if (is_readable($navigation_path)) {
+        $navigation_version = substr((string) hash_file('sha256', $navigation_path), 0, 16);
+        wp_enqueue_script('eduardo-research-navigation', get_stylesheet_directory_uri() . '/assets/research-navigation.js', array(), $navigation_version, true);
     }
 
     if ('cv' === eduardo_research_current_page_key()) {
