@@ -45,11 +45,12 @@ jobs:
             includes/class-research-manager-output-resource.php \
             includes/class-research-manager-project-resource.php \
             includes/class-research-manager-software-resource.php \
+            includes/class-research-manager-dataset-resource.php \
             includes/class-research-manager-admin.php \
             includes/class-research-manager.php; do
             test -s "$P/$f"
           done
-          grep -F 'Version: 0.7.0' "$P/eduardo-research-manager.php"
+          grep -F 'Version: 0.8.0' "$P/eduardo-research-manager.php"
       - name: Lint Manager PHP
         shell: bash
         run: |
@@ -79,7 +80,7 @@ jobs:
           coverage: none
           tools: wp-cli
 
-      - name: Install clean WordPress and activate Manager
+      - name: Install clean WordPress and verify safe plugin-only state
         shell: bash
         run: |
           set -euo pipefail
@@ -97,7 +98,7 @@ jobs:
           if (! empty($report["ready"]) || (int) $report["summary"]["fail"] < 1) { exit(1); }
           ' --allow-root
 
-      - name: Activate Research Theme and verify service contract
+      - name: Activate Theme and verify all Manager services
         shell: bash
         run: |
           set -euo pipefail
@@ -112,11 +113,11 @@ jobs:
           if (empty($report["ready"]) || (int) $report["summary"]["fail"] !== 0) { fwrite(STDERR, wp_json_encode($report)); exit(1); }
           foreach ([
               Eduardo_Research_Manager::pages(), Eduardo_Research_Manager::insights(), Eduardo_Research_Manager::outputs(),
-              Eduardo_Research_Manager::projects(), Eduardo_Research_Manager::software()
+              Eduardo_Research_Manager::projects(), Eduardo_Research_Manager::software(), Eduardo_Research_Manager::datasets()
           ] as $service) { if (! is_object($service)) { exit(1); } }
           ' --allow-root
 
-      - name: Compact regression gate for previous resources
+      - name: Verify research-object executor registry regressions
         shell: bash
         run: |
           set -euo pipefail
@@ -124,122 +125,134 @@ jobs:
           wp eval '
           wp_set_current_user(1);
           $executor = Eduardo_Research_Manager::executor();
-          $page = Eduardo_Research_Manager::pages()->build_hydration_plan("about", "en", ["eyebrow"=>"Regression profile"]);
+          $page = Eduardo_Research_Manager::pages()->build_hydration_plan("about", "en", ["eyebrow"=>"Registry regression profile"]);
           $applied = $executor->apply($page); if (is_wp_error($applied) || is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
-
-          $insight = Eduardo_Research_Manager::insights()->build_creation_plan(["title"=>"Regression Insight","slug"=>"regression-insight","content"=>"<p>Regression.</p>","status"=>"publish"]);
+          $insight = Eduardo_Research_Manager::insights()->build_creation_plan(["title"=>"Registry Insight","slug"=>"registry-insight","content"=>"<p>Regression.</p>","status"=>"publish"]);
           $applied = $executor->apply($insight); if (is_wp_error($applied) || is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
 
-          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Regression Line","post_name"=>"regression-line"]);
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Registry Line","post_name"=>"registry-line"]);
           update_post_meta($line, "_research_language", "en"); update_post_meta($line, "_research_evidence_status", "verified");
-          $ctx = ["evidence_confirmed"=>true,"evidence_reference"=>"CI regression evidence"];
-          $output = Eduardo_Research_Manager::outputs()->build_creation_plan(["title"=>"Regression Output","slug"=>"regression-output","status"=>"publish","output_type"=>"technical_report","review_status"=>"technical_output","publication_date"=>"2026","line_ids"=>[$line]], "Regression output", $ctx);
-          $applied = $executor->apply($output); if (is_wp_error($applied) || is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
-          $project = Eduardo_Research_Manager::projects()->build_creation_plan(["title"=>"Regression Project","slug"=>"regression-project","status"=>"publish","project_status"=>"active","line_ids"=>[$line]], "Regression project", $ctx);
-          $applied = $executor->apply($project); if (is_wp_error($applied) || is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
+          $ctx = ["evidence_confirmed"=>true,"evidence_reference"=>"CI registry regression evidence"];
+          $plans = [
+              Eduardo_Research_Manager::outputs()->build_creation_plan(["title"=>"Registry Output","slug"=>"registry-output","status"=>"publish","output_type"=>"technical_report","review_status"=>"technical_output","publication_date"=>"2026","line_ids"=>[$line]], "Registry output", $ctx),
+              Eduardo_Research_Manager::projects()->build_creation_plan(["title"=>"Registry Project","slug"=>"registry-project","status"=>"publish","project_status"=>"active","line_ids"=>[$line]], "Registry project", $ctx),
+              Eduardo_Research_Manager::software()->build_creation_plan(["title"=>"Registry Software","slug"=>"registry-software","status"=>"publish","software_status"=>"active","version"=>"1.0.0","line_ids"=>[$line]], "Registry software", $ctx),
+          ];
+          foreach ($plans as $plan) {
+              if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
+              $applied = $executor->apply($plan); if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+              if (is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
+          }
           wp_delete_post($line, true);
           ' --allow-root
 
-      - name: Verify evidence-gated Research Software creation
+      - name: Verify evidence-gated Dataset creation and public filtering
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1); $_GET = [];
-          $software = Eduardo_Research_Manager::software(); $executor = Eduardo_Research_Manager::executor();
-          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Verified Software Line","post_name"=>"verified-software-line"]);
+          $datasets = Eduardo_Research_Manager::datasets(); $executor = Eduardo_Research_Manager::executor();
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Verified Dataset Line","post_name"=>"verified-dataset-line"]);
           update_post_meta($line, "_research_language", "en"); update_post_meta($line, "_research_evidence_status", "verified");
           $data = [
-              "title"=>"Reproducible Research Toolkit","slug"=>"reproducible-research-toolkit","excerpt"=>"Evidence-backed software fixture.",
-              "content"=>"<p>Research software narrative.</p>","language"=>"en","status"=>"publish","software_status"=>"active",
-              "version"=>"1.2.0","release_date"=>"2026-10-09","repository_url"=>"https://github.com/example/research-toolkit",
-              "archive_url"=>"https://example.test/releases/1.2.0","license"=>"MIT","documentation_url"=>"https://example.test/docs",
-              "doi"=>"https://doi.org/10.1234/software.2026.1","programming_languages"=>["PHP","Python"],"line_ids"=>[$line]
+              "title"=>"Reproducible Research Dataset","slug"=>"reproducible-research-dataset","excerpt"=>"Evidence-backed dataset fixture.",
+              "content"=>"<p>Dataset scope and reuse context.</p>","language"=>"en","status"=>"publish","version"=>"2.1",
+              "publication_date"=>"2026-10-09","repository"=>"https://example.test/repository/dataset","doi"=>"https://doi.org/10.1234/dataset.2026.1",
+              "license"=>"CC BY 4.0","access_level"=>"open","methodology"=>"Controlled collection and normalization protocol.",
+              "provenance"=>"Derived from verified experimental runs.","size"=>"2.4 GB","documentation_url"=>"https://example.test/datasets/docs",
+              "ethics_notes"=>"No personal data; aggregate technical observations only.","formats"=>["CSV","JSON","Parquet"],"line_ids"=>[$line]
           ];
-          $blocked_plan = $software->build_creation_plan($data, "Preview Research Software");
+          $blocked_plan = $datasets->build_creation_plan($data, "Preview Dataset");
           if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { exit(1); }
           $preview = $executor->preview($blocked_plan); if (is_wp_error($preview) || ! empty($preview["apply_allowed"])) { exit(1); }
           $blocked = $executor->apply($blocked_plan); if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
 
-          $plan = $software->build_creation_plan($data, "Create verified Research Software", ["evidence_confirmed"=>true,"evidence_reference"=>"CI software release + repository evidence"]);
+          $plan = $datasets->build_creation_plan($data, "Create verified Research Dataset", ["evidence_confirmed"=>true,"evidence_reference"=>"CI dataset repository + release evidence"]);
           if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
           $token = (string) $plan["actions"][0]["creation_token"];
           $applied = $executor->apply($plan); if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
-          $id = $software->find_created_by_token($token); if ($id <= 0) { exit(1); }
-          $verified = $software->verify($id, $data, $token); if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified)); exit(1); }
-          $record = $software->inspect($id);
-          if ("10.1234/software.2026.1" !== $record["doi"] || "1" !== $record["doi_verified"] || ["PHP","Python"] !== $record["programming_languages"]) { fwrite(STDERR, wp_json_encode($record)); exit(1); }
+          $id = $datasets->find_created_by_token($token); if ($id <= 0) { exit(1); }
+          $verified = $datasets->verify($id, $data, $token); if (is_wp_error($verified) || empty($verified["verified"])) { fwrite(STDERR, wp_json_encode($verified)); exit(1); }
+          $record = $datasets->inspect($id);
+          if ("10.1234/dataset.2026.1" !== $record["doi"] || "1" !== $record["doi_verified"] || ["CSV","JSON","Parquet"] !== $record["formats"]) { fwrite(STDERR, wp_json_encode($record)); exit(1); }
 
-          $_GET = ["software_status"=>"active"];
-          $query = eduardo_research_collection_query("software", "en");
+          $_GET = ["access_level"=>"open"];
+          $query = eduardo_research_collection_query("datasets", "en");
           $ids = array_map("intval", wp_list_pluck($query->posts, "ID")); wp_reset_postdata(); $_GET = [];
-          if (! in_array($id, $ids, true)) { fwrite(STDERR, "Managed software missing from public collection\n"); exit(1); }
-          update_option("erm_ci_software_id", $id, false); update_option("erm_ci_software_snapshot", $applied["snapshot_id"], false); update_option("erm_ci_software_line", $line, false);
+          if (! in_array($id, $ids, true)) { fwrite(STDERR, "Managed Dataset missing from public collection\n"); exit(1); }
+          update_option("erm_ci_dataset_id", $id, false); update_option("erm_ci_dataset_snapshot", $applied["snapshot_id"], false); update_option("erm_ci_dataset_line", $line, false);
           ' --allow-root
 
-      - name: Verify Software validation update and rollback
+      - name: Verify Dataset validation update and rollback
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
-          $software = Eduardo_Research_Manager::software(); $executor = Eduardo_Research_Manager::executor(); $id = (int) get_option("erm_ci_software_id", 0);
-          $bad_status = $software->build_creation_plan(["title"=>"Bad","software_status"=>"invented"]);
-          if (! is_wp_error($bad_status) || "research_manager_unknown_software_status" !== $bad_status->get_error_code()) { exit(1); }
-          $bad_url = $software->build_creation_plan(["title"=>"Bad URL","repository_url"=>"javascript:alert(1)"]);
-          if (! is_wp_error($bad_url) || "research_manager_invalid_software_url" !== $bad_url->get_error_code()) { exit(1); }
-          $bad_doi = $software->build_creation_plan(["title"=>"Bad DOI","doi"=>"not-a-doi"]);
+          $datasets = Eduardo_Research_Manager::datasets(); $executor = Eduardo_Research_Manager::executor(); $id = (int) get_option("erm_ci_dataset_id", 0);
+          $bad_access = $datasets->build_creation_plan(["title"=>"Bad access","access_level"=>"invented"]);
+          if (! is_wp_error($bad_access) || "research_manager_unknown_access_level" !== $bad_access->get_error_code()) { exit(1); }
+          $bad_repo = $datasets->build_creation_plan(["title"=>"Bad repo","repository"=>"javascript:alert(1)"]);
+          if (! is_wp_error($bad_repo) || "research_manager_invalid_dataset_repository" !== $bad_repo->get_error_code()) { exit(1); }
+          $bad_doi = $datasets->build_creation_plan(["title"=>"Bad DOI","doi"=>"wrong"]);
           if (! is_wp_error($bad_doi) || "research_manager_invalid_doi" !== $bad_doi->get_error_code()) { exit(1); }
+          $bad_date = $datasets->build_creation_plan(["title"=>"Bad date","publication_date"=>"2026-02-31"]);
+          if (! is_wp_error($bad_date) || "research_manager_invalid_dataset_publication_date" !== $bad_date->get_error_code()) { exit(1); }
 
-          $es_line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea Software ES","post_name"=>"linea-software-es"]);
+          $es_line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea Dataset ES","post_name"=>"linea-dataset-es"]);
           update_post_meta($es_line, "_research_language", "es"); update_post_meta($es_line, "_research_evidence_status", "verified");
-          $cross = $software->build_update_plan($id, ["line_ids"=>[$es_line]], "Cross-language software relation", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
+          $cross = $datasets->build_update_plan($id, ["line_ids"=>[$es_line]], "Cross-language dataset relation", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
           if (! is_wp_error($cross) || "research_manager_unverified_line_relation" !== $cross->get_error_code()) { exit(1); }
           wp_delete_post($es_line, true);
 
-          $changes = ["software_status"=>"maintained","version"=>"1.3.0","release_date"=>"2026-10-10","programming_languages"=>["PHP","Python","TypeScript"],"doi"=>"10.1234/software.2026.2"];
-          $blocked_plan = $software->build_update_plan($id, $changes, "Release software 1.3");
+          $changes = [
+              "version"=>"2.2","publication_date"=>"2026-10-10","access_level"=>"restricted",
+              "formats"=>["CSV","JSON","Parquet","Arrow"],"size"=>"2.8 GB","doi"=>"10.1234/dataset.2026.2",
+              "ethics_notes"=>"Restricted access for reproducibility review; no personal data."
+          ];
+          $blocked_plan = $datasets->build_update_plan($id, $changes, "Release Dataset 2.2");
           if (is_wp_error($blocked_plan) || "evidence-required" !== $blocked_plan["risk"]) { exit(1); }
           $blocked = $executor->apply($blocked_plan); if (! is_wp_error($blocked) || "research_manager_evidence_required" !== $blocked->get_error_code()) { exit(1); }
-          $plan = $software->build_update_plan($id, $changes, "Release software 1.3", ["evidence_confirmed"=>true,"evidence_reference"=>"CI software 1.3 release evidence"]);
+          $plan = $datasets->build_update_plan($id, $changes, "Release Dataset 2.2", ["evidence_confirmed"=>true,"evidence_reference"=>"CI dataset 2.2 evidence"]);
           if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
           $applied = $executor->apply($plan); if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
-          $verified = $software->verify($id, $changes); if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          $verified = $datasets->verify($id, $changes); if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
           if (is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
-          $restored = $software->inspect($id);
-          if ("active" !== $restored["software_status"] || "1.2.0" !== $restored["version"] || "10.1234/software.2026.1" !== $restored["doi"]) { fwrite(STDERR, wp_json_encode($restored)); exit(1); }
+          $restored = $datasets->inspect($id);
+          if ("2.1" !== $restored["version"] || "open" !== $restored["access_level"] || "10.1234/dataset.2026.1" !== $restored["doi"]) { fwrite(STDERR, wp_json_encode($restored)); exit(1); }
           ' --allow-root
 
-      - name: Verify Spanish Software route and creation rollback
+      - name: Verify Spanish Dataset route and creation rollback
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-manager-wp
           wp eval '
           wp_set_current_user(1);
-          $software = Eduardo_Research_Manager::software(); $executor = Eduardo_Research_Manager::executor();
-          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea Software Español","post_name"=>"linea-software-espanol"]);
+          $datasets = Eduardo_Research_Manager::datasets(); $executor = Eduardo_Research_Manager::executor();
+          $line = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea Datos Español","post_name"=>"linea-datos-espanol"]);
           update_post_meta($line, "_research_language", "es"); update_post_meta($line, "_research_evidence_status", "verified");
-          $plan = $software->build_creation_plan([
-              "title"=>"Herramienta de investigación CI","slug"=>"herramienta-investigacion-ci","language"=>"es","status"=>"publish",
-              "software_status"=>"experimental","version"=>"0.1.0","release_date"=>"2026-10","repository_url"=>"https://example.test/repos/herramienta",
-              "license"=>"MIT","programming_languages"=>["Python"],"line_ids"=>[$line]
-          ], "Crear software español", ["evidence_confirmed"=>true,"evidence_reference"=>"Evidencia CI Software ES"]);
+          $plan = $datasets->build_creation_plan([
+              "title"=>"Conjunto de datos CI","slug"=>"conjunto-datos-ci","language"=>"es","status"=>"publish","version"=>"1.0",
+              "publication_date"=>"2026-10","repository"=>"https://example.test/datos/ci","license"=>"CC BY 4.0","access_level"=>"open",
+              "methodology"=>"Protocolo controlado.","formats"=>["CSV"],"line_ids"=>[$line]
+          ], "Crear dataset español", ["evidence_confirmed"=>true,"evidence_reference"=>"Evidencia CI Dataset ES"]);
           if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
           $token = (string) $plan["actions"][0]["creation_token"];
-          $applied = $executor->apply($plan); if (is_wp_error($applied)) { exit(1); }
-          $id = $software->find_created_by_token($token); $record = $software->inspect($id);
-          if (is_wp_error($record) || false === strpos((string) $record["url"], "/es/software/")) { fwrite(STDERR, wp_json_encode($record)); exit(1); }
+          $applied = $executor->apply($plan); if (is_wp_error($applied)) { fwrite(STDERR, $applied->get_error_message()); exit(1); }
+          $id = $datasets->find_created_by_token($token); $record = $datasets->inspect($id);
+          if (is_wp_error($record) || false === strpos((string) $record["url"], "/es/datos/")) { fwrite(STDERR, wp_json_encode($record)); exit(1); }
           if (is_wp_error($executor->rollback($applied["snapshot_id"]))) { exit(1); }
-          if ($software->find_created_by_token($token) > 0) { exit(1); }
+          if ($datasets->find_created_by_token($token) > 0) { exit(1); }
           wp_delete_post($line, true);
 
-          $main_id = (int) get_option("erm_ci_software_id", 0); $main_snapshot = (string) get_option("erm_ci_software_snapshot", "");
+          $main_id = (int) get_option("erm_ci_dataset_id", 0); $main_snapshot = (string) get_option("erm_ci_dataset_snapshot", "");
           if ($main_id <= 0 || "" === $main_snapshot || is_wp_error($executor->rollback($main_snapshot))) { exit(1); }
-          if (get_post($main_id) instanceof WP_Post) { fwrite(STDERR, "Software creation rollback left resource behind\n"); exit(1); }
-          $main_line = (int) get_option("erm_ci_software_line", 0); if ($main_line > 0) { wp_delete_post($main_line, true); }
+          if (get_post($main_id) instanceof WP_Post) { fwrite(STDERR, "Dataset creation rollback left resource behind\n"); exit(1); }
+          $main_line = (int) get_option("erm_ci_dataset_line", 0); if ($main_line > 0) { wp_delete_post($main_line, true); }
           ' --allow-root
 
   package:
@@ -253,11 +266,11 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cd wordpress/plugins
-          zip -r ../../dist/eduardo-research-manager-0.7.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
-          test -s ../../dist/eduardo-research-manager-0.7.0.zip
-          unzip -t ../../dist/eduardo-research-manager-0.7.0.zip
+          zip -r ../../dist/eduardo-research-manager-0.8.0.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-manager-0.8.0.zip
+          unzip -t ../../dist/eduardo-research-manager-0.8.0.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: eduardo-research-manager-0.7.0
-          path: dist/eduardo-research-manager-0.7.0.zip
+          name: eduardo-research-manager-0.8.0
+          path: dist/eduardo-research-manager-0.8.0.zip
           if-no-files-found: error
