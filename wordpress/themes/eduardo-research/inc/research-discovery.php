@@ -41,14 +41,26 @@ function eduardo_research_discovery_template(): void {
         $types = array('research_output','research_project','research_software','research_dataset');
         $items = array();
         $latest = 0;
-        if ('en' === $language) {
-            foreach ($types as $type) {
-                $posts = get_posts(array('post_type'=>$type,'post_status'=>'publish','posts_per_page'=>100,'orderby'=>'modified','order'=>'DESC','no_found_rows'=>true));
-                foreach ($posts as $post) {
-                    $modified = get_post_modified_time('U', true, $post);
-                    $latest = max($latest, (int) $modified);
-                    $items[] = array('type'=>$type,'title'=>get_the_title($post),'url'=>get_permalink($post),'modified'=>get_post_modified_time(DATE_W3C, true, $post));
-                }
+        foreach ($types as $type) {
+            $args = eduardo_research_localized_query_args(array(
+                'post_type'=>$type,
+                'post_status'=>'publish',
+                'posts_per_page'=>100,
+                'orderby'=>'modified',
+                'order'=>'DESC',
+                'no_found_rows'=>true,
+            ), $language);
+            $posts = get_posts($args);
+            foreach ($posts as $post) {
+                $modified = get_post_modified_time('U', true, $post);
+                $latest = max($latest, (int) $modified);
+                $items[] = array(
+                    'type'=>$type,
+                    'language'=>eduardo_research_post_language((int) $post->ID),
+                    'title'=>get_the_title($post),
+                    'url'=>get_permalink($post),
+                    'modified'=>get_post_modified_time(DATE_W3C, true, $post),
+                );
             }
         }
         $identity = eduardo_research_identity();
