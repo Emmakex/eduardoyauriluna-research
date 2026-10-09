@@ -1,0 +1,128 @@
+name: Research Collection Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-collections-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-collections-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  collection-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Install clean WordPress and Theme
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/research-collections-wp
+          cd /tmp/research-collections-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://research.test --title='Research Collections Test' --admin_user=admin --admin_password='research-test-password' --admin_email=research@example.test --skip-email --allow-root
+          wp option update permalink_structure '/%postname%/' --allow-root
+          mkdir -p wp-content/themes/eduardo-research
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          wp theme activate eduardo-research --allow-root
+      - name: Verify publication facets and language-safe Research Lines
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-collections-wp
+          wp eval '
+          $line_en = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Verified EN Line","post_name"=>"verified-en-line"]);
+          $line_es = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea ES verificada","post_name"=>"linea-es-verificada"]);
+          update_post_meta($line_en, "_research_language", "en"); update_post_meta($line_en, "_research_evidence_status", "verified");
+          update_post_meta($line_es, "_research_language", "es"); update_post_meta($line_es, "_research_evidence_status", "verified");
+          $paper_a = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Peer reviewed 2026","post_name"=>"peer-reviewed-2026"]);
+          $paper_b = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Preprint 2025","post_name"=>"preprint-2025"]);
+          $paper_es = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Artículo ES","post_name"=>"articulo-es"]);
+          foreach ([$paper_a,$paper_b] as $id) { update_post_meta($id, "_research_language", "en"); }
+          update_post_meta($paper_es, "_research_language", "es");
+          update_post_meta($paper_a, "_research_output_type", "journal_article"); update_post_meta($paper_a, "_research_review_status", "peer_reviewed"); update_post_meta($paper_a, "_research_publication_date", "2026-04-12"); update_post_meta($paper_a, "_research_line_ids", [$line_en]);
+          update_post_meta($paper_b, "_research_output_type", "preprint"); update_post_meta($paper_b, "_research_review_status", "preprint"); update_post_meta($paper_b, "_research_publication_date", "2025-09-01"); update_post_meta($paper_b, "_research_line_ids", [$line_en]);
+          update_post_meta($paper_es, "_research_output_type", "journal_article"); update_post_meta($paper_es, "_research_review_status", "peer_reviewed"); update_post_meta($paper_es, "_research_publication_date", "2026-05-01"); update_post_meta($paper_es, "_research_line_ids", [$line_es]);
+          $_GET = ["research_line"=>(string)$line_en,"output_type"=>"journal_article","review_status"=>"peer_reviewed","year"=>"2026","sort"=>"recent"];
+          $state = eduardo_research_collection_filter_state("publications", "en");
+          if ($line_en !== $state["research_line"] || "journal_article" !== $state["output_type"] || "peer_reviewed" !== $state["review_status"] || "2026" !== $state["year"]) { exit(1); }
+          $query = eduardo_research_collection_query("publications", "en");
+          $ids = wp_list_pluck($query->posts, "ID");
+          if ([$paper_a] !== $ids) { fwrite(STDERR, wp_json_encode($ids) . "\n"); exit(1); }
+          $_GET = ["research_line"=>(string)$line_es];
+          $invalid = eduardo_research_collection_filter_state("publications", "en");
+          if (0 !== $invalid["research_line"]) { exit(1); }
+          $_GET = ["research_line"=>(string)$line_es,"output_type"=>"journal_article","year"=>"2026"];
+          $spanish = eduardo_research_collection_query("publications", "es");
+          $spanish_ids = wp_list_pluck($spanish->posts, "ID");
+          if ([$paper_es] !== $spanish_ids) { exit(1); }
+          ' --allow-root
+      - name: Verify project software dataset filters
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-collections-wp
+          wp eval '
+          $project_active = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"Active Project"]);
+          $project_done = wp_insert_post(["post_type"=>"research_project","post_status"=>"publish","post_title"=>"Completed Project"]);
+          update_post_meta($project_active, "_research_language", "en"); update_post_meta($project_done, "_research_language", "en");
+          update_post_meta($project_active, "_research_project_status", "active"); update_post_meta($project_done, "_research_project_status", "completed");
+          $_GET = ["project_status"=>"active"];
+          $project_query = eduardo_research_collection_query("projects", "en");
+          if ([$project_active] !== wp_list_pluck($project_query->posts, "ID")) { exit(1); }
+          $software = wp_insert_post(["post_type"=>"research_software","post_status"=>"publish","post_title"=>"Experimental Software"]);
+          $software_archived = wp_insert_post(["post_type"=>"research_software","post_status"=>"publish","post_title"=>"Archived Software"]);
+          update_post_meta($software, "_research_language", "en"); update_post_meta($software_archived, "_research_language", "en");
+          update_post_meta($software, "_research_software_status", "experimental"); update_post_meta($software_archived, "_research_software_status", "archived");
+          $_GET = ["software_status"=>"experimental"];
+          $software_query = eduardo_research_collection_query("software", "en");
+          if ([$software] !== wp_list_pluck($software_query->posts, "ID")) { exit(1); }
+          $dataset_open = wp_insert_post(["post_type"=>"research_dataset","post_status"=>"publish","post_title"=>"Open Dataset"]);
+          $dataset_closed = wp_insert_post(["post_type"=>"research_dataset","post_status"=>"publish","post_title"=>"Closed Dataset"]);
+          update_post_meta($dataset_open, "_research_language", "en"); update_post_meta($dataset_closed, "_research_language", "en");
+          update_post_meta($dataset_open, "_research_access_level", "open"); update_post_meta($dataset_closed, "_research_access_level", "closed");
+          $_GET = ["access_level"=>"open"];
+          $dataset_query = eduardo_research_collection_query("datasets", "en");
+          if ([$dataset_open] !== wp_list_pluck($dataset_query->posts, "ID")) { exit(1); }
+          ' --allow-root
+      - name: Verify pagination and filter URL persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-collections-wp
+          wp eval '
+          $_GET = ["output_type"=>"journal_article","review_status"=>"peer_reviewed","year"=>"2026","sort"=>"title","research_page"=>"2"];
+          $state = eduardo_research_collection_filter_state("publications", "en");
+          if (2 !== $state["research_page"] || "title" !== $state["sort"]) { exit(1); }
+          $url = eduardo_research_collection_query_url("publications", $state, 3);
+          foreach (["output_type=journal_article","review_status=peer_reviewed","year=2026","sort=title","research_page=3"] as $needle) { if (false === strpos($url, $needle)) { fwrite(STDERR, $url . "\n"); exit(1); } }
+          $_GET = ["sort"=>"bogus","year"=>"9999"];
+          $clean = eduardo_research_collection_filter_state("publications", "en");
+          if ("recent" !== $clean["sort"] || "" !== $clean["year"]) { exit(1); }
+          ' --allow-root
