@@ -12,7 +12,7 @@ final class Eduardo_Research_Manager_Plan {
     private const ALLOWED_SURFACE_KEYS = array(
         'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
     );
-    private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order');
+    private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order','post_status');
     private const STRUCTURED_RESEARCH_POST_TYPES = array('research_output','research_project','research_software','research_dataset');
     private const MAX_TITLE_BYTES = 200;
     private const MAX_EXCERPT_BYTES = 1000;
@@ -90,11 +90,18 @@ final class Eduardo_Research_Manager_Plan {
         if (in_array($type, array('create_output','create_project','create_software','create_dataset'), true)) { return 'evidence-required'; }
 
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
+        $post_id = absint($action['post_id'] ?? 0);
         if ('post_field' === $type && 'post_title' === $key) {
-            $post = get_post(absint($action['post_id'] ?? 0));
+            $post = get_post($post_id);
             if ($post instanceof WP_Post && in_array((string) $post->post_type, self::STRUCTURED_RESEARCH_POST_TYPES, true)) {
                 return 'evidence-required';
             }
+        }
+        if ('post_field' === $type && 'post_status' === $key && self::is_theme_owned_page($post_id)) {
+            return 'standard';
+        }
+        if ('post_meta' === $type && in_array($key, array('_eduardo_research_role','_eduardo_research_model'), true) && self::is_theme_owned_page($post_id)) {
+            return 'standard';
         }
 
         foreach (array(
@@ -117,6 +124,21 @@ final class Eduardo_Research_Manager_Plan {
         $type = sanitize_key((string) ($action['type'] ?? ''));
         if ('option' === $type) {
             $key = sanitize_key((string) ($action['key'] ?? ''));
+            if ('show_on_front' === $key) {
+                $value = sanitize_key((string) ($action['value'] ?? ''));
+                if ('page' !== $value || self::theme_home_page_id() <= 0) {
+                    return new WP_Error('research_manager_front_page_option_not_allowed', 'Research Manager may only set show_on_front=page when the contracted Research Home exists.');
+                }
+                return array('type'=>'option','key'=>$key,'value'=>'page');
+            }
+            if ('page_on_front' === $key) {
+                $value = absint($action['value'] ?? 0);
+                $home_id = self::theme_home_page_id();
+                if ($home_id <= 0 || $value !== $home_id) {
+                    return new WP_Error('research_manager_front_page_option_not_allowed', 'Research Manager may only assign the contracted Research Home as the static front page.');
+                }
+                return array('type'=>'option','key'=>$key,'value'=>$home_id);
+            }
             if (! self::allowed_option_key($key)) { return new WP_Error('research_manager_option_not_allowed', 'This WordPress option is outside the Research Manager mutation contract.'); }
             return array('type'=>'option','key'=>$key,'value'=>$action['value'] ?? null);
         }
@@ -132,6 +154,13 @@ final class Eduardo_Research_Manager_Plan {
             $field = sanitize_key((string) ($action['field'] ?? ''));
             if ($post_id <= 0 || ! get_post($post_id)) { return new WP_Error('research_manager_invalid_post', 'Post-field mutation requires an existing WordPress resource.'); }
             if (! in_array($field, self::ALLOWED_POST_FIELDS, true)) { return new WP_Error('research_manager_post_field_not_allowed', 'This post field cannot be mutated by the Manager foundation.'); }
+            if ('post_status' === $field) {
+                $value = sanitize_key((string) ($action['value'] ?? ''));
+                if ('publish' !== $value || ! self::is_theme_owned_page($post_id)) {
+                    return new WP_Error('research_manager_post_status_not_allowed', 'Research Manager may only publish an existing Theme-controlled Research Page during structural remediation.');
+                }
+                return array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>'publish');
+            }
             $value = self::sanitize_post_field_value($field, $action['value'] ?? '');
             $bounded = self::validate_post_field_length($field, $value);
             if (is_wp_error($bounded)) { return $bounded; }
@@ -463,6 +492,32 @@ final class Eduardo_Research_Manager_Plan {
 
     private static function valid_creation_token(string $token): bool {
         return 1 === preg_match('/^[a-f0-9-]{32,64}$/i', $token);
+    }
+
+    private static function is_theme_owned_page(int $post_id): bool {
+        if ($post_id <= 0 || ! function_exists('eduardo_research_preset')) { return false; }
+        $post = get_post($post_id);
+        if (! $post instanceof WP_Post || 'page' !== $post->post_type) { return false; }
+        $pages = (array) (eduardo_research_preset()['pages'] ?? array());
+        foreach ($pages as $key => $contract) {
+            if (! is_array($contract)) { continue; }
+            $path = sanitize_title((string) ($contract['wp_slug'] ?? $contract['slug'] ?? $key));
+            if ('' === $path) { continue; }
+            $page = get_page_by_path($path, OBJECT, 'page');
+            if ($page instanceof WP_Post && (int) $page->ID === $post_id) { return true; }
+        }
+        return false;
+    }
+
+    private static function theme_home_page_id(): int {
+        if (! function_exists('eduardo_research_preset')) { return 0; }
+        $pages = (array) (eduardo_research_preset()['pages'] ?? array());
+        $contract = is_array($pages['home'] ?? null) ? $pages['home'] : array();
+        if (! $contract) { return 0; }
+        $path = sanitize_title((string) ($contract['wp_slug'] ?? $contract['slug'] ?? 'home'));
+        if ('' === $path) { return 0; }
+        $page = get_page_by_path($path, OBJECT, 'page');
+        return $page instanceof WP_Post ? (int) $page->ID : 0;
     }
 
     private static function target_signature(array $action): string {
