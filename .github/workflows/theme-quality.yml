@@ -34,6 +34,7 @@ jobs:
           test -f wordpress/themes/eduardo-research/functions.php
           test -f wordpress/themes/eduardo-research/front-page.php
           test -f wordpress/themes/eduardo-research/index.php
+          test -f wordpress/themes/eduardo-research/inc/research-evidence.php
           test -f wordpress/themes/eduardo-research/theme.json
       - name: Lint Theme PHP
         shell: bash
@@ -96,6 +97,13 @@ jobs:
           wp eval 'foreach (["research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
           wp eval '$page = get_page_by_path("publications"); if (! $page || "output-index" !== get_post_meta($page->ID, "_eduardo_research_role", true)) { exit(1); }' --allow-root
           wp eval 'if ("CreativeWork" !== eduardo_research_output_schema_type(0)) { exit(1); } foreach (["about","research","publications","projects","software","datasets","cv","insights","contact"] as $key) { if ("" === eduardo_research_page_url($key)) { exit(1); } }' --allow-root
+      - name: Verify evidence visibility contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          wp option update eduardo_research_evidence '{"research_lines":[{"title":"Hidden line","status":"unverified"},{"title":"Visible line","summary":"Verified summary","status":"verified"}],"identifiers":[{"label":"Hidden profile","url":"https://example.test/hidden","status":"needs-review"},{"label":"Verified profile","url":"https://example.test/verified","status":"verified"}],"affiliations":[{"title":"Verified organisation","url":"https://example.test/org","status":"verified"}]}' --format=json --allow-root
+          wp eval '$lines = eduardo_research_verified_evidence("research_lines"); if (1 !== count($lines) || "Visible line" !== $lines[0]["title"]) { exit(1); } $urls = eduardo_research_verified_identifier_urls(); if (["https://example.test/verified"] !== $urls) { exit(1); } $groups = eduardo_research_surface_evidence_groups("cv"); if (! isset($groups["education"]) || ! isset($groups["experience"])) { exit(1); }' --allow-root
 
   package:
     needs: [quality, runtime-smoke]

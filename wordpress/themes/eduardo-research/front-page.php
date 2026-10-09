@@ -20,8 +20,8 @@ $insights = new WP_Query(array(
     'order' => 'DESC',
     'no_found_rows' => true,
 ));
-$research_lines = get_option('eduardo_research_lines', array());
-$research_lines = is_array($research_lines) ? array_values(array_filter($research_lines, 'is_array')) : array();
+$research_lines = eduardo_research_verified_evidence('research_lines');
+$identifiers = eduardo_research_verified_evidence('identifiers');
 ?>
 <main id="main" tabindex="-1">
  <section class="research-shell research-hero" aria-labelledby="research-title">
@@ -43,7 +43,7 @@ $research_lines = is_array($research_lines) ? array_values(array_filter($researc
    </div>
    <div class="research-grid">
     <?php if ($research_lines) : foreach (array_slice($research_lines, 0, 6) as $line) : ?>
-     <article class="research-card"><p class="research-card-kicker">Research line</p><h3><?php echo esc_html((string) ($line['title'] ?? 'Research line')); ?></h3><?php if (! empty($line['summary'])) : ?><p><?php echo esc_html((string) $line['summary']); ?></p><?php endif; ?></article>
+     <article class="research-card"><p class="research-card-kicker">Verified research line</p><h3><?php echo esc_html((string) ($line['title'] ?? $line['label'] ?? 'Research line')); ?></h3><?php if (! empty($line['summary'])) : ?><p><?php echo esc_html((string) $line['summary']); ?></p><?php endif; ?></article>
     <?php endforeach; else : ?>
      <article class="research-card research-empty"><p class="research-card-kicker">Evidence-ready</p><h3>Research lines are ready for verified content</h3><p>The Theme reserves the semantic structure without publishing unsupported research claims.</p></article>
     <?php endif; ?>
@@ -67,7 +67,15 @@ $research_lines = is_array($research_lines) ? array_values(array_filter($researc
  <section class="research-section research-section-bordered" aria-labelledby="academic-identity">
   <div class="research-shell research-split">
    <div><div class="research-eyebrow">Identity</div><h2 id="academic-identity"><?php echo esc_html($model['academic-identifiers-heading']); ?></h2><p>Academic identifiers and affiliations are exposed only when their evidence state is verified.</p></div>
-   <div class="research-card research-empty"><p class="research-card-kicker">Verification policy</p><h3>No fabricated identifiers</h3><p>ORCID, affiliations, degrees, metrics and similar claims remain unpublished until explicitly verified.</p></div>
+   <?php if ($identifiers) : ?>
+    <div class="research-evidence-list">
+     <?php foreach (array_slice($identifiers, 0, 6) as $identifier) : $url = isset($identifier['url']) ? esc_url((string) $identifier['url']) : ''; ?>
+      <article class="research-card"><p class="research-card-kicker">Verified identifier</p><h3><?php echo esc_html((string) ($identifier['label'] ?? $identifier['title'] ?? 'Academic profile')); ?></h3><?php if (! empty($identifier['value'])) : ?><p><?php echo esc_html((string) $identifier['value']); ?></p><?php endif; ?><?php if ('' !== $url) : ?><a href="<?php echo $url; ?>" rel="me noopener">Open verified profile</a><?php endif; ?></article>
+     <?php endforeach; ?>
+    </div>
+   <?php else : ?>
+    <div class="research-card research-empty"><p class="research-card-kicker">Verification policy</p><h3>No fabricated identifiers</h3><p>ORCID, affiliations, degrees, metrics and similar claims remain unpublished until explicitly verified.</p></div>
+   <?php endif; ?>
   </div>
  </section>
 

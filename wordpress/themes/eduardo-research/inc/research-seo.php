@@ -70,6 +70,22 @@ function eduardo_research_schema_graph(): void {
     $identity = eduardo_research_identity();
     $url = eduardo_research_current_url();
     $person = array('@type'=>'Person','@id'=>home_url('/#researcher'),'name'=>$identity['name'],'url'=>$identity['url']);
+
+    $same_as = eduardo_research_verified_identifier_urls();
+    if ($same_as) { $person['sameAs'] = $same_as; }
+
+    $affiliations = array();
+    foreach (eduardo_research_verified_evidence('affiliations') as $record) {
+        $name = trim((string) ($record['title'] ?? $record['label'] ?? $record['value'] ?? ''));
+        if ('' === $name) { continue; }
+        $organization = array('@type'=>'Organization','name'=>$name);
+        if (! empty($record['url']) && is_scalar($record['url'])) {
+            $organization['url'] = esc_url_raw((string) $record['url']);
+        }
+        $affiliations[] = $organization;
+    }
+    if ($affiliations) { $person['affiliation'] = $affiliations; }
+
     $website = array('@type'=>'WebSite','@id'=>home_url('/#website'),'url'=>home_url('/'),'name'=>get_bloginfo('name'),'publisher'=>array('@id'=>home_url('/#researcher')));
     $page = array('@type'=>'WebPage','@id'=>$url . '#webpage','url'=>$url,'name'=>wp_get_document_title(),'isPartOf'=>array('@id'=>home_url('/#website')),'about'=>array('@id'=>home_url('/#researcher')));
     $graph = array($person, $website, $page);
