@@ -4,7 +4,7 @@ Independent WordPress control plane for the Eduardo Research Theme. The Manager 
 
 ## Current version
 
-`0.6.0`
+`0.7.0`
 
 The Manager now covers:
 
@@ -12,75 +12,56 @@ The Manager now covers:
 - Theme-owned Page hydration and reversible creation;
 - bounded EN/ES Insight creation and updates;
 - evidence-aware Research Output / Publication creation and updates;
-- evidence-aware Research Project creation and updates.
+- evidence-aware Research Project creation and updates;
+- evidence-aware Research Software creation and updates.
 
 ## Evidence discipline
 
-Academic claims are not inferred from prose or accepted merely because WordPress can store them. Evidence-sensitive plans require both `evidence_confirmed=true` and a non-empty `evidence_reference` inside the checksummed plan. Preview remains available before evidence confirmation; changing the evidence confirmation/reference changes the checksum and requires a new Preview.
+Academic and research claims are not inferred from prose or accepted merely because WordPress can store them. Evidence-sensitive plans require both `evidence_confirmed=true` and a non-empty `evidence_reference` inside the checksummed plan. Preview remains available before evidence confirmation; changing confirmation or evidence reference requires a new checksummed plan.
 
-The Manager treats publication identity, DOI, review state, authors/affiliations, project status, research question, role, dates, partners, funding, methods and Research Line relations as evidence-sensitive academic/research claims.
+## Resource boundaries
 
-## Pages
+Pages remain Theme-owned structured surfaces; Gutenberg is not the Page layout engine. Insights retain bounded long-form body content inside the Theme-owned editorial shell. Publications, Projects and Software are first-class research objects with dedicated creation actions; generic `post_status` and slug mutation remain unavailable.
 
-`Eduardo_Research_Manager_Page_Resource` works from the active Research preset. It hydrates only Theme-defined EN/ES slots, repairs role/model drift and can explicitly create missing Theme-owned Pages with provenance-safe rollback. Page `post_content` remains empty; Gutenberg is not the Page layout engine.
+## Research Software
 
-## Insights
+`Eduardo_Research_Manager_Software_Resource` manages `research_software` records against the Theme software contract.
 
-`Eduardo_Research_Manager_Insight_Resource` manages Theme editorial `post` records. Creation supports only Theme Insight types, EN/ES, bounded title/excerpt/body and initial `draft` or `publish`. Updates are limited to title, excerpt, body, language and Insight type. Generic status/slug mutation remains unavailable.
-
-The long-form Insight body is the bounded editorial zone inside the Theme-owned single shell.
-
-## Research Outputs / Publications
-
-`Eduardo_Research_Manager_Output_Resource` manages `research_output` records against the Theme academic object contract. It supports bounded narrative content, EN/ES, publication/review state, structured dates, venue, DOI, structured authors and verified Research Line relations.
-
-Every `create_output` plan is `evidence-required`. The service controls the Theme verification flags for output type, review state and DOI, so unverified academic claims remain private and public Schema/filtering only uses claims accepted through the evidence gate.
-
-Status and slug remain creation-time properties; generic update mutation for them is intentionally unavailable.
-
-## Research Projects
-
-`Eduardo_Research_Manager_Project_Resource` manages `research_project` records against the Theme project contract.
-
-### Creation
-
-A dedicated `create_project` action supports:
+A dedicated `create_software` action supports:
 
 - title, slug, excerpt and bounded narrative body;
 - EN/ES language;
 - initial `draft` or `publish` state;
-- Theme-controlled project status: `planning`, `active`, `completed`, `paused`, `archived`;
-- research question;
-- researcher/project role;
-- structured start/end dates (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`);
-- institution/partner;
-- funding/source description;
-- validated http/https project URL;
-- structured method list;
-- verified Research Line relations;
+- Theme-controlled software status: `active`, `maintained`, `experimental`, `archived`;
+- software version and structured release date (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`);
+- validated http/https repository, archive and documentation URLs;
+- license;
+- DOI with Manager-controlled `_research_doi_verified` flag;
+- structured programming-language list;
+- verified same-language Research Line relations;
 - Manager provenance token.
 
-Every `create_project` plan is `evidence-required`, including draft creation, because the record asserts the existence/identity of a research project.
+Every `create_software` plan is `evidence-required`, including draft creation, because the record asserts a research software identity. DOI is normalized and is publicly verifiable only when accepted through the evidence gate.
 
-### Research Line relationships
+Updates are reversible and bounded to title, excerpt/body, language, software status, version/release, URLs, license, DOI, programming languages and Research Line relations. Status and slug remain creation-time properties.
 
-`_research_line_ids` only accepts published, evidence-verified Research Lines in the same language as the Project. Cross-language or unverified relationships are rejected before Apply.
+Creation rollback deletes only the `research_software` carrying the matching Manager provenance token. A resource occupying the planned slug without that token is never overwritten or deleted.
 
-### Updates
+## Other resource services
 
-The Project service can prepare reversible updates for title, excerpt/body, language, project status, question, role, dates, partner, funding, URL, methods and Research Line relations. Status and slug are not generic update fields.
+`Eduardo_Research_Manager_Page_Resource` hydrates Theme-defined EN/ES slots, repairs role/model drift and can explicitly recreate missing Theme-owned Pages with provenance-safe rollback.
 
-Project metadata changes are evidence-gated. Narrative-only excerpt/body edits remain editorial-review operations unless the same plan also changes an evidence-sensitive field.
+`Eduardo_Research_Manager_Insight_Resource` manages Theme editorial `post` records with Theme-controlled Insight types and bounded body content.
 
-### Verification and rollback
+`Eduardo_Research_Manager_Output_Resource` manages `research_output` records with publication/review state, dates, venue, DOI, structured authors and verified Research Line relations.
 
-After Apply, the service verifies stored state and the Theme-generated route. Creation rollback deletes only the `research_project` carrying the matching Manager provenance token; a conflicting resource is never overwritten or deleted.
+`Eduardo_Research_Manager_Project_Resource` manages `research_project` records with project status, research question, role, dates, partner, funding, methods, URL and verified Research Line relations.
 
-## Mutation boundaries
+## Mutation and rollback discipline
 
-Generic mutations remain narrow: approved Research options, Theme/Research metadata and bounded title/excerpt/body/menu-order fields. Dedicated creation actions exist for Pages, Insights, Research Outputs and Research Projects; they do not grant generic `post_status` writes to arbitrary WordPress content.
+Generic mutations remain narrow: approved Research options, Theme/Research metadata and bounded title/excerpt/body/menu-order fields. Dedicated resource creation actions do not grant generic publishing control to arbitrary WordPress content.
 
-Snapshots are non-autoloaded, bounded and one-shot for rollback.
+Snapshots are non-autoloaded, bounded and one-shot for rollback. The Manager verifies private stored state while the Theme independently determines what is safe to expose publicly.
 
 ## Admin surface
 
@@ -88,9 +69,8 @@ WordPress → Tools → Research Manager exposes readiness/control-plane state. 
 
 ## Next implementation blocks
 
-1. Research Software resource service.
-2. Dataset resource service.
-3. Rendered-frontend verification adapters.
-4. Readiness remediation plans wired to Preview/Apply.
-5. EN/ES record pairing and translation operations.
-6. External academic connectors behind explicit authorization and additional evidence gates.
+1. Dataset resource service.
+2. Rendered-frontend verification adapters.
+3. Readiness remediation plans wired to Preview/Apply.
+4. EN/ES record pairing and translation operations.
+5. External academic connectors behind explicit authorization and additional evidence gates.
