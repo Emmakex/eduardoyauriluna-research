@@ -4,6 +4,8 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_current_page_key(): ?string {
+    $localized = sanitize_key((string) get_query_var('research_page_key'));
+    if ('' !== $localized && isset(eduardo_research_preset()['pages'][$localized])) { return $localized; }
     if (is_front_page()) { return 'home'; }
     if (! is_page()) { return null; }
     $post = get_queried_object();
