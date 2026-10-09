@@ -67,3 +67,19 @@ function eduardo_research_register_content_types(): void {
 add_action('init', 'eduardo_research_register_content_types');
 function eduardo_research_page_editor_support(): void { remove_post_type_support('page', 'editor'); }
 add_action('init', 'eduardo_research_page_editor_support', 20);
+
+/**
+ * Keep researcher identity and Theme product ownership separate in wp-admin.
+ * The site belongs to the researcher; the reusable Theme product is Emmake by Kairoseth.
+ */
+function eduardo_research_admin_theme_branding(array $themes): array {
+    $stylesheet = get_stylesheet();
+    if (! isset($themes[$stylesheet]) || ! is_array($themes[$stylesheet])) { return $themes; }
+
+    $themes[$stylesheet]['author'] = 'Emmake by Kairoseth';
+    $themes[$stylesheet]['authorAndUri'] = '<a href="https://kairoseth.com/">Emmake by Kairoseth</a>';
+    $themes[$stylesheet]['description'] = 'Academic research Theme for Eduardo Research. Theme and product ownership: Emmake by Kairoseth.';
+
+    return $themes;
+}
+add_filter('wp_prepare_themes_for_js', 'eduardo_research_admin_theme_branding');
