@@ -13,18 +13,20 @@ function eduardo_research_install_page(string $key, array $contract): int {
     }
 
     $id = wp_insert_post(array(
-        'post_type' => 'page',
-        'post_status' => 'publish',
-        'post_title' => (string) ($contract['label'] ?? ucfirst($key)),
-        'post_name' => $path,
-        'post_content' => '',
-        'post_excerpt' => '',
+        'post_type'=>'page','post_status'=>'publish','post_title'=>(string) ($contract['label'] ?? ucfirst($key)),
+        'post_name'=>$path,'post_content'=>'','post_excerpt'=>'',
     ), true);
 
     if (is_wp_error($id)) { return 0; }
     update_post_meta((int) $id, '_eduardo_research_role', (string) ($contract['role'] ?? ''));
     update_post_meta((int) $id, '_eduardo_research_model', (string) ($contract['model'] ?? ''));
     return (int) $id;
+}
+
+function eduardo_research_register_all_rewrites(): void {
+    eduardo_research_multilingual_rewrites();
+    eduardo_research_content_language_rewrites();
+    eduardo_research_discovery_rewrites();
 }
 
 function eduardo_research_install(): void {
@@ -43,8 +45,18 @@ function eduardo_research_install(): void {
     }
 
     eduardo_research_register_content_types();
-    eduardo_research_discovery_rewrites();
+    eduardo_research_register_all_rewrites();
     flush_rewrite_rules(false);
-    update_option('eduardo_research_theme_bootstrap_version', '2');
+    update_option('eduardo_research_theme_bootstrap_version', '4');
+    update_option('eduardo_research_native_languages', array('default'=>'en','enabled'=>array('en','es')));
 }
 add_action('after_switch_theme', 'eduardo_research_install');
+
+function eduardo_research_maybe_upgrade(): void {
+    if ((int) get_option('eduardo_research_theme_bootstrap_version', 0) >= 4) { return; }
+    eduardo_research_register_all_rewrites();
+    flush_rewrite_rules(false);
+    update_option('eduardo_research_theme_bootstrap_version', '4');
+    update_option('eduardo_research_native_languages', array('default'=>'en','enabled'=>array('en','es')));
+}
+add_action('init', 'eduardo_research_maybe_upgrade', 30);

@@ -4,12 +4,15 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once get_template_directory() . '/inc/research-preset.php';
+require_once get_template_directory() . '/inc/research-language.php';
+require_once get_template_directory() . '/inc/research-content-language.php';
 require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-evidence.php';
 require_once get_template_directory() . '/inc/research-router.php';
 require_once get_template_directory() . '/inc/research-seo.php';
 require_once get_template_directory() . '/inc/research-discovery.php';
 require_once get_template_directory() . '/inc/research-breadcrumbs.php';
+require_once get_template_directory() . '/inc/research-sitemap.php';
 require_once get_template_directory() . '/inc/research-install.php';
 
 function eduardo_research_setup(): void {
@@ -30,12 +33,7 @@ function eduardo_research_assets(): void {
     $polish_path = get_stylesheet_directory() . '/assets/visual-polish.css';
     if (is_readable($polish_path)) {
         $polish_version = substr((string) hash_file('sha256', $polish_path), 0, 16);
-        wp_enqueue_style(
-            'eduardo-research-visual-polish',
-            get_stylesheet_directory_uri() . '/assets/visual-polish.css',
-            array('eduardo-research'),
-            $polish_version
-        );
+        wp_enqueue_style('eduardo-research-visual-polish', get_stylesheet_directory_uri() . '/assets/visual-polish.css', array('eduardo-research'), $polish_version);
     }
 }
 add_action('wp_enqueue_scripts', 'eduardo_research_assets');

@@ -2,6 +2,12 @@
 .research-section{padding-block:clamp(4rem,6.6vw,6.6rem)}
 .research-section-soft{background:linear-gradient(180deg,rgba(232,242,239,.56),rgba(245,245,240,.16))}
 .research-nav a{font-size:.86rem;font-weight:680}
+.research-header-actions{display:flex;align-items:center;gap:1rem;min-width:0}
+.research-language-switcher{display:inline-flex;align-items:center;gap:.18rem;padding:.2rem;border:1px solid var(--research-line);border-radius:999px;background:rgba(252,252,250,.82)}
+.research-language-switcher a{display:grid;place-items:center;min-width:2rem;height:1.8rem;padding:0 .45rem;border-radius:999px;color:var(--research-text);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-decoration:none}
+.research-language-switcher a[aria-current="true"]{background:var(--research-ink);color:var(--research-surface)}
+.research-language-switcher a:hover{background:var(--research-soft);color:var(--research-ink)}
+.research-language-switcher a[aria-current="true"]:hover{background:var(--research-petrol);color:var(--research-surface)}
 .research-section-number{color:#6F7F7C;font-size:.78rem}
 .research-section-heading{margin-bottom:2.35rem}
 .research-section-heading>p,.research-card p,.research-lead{line-height:1.72}
@@ -20,5 +26,6 @@
 .research-cta-inner{position:relative;z-index:1}
 .research-site-footer{font-size:.84rem}
 .research-footer-nav a{font-size:.86rem}
-@media(max-width:900px){.research-section{padding-block:3.75rem}.research-section-heading{margin-bottom:2rem}.research-nav a{font-size:.84rem}}
-@media(max-width:640px){.research-section{padding-block:3.1rem}.research-section-number{font-size:.74rem}.research-insights-grid>.research-empty-wide{padding-right:1.4rem;background:var(--research-surface)}}
+@media(max-width:1100px){.research-header-actions{gap:.65rem}.research-nav{gap:.65rem}.research-language-switcher{flex:0 0 auto}}
+@media(max-width:900px){.research-section{padding-block:3.75rem}.research-section-heading{margin-bottom:2rem}.research-nav a{font-size:.84rem}.research-header-actions{width:100%;align-items:flex-start}.research-nav{flex:1}.research-language-switcher{margin-top:-.1rem}}
+@media(max-width:640px){.research-section{padding-block:3.1rem}.research-section-number{font-size:.74rem}.research-insights-grid>.research-empty-wide{padding-right:1.4rem;background:var(--research-surface)}.research-header-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start}.research-language-switcher a{min-width:1.85rem}}
