@@ -33,6 +33,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-dat
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rendered-verifier.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remediation.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-pairing.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
