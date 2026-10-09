@@ -23,7 +23,7 @@ final class Eduardo_Research_Manager_Executor {
                 'action'=>$action,
                 'before'=>$before,
                 'after'=>$action['value'],
-                'changed'=>! $this->values_equal($before['value'] ?? null, $action['value']) || empty($before['exists']),
+                'changed'=>! $this->state_matches_value($before, $action['value']),
                 'risk'=>Eduardo_Research_Manager_Plan::action_risk($action),
             );
         }
@@ -102,7 +102,7 @@ final class Eduardo_Research_Manager_Executor {
         foreach ($plan['actions'] as $action) {
             $state = $this->read_state($action);
             if (is_wp_error($state)) { return $state; }
-            $matches = ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $action['value']);
+            $matches = $this->state_matches_value($state, $action['value']);
             $verified = $verified && $matches;
             $results[] = array('action'=>$action,'matches'=>$matches,'stored'=>$state['value'] ?? null);
         }
@@ -140,11 +140,7 @@ final class Eduardo_Research_Manager_Executor {
             return array('exists'=>$value !== $marker,'value'=>$value === $marker ? null : $value);
         }
         if ('post_meta' === $action['type']) {
-            $exists = metadata_exists('post', (int) $action['post_id'], (string) $action['key']);
-            return array(
-                'exists'=>$exists,
-                'value'=>$exists ? get_post_meta((int) $action['post_id'], (string) $action['key'], true) : null,
-            );
+            return $this->read_post_meta_storage((int) $action['post_id'], (string) $action['key']);
         }
         if ('post_field' === $action['type']) {
             $post = get_post((int) $action['post_id']);
@@ -155,6 +151,20 @@ final class Eduardo_Research_Manager_Executor {
             return array('exists'=>property_exists($post, $field),'value'=>$post->{$field} ?? null);
         }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
+    }
+
+    /**
+     * Read the persisted private meta value without Theme presentation filters.
+     * The Manager verifies storage; the Theme independently decides what is safe to expose publicly.
+     */
+    private function read_post_meta_storage(int $post_id, string $key): array {
+        global $wpdb;
+        $raw = $wpdb->get_var($wpdb->prepare(
+            "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id ASC LIMIT 1",
+            $post_id,
+            $key
+        ));
+        return array('exists'=>null !== $raw,'value'=>null === $raw ? null : maybe_unserialize($raw));
     }
 
     private function write_action(array $action): true|WP_Error {
@@ -171,7 +181,7 @@ final class Eduardo_Research_Manager_Executor {
 
         $state = $this->read_state($action);
         if (is_wp_error($state)) { return $state; }
-        if (empty($state['exists']) || ! $this->values_equal($state['value'] ?? null, $action['value'])) {
+        if (! $this->state_matches_value($state, $action['value'])) {
             return new WP_Error('research_manager_write_failed', 'WordPress did not persist the planned value.');
         }
         return true;
@@ -192,8 +202,24 @@ final class Eduardo_Research_Manager_Executor {
                 $result = wp_update_post(array('ID'=>(int) $action['post_id'],(string) $action['field']=>$state['value']), true);
                 if (is_wp_error($result)) { return $result; }
             }
+
+            $restored = $this->read_state($action);
+            if (is_wp_error($restored)) { return $restored; }
+            if (! $this->states_equal($restored, $state)) {
+                return new WP_Error('research_manager_rollback_failed', 'Rollback could not restore the previous stored state.');
+            }
         }
         return true;
+    }
+
+    private function state_matches_value(array $state, mixed $value): bool {
+        return ! empty($state['exists']) && $this->values_equal($state['value'] ?? null, $value);
+    }
+
+    private function states_equal(array $left, array $right): bool {
+        if (! empty($left['exists']) !== ! empty($right['exists'])) { return false; }
+        if (empty($left['exists'])) { return true; }
+        return $this->values_equal($left['value'] ?? null, $right['value'] ?? null);
     }
 
     private function values_equal(mixed $left, mixed $right): bool {
