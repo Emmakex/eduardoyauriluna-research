@@ -54,10 +54,10 @@ final class Eduardo_Research_Manager_Translation_Pairing {
 
         $actions = array();
         if ((int) get_post_meta($en_id, '_research_translation_es', true) !== $es_id) {
-            $actions[] = array('type'=>'post_meta','post_id'=>$en_id,'key'=>'_research_translation_es','value'=>$es_id);
+            $actions[] = array('type'=>'post_meta','post_id'=>$en_id,'key'=>'_research_translation_es','value'=>(string) $es_id);
         }
         if ((int) get_post_meta($es_id, '_research_translation_en', true) !== $en_id) {
-            $actions[] = array('type'=>'post_meta','post_id'=>$es_id,'key'=>'_research_translation_en','value'=>$en_id);
+            $actions[] = array('type'=>'post_meta','post_id'=>$es_id,'key'=>'_research_translation_en','value'=>(string) $en_id);
         }
 
         $post_type = (string) $first['post_type'];
@@ -84,7 +84,7 @@ final class Eduardo_Research_Manager_Translation_Pairing {
         $counterpart_id = (int) get_post_meta($post_id, $key, true);
         if ($counterpart_id <= 0) { return new WP_Error('research_manager_translation_not_paired', 'This record does not currently reference a translation counterpart.'); }
 
-        $actions = array(array('type'=>'post_meta','post_id'=>$post_id,'key'=>$key,'value'=>0));
+        $actions = array(array('type'=>'post_meta','post_id'=>$post_id,'key'=>$key,'value'=>'0'));
         $counterpart = get_post($counterpart_id);
         if ($counterpart instanceof WP_Post && $counterpart->post_type === $record['post_type']) {
             $counterpart_language = function_exists('eduardo_research_post_language')
@@ -93,7 +93,7 @@ final class Eduardo_Research_Manager_Translation_Pairing {
             if (in_array($counterpart_language, array('en','es'), true) && $counterpart_language !== $record['language']) {
                 $reverse_key = '_research_translation_' . $record['language'];
                 if ((int) get_post_meta($counterpart_id, $reverse_key, true) === $post_id) {
-                    $actions[] = array('type'=>'post_meta','post_id'=>$counterpart_id,'key'=>$reverse_key,'value'=>0);
+                    $actions[] = array('type'=>'post_meta','post_id'=>$counterpart_id,'key'=>$reverse_key,'value'=>'0');
                 }
             }
         }
