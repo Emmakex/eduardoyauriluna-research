@@ -4,7 +4,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_install_page(string $key, array $contract): int {
-    $path = 'home' === $key ? 'home' : (string) ($contract['slug'] ?? $key);
+    $path = (string) ($contract['wp_slug'] ?? $contract['slug'] ?? $key);
     $existing = get_page_by_path($path, OBJECT, 'page');
     if ($existing instanceof WP_Post) {
         update_post_meta($existing->ID, '_eduardo_research_role', (string) ($contract['role'] ?? ''));
@@ -38,10 +38,13 @@ function eduardo_research_install(): void {
         update_option('show_on_front', 'page');
         update_option('page_on_front', (int) $page_ids['home']);
     }
+    if (! empty($page_ids['privacy-policy']) && 0 === (int) get_option('wp_page_for_privacy_policy')) {
+        update_option('wp_page_for_privacy_policy', (int) $page_ids['privacy-policy']);
+    }
 
     eduardo_research_register_content_types();
     eduardo_research_discovery_rewrites();
     flush_rewrite_rules(false);
-    update_option('eduardo_research_theme_bootstrap_version', '1');
+    update_option('eduardo_research_theme_bootstrap_version', '2');
 }
 add_action('after_switch_theme', 'eduardo_research_install');
