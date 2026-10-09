@@ -92,11 +92,19 @@ final class Eduardo_Research_Manager_Plan {
     public static function apply_gate(array $plan): bool|WP_Error {
         $valid = self::validate($plan);
         if (is_wp_error($valid)) { return $valid; }
-        if ('evidence-required' === (string) $plan['risk'] && empty($plan['evidence_confirmed'])) {
-            return new WP_Error(
-                'research_manager_evidence_required',
-                'This mutation changes an evidence-sensitive academic claim. Confirm evidence and rebuild the plan before Apply.'
-            );
+        if ('evidence-required' === (string) $plan['risk']) {
+            if (empty($plan['evidence_confirmed'])) {
+                return new WP_Error(
+                    'research_manager_evidence_required',
+                    'This mutation changes an evidence-sensitive academic claim. Confirm evidence and rebuild the plan before Apply.'
+                );
+            }
+            if ('' === trim((string) $plan['evidence_reference'])) {
+                return new WP_Error(
+                    'research_manager_evidence_reference_required',
+                    'Evidence-sensitive mutations require a source or verification reference before Apply.'
+                );
+            }
         }
         return true;
     }
