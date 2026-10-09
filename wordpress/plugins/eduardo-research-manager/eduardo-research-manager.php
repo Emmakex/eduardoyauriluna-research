@@ -30,6 +30,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-pro
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-software-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-dataset-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rendered-verifier.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remediation.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 

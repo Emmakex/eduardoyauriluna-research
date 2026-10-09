@@ -15,6 +15,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Software_Resource $software = null;
     private static ?Eduardo_Research_Manager_Dataset_Resource $datasets = null;
     private static ?Eduardo_Research_Manager_Rendered_Verifier $rendered = null;
+    private static ?Eduardo_Research_Manager_Remediation $remediation = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -27,6 +28,7 @@ final class Eduardo_Research_Manager {
         self::$software = new Eduardo_Research_Manager_Software_Resource(self::$contract);
         self::$datasets = new Eduardo_Research_Manager_Dataset_Resource(self::$contract);
         self::$rendered = new Eduardo_Research_Manager_Rendered_Verifier(self::$contract);
+        self::$remediation = new Eduardo_Research_Manager_Remediation(self::$contract, self::$diagnostics, self::$pages);
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
@@ -69,5 +71,9 @@ final class Eduardo_Research_Manager {
     public static function rendered(): Eduardo_Research_Manager_Rendered_Verifier {
         if (! self::$rendered) { self::$rendered = new Eduardo_Research_Manager_Rendered_Verifier(self::contract()); }
         return self::$rendered;
+    }
+    public static function remediation(): Eduardo_Research_Manager_Remediation {
+        if (! self::$remediation) { self::$remediation = new Eduardo_Research_Manager_Remediation(self::contract(), self::diagnostics(), self::pages()); }
+        return self::$remediation;
     }
 }
