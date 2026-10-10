@@ -64,6 +64,7 @@ final class Eduardo_Research_Manager {
         self::$blueprint_relations = new Eduardo_Research_Manager_Blueprint_Relations(self::$blueprint, self::$lines, self::$executor);
         self::$pipeline = new Eduardo_Research_Manager_Greenfield_Pipeline(self::$bootstrap, self::$blueprint_pairing, self::$hydrator, self::$blueprint_relations);
         if (is_admin()) {
+            (new Eduardo_Research_Manager_Workspace())->register();
             (new Eduardo_Research_Manager_Admin())->register();
             (new Eduardo_Research_Manager_Insight_Admin())->register();
             (new Eduardo_Research_Manager_Line_Admin())->register();
