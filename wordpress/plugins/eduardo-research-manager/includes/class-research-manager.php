@@ -11,6 +11,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Page_Resource $pages = null;
     private static ?Eduardo_Research_Manager_Page_Editor $page_editor = null;
     private static ?Eduardo_Research_Manager_Insight_Resource $insights = null;
+    private static ?Eduardo_Research_Manager_Insight_Editor $insight_editor = null;
     private static ?Eduardo_Research_Manager_Line_Resource $lines = null;
     private static ?Eduardo_Research_Manager_Output_Resource $outputs = null;
     private static ?Eduardo_Research_Manager_Project_Resource $projects = null;
@@ -36,6 +37,7 @@ final class Eduardo_Research_Manager {
         self::$pages = new Eduardo_Research_Manager_Page_Resource(self::$contract);
         self::$page_editor = new Eduardo_Research_Manager_Page_Editor(self::$pages, self::$executor);
         self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::$contract);
+        self::$insight_editor = new Eduardo_Research_Manager_Insight_Editor(self::$insights, self::$executor);
         self::$lines = new Eduardo_Research_Manager_Line_Resource(self::$contract);
         self::$outputs = new Eduardo_Research_Manager_Output_Resource(self::$contract);
         self::$projects = new Eduardo_Research_Manager_Project_Resource(self::$contract);
@@ -72,6 +74,7 @@ final class Eduardo_Research_Manager {
     public static function pages(): Eduardo_Research_Manager_Page_Resource { if (! self::$pages) { self::$pages = new Eduardo_Research_Manager_Page_Resource(self::contract()); } return self::$pages; }
     public static function page_editor(): Eduardo_Research_Manager_Page_Editor { if (! self::$page_editor) { self::$page_editor = new Eduardo_Research_Manager_Page_Editor(self::pages(), self::executor()); } return self::$page_editor; }
     public static function insights(): Eduardo_Research_Manager_Insight_Resource { if (! self::$insights) { self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::contract()); } return self::$insights; }
+    public static function insight_editor(): Eduardo_Research_Manager_Insight_Editor { if (! self::$insight_editor) { self::$insight_editor = new Eduardo_Research_Manager_Insight_Editor(self::insights(), self::executor()); } return self::$insight_editor; }
     public static function lines(): Eduardo_Research_Manager_Line_Resource { if (! self::$lines) { self::$lines = new Eduardo_Research_Manager_Line_Resource(self::contract()); } return self::$lines; }
     public static function outputs(): Eduardo_Research_Manager_Output_Resource { if (! self::$outputs) { self::$outputs = new Eduardo_Research_Manager_Output_Resource(self::contract()); } return self::$outputs; }
     public static function projects(): Eduardo_Research_Manager_Project_Resource { if (! self::$projects) { self::$projects = new Eduardo_Research_Manager_Project_Resource(self::contract()); } return self::$projects; }
