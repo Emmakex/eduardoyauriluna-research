@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "site": {
+    "name": "Eduardo Jose Yauri Luna",
+    "canonical_domain": "https://eduardoyauriluna.com",
+    "purpose": "Research identity hub"
+  },
+  "languages": ["en", "es"],
+  "pages": [
+    {
+      "key": "home",
+      "slots": {
+        "en": {
+          "hero-eyebrow": "Research profile",
+          "researcher-name": "Eduardo Jose Yauri Luna",
+          "researcher-headline": "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
+          "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
+          "research-lines-heading": "Research agenda",
+          "research-lines-intro": "Current work focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.",
+          "selected-outputs-heading": "Research outputs",
+          "selected-outputs-intro": "Publications, projects, research software and datasets are separated by type, status and evidence so intended research directions are not presented as completed results.",
+          "academic-identifiers-heading": "Academic identity",
+          "latest-insights-heading": "Research notes",
+          "final-cta-heading": "Research and collaboration",
+          "final-cta-body": "Explore the research agenda, methods, projects and reproducible artefacts as they are developed and verified.",
+          "final-cta-button": "Explore research"
+        },
+        "es": {
+          "hero-eyebrow": "Perfil de investigación",
+          "researcher-name": "Eduardo Jose Yauri Luna",
+          "researcher-headline": "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales",
+          "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
+          "research-lines-heading": "Agenda de investigación",
+          "research-lines-intro": "El trabajo actual se centra en agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.",
+          "selected-outputs-heading": "Resultados de investigación",
+          "selected-outputs-intro": "Publicaciones, proyectos, software de investigación y datos se separan por tipo, estado y evidencia para no presentar líneas de trabajo previstas como resultados ya completados.",
+          "academic-identifiers-heading": "Identidad académica",
+          "latest-insights-heading": "Notas de investigación",
+          "final-cta-heading": "Investigación y colaboración",
+          "final-cta-body": "Explora la agenda de investigación, los métodos, los proyectos y los artefactos reproducibles a medida que se desarrollan y verifican.",
+          "final-cta-button": "Explorar investigación"
+        }
+      }
+    },
+    {
+      "key": "about",
+      "slots": {
+        "en": {
+          "eyebrow": "Research profile",
+          "lead": "Eduardo Jose Yauri Luna develops an applied research agenda around AI-enabled business systems, drawing on more than ten years of professional experience in digital strategy, web technologies, automation and software-based business systems.",
+          "sections": ["Research profile", "Professional background", "Verified identity"]
+        },
+        "es": {
+          "eyebrow": "Perfil de investigación",
+          "lead": "Eduardo Jose Yauri Luna desarrolla una agenda de investigación aplicada sobre sistemas empresariales habilitados por IA, apoyada en más de diez años de experiencia profesional en estrategia digital, tecnologías web, automatización y sistemas empresariales basados en software.",
+          "sections": ["Perfil de investigación", "Trayectoria profesional", "Identidad verificada"]
+        }
+      }
+    },
+    {
+      "key": "research",
+      "slots": {
+        "en": {
+          "eyebrow": "Research agenda",
+          "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+          "sections": ["Autonomous AI agents", "Human–AI collaboration", "Digital transformation in SMEs", "AI-mediated information discovery", "Methods and evaluation"]
+        },
+        "es": {
+          "eyebrow": "Agenda de investigación",
+          "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+          "sections": ["Agentes autónomos de IA", "Colaboración humano–IA", "Transformación digital en pymes", "Descubrimiento de información mediado por IA", "Métodos y evaluación"]
+        }
+      }
+    },
+    {
+      "key": "publications",
+      "slots": {
+        "en": {"eyebrow": "Research outputs", "lead": "Scholarly outputs will be listed here by publication type and verified status. No peer-reviewed publications are currently recorded in the controlled academic CV source."},
+        "es": {"eyebrow": "Resultados de investigación", "lead": "Los resultados académicos se listarán aquí por tipo de publicación y estado verificado. Actualmente no constan publicaciones revisadas por pares en la fuente controlada del CV académico."}
+      }
+    },
+    {
+      "key": "projects",
+      "slots": {
+        "en": {"eyebrow": "Research projects", "lead": "Research projects will be added only when their research question, methodology, role, dates and outputs can be represented with clear provenance."},
+        "es": {"eyebrow": "Proyectos de investigación", "lead": "Los proyectos de investigación se añadirán únicamente cuando su pregunta de investigación, metodología, rol, fechas y resultados puedan representarse con procedencia clara."}
+      }
+    },
+    {
+      "key": "software",
+      "slots": {
+        "en": {"eyebrow": "Research software", "lead": "Research software and technical artefacts will be published with version, repository, licence, contribution and links to related research when those records are verified."},
+        "es": {"eyebrow": "Software de investigación", "lead": "El software de investigación y los artefactos técnicos se publicarán con versión, repositorio, licencia, contribución y relación con la investigación cuando esos registros estén verificados."}
+      }
+    },
+    {
+      "key": "datasets",
+      "slots": {
+        "en": {"eyebrow": "Research datasets", "lead": "Datasets will be documented with provenance, version, repository, access conditions, licence, generation method and related research context."},
+        "es": {"eyebrow": "Datos de investigación", "lead": "Los conjuntos de datos se documentarán con procedencia, versión, repositorio, condiciones de acceso, licencia, método de generación y contexto de investigación relacionado."}
+      }
+    },
+    {
+      "key": "cv",
+      "slots": {
+        "en": {
+          "eyebrow": "Academic CV",
+          "lead": "A controlled academic CV that separates verified evidence from planned research activity and does not invent degrees, affiliations, publications, grants or identifiers.",
+          "sections": ["Identity and research profile", "Education", "Research-relevant professional experience", "Research outputs", "Projects and software", "Skills and methods"]
+        },
+        "es": {
+          "eyebrow": "CV académico",
+          "lead": "Un CV académico controlado que separa la evidencia verificada de la actividad investigadora prevista y no inventa titulaciones, afiliaciones, publicaciones, ayudas ni identificadores.",
+          "sections": ["Identidad y perfil de investigación", "Formación", "Experiencia profesional relevante para investigación", "Resultados de investigación", "Proyectos y software", "Competencias y métodos"]
+        }
+      }
+    },
+    {
+      "key": "insights",
+      "slots": {
+        "en": {"eyebrow": "Research notes", "lead": "Working notes, explainers and methodological observations are published here as editorial content, clearly separated from peer-reviewed research outputs."},
+        "es": {"eyebrow": "Notas de investigación", "lead": "Las notas de trabajo, explicaciones y observaciones metodológicas se publican aquí como contenido editorial, claramente separado de los resultados revisados por pares."}
+      }
+    },
+    {
+      "key": "contact",
+      "slots": {
+        "en": {"eyebrow": "Research contact", "lead": "Contact channels and academic identifiers are published here only when they are current and verified.", "sections": ["Research enquiries", "Academic profiles"]},
+        "es": {"eyebrow": "Contacto de investigación", "lead": "Los canales de contacto y los identificadores académicos se publican aquí únicamente cuando están actualizados y verificados.", "sections": ["Consultas de investigación", "Perfiles académicos"]}
+      }
+    },
+    {
+      "key": "privacy-policy",
+      "slots": {
+        "en": {"eyebrow": "Privacy", "lead": "Privacy information for eduardoyauriluna.com.", "sections": ["Data handling", "Contact"]},
+        "es": {"eyebrow": "Privacidad", "lead": "Información de privacidad de eduardoyauriluna.com.", "sections": ["Tratamiento de datos", "Contacto"]}
+      }
+    },
+    {
+      "key": "legal-notice",
+      "slots": {
+        "en": {"eyebrow": "Legal notice", "lead": "Legal and ownership information for eduardoyauriluna.com.", "sections": ["Site ownership", "Terms of use"]},
+        "es": {"eyebrow": "Aviso legal", "lead": "Información legal y de titularidad de eduardoyauriluna.com.", "sections": ["Titularidad del sitio", "Condiciones de uso"]}
+      }
+    }
+  ],
+  "insights": [],
+  "lines": [
+    {
+      "title": "Autonomous AI agents for business processes",
+      "slug": "autonomous-ai-agents-business-processes",
+      "language": "en",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "10",
+      "excerpt": "Research direction on reliable, observable and governable autonomous and semi-autonomous AI agents operating in real business processes.",
+      "central_question": "How can autonomous and semi-autonomous AI agents be designed and evaluated so they improve business processes while remaining reliable, traceable and governable?",
+      "topics": ["Autonomous AI agents", "Agentic AI", "Business process automation", "AI governance"],
+      "methods": ["Design Science Research", "Software prototyping", "Controlled experiments", "Quantitative evaluation"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "Agentes autónomos de IA para procesos empresariales",
+      "slug": "agentes-autonomos-ia-procesos-empresariales",
+      "language": "es",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "10",
+      "excerpt": "Línea de investigación sobre agentes de IA autónomos y semiautónomos fiables, observables y gobernables en procesos empresariales reales.",
+      "central_question": "¿Cómo pueden diseñarse y evaluarse agentes de IA autónomos y semiautónomos para mejorar procesos empresariales manteniendo fiabilidad, trazabilidad y gobernanza?",
+      "topics": ["Agentes autónomos de IA", "IA agéntica", "Automatización de procesos empresariales", "Gobernanza de IA"],
+      "methods": ["Design Science Research", "Prototipado de software", "Experimentos controlados", "Evaluación cuantitativa"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "Human–AI collaboration and responsible autonomy",
+      "slug": "human-ai-collaboration-responsible-autonomy",
+      "language": "en",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "20",
+      "excerpt": "Research direction on calibrated autonomy, human oversight and responsible collaboration between people and AI systems.",
+      "central_question": "How should autonomy, human oversight and recovery mechanisms be calibrated so AI systems remain useful without making organisational processes opaque or uncontrollable?",
+      "topics": ["Human–AI collaboration", "Responsible automation", "Calibrated autonomy", "Human oversight"],
+      "methods": ["Mixed methods", "Controlled experiments", "Surveys and interviews", "Comparative case studies"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "Colaboración humano–IA y autonomía responsable",
+      "slug": "colaboracion-humano-ia-autonomia-responsable",
+      "language": "es",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "20",
+      "excerpt": "Línea de investigación sobre autonomía calibrada, supervisión humana y colaboración responsable entre personas y sistemas de IA.",
+      "central_question": "¿Cómo deben calibrarse la autonomía, la supervisión humana y los mecanismos de recuperación para que los sistemas de IA sean útiles sin volver opacos o incontrolables los procesos organizativos?",
+      "topics": ["Colaboración humano–IA", "Automatización responsable", "Autonomía calibrada", "Supervisión humana"],
+      "methods": ["Métodos mixtos", "Experimentos controlados", "Encuestas y entrevistas", "Estudios de caso comparativos"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "Digital transformation and AI adoption in SMEs",
+      "slug": "digital-transformation-ai-adoption-smes",
+      "language": "en",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "30",
+      "excerpt": "Applied research on the organisational, technical and operational conditions that shape successful AI-enabled digital transformation in SMEs.",
+      "central_question": "Which technical, organisational and governance conditions enable SMEs to adopt AI-enabled automation effectively and sustainably?",
+      "topics": ["Digital transformation", "SME digitalisation", "AI adoption", "Business process redesign"],
+      "methods": ["Comparative case studies", "Surveys and interviews", "Mixed methods", "Design Science Research"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "Transformación digital y adopción de IA en pymes",
+      "slug": "transformacion-digital-adopcion-ia-pymes",
+      "language": "es",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "30",
+      "excerpt": "Investigación aplicada sobre las condiciones organizativas, técnicas y operativas que determinan una transformación digital con IA eficaz en las pymes.",
+      "central_question": "¿Qué condiciones técnicas, organizativas y de gobernanza permiten a las pymes adoptar automatización basada en IA de forma eficaz y sostenible?",
+      "topics": ["Transformación digital", "Digitalización de pymes", "Adopción de IA", "Rediseño de procesos empresariales"],
+      "methods": ["Estudios de caso comparativos", "Encuestas y entrevistas", "Métodos mixtos", "Design Science Research"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "AI-mediated information discovery and generative search",
+      "slug": "ai-mediated-information-discovery-generative-search",
+      "language": "en",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "40",
+      "excerpt": "Complementary research direction on how generative and AI-mediated search systems change information retrieval, discovery and digital visibility.",
+      "central_question": "How do generative search and AI-mediated discovery reshape information retrieval, evaluation and visibility for organisations and users?",
+      "topics": ["Generative search", "Information retrieval", "AI-mediated discovery", "Generative Engine Optimisation"],
+      "methods": ["Information retrieval evaluation", "Comparative experiments", "Quantitative analysis", "Reproducible datasets"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    },
+    {
+      "title": "Descubrimiento de información mediado por IA y búsqueda generativa",
+      "slug": "descubrimiento-informacion-ia-busqueda-generativa",
+      "language": "es",
+      "status": "publish",
+      "evidence_status": "verified",
+      "research_status": "planned",
+      "order": "40",
+      "excerpt": "Línea complementaria sobre cómo los sistemas de búsqueda generativa y mediada por IA cambian la recuperación, el descubrimiento y la visibilidad de la información.",
+      "central_question": "¿Cómo transforman la búsqueda generativa y el descubrimiento mediado por IA la recuperación, evaluación y visibilidad de la información para organizaciones y usuarios?",
+      "topics": ["Búsqueda generativa", "Recuperación de información", "Descubrimiento mediado por IA", "Generative Engine Optimisation"],
+      "methods": ["Evaluación de recuperación de información", "Experimentos comparativos", "Análisis cuantitativo", "Datos reproducibles"],
+      "evidence": {"confirmed": true, "reference": "content/research-statement/research-statement-v1.md"}
+    }
+  ],
+  "outputs": [],
+  "projects": [],
+  "software": [],
+  "datasets": []
+}
