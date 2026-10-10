@@ -294,6 +294,11 @@ final class Eduardo_Research_Manager_Insight_Editor {
         if ('' === $snapshot_id) {
             return new WP_Error('research_manager_insight_editor_snapshot_missing', 'An Insight editor snapshot ID is required for rollback.');
         }
+        $snapshot = $this->snapshots->get($snapshot_id);
+        $schedule = $this->schedule_snapshot_state($snapshot);
+        if (is_array($schedule)) {
+            return $this->rollback_schedule_snapshot($snapshot_id, $snapshot, $schedule);
+        }
         return $this->executor->rollback($snapshot_id);
     }
 
@@ -456,7 +461,7 @@ final class Eduardo_Research_Manager_Insight_Editor {
 
         $verification = $this->insights->verify($post_id, array('status'=>'future','scheduled_at'=>$scheduled_at));
         if (is_wp_error($verification) || empty($verification['verified'])) {
-            $this->executor->rollback($snapshot_id);
+            $this->rollback($snapshot_id);
             return is_wp_error($verification)
                 ? $verification
                 : new WP_Error('research_manager_insight_editor_verification_failed', 'Insight scheduling failed verification and was rolled back.');
@@ -471,6 +476,69 @@ final class Eduardo_Research_Manager_Insight_Editor {
             'scheduled_at'=>$scheduled_at,
             'verification'=>$verification,
             'verified'=>true,
+        );
+    }
+
+    private function schedule_snapshot_state(array $snapshot): array|false {
+        $records = is_array($snapshot['before'] ?? null) ? $snapshot['before'] : array();
+        if (3 !== count($records)) { return false; }
+        $post_id = 0;
+        $state = array();
+        foreach ($records as $record) {
+            if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { return false; }
+            $action = $record['action'];
+            if ('post_field' !== (string) ($action['type'] ?? '')) { return false; }
+            $field = sanitize_key((string) ($action['field'] ?? ''));
+            if (! in_array($field, array('post_status','post_date','post_date_gmt'), true)) { return false; }
+            $record_post_id = absint($action['post_id'] ?? 0);
+            if ($record_post_id <= 0 || ($post_id > 0 && $post_id !== $record_post_id)) { return false; }
+            $post_id = $record_post_id;
+            $state[$field] = $record['state']['value'] ?? null;
+        }
+        if ($post_id <= 0 || 3 !== count($state)) { return false; }
+        return array(
+            'post_id'=>$post_id,
+            'post_status'=>(string) $state['post_status'],
+            'post_date'=>(string) $state['post_date'],
+            'post_date_gmt'=>(string) $state['post_date_gmt'],
+        );
+    }
+
+    private function rollback_schedule_snapshot(string $snapshot_id, array $snapshot, array $state): array|WP_Error {
+        if ('rolled-back' === (string) ($snapshot['status'] ?? '')) {
+            return new WP_Error('research_manager_snapshot_used', 'This snapshot has already been rolled back.');
+        }
+        $post_id = absint($state['post_id'] ?? 0);
+        $post = get_post($post_id);
+        if (! $post instanceof WP_Post || 'post' !== $post->post_type) {
+            return new WP_Error('research_manager_resource_missing', 'Scheduled Research Insight no longer exists.');
+        }
+
+        $result = wp_update_post(array(
+            'ID'=>$post_id,
+            'post_status'=>(string) $state['post_status'],
+            'post_date'=>(string) $state['post_date'],
+            'post_date_gmt'=>(string) $state['post_date_gmt'],
+            'edit_date'=>true,
+        ), true);
+        if (is_wp_error($result)) { return $result; }
+        clean_post_cache($post_id);
+
+        $restored = get_post($post_id);
+        if (! $restored instanceof WP_Post
+            || (string) $restored->post_status !== (string) $state['post_status']
+            || (string) $restored->post_date !== (string) $state['post_date']
+            || (string) $restored->post_date_gmt !== (string) $state['post_date_gmt']) {
+            return new WP_Error('research_manager_rollback_failed', 'Scheduling rollback could not restore the exact previous calendar state.');
+        }
+
+        $this->snapshots->mark_rolled_back($snapshot_id);
+        return array(
+            'status'=>'rolled-back',
+            'snapshot_id'=>$snapshot_id,
+            'plan_id'=>(string) ($snapshot['plan_id'] ?? ''),
+            'restored'=>3,
+            'rolled_back_at'=>gmdate(DATE_W3C),
         );
     }
 
