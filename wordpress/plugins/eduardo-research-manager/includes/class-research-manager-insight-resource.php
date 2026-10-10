@@ -45,29 +45,15 @@ final class Eduardo_Research_Manager_Insight_Resource {
 
         $title = is_scalar($data['title'] ?? null) ? (string) $data['title'] : '';
         $slug = is_scalar($data['slug'] ?? null) ? (string) $data['slug'] : sanitize_title($title);
-        $status = $this->normalise_status(is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft');
-        if (is_wp_error($status)) { return $status; }
-        $language = sanitize_key(is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en');
-        if (! in_array($language, $this->languages(), true)) {
-            return new WP_Error('research_manager_unknown_language', 'Insight language is outside the active Research preset.');
-        }
-        $insight_type = sanitize_key(is_scalar($data['insight_type'] ?? null) ? (string) $data['insight_type'] : 'research_note');
-        if (! array_key_exists($insight_type, $this->types())) {
-            return new WP_Error('research_manager_unknown_insight_type', 'Insight type is outside the active Research Theme editorial contract.');
-        }
-        if ('' === trim($title) || '' === sanitize_title($slug)) {
-            return new WP_Error('research_manager_invalid_insight_identity', 'Insight title and slug must produce a valid editorial identity.');
-        }
-
         $action = array(
             'type'=>'create_insight',
-            'title'=>$this->sanitize_editorial_field('title', $title),
-            'slug'=>sanitize_title($slug),
+            'title'=>$title,
+            'slug'=>$slug,
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>$language,
-            'insight_type'=>$insight_type,
-            'status'=>$status,
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'insight_type'=>is_scalar($data['insight_type'] ?? null) ? (string) $data['insight_type'] : 'research_note',
+            'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'creation_token'=>wp_generate_uuid4(),
         );
         $intent = '' !== trim($intent)
@@ -83,7 +69,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
             return new WP_Error('research_manager_empty_update', 'At least one Insight field must be supplied.');
         }
 
-        $allowed = array('title','excerpt','content','language','insight_type','status');
+        $allowed = array('title','excerpt','content','language','insight_type');
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error(
@@ -114,14 +100,6 @@ final class Eduardo_Research_Manager_Insight_Resource {
                 }
                 if ($value !== (string) $current['insight_type']) {
                     $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_insight_type','value'=>$value);
-                }
-                continue;
-            }
-            if ('status' === $field) {
-                $status = $this->normalise_status((string) $value);
-                if (is_wp_error($status)) { return $status; }
-                if ($status !== (string) $current['status']) {
-                    $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>'post_status','value'=>$status);
                 }
                 continue;
             }
@@ -206,14 +184,6 @@ final class Eduardo_Research_Manager_Insight_Resource {
             return new WP_Error('research_manager_insight_contract_invalid', 'The active Research Theme does not expose a usable Insight contract.');
         }
         return true;
-    }
-
-    private function normalise_status(string $status): string|WP_Error {
-        $status = sanitize_key($status);
-        if (! in_array($status, array('draft','publish'), true)) {
-            return new WP_Error('research_manager_insight_status_not_allowed', 'Research Insights may transition only between draft and publish.');
-        }
-        return $status;
     }
 
     private function sanitize_editorial_field(string $field, string $value): string {
