@@ -351,7 +351,10 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if (! is_array($value)) { return $value; }
         $result = array();
         foreach ($value as $key => $item) {
-            if (in_array((string) $key, array('created_at','generated_at','verified_at','applied_at','rolled_back_at','snapshot_id','snapshot_ids'), true)) { continue; }
+            if (in_array((string) $key, array(
+                'created_at','generated_at','verified_at','applied_at','rolled_back_at',
+                'snapshot_id','snapshot_ids','plan_id','checksum','creation_token'
+            ), true)) { continue; }
             $result[$key] = $this->stable_value($item);
         }
         if (array_is_list($result)) { return array_values($result); }
