@@ -19,6 +19,22 @@ final class Eduardo_Research_Manager_Workspace {
             'dashicons-welcome-learn-more',
             30
         );
+
+        add_submenu_page(
+            'eduardo-research-workspace',
+            'Research Workspace',
+            'Workspace',
+            'manage_options',
+            'eduardo-research-workspace',
+            array($this, 'render')
+        );
+
+        $this->add_authoring_submenu('Greenfield Site & Pages', 'Site & Pages', 'eduardo-research-manager', new Eduardo_Research_Manager_Admin());
+        $this->add_authoring_submenu('Academic Evidence', 'Academic Evidence', 'eduardo-research-evidence', new Eduardo_Research_Manager_Evidence_Admin());
+        $this->add_authoring_submenu('Research Lines', 'Research Lines', 'eduardo-research-lines', new Eduardo_Research_Manager_Line_Admin());
+        $this->add_authoring_submenu('Research Objects', 'Research Objects', 'eduardo-research-objects', new Eduardo_Research_Manager_Object_Admin());
+        $this->add_authoring_submenu('Research Insights', 'Research Insights', 'eduardo-research-insights', new Eduardo_Research_Manager_Insight_Admin());
+        $this->add_authoring_submenu('EN/ES Translations', 'EN/ES Translations', 'eduardo-research-translations', new Eduardo_Research_Manager_Translation_Admin());
     }
 
     public function render(): void {
@@ -81,48 +97,59 @@ final class Eduardo_Research_Manager_Workspace {
         <?php
     }
 
+    private function add_authoring_submenu(string $page_title, string $menu_title, string $slug, object $controller): void {
+        add_submenu_page(
+            'eduardo-research-workspace',
+            $page_title,
+            $menu_title,
+            'manage_options',
+            $slug,
+            array($controller, 'render')
+        );
+    }
+
     private function tools(array $counts): array {
         return array(
             array(
                 'title'=>'Greenfield Site & Pages',
                 'description'=>'Run the canonical blueprint pipeline, inspect readiness and edit Theme-owned structured Page slots.',
                 'metric'=>sprintf('%d contracted Pages', (int) ($counts['pages'] ?? 0)),
-                'url'=>$this->tools_url('eduardo-research-manager'),
+                'url'=>$this->workspace_url('eduardo-research-manager'),
                 'cta'=>'Open Research Manager',
             ),
             array(
                 'title'=>'Academic Evidence',
                 'description'=>'Manage canonical researcher identity and verified evidence for About, Research, CV, Contact and scholarly SEO.',
                 'metric'=>sprintf('%d evidence records', (int) ($counts['evidence'] ?? 0)),
-                'url'=>$this->tools_url('eduardo-research-evidence'),
+                'url'=>$this->workspace_url('eduardo-research-evidence'),
                 'cta'=>'Open Research Evidence',
             ),
             array(
                 'title'=>'Research Lines',
                 'description'=>'Author the evidence-backed research agenda, central questions, methods, topics and research status.',
                 'metric'=>sprintf('%d EN/ES lines', (int) ($counts['lines'] ?? 0)),
-                'url'=>$this->tools_url('eduardo-research-lines'),
+                'url'=>$this->workspace_url('eduardo-research-lines'),
                 'cta'=>'Open Research Lines',
             ),
             array(
                 'title'=>'Research Objects',
                 'description'=>'Create and maintain Outputs, Projects, Research Software and Datasets with collection-specific metadata.',
                 'metric'=>sprintf('%d EN/ES objects', (int) ($counts['objects'] ?? 0)),
-                'url'=>$this->tools_url('eduardo-research-objects'),
+                'url'=>$this->workspace_url('eduardo-research-objects'),
                 'cta'=>'Open Research Objects',
             ),
             array(
                 'title'=>'Research Insights',
                 'description'=>'Publish Theme-rendered research notes, explainers and working ideas as controlled editorial content.',
                 'metric'=>sprintf('%d EN/ES insights', (int) ($counts['insights'] ?? 0)),
-                'url'=>$this->tools_url('eduardo-research-insights'),
+                'url'=>$this->workspace_url('eduardo-research-insights'),
                 'cta'=>'Open Research Insights',
             ),
             array(
                 'title'=>'EN/ES Translations',
                 'description'=>'Pair published English and Spanish records so alternate-language navigation and hreflang stay deterministic.',
                 'metric'=>sprintf('%d bilateral pairs', (int) ($counts['translations'] ?? 0)),
-                'url'=>$this->tools_url('eduardo-research-translations'),
+                'url'=>$this->workspace_url('eduardo-research-translations'),
                 'cta'=>'Open Research Translations',
             ),
         );
@@ -166,7 +193,7 @@ final class Eduardo_Research_Manager_Workspace {
         return $counts;
     }
 
-    private function tools_url(string $page): string {
-        return add_query_arg('page', $page, admin_url('tools.php'));
+    private function workspace_url(string $page): string {
+        return add_query_arg('page', $page, admin_url('admin.php'));
     }
 }
