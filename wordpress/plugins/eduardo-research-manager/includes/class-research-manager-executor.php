@@ -323,6 +323,14 @@ final class Eduardo_Research_Manager_Executor {
 
     private function research_object_spec(string $action_type): array {
         $specs = array(
+            'create_line'=>array(
+                'post_type'=>'research_line','creation_conflict'=>'research_manager_line_creation_conflict','rollback_conflict'=>'research_manager_line_rollback_conflict',
+                'meta'=>array(
+                    'evidence_status'=>'_research_evidence_status','research_status'=>'_research_status','central_question'=>'_research_central_question',
+                    'order'=>'_research_order','topics'=>'_research_topics','methods'=>'_research_methods',
+                ),
+                'array_fields'=>array('topics','methods'),'defaults'=>array('evidence_status'=>'unverified','research_status'=>'planned'),
+            ),
             'create_output'=>array(
                 'post_type'=>'research_output','creation_conflict'=>'research_manager_output_creation_conflict','rollback_conflict'=>'research_manager_output_rollback_conflict',
                 'meta'=>array(
