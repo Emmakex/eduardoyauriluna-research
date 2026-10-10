@@ -7,6 +7,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
       - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-orcid-admin-quality.yml'
   push:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
       - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-orcid-admin-quality.yml'
 
 permissions:
@@ -43,6 +45,10 @@ jobs:
           extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
 
       - name: Lint ORCID admin surface
         shell: bash
