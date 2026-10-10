@@ -38,7 +38,7 @@ final class Eduardo_Research_Manager_Remote_Request_Guard {
         );
     }
 
-    public function consume_nonce(string $connection_id, string $nonce): true|WP_Error {
+    public function consume_nonce(string $connection_id, string $nonce): bool|WP_Error {
         $key = 'erm_remote_nonce_' . substr(hash('sha256', $connection_id . '|' . $nonce), 0, 40);
         if (false !== get_transient($key)) {
             return $this->error('validation_failed', 'Remote Manager request nonce has already been used.', 409);
@@ -47,7 +47,7 @@ final class Eduardo_Research_Manager_Remote_Request_Guard {
         return true;
     }
 
-    public function enforce_rate_limit(string $connection_id): true|WP_Error {
+    public function enforce_rate_limit(string $connection_id): bool|WP_Error {
         $window = (int) floor(time() / self::RATE_WINDOW_SECONDS);
         $key = 'erm_remote_rate_' . substr(hash('sha256', $connection_id . '|' . $window), 0, 40);
         $count = (int) get_transient($key);
@@ -88,7 +88,7 @@ final class Eduardo_Research_Manager_Remote_Request_Guard {
         );
     }
 
-    public function validate_idempotency(string $connection_id, string $request_id, string $fingerprint): true|array|WP_Error {
+    public function validate_idempotency(string $connection_id, string $request_id, string $fingerprint): bool|array|WP_Error {
         $previous = $this->previous_request($connection_id, $request_id);
         if (null === $previous) { return true; }
         if (! hash_equals((string) ($previous['fingerprint'] ?? ''), $fingerprint)) {
