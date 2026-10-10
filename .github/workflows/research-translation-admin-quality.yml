@@ -1,0 +1,219 @@
+name: Research Translation Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-translation-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-translation-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  translation-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Translation admin files
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-translation-admin-wp
+          mkdir -p /tmp/research-translation-admin-wp
+          cd /tmp/research-translation-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Translation Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Seed bilingual Research Output candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-admin-wp
+          wp eval '
+          $en = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"English admin output","post_name"=>"english-admin-output"]);
+          $es = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Resultado admin español","post_name"=>"resultado-admin-espanol"]);
+          update_post_meta($en,"_research_language","en"); update_post_meta($es,"_research_language","es");
+          update_option("translation_admin_output_en",(int)$en,false); update_option("translation_admin_output_es",(int)$es,false);
+          ' --allow-root
+
+      - name: Render structured Translation management screen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_GET = ["erm_translation_type"=>"research_output"];
+          ob_start(); (new Eduardo_Research_Manager_Translation_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["Research Translations","Pair Research Outputs","English record","Spanish record","Translation evidence gate","Current bilateral pairs","Preview EN/ES pairing"] as $needle) {
+              if (false === strpos($html,$needle)) { fwrite(STDERR,"missing marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Prove structured pairing is blocked without evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "translation_operation"=>"pair","post_type"=>"research_output",
+              "first_id"=>(int)get_option("translation_admin_output_en",0),"second_id"=>(int)get_option("translation_admin_output_es",0),
+              "evidence_reference"=>"","_wpnonce"=>wp_create_nonce("erm_translation_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_translation_preview_1");
+          if (! is_array($prepared) || ! empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "") || empty($prepared["apply_blocker"])) { fwrite(STDERR,wp_json_encode($prepared)); exit(1); }
+          $_GET = ["erm_translation_type"=>"research_output"];
+          ob_start(); (new Eduardo_Research_Manager_Translation_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html,"Apply is blocked") || false !== strpos($html,"Apply prepared Translation change")) { exit(1); }
+          delete_transient("eduardo_research_manager_translation_preview_1");
+          ' --allow-root
+
+      - name: Preview and apply verified Research Output pairing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "translation_operation"=>"pair","post_type"=>"research_output",
+              "first_id"=>(int)get_option("translation_admin_output_en",0),"second_id"=>(int)get_option("translation_admin_output_es",0),
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI verified admin translation source",
+              "_wpnonce"=>wp_create_nonce("erm_translation_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_translation_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "change" !== ($prepared["status"] ?? "")) { fwrite(STDERR,wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_translation_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $en = (int)get_option("translation_admin_output_en",0); $es = (int)get_option("translation_admin_output_es",0);
+          $verified = Eduardo_Research_Manager::translations()->verify_pair($en,$es);
+          $edit = get_transient("eduardo_research_manager_translation_edit_1");
+          if (is_wp_error($verified) || empty($verified["verified"]) || ! is_array($edit) || "pair" !== ($edit["operation"] ?? "") || empty($edit["snapshot_id"])) { exit(1); }
+          $_GET = ["erm_translation_type"=>"research_output"];
+          ob_start(); (new Eduardo_Research_Manager_Translation_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["English admin output","Resultado admin español","CI verified admin translation source","Preview unpair","Rollback latest Translation edit"] as $needle) {
+              if (false === strpos($html,$needle)) { fwrite(STDERR,"missing paired marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Unpair through admin then rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "translation_operation"=>"unpair","post_type"=>"research_output","post_id"=>(int)get_option("translation_admin_output_en",0),
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI verified admin unpair source",
+              "_wpnonce"=>wp_create_nonce("erm_translation_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_translation_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "unpair" !== ($prepared["operation"] ?? "")) { exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_translation_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $en = (int)get_option("translation_admin_output_en",0); $es = (int)get_option("translation_admin_output_es",0);
+          $a = Eduardo_Research_Manager::translations()->verify_unpaired($en); $b = Eduardo_Research_Manager::translations()->verify_unpaired($es);
+          $edit = get_transient("eduardo_research_manager_translation_edit_1");
+          if (is_wp_error($a) || empty($a["verified"]) || is_wp_error($b) || empty($b["verified"]) || "unpair" !== ($edit["operation"] ?? "")) { exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_translation_rollback")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_rollback();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $en = (int)get_option("translation_admin_output_en",0); $es = (int)get_option("translation_admin_output_es",0);
+          $paired = Eduardo_Research_Manager::translations()->verify_pair($en,$es);
+          if (is_wp_error($paired) || empty($paired["verified"]) || get_transient("eduardo_research_manager_translation_edit_1")) { exit(1); }
+          ' --allow-root
+
+      - name: Pair Research Insights without academic evidence confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-admin-wp
+          wp eval '
+          $en = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"English admin insight","post_name"=>"english-admin-insight"]);
+          $es = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Insight admin español","post_name"=>"insight-admin-espanol"]);
+          foreach ([[$en,"en"],[$es,"es"]] as [$id,$language]) { update_post_meta($id,"_research_language",$language); update_post_meta($id,"_research_insight_type","research_note"); }
+          update_option("translation_admin_insight_en",(int)$en,false); update_option("translation_admin_insight_es",(int)$es,false);
+          wp_set_current_user(1);
+          $_GET = ["erm_translation_type"=>"post"];
+          ob_start(); (new Eduardo_Research_Manager_Translation_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html,"Research Insight translation pairing is an editorial relationship")) { exit(1); }
+          $_POST = [
+              "translation_operation"=>"pair","post_type"=>"post","first_id"=>(int)$en,"second_id"=>(int)$es,
+              "_wpnonce"=>wp_create_nonce("erm_translation_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_translation_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "editorial-review" !== ($prepared["risk"] ?? "")) { fwrite(STDERR,wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_translation_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Translation_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          $en=(int)get_option("translation_admin_insight_en",0); $es=(int)get_option("translation_admin_insight_es",0);
+          $verified=Eduardo_Research_Manager::translations()->verify_pair($en,$es);
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+          ' --allow-root
