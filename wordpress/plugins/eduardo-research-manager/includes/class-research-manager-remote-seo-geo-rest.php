@@ -1,5 +1,5 @@
 <?php
-/** Authenticated M6 SEO/GEO diagnostics, resource inspection and exact remediation gateway. */
+/** Authenticated M6 SEO/GEO diagnostics, planning and exact remediation gateway. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
@@ -7,16 +7,19 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
     private Eduardo_Research_Manager_Remote_REST $auth;
     private Eduardo_Research_Manager_SEO_GEO $seo_geo;
+    private Eduardo_Research_Manager_SEO_GEO_Action_Planner $action_planner;
     private Eduardo_Research_Manager_Remote_SEO_GEO_Operations $operations;
 
     public function __construct(
         ?Eduardo_Research_Manager_Remote_REST $auth = null,
         ?Eduardo_Research_Manager_SEO_GEO $seo_geo = null,
-        ?Eduardo_Research_Manager_Remote_SEO_GEO_Operations $operations = null
+        ?Eduardo_Research_Manager_Remote_SEO_GEO_Operations $operations = null,
+        ?Eduardo_Research_Manager_SEO_GEO_Action_Planner $action_planner = null
     ) {
         $this->auth = $auth ?: Eduardo_Research_Manager::remote_rest();
         $this->seo_geo = $seo_geo ?: new Eduardo_Research_Manager_SEO_GEO();
         $this->operations = $operations ?: new Eduardo_Research_Manager_Remote_SEO_GEO_Operations();
+        $this->action_planner = $action_planner ?: new Eduardo_Research_Manager_SEO_GEO_Action_Planner($this->seo_geo);
     }
 
     public function register(): void {
@@ -34,6 +37,11 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
         register_rest_route($ns, '/seo-geo/resource', array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'resource'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'seo.read'),
+        ));
+        register_rest_route($ns, '/seo-geo/resource/actions', array(
+            'methods'=>WP_REST_Server::READABLE,
+            'callback'=>array($this, 'resource_actions'),
             'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'seo.read'),
         ));
         register_rest_route($ns, '/seo-geo/remediation/plan', array(
@@ -73,14 +81,16 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
     }
 
     public function resource(WP_REST_Request $request): WP_REST_Response|WP_Error {
-        $type = sanitize_key((string) $request->get_param('type'));
-        $identifier = $request->get_param('id');
-        if (null === $identifier || '' === (string) $identifier) { $identifier = (string) $request->get_param('key'); }
-        $language = sanitize_key((string) ($request->get_param('language') ?: ''));
-        if ('' === $type || null === $identifier || '' === (string) $identifier) {
-            return new WP_Error('validation_failed', 'SEO/GEO resource inspection requires type plus id or key.', array('status'=>400));
-        }
-        $result = $this->seo_geo->inspect_resource($type, is_numeric($identifier) ? (int) $identifier : (string) $identifier, $language);
+        $target = $this->resource_target($request);
+        if (is_wp_error($target)) { return $target; }
+        $result = $this->seo_geo->inspect_resource($target['type'], $target['identifier'], $target['language']);
+        return is_wp_error($result) ? $result : $this->response($request, $result);
+    }
+
+    public function resource_actions(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $target = $this->resource_target($request);
+        if (is_wp_error($target)) { return $target; }
+        $result = $this->action_planner->plan($target['type'], $target['identifier'], $target['language']);
         return is_wp_error($result) ? $result : $this->response($request, $result);
     }
 
@@ -129,14 +139,18 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
         $read = is_array($data['read_endpoints'] ?? null) ? $data['read_endpoints'] : array();
         $read['seo_geo_site'] = 'site.diagnostics + seo.read';
         $read['seo_geo_resource'] = 'site.diagnostics + seo.read';
+        $read['seo_geo_resource_actions'] = 'site.diagnostics + seo.read';
         $data['read_endpoints'] = $read;
         $data['seo_geo_control'] = array(
             'milestone'=>'M6',
-            'slice'=>'diagnostics-and-deterministic-readiness-remediation',
+            'slice'=>'diagnostics-remediation-and-structured-action-planning',
             'available'=>true,
             'site_diagnostics'=>true,
             'resource_rendered_inspection'=>array('page','insight','line','output','project','software','dataset'),
             'rendered_checks'=>array('http_200','canonical','html_language','current_hreflang','og_url','json_ld','schema_type'),
+            'structured_action_planner'=>true,
+            'planner_dimensions'=>array('seo','geo','provenance','seo+geo','geo+provenance','seo+geo+provenance'),
+            'planner_delegates_to'=>array('pages','insights','insight-translations','research-lines','research-objects','research-translations','research-evidence','seo-geo'),
             'operations'=>array('seo-remediate'),
             'lifecycle'=>array('plan','apply','status','verify','rollback'),
             'read_scope'=>'seo.read',
@@ -145,13 +159,29 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
             'stale_target_protection'=>true,
             'idempotency'=>true,
             'current_remediation_boundary'=>'Diagnostics findings already classified auto-remediable by the shared Remediation service.',
-            'advanced_metadata_canonical_schema_mutations'=>'later-m6-slice',
+            'structured_optimization_boundary'=>'SEO/GEO source findings are routed to existing bounded Manager gateways instead of direct metadata writes.',
+            'advanced_indexability_and_link_remediation'=>'later-m6-slice',
             'arbitrary_meta_editor'=>false,
             'arbitrary_wordpress_proxy'=>false,
         );
         $payload['data'] = $data;
         $response->set_data($payload);
         return $response;
+    }
+
+    private function resource_target(WP_REST_Request $request): array|WP_Error {
+        $type = sanitize_key((string) $request->get_param('type'));
+        $identifier = $request->get_param('id');
+        if (null === $identifier || '' === (string) $identifier) { $identifier = (string) $request->get_param('key'); }
+        $language = sanitize_key((string) ($request->get_param('language') ?: ''));
+        if ('' === $type || null === $identifier || '' === (string) $identifier) {
+            return new WP_Error('validation_failed', 'SEO/GEO resource inspection requires type plus id or key.', array('status'=>400));
+        }
+        return array(
+            'type'=>$type,
+            'identifier'=>is_numeric($identifier) ? (int) $identifier : (string) $identifier,
+            'language'=>$language,
+        );
     }
 
     private function permission(WP_REST_Request $request, string $primary, string $secondary = ''): bool|WP_Error {
