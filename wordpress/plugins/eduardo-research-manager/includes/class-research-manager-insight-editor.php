@@ -441,7 +441,13 @@ final class Eduardo_Research_Manager_Insight_Editor {
         );
         $snapshot_id = $this->snapshots->create($snapshot_plan, $before);
 
-        $written = wp_update_post(array('ID'=>$post_id,'post_status'=>'future','post_date'=>$local_mysql,'post_date_gmt'=>$gmt_mysql), true);
+        $written = wp_update_post(array(
+            'ID'=>$post_id,
+            'post_status'=>'future',
+            'post_date'=>$local_mysql,
+            'post_date_gmt'=>$gmt_mysql,
+            'edit_date'=>true,
+        ), true);
         if (is_wp_error($written)) {
             $this->executor->rollback($snapshot_id);
             return $written;
