@@ -13,7 +13,7 @@ final class Eduardo_Research_Manager_Plan {
         'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
     );
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order','post_status');
-    private const STRUCTURED_RESEARCH_POST_TYPES = array('research_output','research_project','research_software','research_dataset');
+    private const STRUCTURED_RESEARCH_POST_TYPES = array('research_line','research_output','research_project','research_software','research_dataset');
     private const MAX_TITLE_BYTES = 200;
     private const MAX_EXCERPT_BYTES = 1000;
     private const MAX_CONTENT_BYTES = 60000;
@@ -87,7 +87,7 @@ final class Eduardo_Research_Manager_Plan {
         $type = (string) ($action['type'] ?? '');
         if ('create_page' === $type) { return 'standard'; }
         if ('create_insight' === $type) { return 'editorial-review'; }
-        if (in_array($type, array('create_output','create_project','create_software','create_dataset'), true)) { return 'evidence-required'; }
+        if (in_array($type, array('create_line','create_output','create_project','create_software','create_dataset'), true)) { return 'evidence-required'; }
 
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         $post_id = absint($action['post_id'] ?? 0);
@@ -110,6 +110,7 @@ final class Eduardo_Research_Manager_Plan {
             'start_date','end_date','partner','funding','methods','project_url','software_status','software_version',
             'release_date','repository_url','archive_url','documentation_url','programming_languages','license',
             'dataset_version','repository','access_level','formats','methodology','provenance','ethics_notes','size',
+            'research_status','central_question','topics','research_order',
         ) as $needle) {
             if (str_contains($key, $needle)) { return 'evidence-required'; }
         }
@@ -168,6 +169,7 @@ final class Eduardo_Research_Manager_Plan {
         }
         if ('create_page' === $type) { return self::normalize_page_creation($action); }
         if ('create_insight' === $type) { return self::normalize_insight_creation($action); }
+        if ('create_line' === $type) { return self::normalize_line_creation($action); }
         if ('create_output' === $type) { return self::normalize_output_creation($action); }
         if ('create_project' === $type) { return self::normalize_project_creation($action); }
         if ('create_software' === $type) { return self::normalize_software_creation($action); }
@@ -219,6 +221,44 @@ final class Eduardo_Research_Manager_Plan {
         if (! array_key_exists($insight_type, $types)) { return new WP_Error('research_manager_unknown_insight_type', 'Insight type is outside the active Research Theme editorial contract.'); }
         if (! in_array($status, array('draft','publish'), true)) { return new WP_Error('research_manager_invalid_insight_status', 'Insight creation only permits draft or publish status.'); }
         return array('type'=>'create_insight','title'=>$title,'slug'=>$slug,'excerpt'=>$excerpt,'content'=>$content,'language'=>$language,'insight_type'=>$insight_type,'status'=>$status,'creation_token'=>$creation_token);
+    }
+
+    private static function normalize_line_creation(array $action): array|WP_Error {
+        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_line_statuses') || ! function_exists('eduardo_research_line_evidence_statuses')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
+        }
+        $preset = eduardo_research_preset();
+        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
+        $statuses = eduardo_research_line_statuses('en');
+        $evidence_statuses = eduardo_research_line_evidence_statuses('en');
+        $title = sanitize_text_field((string) ($action['title'] ?? ''));
+        $slug = sanitize_title((string) ($action['slug'] ?? ''));
+        $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
+        $content = wp_kses_post((string) ($action['content'] ?? ''));
+        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $post_status = sanitize_key((string) ($action['status'] ?? 'draft'));
+        $evidence_status = sanitize_key((string) ($action['evidence_status'] ?? 'unverified'));
+        $research_status = sanitize_key((string) ($action['research_status'] ?? 'planned'));
+        $central_question = sanitize_textarea_field((string) ($action['central_question'] ?? ''));
+        $order_raw = trim((string) ($action['order'] ?? ''));
+        $order = '' === $order_raw ? '' : (string) absint($order_raw);
+        $topics = self::sanitize_string_list($action['topics'] ?? array(), 'research_manager_invalid_line_topics', 'Research Line topics must be an array of text values.');
+        if (is_wp_error($topics)) { return $topics; }
+        $methods = self::sanitize_string_list($action['methods'] ?? array(), 'research_manager_invalid_line_methods', 'Research Line methods must be an array of text values.');
+        if (is_wp_error($methods)) { return $methods; }
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+        if ('' === $title || '' === $slug || ! self::valid_creation_token($creation_token)) { return new WP_Error('research_manager_invalid_line_creation', 'Research Line creation requires a title, slug and provenance token.'); }
+        if (strlen($title) > self::MAX_TITLE_BYTES || strlen($excerpt) > self::MAX_EXCERPT_BYTES || strlen($content) > self::MAX_CONTENT_BYTES) { return new WP_Error('research_manager_line_content_too_large', 'Research Line title, excerpt or body exceeds the bounded contract.'); }
+        if (! in_array($language, $languages, true)) { return new WP_Error('research_manager_unknown_language', 'Research Line language is outside the active Research preset.'); }
+        if (! in_array($post_status, array('draft','publish'), true)) { return new WP_Error('research_manager_invalid_line_post_status', 'Research Line creation only permits draft or publish status.'); }
+        if (! array_key_exists($evidence_status, $evidence_statuses)) { return new WP_Error('research_manager_unknown_line_evidence_status', 'Research Line evidence status is outside the active Theme contract.'); }
+        if (! array_key_exists($research_status, $statuses)) { return new WP_Error('research_manager_unknown_line_status', 'Research Line status is outside the active Theme contract.'); }
+        if ('publish' === $post_status && 'verified' !== $evidence_status) { return new WP_Error('research_manager_unverified_line_publish', 'A public Research Line must have verified provenance.'); }
+        return array(
+            'type'=>'create_line','title'=>$title,'slug'=>$slug,'excerpt'=>$excerpt,'content'=>$content,'language'=>$language,'status'=>$post_status,
+            'evidence_status'=>$evidence_status,'research_status'=>$research_status,'central_question'=>$central_question,'order'=>$order,
+            'topics'=>$topics,'methods'=>$methods,'creation_token'=>$creation_token,
+        );
     }
 
     private static function normalize_output_creation(array $action): array|WP_Error {
@@ -526,6 +566,7 @@ final class Eduardo_Research_Manager_Plan {
         if ('post_field' === $action['type']) { return 'post_field:' . $action['post_id'] . ':' . $action['field']; }
         if ('create_page' === $action['type']) { return 'create_page:' . $action['wp_slug']; }
         if ('create_insight' === $action['type']) { return 'create_insight:' . $action['slug']; }
+        if ('create_line' === $action['type']) { return 'create_line:' . $action['slug']; }
         if ('create_output' === $action['type']) { return 'create_output:' . $action['slug']; }
         if ('create_project' === $action['type']) { return 'create_project:' . $action['slug']; }
         if ('create_software' === $action['type']) { return 'create_software:' . $action['slug']; }
