@@ -5,12 +5,14 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-object-editor-quality.yml'
   push:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-object-editor-quality.yml'
 
 permissions:
@@ -39,6 +41,10 @@ jobs:
           extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
 
       - name: Lint Research object editor
         run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php

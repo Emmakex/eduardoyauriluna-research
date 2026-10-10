@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-crossref-quality.yml'
   push:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-crossref-quality.yml'
 
 permissions:
@@ -37,6 +39,10 @@ jobs:
           extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
 
       - name: Lint Crossref adapter
         run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-adapter.php
@@ -193,7 +199,6 @@ jobs:
           if (is_wp_error($preview)) { fwrite(STDERR,$preview->get_error_message()); exit(1); }
           if ("preview" !== $preview["status"] || empty($preview["has_differences"]) || empty($preview["requires_reconciliation"])) { exit(1); }
           if (! empty($preview["automatic_local_apply"]) || ! empty($preview["external_write"])) { exit(1); }
-          if (! empty($preview["comparison"]["doi"]["matches"]) === false) { /* DOI should match; keep explicit check below. */ }
           if (empty($preview["comparison"]["doi"]["matches"])) { fwrite(STDERR,"exact DOI unexpectedly differed\n"); exit(1); }
           if (! empty($preview["comparison"]["title"]["matches"])) { fwrite(STDERR,"title difference not detected\n"); exit(1); }
           if (! empty($preview["comparison"]["authors"]["matches"])) { fwrite(STDERR,"author difference not detected\n"); exit(1); }
