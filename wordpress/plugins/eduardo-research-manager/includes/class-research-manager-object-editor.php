@@ -294,7 +294,7 @@ final class Eduardo_Research_Manager_Object_Editor {
         return $supported[$kind];
     }
 
-    private function resource(string $kind): object|WP_Error {
+    private function resource(string $kind): object {
         return match (sanitize_key($kind)) {
             'output' => Eduardo_Research_Manager::outputs(),
             'project' => Eduardo_Research_Manager::projects(),
@@ -326,7 +326,18 @@ final class Eduardo_Research_Manager_Object_Editor {
         foreach ((array) $spec['fields'] as $field) {
             $state[$field] = $record[$field] ?? null;
         }
+        foreach ($this->auxiliary_state_fields($kind) as $field) {
+            $state[$field] = $record[$field] ?? null;
+        }
         return hash('sha256', (string) wp_json_encode($state));
+    }
+
+    private function auxiliary_state_fields(string $kind): array {
+        return match (sanitize_key($kind)) {
+            'output' => array('output_type_verified','review_status_verified','doi_verified'),
+            'software', 'dataset' => array('doi_verified'),
+            default => array(),
+        };
     }
 
     private function default_value_for_field(string $field): mixed {
