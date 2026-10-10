@@ -65,7 +65,10 @@ jobs:
           test -s "$BUNDLE"
           test -s "$BUNDLE.sha256"
           unzip -t "$BUNDLE"
-          sha256sum -c "$BUNDLE.sha256"
+          (
+            cd "$(dirname "$BUNDLE")"
+            sha256sum -c "$(basename "$BUNDLE").sha256"
+          )
           printf 'GREENFIELD_BUNDLE=%s\n' "$BUNDLE" >> "$GITHUB_ENV"
 
       - name: Extract bundle away from repository sources
@@ -129,8 +132,8 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/research-greenfield-target
-          test "$(wp theme status eduardo-research --field=status --allow-root)" = "active"
-          test "$(wp plugin status eduardo-research-manager --field=status --allow-root)" = "active"
+          test "$(wp theme get eduardo-research --field=status --allow-root)" = "active"
+          test "$(wp plugin get eduardo-research-manager --field=status --allow-root)" = "active"
           test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.0.0"
           test "$(wp plugin get eduardo-research-manager --field=version --allow-root)" = "0.9.0"
           test "$(wp post list --post_type=research_line --post_status=publish --format=count --allow-root)" = "8"
