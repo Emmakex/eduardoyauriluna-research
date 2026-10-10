@@ -1,0 +1,128 @@
+name: Research Greenfield Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-greenfield-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-greenfield-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-console:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint admin controller
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-admin.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-greenfield-admin-wp
+          mkdir -p /tmp/research-greenfield-admin-wp
+          cd /tmp/research-greenfield-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Greenfield Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Render canonical Greenfield console
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          ob_start();
+          (new Eduardo_Research_Manager_Admin())->render();
+          $html = (string) ob_get_clean();
+          foreach (["Canonical Greenfield blueprint","Download canonical JSON","Greenfield pipeline preview","Apply canonical Greenfield site","Readiness checks"] as $needle) {
+              if (false === strpos($html, $needle)) { fwrite(STDERR, "missing admin marker: {$needle}\n"); exit(1); }
+          }
+          if (false === strpos($html, "Eduardo Jose Yauri Luna") || false === strpos($html, "eduardoyauriluna.com")) { exit(1); }
+          ' --allow-root
+
+      - name: Apply canonical site through admin action
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_REQUEST["_wpnonce"] = wp_create_nonce("erm_greenfield_apply");
+          (new Eduardo_Research_Manager_Admin())->handle_apply_canonical();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $state = get_option("eduardo_research_manager_last_pipeline_run", []);
+          if (! is_array($state) || "applied" !== ($state["status"] ?? "") || (int) ($state["snapshot_count"] ?? 0) < 1 || empty($state["snapshots"]) || empty($state["blueprint_sha256"])) { fwrite(STDERR, wp_json_encode($state)); exit(1); }
+          ob_start(); (new Eduardo_Research_Manager_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html, "Rollback last canonical run")) { exit(1); }
+          ' --allow-root
+
+      - name: Export canonical blueprint through admin action
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_REQUEST["_wpnonce"] = wp_create_nonce("erm_blueprint_download");
+          (new Eduardo_Research_Manager_Admin())->handle_download_blueprint();
+          ' --allow-root > /tmp/eduardo-research-blueprint.json
+          php -r '$d=json_decode(file_get_contents("/tmp/eduardo-research-blueprint.json"),true); if(!is_array($d)||($d["site"]["name"]??"")!=="Eduardo Jose Yauri Luna"||($d["site"]["canonical_domain"]??"")!=="https://eduardoyauriluna.com"){exit(1);}';
+
+      - name: Roll back canonical site through admin action
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_REQUEST["_wpnonce"] = wp_create_nonce("erm_greenfield_rollback");
+          (new Eduardo_Research_Manager_Admin())->handle_rollback_canonical();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $state = get_option("eduardo_research_manager_last_pipeline_run", []);
+          if (! is_array($state) || "rolled-back" !== ($state["status"] ?? "") || empty($state["rolled_back_at"])) { fwrite(STDERR, wp_json_encode($state)); exit(1); }
+          $lines = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
+          if (0 !== count($lines)) { exit(1); }
+          $home = Eduardo_Research_Manager::pages()->inspect("home", "en");
+          if (is_wp_error($home) || ! empty($home["stored_slots"])) { exit(1); }
+          ' --allow-root
