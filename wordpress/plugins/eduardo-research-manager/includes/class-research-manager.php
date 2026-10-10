@@ -20,6 +20,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
     private static ?Eduardo_Research_Manager_Blueprint $blueprint = null;
     private static ?Eduardo_Research_Manager_Blueprint_Compiler $compiler = null;
+    private static ?Eduardo_Research_Manager_Bootstrap $bootstrap = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -37,6 +38,7 @@ final class Eduardo_Research_Manager {
         self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         self::$blueprint = new Eduardo_Research_Manager_Blueprint();
         self::$compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::$blueprint, self::$greenfield);
+        self::$bootstrap = new Eduardo_Research_Manager_Bootstrap(self::$compiler, self::$executor);
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
@@ -44,6 +46,7 @@ final class Eduardo_Research_Manager {
     public static function greenfield(): Eduardo_Research_Manager_Greenfield { if (! self::$greenfield) { self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::contract()); } return self::$greenfield; }
     public static function blueprint(): Eduardo_Research_Manager_Blueprint { if (! self::$blueprint) { self::$blueprint = new Eduardo_Research_Manager_Blueprint(); } return self::$blueprint; }
     public static function compiler(): Eduardo_Research_Manager_Blueprint_Compiler { if (! self::$compiler) { self::$compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::blueprint(), self::greenfield()); } return self::$compiler; }
+    public static function bootstrap(): Eduardo_Research_Manager_Bootstrap { if (! self::$bootstrap) { self::$bootstrap = new Eduardo_Research_Manager_Bootstrap(self::compiler(), self::executor()); } return self::$bootstrap; }
     public static function contract(): Eduardo_Research_Manager_Contract { if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); } return self::$contract; }
     public static function diagnostics(): Eduardo_Research_Manager_Diagnostics { if (! self::$diagnostics) { self::$diagnostics = new Eduardo_Research_Manager_Diagnostics(self::contract()); } return self::$diagnostics; }
     public static function executor(): Eduardo_Research_Manager_Executor { if (! self::$executor) { self::$executor = new Eduardo_Research_Manager_Executor(); } return self::$executor; }
