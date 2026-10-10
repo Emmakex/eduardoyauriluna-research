@@ -60,6 +60,7 @@ final class Eduardo_Research_Manager {
         if (is_admin()) {
             (new Eduardo_Research_Manager_Admin())->register();
             (new Eduardo_Research_Manager_Insight_Admin())->register();
+            (new Eduardo_Research_Manager_Line_Admin())->register();
         }
     }
 
