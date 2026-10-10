@@ -119,6 +119,60 @@ The difference is the **entry path**:
 
 Migration complexity must therefore remain isolated from the normal Greenfield creation path. A new website must never pay the architectural or operational cost of pretending that it is a migration.
 
+---
+
+## Two real validation sites — fixed product path
+
+The Manager is intentionally being validated on **two real WordPress sites** that represent the two operating scenarios. This is the current product-development path and must not be replaced by speculative platform work before both scenarios are proven in practice.
+
+### Test bed A — `eduardoyauriluna.com`
+
+**Scenario:** Greenfield / new website.
+
+Purpose:
+
+- validate the Research Theme as a Theme-owned frontend from a clean WordPress installation;
+- validate direct creation of pages, research entities, navigation, multilingual content and editorial content from known contracts;
+- validate Manager-controlled SEO/GEO and academic discoverability;
+- validate that the Manager can create, modify, optimise, publish and verify the site without first interpreting legacy WordPress state;
+- expose any operation that still unnecessarily depends on SSH/WP-CLI so it can be moved into the normal Manager product surface.
+
+This site is the reference for **native creation and operation**.
+
+### Test bed B — `emmake.com`
+
+**Scenario:** Existing website / migration-adoption.
+
+Purpose:
+
+- validate the generic SEO/GEO Theme + Manager against a real existing WordPress site;
+- validate scan/audit, mapping and controlled adoption of existing content and URLs;
+- validate preservation of valuable SEO state while moving frontend control toward the Theme contract;
+- validate page, blog, media, navigation and SEO/GEO operations on a non-greenfield installation;
+- validate that migration/adoption complexity stays isolated from the normal Greenfield workflow.
+
+This site is the reference for **existing-site adoption and optimisation**.
+
+### Shared validation target
+
+Both sites must prove the same end-state capability:
+
+`Manager -> create / modify / style / publish / optimise SEO+GEO / verify -> WordPress site`
+
+The implementation may enter through different paths, but the reusable Manager services, Theme contracts and optimisation logic should converge wherever possible.
+
+### Development guardrail
+
+Until these two sites have validated the Manager end to end, product development should prioritise gaps discovered while operating them. Remote API, multi-client control-center and other broader platform capabilities remain future layers; they must not displace the two-site validation path.
+
+When discussing roadmap or next steps, always identify which of the two scenarios is being advanced and preserve the distinction between:
+
+1. implemented in repository;
+2. verified by CI/tests;
+3. validated on `eduardoyauriluna.com` or `emmake.com` in the corresponding real scenario.
+
+---
+
 ## Decision for Research
 
 For the Research project, all upcoming Manager development must assume **Greenfield mode by default**. Migration/adoption capabilities are reusable platform concerns and must not dictate the workflow of `eduardoyauriluna.com`.
