@@ -1,0 +1,248 @@
+name: Research Manager Remote M2 Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-manager-remote-m2-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-manager-remote-m2-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remote-m2:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint M2 lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-remote-m2
+          mkdir -p /tmp/research-manager-remote-m2
+          cd /tmp/research-manager-remote-m2
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp config set WP_ENVIRONMENT_TYPE development --type=constant --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Manager Remote M2' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Verify M2 Plan Apply Verify Rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/research-manager-remote-m2-test.php <<'PHP'
+          <?php
+          wp_set_current_user(1);
+          $credentials = Eduardo_Research_Manager::remote_credentials();
+
+          function fail_m2(string $message, mixed $context = null): never {
+              fwrite(STDERR, "M2 FAIL: {$message}\n");
+              if (null !== $context) { fwrite(STDERR, wp_json_encode($context, JSON_PRETTY_PRINT) . "\n"); }
+              exit(1);
+          }
+
+          function m2_request(string $method, string $route, string $token, array $body = array(), ?string $request_id = null): WP_REST_Response {
+              $request = new WP_REST_Request($method, '/research-manager/v1/' . ltrim($route, '/'));
+              $request->set_header('Authorization', 'Bearer ' . $token);
+              $request->set_header('X-Research-Manager-Request-Id', $request_id ?: 'req-' . wp_generate_uuid4());
+              $request->set_header('X-Research-Manager-Nonce', 'nonce-' . str_replace('-', '', wp_generate_uuid4()));
+              $request->set_header('X-Research-Manager-Timestamp', (string) time());
+              if ($body) {
+                  $request->set_header('Content-Type', 'application/json');
+                  $request->set_body((string) wp_json_encode($body));
+              }
+              return rest_do_request($request);
+          }
+
+          rest_get_server();
+          $issued = $credentials->issue_token(array('site.read','site.diagnostics','operations.apply','operations.rollback'), 1, 'CI M2 Bridge');
+          if (is_wp_error($issued) || empty($issued['token'])) { fail_m2('credential issuance failed'); }
+          $token = (string) $issued['token'];
+
+          $routes = rest_get_server()->get_routes();
+          foreach (array('/research-manager/v1/operations/plan') as $route) {
+              if (! isset($routes[$route])) { fail_m2('M2 route missing: ' . $route); }
+          }
+
+          $cap = m2_request('GET', 'capabilities', $token)->get_data();
+          if (empty($cap['data']['mutation_transport']['available'])) { fail_m2('capabilities still report mutation transport unavailable', $cap); }
+
+          $plan_request_id = 'req-plan-idempotent-0001';
+          $plan_body = array('operation'=>'greenfield-canonical','payload'=>array('reason'=>'CI exact plan lifecycle'));
+          $plan_response = m2_request('POST', 'operations/plan', $token, $plan_body, $plan_request_id);
+          if (200 !== $plan_response->get_status()) { fail_m2('plan creation failed', $plan_response->get_data()); }
+          $plan_data = $plan_response->get_data();
+          $plan = $plan_data['data'] ?? array();
+          $plan_id = (string) ($plan['plan_id'] ?? '');
+          if ('' === $plan_id || empty($plan['source_revision']) || empty($plan['expires_at']) || ! array_key_exists('preview', $plan)) {
+              fail_m2('plan contract incomplete', $plan);
+          }
+          if (empty($plan['confirmation_required']) || empty($plan['confirmation_class'])) { fail_m2('plan confirmation contract missing', $plan); }
+
+          $plan_retry = m2_request('POST', 'operations/plan', $token, $plan_body, $plan_request_id);
+          $retry_data = $plan_retry->get_data();
+          if (200 !== $plan_retry->get_status() || empty($retry_data['idempotent_replay']) || $plan_id !== (string) ($retry_data['data']['plan_id'] ?? '')) {
+              fail_m2('plan idempotent retry failed', $retry_data);
+          }
+          $conflict = m2_request('POST', 'operations/plan', $token, array('operation'=>'greenfield-canonical','payload'=>array('reason'=>'different')), $plan_request_id);
+          if (409 !== $conflict->get_status() || 'validation_failed' !== (string) ($conflict->get_data()['code'] ?? '')) {
+              fail_m2('request ID payload conflict was not rejected', $conflict->get_data());
+          }
+
+          $no_confirm = m2_request('POST', 'plans/' . rawurlencode($plan_id) . '/apply', $token, array('confirm'=>false));
+          if (409 !== $no_confirm->get_status() || 'confirmation_required' !== (string) ($no_confirm->get_data()['code'] ?? '')) {
+              fail_m2('Apply without confirmation was not blocked', $no_confirm->get_data());
+          }
+
+          // Prove stale-state rejection by changing the managed site through the same local pipeline after Preview.
+          $blueprint = Eduardo_Research_Manager::blueprint_store()->canonical();
+          if (is_wp_error($blueprint)) { fail_m2('canonical blueprint unavailable', $blueprint->get_error_message()); }
+          $local_apply = Eduardo_Research_Manager::pipeline()->apply($blueprint);
+          if (is_wp_error($local_apply)) { fail_m2('local state-change setup failed', $local_apply->get_error_message()); }
+          $stale = m2_request('POST', 'plans/' . rawurlencode($plan_id) . '/apply', $token, array('confirm'=>true));
+          if (409 !== $stale->get_status() || 'stale_revision' !== (string) ($stale->get_data()['code'] ?? '')) {
+              fail_m2('stale plan was not rejected', $stale->get_data());
+          }
+          $local_rollback = Eduardo_Research_Manager::pipeline()->rollback((array) ($local_apply['snapshots'] ?? array()));
+          if (is_wp_error($local_rollback)) { fail_m2('local stale-test rollback failed', $local_rollback->get_error_message()); }
+
+          // Prove expiry using an independently prepared plan.
+          $expiry_response = m2_request('POST', 'operations/plan', $token, array('operation'=>'greenfield-canonical','payload'=>array('reason'=>'expiry test')));
+          $expiry_plan_id = (string) ($expiry_response->get_data()['data']['plan_id'] ?? '');
+          if ('' === $expiry_plan_id) { fail_m2('expiry plan missing'); }
+          $plans = get_option('eduardo_research_manager_remote_plans', array());
+          $plans[$expiry_plan_id]['expires_unix'] = time() - 10;
+          update_option('eduardo_research_manager_remote_plans', $plans, false);
+          $expired = m2_request('POST', 'plans/' . rawurlencode($expiry_plan_id) . '/apply', $token, array('confirm'=>true));
+          if (409 !== $expired->get_status() || 'plan_expired' !== (string) ($expired->get_data()['code'] ?? '')) {
+              fail_m2('expired plan was not rejected', $expired->get_data());
+          }
+
+          // Fresh plan → exact Apply.
+          $fresh = m2_request('POST', 'operations/plan', $token, array('operation'=>'greenfield-canonical','payload'=>array('reason'=>'real M2 apply')));
+          if (200 !== $fresh->get_status()) { fail_m2('fresh plan failed', $fresh->get_data()); }
+          $fresh_plan = $fresh->get_data()['data'] ?? array();
+          $fresh_plan_id = (string) ($fresh_plan['plan_id'] ?? '');
+          $apply_request_id = 'req-apply-idempotent-0001';
+          $apply = m2_request('POST', 'plans/' . rawurlencode($fresh_plan_id) . '/apply', $token, array('confirm'=>true), $apply_request_id);
+          if (200 !== $apply->get_status()) { fail_m2('exact Apply failed', $apply->get_data()); }
+          $operation = $apply->get_data()['data'] ?? array();
+          $operation_id = (string) ($operation['operation_id'] ?? '');
+          if ('' === $operation_id || 'applied' !== (string) ($operation['status'] ?? '')) { fail_m2('operation contract invalid after Apply', $operation); }
+
+          $apply_retry = m2_request('POST', 'plans/' . rawurlencode($fresh_plan_id) . '/apply', $token, array('confirm'=>true), $apply_request_id);
+          $apply_retry_data = $apply_retry->get_data();
+          if (200 !== $apply_retry->get_status() || empty($apply_retry_data['idempotent_replay']) || $operation_id !== (string) ($apply_retry_data['data']['operation_id'] ?? '')) {
+              fail_m2('Apply retry did not return original operation', $apply_retry_data);
+          }
+
+          $status = m2_request('GET', 'operations/' . rawurlencode($operation_id), $token);
+          if (200 !== $status->get_status() || $operation_id !== (string) ($status->get_data()['data']['operation_id'] ?? '')) {
+              fail_m2('operation status retrieval failed', $status->get_data());
+          }
+
+          $stored_verify = m2_request('POST', 'operations/' . rawurlencode($operation_id) . '/verify', $token, array('rendered'=>false));
+          if (200 !== $stored_verify->get_status()) { fail_m2('stored verification call failed', $stored_verify->get_data()); }
+          $stored_operation = $stored_verify->get_data()['data'] ?? array();
+          if (empty($stored_operation['stored_verification']['verified'])) { fail_m2('stored verification did not pass', $stored_operation); }
+
+          // Render verification uses the real verifier while preempting HTTP with a deterministic valid Theme response.
+          add_filter('pre_http_request', static function ($preempt, $args, $url) {
+              $lang = (false !== strpos((string) $url, '/es')) ? 'es' : 'en';
+              $safe = esc_url((string) $url);
+              $body = '<!doctype html><html lang="' . esc_attr($lang) . '"><head>'
+                  . '<link rel="canonical" href="' . $safe . '">'
+                  . '<link rel="alternate" hreflang="en" href="' . $safe . '">'
+                  . '<link rel="alternate" hreflang="es" href="' . $safe . '">'
+                  . '<link rel="alternate" hreflang="x-default" href="' . $safe . '">'
+                  . '<meta property="og:url" content="' . $safe . '">'
+                  . '<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage"}</script>'
+                  . '</head><body>Research</body></html>';
+              return array('headers'=>array(),'body'=>$body,'response'=>array('code'=>200,'message'=>'OK'),'cookies'=>array(),'filename'=>null);
+          }, 10, 3);
+          $rendered_verify = m2_request('POST', 'operations/' . rawurlencode($operation_id) . '/verify', $token, array('rendered'=>true));
+          remove_all_filters('pre_http_request');
+          if (200 !== $rendered_verify->get_status()) { fail_m2('rendered verification call failed', $rendered_verify->get_data()); }
+          $verified_operation = $rendered_verify->get_data()['data'] ?? array();
+          if ('verified' !== (string) ($verified_operation['status'] ?? '') || empty($verified_operation['rendered_verification']['verified'])) {
+              fail_m2('rendered verification did not pass', $verified_operation);
+          }
+          $rendered_json = wp_json_encode($verified_operation['rendered_verification']);
+          if (false !== strpos($rendered_json, '<html')) { fail_m2('rendered verification leaked response bodies'); }
+
+          $rollback_no_confirm = m2_request('POST', 'operations/' . rawurlencode($operation_id) . '/rollback', $token, array('confirm'=>false));
+          if (409 !== $rollback_no_confirm->get_status() || 'confirmation_required' !== (string) ($rollback_no_confirm->get_data()['code'] ?? '')) {
+              fail_m2('rollback without confirmation was not blocked', $rollback_no_confirm->get_data());
+          }
+          $rollback_request_id = 'req-rollback-idempotent-0001';
+          $rollback = m2_request('POST', 'operations/' . rawurlencode($operation_id) . '/rollback', $token, array('confirm'=>true), $rollback_request_id);
+          if (200 !== $rollback->get_status()) { fail_m2('rollback failed', $rollback->get_data()); }
+          $rolled = $rollback->get_data()['data'] ?? array();
+          if ('rolled-back' !== (string) ($rolled['status'] ?? '')) { fail_m2('rollback status incorrect', $rolled); }
+          $rollback_retry = m2_request('POST', 'operations/' . rawurlencode($operation_id) . '/rollback', $token, array('confirm'=>true), $rollback_request_id);
+          if (200 !== $rollback_retry->get_status() || empty($rollback_retry->get_data()['idempotent_replay'])) {
+              fail_m2('rollback retry idempotency failed', $rollback_retry->get_data());
+          }
+
+          $audit = get_option('eduardo_research_manager_remote_audit', array());
+          $audit_json = wp_json_encode($audit);
+          foreach (array($fresh_plan_id, $operation_id, $apply_request_id, $rollback_request_id) as $needle) {
+              if (false === strpos($audit_json, $needle)) { fail_m2('audit correlation missing: ' . $needle, $audit); }
+          }
+          if (false !== strpos($audit_json, $token)) { fail_m2('audit leaked bearer token'); }
+
+          echo "M2 exact remote operation lifecycle acceptance OK\n";
+          PHP
+
+          cd /tmp/research-manager-remote-m2
+          wp eval-file /tmp/research-manager-remote-m2-test.php --allow-root

@@ -137,7 +137,9 @@ jobs:
           if (! in_array('site.read', $cap_data['granted_scopes'] ?? array(), true) || ! in_array('site.diagnostics', $cap_data['granted_scopes'] ?? array(), true)) {
               fail_m1('capabilities omitted granted scopes', $cap_data);
           }
-          if (true === ($cap_data['mutation_transport']['available'] ?? true)) { fail_m1('M1 unexpectedly exposes mutation transport', $cap_data); }
+          if (empty($cap_data['mutation_transport']) || ! array_key_exists('available', $cap_data['mutation_transport'])) {
+              fail_m1('capabilities omitted mutation transport declaration', $cap_data);
+          }
 
           $credentials->set_scopes(array('site.read'));
           $denied = remote_request('readiness', $token1);
