@@ -41,6 +41,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-boo
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-hydrator.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-pairing.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-relations.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield-pipeline.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
