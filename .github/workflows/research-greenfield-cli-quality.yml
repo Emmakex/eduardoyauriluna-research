@@ -1,0 +1,149 @@
+name: Research Greenfield CLI Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-greenfield-cli-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-greenfield-cli-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  greenfield-cli:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint Greenfield CLI surface
+        shell: bash
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield-cli.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-greenfield-cli-wp
+          mkdir -p /tmp/research-greenfield-cli-wp
+          cd /tmp/research-greenfield-cli-wp
+          ADMIN_PASSWORD="$(php -r 'echo bin2hex(random_bytes(16));')"
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Greenfield CLI' --admin_user=admin --admin_password="$ADMIN_PASSWORD" --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Prove command registration and initial status
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          wp help research-manager greenfield --allow-root >/tmp/greenfield-help.txt
+          for command in status preview apply rollback; do grep -F "$command" /tmp/greenfield-help.txt; done
+          wp research-manager greenfield status --allow-root >/tmp/greenfield-status.json
+          php -r '$d=json_decode(file_get_contents("/tmp/greenfield-status.json"),true); if(!is_array($d)||($d["mode"]??"")!=="greenfield"||empty($d["active_theme"]["research_theme_active"])||($d["blueprint"]["total_resources"]??0)!==20||strlen((string)($d["blueprint"]["sha256"]??""))!==64){exit(1);}'
+
+      - name: Preview canonical plan with zero mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          before="$(wp post list --post_type=research_line --post_status=any --format=count --allow-root)"
+          wp research-manager greenfield preview --allow-root >/tmp/greenfield-preview.json
+          after="$(wp post list --post_type=research_line --post_status=any --format=count --allow-root)"
+          test "$before" = "$after"
+          php -r '$d=json_decode(file_get_contents("/tmp/greenfield-preview.json"),true); if(!is_array($d)||strlen((string)($d["blueprint_sha256"]??""))!==64||empty($d["preview"]["apply_allowed"])||!empty($d["preview"]["requires_legacy_discovery"])||!empty($d["preview"]["requires_legacy_mapping"])||!empty($d["preview"]["requires_gutenberg_layout"])){exit(1);}'
+
+      - name: Require administrator context for mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          if wp research-manager greenfield apply --yes --allow-root >/tmp/greenfield-no-user.out 2>&1; then exit 1; fi
+          grep -F 'Administrator capability is required' /tmp/greenfield-no-user.out
+
+      - name: Apply and verify canonical Greenfield site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          wp research-manager greenfield apply --user=admin --yes --allow-root >/tmp/greenfield-apply.out
+          grep -F 'Success:' /tmp/greenfield-apply.out
+          wp eval '
+          $state=get_option("eduardo_research_manager_last_pipeline_run",[]);
+          $report=Eduardo_Research_Manager::diagnostics()->run();
+          if (!is_array($state)||"applied"!==($state["status"]??"")||($state["operator"]??"")!=="wp-cli"||(int)($state["snapshot_count"]??0)<1||empty($state["snapshots"])||strlen((string)($state["blueprint_sha256"]??""))!==64||empty($report["ready"])||(int)($report["summary"]["fail"]??1)!==0) { exit(1); }
+          ' --allow-root
+          wp option get eduardo_research_manager_last_pipeline_run --format=json --allow-root >/tmp/greenfield-state-before-noop.json
+
+      - name: Re-apply is a no-op and preserves reversible state
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          wp research-manager greenfield apply --user=admin --yes --allow-root >/tmp/greenfield-noop.out
+          grep -F 'no mutation was required' /tmp/greenfield-noop.out
+          wp option get eduardo_research_manager_last_pipeline_run --format=json --allow-root >/tmp/greenfield-state-after-noop.json
+          cmp /tmp/greenfield-state-before-noop.json /tmp/greenfield-state-after-noop.json
+
+      - name: Roll back latest canonical run
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          wp research-manager greenfield rollback --user=admin --yes --allow-root >/tmp/greenfield-rollback.out
+          grep -F 'Success:' /tmp/greenfield-rollback.out
+          wp eval '
+          $state=get_option("eduardo_research_manager_last_pipeline_run",[]);
+          if (!is_array($state)||"rolled-back"!==($state["status"]??"")||($state["rollback_operator"]??"")!=="wp-cli"||empty($state["rolled_back_at"])) { exit(1); }
+          $lines=get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
+          if (count($lines)!==0) { exit(1); }
+          $home=Eduardo_Research_Manager::pages()->inspect("home","en");
+          if (is_wp_error($home)||!empty($home["stored_slots"])) { exit(1); }
+          ' --allow-root
+
+      - name: Status exposes rolled-back deployment state
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-cli-wp
+          wp research-manager greenfield status --allow-root >/tmp/greenfield-final-status.json
+          php -r '$d=json_decode(file_get_contents("/tmp/greenfield-final-status.json"),true); if(!is_array($d)||($d["last_run"]["status"]??"")!=="rolled-back"||($d["last_run"]["operator"]??"")!=="wp-cli"||($d["last_run"]["rollback_operator"]??"")!=="wp-cli"){exit(1);}'
