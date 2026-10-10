@@ -1,0 +1,239 @@
+name: Research Evidence Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-evidence-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-evidence-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Academic Evidence admin files
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-evidence-admin-wp
+          mkdir -p /tmp/research-evidence-admin-wp
+          cd /tmp/research-evidence-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Jose Yauri Luna' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Render Academic Evidence authoring screen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_GET = ["erm_evidence_group"=>"profile"];
+          ob_start(); (new Eduardo_Research_Manager_Evidence_Admin())->render(); $html = (string) ob_get_clean();
+          foreach ([
+              "Research Evidence","Verified academic identity","Evidence groups","Academic evidence gate",
+              "Create Research profile evidence","Existing evidence records","Preview new evidence record"
+          ] as $needle) {
+              if (false === strpos($html,$needle)) { fwrite(STDERR,"missing marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Prove identity Apply is blocked without evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "evidence_operation"=>"identity","identity_name"=>"Eduardo Jose Yauri Luna",
+              "evidence_reference"=>"","_wpnonce"=>wp_create_nonce("erm_evidence_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_evidence_preview_1");
+          if (! is_array($prepared) || "identity" !== ($prepared["resource"] ?? "") || ! empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "") || empty($prepared["apply_blocker"])) {
+              fwrite(STDERR,wp_json_encode($prepared)); exit(1);
+          }
+          $_GET = ["erm_evidence_group"=>"profile"];
+          ob_start(); (new Eduardo_Research_Manager_Evidence_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html,"Apply is blocked") || false !== strpos($html,"Apply prepared Academic Evidence change")) { exit(1); }
+          delete_transient("eduardo_research_manager_evidence_preview_1");
+          ' --allow-root
+
+      - name: Preview and apply verified academic identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "evidence_operation"=>"identity","identity_name"=>"Eduardo Jose Yauri Luna",
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI verified canonical identity source",
+              "_wpnonce"=>wp_create_nonce("erm_evidence_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_evidence_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "")) { fwrite(STDERR,wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_evidence_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $identity = Eduardo_Research_Manager::evidence_editor()->identity();
+          $edit = get_transient("eduardo_research_manager_evidence_edit_1");
+          if (is_wp_error($identity) || "Eduardo Jose Yauri Luna" !== $identity["name"] || "CI verified canonical identity source" !== $identity["evidence_reference"] || "" === $identity["verified_at"] || ! is_array($edit) || "identity" !== ($edit["resource"] ?? "") || empty($edit["snapshot_id"])) { exit(1); }
+          ' --allow-root
+
+      - name: Create verified academic identifier through admin handlers
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "evidence_operation"=>"record","evidence_group"=>"identifiers","record_id"=>"",
+              "status"=>"verified","title"=>"ORCID test fixture","label"=>"ORCID","value"=>"0000-0002-1825-0097",
+              "url"=>"https://orcid.org/0000-0002-1825-0097","summary"=>"CI-only academic identifier fixture.",
+              "es_title"=>"Fixture de ORCID","es_label"=>"ORCID","es_value"=>"0000-0002-1825-0097","es_summary"=>"Fixture académico exclusivo para CI.",
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI synthetic ORCID verification source",
+              "_wpnonce"=>wp_create_nonce("erm_evidence_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_evidence_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "identifiers" !== ($prepared["group"] ?? "") || "create" !== ($prepared["operation"] ?? "") || empty($prepared["record_id"])) { fwrite(STDERR,wp_json_encode($prepared)); exit(1); }
+          update_option("research_evidence_admin_identifier_id",(string)$prepared["record_id"],false);
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_evidence_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $id = (string)get_option("research_evidence_admin_identifier_id","");
+          $record = Eduardo_Research_Manager::evidence_editor()->inspect_record("identifiers",$id);
+          if (is_wp_error($record) || "verified" !== $record["status"] || "CI synthetic ORCID verification source" !== $record["evidence_reference"] || "Fixture de ORCID" !== ($record["translations"]["es"]["title"] ?? "")) { fwrite(STDERR,wp_json_encode($record)); exit(1); }
+          $urls = eduardo_research_verified_identifier_urls();
+          if (! in_array("https://orcid.org/0000-0002-1825-0097",$urls,true)) { fwrite(STDERR,wp_json_encode($urls)); exit(1); }
+          $_GET = ["erm_evidence_group"=>"identifiers","erm_evidence_id"=>$id];
+          ob_start(); (new Eduardo_Research_Manager_Evidence_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["ORCID test fixture","CI synthetic ORCID verification source","Edit selected evidence record","Preview evidence changes","Preview evidence deletion"] as $needle) {
+              if (false === strpos($html,$needle)) { fwrite(STDERR,"missing identifier marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Update identifier and preserve Spanish localization
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $id=(string)get_option("research_evidence_admin_identifier_id","");
+          $_POST = [
+              "evidence_operation"=>"record","evidence_group"=>"identifiers","record_id"=>$id,
+              "status"=>"verified","title"=>"ORCID test fixture","label"=>"ORCID","value"=>"0000-0002-1825-0097",
+              "url"=>"https://orcid.org/0000-0002-1825-0097","summary"=>"Updated CI-only academic identifier fixture.",
+              "es_title"=>"Fixture de ORCID","es_label"=>"ORCID","es_value"=>"0000-0002-1825-0097","es_summary"=>"Fixture académico actualizado para CI.",
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI synthetic ORCID update source",
+              "_wpnonce"=>wp_create_nonce("erm_evidence_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared=get_transient("eduardo_research_manager_evidence_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "update" !== ($prepared["operation"] ?? "")) { exit(1); }
+          $_POST=["_wpnonce"=>wp_create_nonce("erm_evidence_apply")]; $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          $id=(string)get_option("research_evidence_admin_identifier_id","");
+          $record=Eduardo_Research_Manager::evidence_editor()->inspect_record("identifiers",$id);
+          if (is_wp_error($record) || "Updated CI-only academic identifier fixture." !== $record["summary"] || "Fixture académico actualizado para CI." !== ($record["translations"]["es"]["summary"] ?? "") || "CI synthetic ORCID update source" !== $record["evidence_reference"]) { exit(1); }
+          ' --allow-root
+
+      - name: Delete identifier through gated Preview then rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $id=(string)get_option("research_evidence_admin_identifier_id","");
+          $_POST=[
+              "evidence_operation"=>"delete","evidence_group"=>"identifiers","record_id"=>$id,
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI synthetic ORCID removal source",
+              "_wpnonce"=>wp_create_nonce("erm_evidence_preview")
+          ]; $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared=get_transient("eduardo_research_manager_evidence_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "delete" !== ($prepared["operation"] ?? "")) { exit(1); }
+          $_POST=["_wpnonce"=>wp_create_nonce("erm_evidence_apply")]; $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $id=(string)get_option("research_evidence_admin_identifier_id","");
+          $missing=Eduardo_Research_Manager::evidence_editor()->inspect_record("identifiers",$id);
+          $edit=get_transient("eduardo_research_manager_evidence_edit_1");
+          if (! is_wp_error($missing) || "research_manager_evidence_record_missing" !== $missing->get_error_code() || ! is_array($edit) || "delete" !== ($edit["operation"] ?? "") || empty($edit["snapshot_id"])) { exit(1); }
+          $_POST=["_wpnonce"=>wp_create_nonce("erm_evidence_rollback")]; $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_Evidence_Admin())->handle_rollback();
+          ' --allow-root
+          wp eval '
+          $id=(string)get_option("research_evidence_admin_identifier_id","");
+          $record=Eduardo_Research_Manager::evidence_editor()->inspect_record("identifiers",$id);
+          if (is_wp_error($record) || "Updated CI-only academic identifier fixture." !== $record["summary"] || get_transient("eduardo_research_manager_evidence_edit_1")) { exit(1); }
+          ' --allow-root
