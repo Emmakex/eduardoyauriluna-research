@@ -1,0 +1,127 @@
+name: Research Evidence Editor Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-evidence-editor-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-evidence-editor-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-editor:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Lint Evidence editor service
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-editor.php
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-evidence-editor-wp
+          mkdir -p /tmp/research-evidence-editor-wp
+          cd /tmp/research-evidence-editor-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Jose Yauri Luna' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+      - name: Exercise identity evidence CRUD stale protection and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-evidence-editor-wp
+          wp eval '
+          wp_set_current_user(1);
+          $editor = Eduardo_Research_Manager::evidence_editor();
+          if (! $editor instanceof Eduardo_Research_Manager_Evidence_Editor) { exit(1); }
+          $expected = ["profile","affiliations","identifiers","research_questions","methods","experience","education","awards","contact"];
+          if (array_keys($editor->groups()) !== $expected) { exit(1); }
+
+          $blocked = $editor->preview_identity("Eduardo Jose Yauri Luna");
+          if (is_wp_error($blocked) || ! empty($blocked["apply_allowed"]) || "evidence-required" !== ($blocked["risk"] ?? "")) { exit(1); }
+          $prepared = $editor->preview_identity("Eduardo Jose Yauri Luna", true, "CI verified identity source");
+          $applied = is_wp_error($prepared) ? $prepared : $editor->apply_preview($prepared);
+          if (is_wp_error($applied) || empty($applied["verified"]) || empty($applied["snapshot_id"])) { exit(1); }
+          $identity = $editor->identity();
+          if (is_wp_error($identity) || "CI verified identity source" !== $identity["evidence_reference"] || "" === $identity["verified_at"]) { exit(1); }
+          $noop = $editor->preview_identity("Eduardo Jose Yauri Luna");
+          if (is_wp_error($noop) || "already-matching" !== ($noop["status"] ?? "")) { exit(1); }
+          if (is_wp_error($editor->rollback((string) $applied["snapshot_id"]))) { exit(1); }
+
+          $data = [
+              "status"=>"verified",
+              "title"=>"Applied digital systems research profile",
+              "summary"=>"Evidence-backed research profile for controlled public surfaces.",
+              "url"=>"https://eduardoyauriluna.com/",
+              "translations"=>["es"=>["title"=>"Perfil de investigación en sistemas digitales aplicados","summary"=>"Perfil verificado para superficies públicas."]]
+          ];
+          $blocked_record = $editor->preview_record("profile", "", $data);
+          if (is_wp_error($blocked_record) || ! empty($blocked_record["apply_allowed"]) || "create" !== ($blocked_record["operation"] ?? "")) { exit(1); }
+          $create = $editor->preview_record("profile", "", $data, true, "CI verified profile source");
+          $created = is_wp_error($create) ? $create : $editor->apply_preview($create);
+          if (is_wp_error($created) || empty($created["verified"]) || empty($created["snapshot_id"])) { exit(1); }
+          $id = (string) $create["record_id"];
+          $record = $editor->inspect_record("profile", $id);
+          if (is_wp_error($record) || "verified" !== $record["status"] || "CI verified profile source" !== $record["evidence_reference"] || "Perfil de investigación en sistemas digitales aplicados" !== ($record["translations"]["es"]["title"] ?? "")) { exit(1); }
+          $public = eduardo_research_verified_evidence("profile");
+          if (1 !== count($public) || "Applied digital systems research profile" !== ($public[0]["title"] ?? "")) { exit(1); }
+          if ("Perfil de investigación en sistemas digitales aplicados" !== (eduardo_research_localize_record($public[0], "es")["title"] ?? "")) { exit(1); }
+
+          $changes = $record;
+          unset($changes["record_id"], $changes["index"], $changes["id"], $changes["evidence_reference"], $changes["verified_at"]);
+          $changes["summary"] = "Updated verified profile summary.";
+          $blocked_update = $editor->preview_record("profile", $id, $changes);
+          if (is_wp_error($blocked_update) || ! empty($blocked_update["apply_allowed"]) || "update" !== ($blocked_update["operation"] ?? "")) { exit(1); }
+          $stale_preview = $editor->preview_record("profile", $id, $changes, true, "CI verified profile update");
+          $store = get_option("eduardo_research_evidence", []);
+          $store["methods"] = [["id"=>"concurrent-method","status"=>"unverified","title"=>"Concurrent method"]];
+          update_option("eduardo_research_evidence", $store, false);
+          $stale = $editor->apply_preview($stale_preview);
+          if (! is_wp_error($stale) || "research_manager_evidence_stale_preview" !== $stale->get_error_code()) { exit(1); }
+          unset($store["methods"]); update_option("eduardo_research_evidence", $store, false);
+          $fresh = $editor->preview_record("profile", $id, $changes, true, "CI verified profile update");
+          $updated = is_wp_error($fresh) ? $fresh : $editor->apply_preview($fresh);
+          if (is_wp_error($updated) || empty($updated["verified"])) { exit(1); }
+
+          $delete_blocked = $editor->preview_delete_record("profile", $id);
+          if (is_wp_error($delete_blocked) || ! empty($delete_blocked["apply_allowed"])) { exit(1); }
+          $delete = $editor->preview_delete_record("profile", $id, true, "CI verified evidence removal");
+          $deleted = is_wp_error($delete) ? $delete : $editor->apply_preview($delete);
+          if (is_wp_error($deleted) || empty($deleted["verified"]) || empty($deleted["snapshot_id"])) { exit(1); }
+          $missing = $editor->inspect_record("profile", $id);
+          if (! is_wp_error($missing) || "research_manager_evidence_record_missing" !== $missing->get_error_code()) { exit(1); }
+          if (is_wp_error($editor->rollback((string) $deleted["snapshot_id"]))) { exit(1); }
+          $restored = $editor->inspect_record("profile", $id);
+          if (is_wp_error($restored) || "Updated verified profile summary." !== $restored["summary"]) { exit(1); }
+          ' --allow-root
