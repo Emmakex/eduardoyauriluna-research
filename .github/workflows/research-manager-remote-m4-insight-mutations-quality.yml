@@ -1,0 +1,86 @@
+name: Research Manager Remote M4 Insight Mutations Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/scripts/test-remote-m4-insight-mutations.php'
+      - '.github/workflows/research-manager-remote-m4-insight-mutations-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/scripts/test-remote-m4-insight-mutations.php'
+      - '.github/workflows/research-manager-remote-m4-insight-mutations-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remote-m4-insight-mutations:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint M4 Insight mutation bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insights-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          php -l .github/scripts/test-remote-m4-insight-mutations.php
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-remote-m4-mutations
+          mkdir -p /tmp/research-manager-remote-m4-mutations
+          cd /tmp/research-manager-remote-m4-mutations
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp config set WP_ENVIRONMENT_TYPE development --type=constant --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Manager Remote M4 Mutations' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Verify exact M4 Insight create update lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remote-m4-mutations
+          wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-m4-insight-mutations.php" --allow-root
