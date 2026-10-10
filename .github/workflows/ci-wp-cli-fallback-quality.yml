@@ -1,0 +1,39 @@
+name: CI WP-CLI Fallback Quality
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/ci-wp-cli-fallback-quality.yml'
+      - '.github/workflows/research-insight-editor-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/ci-wp-cli-fallback-quality.yml'
+      - '.github/workflows/research-insight-editor-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  fallback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Exercise forced WP-CLI fallback
+        shell: bash
+        env:
+          WP_CLI_FORCE_FALLBACK: '1'
+        run: bash .github/scripts/ensure-wp-cli.sh
+      - name: Verify fallback WP-CLI remains available to later steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v wp
+          wp --info
+          wp cli version
