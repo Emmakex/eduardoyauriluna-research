@@ -123,7 +123,7 @@ final class Eduardo_Research_Manager_Remote_REST {
         return $this->response($request, Eduardo_Research_Manager::diagnostics()->run());
     }
 
-    public function permission(WP_REST_Request $request, string $required_scope): true|WP_Error {
+    public function permission(WP_REST_Request $request, string $required_scope): bool|WP_Error {
         $metadata = $this->guard->validate_metadata($request);
         if (is_wp_error($metadata)) {
             $this->audit_failure($request, $required_scope, $metadata, array());
