@@ -31,7 +31,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
 
         $line_ids = function_exists('eduardo_research_post_line_ids')
             ? eduardo_research_post_line_ids($post_id, $language)
-            : array_values(array_unique(array_filter(array_map('absint', (array) get_post_meta($post_id, '_research_line_ids', true)))));
+            : array_values(array_unique(array_filter(array_map('absint', (array) get_post_meta($post_id, '_research_insight_line_relations', true)))));
 
         return array(
             'post_id'=>$post_id,
@@ -94,7 +94,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
                 $line_ids = $this->sanitize_verified_line_ids($value, (string) $current['language']);
                 if (is_wp_error($line_ids)) { return $line_ids; }
                 if (maybe_serialize($line_ids) !== maybe_serialize((array) $current['line_ids'])) {
-                    $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_line_ids','value'=>$line_ids);
+                    $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_insight_line_relations','value'=>$line_ids);
                 }
                 continue;
             }
