@@ -31,6 +31,7 @@ final class Eduardo_Research_Manager_Workspace {
 
         $this->add_authoring_submenu('Greenfield Site & Pages', 'Site & Pages', 'eduardo-research-manager', new Eduardo_Research_Manager_Admin());
         $this->add_authoring_submenu('Academic Evidence', 'Academic Evidence', 'eduardo-research-evidence', new Eduardo_Research_Manager_Evidence_Admin());
+        $this->add_authoring_submenu('Academic Connections', 'Academic Connections', 'eduardo-research-connections', new Eduardo_Research_Manager_Connections_Admin());
         $this->add_authoring_submenu('Research Lines', 'Research Lines', 'eduardo-research-lines', new Eduardo_Research_Manager_Line_Admin());
         $this->add_authoring_submenu('Research Objects', 'Research Objects', 'eduardo-research-objects', new Eduardo_Research_Manager_Object_Admin());
         $this->add_authoring_submenu('Research Insights', 'Research Insights', 'eduardo-research-insights', new Eduardo_Research_Manager_Insight_Admin());
@@ -50,7 +51,7 @@ final class Eduardo_Research_Manager_Workspace {
         ?>
         <div class="wrap">
           <h1><?php echo esc_html__('Research Workspace', 'eduardo-research-manager'); ?></h1>
-          <p><?php echo esc_html__('One control plane for the Greenfield Research site. The Manager owns structured authoring and academic evidence; the Research Theme remains the public rendering authority.', 'eduardo-research-manager'); ?></p>
+          <p><?php echo esc_html__('One control plane for the Greenfield Research site. The Manager owns structured authoring, academic evidence and connection readiness; the Research Theme remains the public rendering authority.', 'eduardo-research-manager'); ?></p>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;max-width:1180px;margin:18px 0">
             <div class="card" style="margin:0;max-width:none;padding:16px">
@@ -72,7 +73,7 @@ final class Eduardo_Research_Manager_Workspace {
           </div>
 
           <h2><?php echo esc_html__('Authoring workspace', 'eduardo-research-manager'); ?></h2>
-          <p><?php echo esc_html__('Open the dedicated structured editor for each Research resource. Every mutation surface keeps Preview → Apply → Verify → Rollback discipline.', 'eduardo-research-manager'); ?></p>
+          <p><?php echo esc_html__('Open the dedicated structured editor or readiness surface for each Research resource. Every mutation surface keeps Preview → Apply → Verify → Rollback discipline.', 'eduardo-research-manager'); ?></p>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;max-width:1180px;margin:16px 0 26px">
             <?php foreach ($tools as $tool) : ?>
               <section class="card" style="margin:0;max-width:none;padding:18px;display:flex;flex-direction:column;min-height:175px">
@@ -88,6 +89,7 @@ final class Eduardo_Research_Manager_Workspace {
           <table class="widefat striped" style="max-width:1000px"><tbody>
             <tr><th><?php echo esc_html__('Frontend authority', 'eduardo-research-manager'); ?></th><td><?php echo esc_html__('Research Theme — layouts, routes, semantic HTML, responsive behavior and public rendering.', 'eduardo-research-manager'); ?></td></tr>
             <tr><th><?php echo esc_html__('Authoring authority', 'eduardo-research-manager'); ?></th><td><?php echo esc_html__('Research Manager — structured Pages, Insights, Lines, Research Objects, translations and verified evidence.', 'eduardo-research-manager'); ?></td></tr>
+            <tr><th><?php echo esc_html__('Academic connections', 'eduardo-research-manager'); ?></th><td><?php echo esc_html__('Verified identifiers and read/reconcile adapters first; no external write is enabled by default.', 'eduardo-research-manager'); ?></td></tr>
             <tr><th><?php echo esc_html__('Academic safety', 'eduardo-research-manager'); ?></th><td><?php echo esc_html__('Evidence-sensitive claims remain blocked until an explicit verification source is confirmed.', 'eduardo-research-manager'); ?></td></tr>
             <tr><th><?php echo esc_html__('Page composition', 'eduardo-research-manager'); ?></th><td><?php echo esc_html__('Theme-controlled structured slots; no Gutenberg layout composition is required.', 'eduardo-research-manager'); ?></td></tr>
           </tbody></table>
@@ -125,6 +127,13 @@ final class Eduardo_Research_Manager_Workspace {
                 'cta'=>'Open Research Evidence',
             ),
             array(
+                'title'=>'Academic Connections',
+                'description'=>'Inspect ORCID, Scholar, Crossref, Zenodo, OpenAlex and GitHub readiness without exposing credentials or enabling external writes.',
+                'metric'=>sprintf('%d/%d ready or linked providers', (int) ($counts['connections_ready'] ?? 0), (int) ($counts['connections_total'] ?? 0)),
+                'url'=>$this->workspace_url('eduardo-research-connections'),
+                'cta'=>'Open Academic Connections',
+            ),
+            array(
                 'title'=>'Research Lines',
                 'description'=>'Author the evidence-backed research agenda, central questions, methods, topics and research status.',
                 'metric'=>sprintf('%d EN/ES lines', (int) ($counts['lines'] ?? 0)),
@@ -157,9 +166,17 @@ final class Eduardo_Research_Manager_Workspace {
 
     private function counts(): array {
         $languages = Eduardo_Research_Manager::contract()->languages();
+        $connections = Eduardo_Research_Manager::connections()->overview();
+        $connection_summary = is_array($connections['summary'] ?? null) ? $connections['summary'] : array();
+        $connections_ready = (int) ($connection_summary['connected'] ?? 0)
+            + (int) ($connection_summary['linked'] ?? 0)
+            + (int) ($connection_summary['configured'] ?? 0)
+            + (int) ($connection_summary['available'] ?? 0);
         $counts = array(
             'pages'=>count(Eduardo_Research_Manager::contract()->pages()),
             'evidence'=>0,
+            'connections_ready'=>$connections_ready,
+            'connections_total'=>(int) ($connections['provider_count'] ?? 0),
             'lines'=>0,
             'objects'=>0,
             'insights'=>0,

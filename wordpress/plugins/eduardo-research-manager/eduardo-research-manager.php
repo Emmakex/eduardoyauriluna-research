@@ -57,6 +57,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-lin
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-object-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-evidence-admin.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-connections-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
 register_activation_hook(__FILE__, static function (): void {
