@@ -132,11 +132,33 @@ $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(array(
 if (is_wp_error($issued) || empty($issued['token'])) { m5a_fail('aggregate credential issuance failed'); }
 $token = (string) $issued['token'];
 
-// All M5 gateways must coexist under one bounded connection.
+// All M5 gateways must coexist under one bounded connection, each under its own public contract.
 $cap = m5a_request('GET', 'capabilities', $token);
 $cap_data = (array) ($cap->get_data()['data'] ?? array());
-foreach (array('research_line_control','research_object_control','research_translation_control','research_evidence_control') as $key) {
-    if (empty($cap_data[$key]['available']) || 'M5' !== (string) ($cap_data[$key]['milestone'] ?? '')) { m5a_fail('aggregate capability missing: ' . $key, $cap_data); }
+$line_control = (array) ($cap_data['research_line_control'] ?? array());
+if (
+    'M5' !== (string) ($line_control['milestone'] ?? '')
+    || empty($line_control['inventory'])
+    || empty($line_control['inspection'])
+) {
+    m5a_fail('aggregate capability missing: research_line_control', $cap_data);
+}
+$object_control = (array) ($cap_data['research_object_control'] ?? array());
+if (
+    'M5' !== (string) ($object_control['milestone'] ?? '')
+    || empty($object_control['foundation'])
+    || empty($object_control['inventory'])
+    || empty($object_control['inspection'])
+) {
+    m5a_fail('aggregate capability missing: research_object_control', $cap_data);
+}
+$translation_control = (array) ($cap_data['research_translation_control'] ?? array());
+if ('M5' !== (string) ($translation_control['milestone'] ?? '') || empty($translation_control['available'])) {
+    m5a_fail('aggregate capability missing: research_translation_control', $cap_data);
+}
+$evidence_control = (array) ($cap_data['research_evidence_control'] ?? array());
+if ('M5' !== (string) ($evidence_control['milestone'] ?? '') || empty($evidence_control['available'])) {
+    m5a_fail('aggregate capability missing: research_evidence_control', $cap_data);
 }
 
 // 1. Verified provenance record that must also appear in public Person schema.
