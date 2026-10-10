@@ -84,6 +84,8 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
         $content = trim(wp_strip_all_tags((string) ($record['content'] ?? '')));
         $title = trim((string) ($record['title'] ?? ''));
         $line_ids = array_values(array_map('absint', (array) ($record['line_ids'] ?? array())));
+        $status = sanitize_key((string) ($record['status'] ?? ''));
+        $scheduled_at = trim((string) ($record['scheduled_at'] ?? ''));
         $stored_checks = array(
             'title'=>'' !== $title,
             'excerpt'=>'' !== $excerpt,
@@ -91,6 +93,7 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
             'language'=>in_array((string) ($record['language'] ?? ''), Eduardo_Research_Manager::contract()->languages(), true),
             'insight_type'=>array_key_exists((string) ($record['insight_type'] ?? ''), Eduardo_Research_Manager::insights()->types()),
             'relations'=>count($line_ids) === count(array_filter($line_ids, static fn(int $line_id): bool => function_exists('eduardo_research_line_is_verified_public') && eduardo_research_line_is_verified_public($line_id, (string) ($record['language'] ?? 'en')))),
+            'schedule'=>'future' !== $status || '' !== $scheduled_at,
             'url'=>'' !== (string) ($record['url'] ?? ''),
         );
 
@@ -99,6 +102,12 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
             'stored'=>$record,
             'stored_checks'=>$stored_checks,
             'stored_ready'=>! in_array(false, $stored_checks, true),
+            'scheduling'=>array(
+                'status'=>$status,
+                'scheduled_at'=>$scheduled_at,
+                'scheduled'=>'future' === $status && '' !== $scheduled_at,
+                'verified'=>! empty($stored_checks['schedule']),
+            ),
             'relations'=>array(
                 'line_ids'=>$line_ids,
                 'count'=>count($line_ids),
@@ -148,7 +157,19 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
             'languages'=>Eduardo_Research_Manager::contract()->languages(),
             'editorial_types'=>array_keys(Eduardo_Research_Manager::insights()->types()),
             'creation_statuses'=>array('draft','publish'),
-            'update_fields'=>array('title','excerpt','content','language','insight_type','status','line_ids'),
+            'update_fields'=>array('title','excerpt','content','language','insight_type','status','scheduled_at','line_ids'),
+            'scheduling'=>array(
+                'available'=>true,
+                'field'=>'scheduled_at',
+                'operation'=>'insight-update',
+                'format'=>'RFC3339',
+                'future_only'=>true,
+                'eligible_statuses'=>array('draft','future'),
+                'result_status'=>'future',
+                'separate_preview_required'=>true,
+                'rollback_cancels_or_restores_schedule'=>true,
+                'generic_post_status_and_date_contract_unchanged'=>true,
+            ),
             'research_relations'=>array(
                 'available'=>true,
                 'field'=>'line_ids',
@@ -163,6 +184,7 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
                 'available'=>true,
                 'allowed'=>array('draft','publish'),
                 'separate_preview_required'=>true,
+                'scheduled_state_uses_scheduling_control'=>true,
                 'generic_post_status_contract_unchanged'=>true,
             ),
             'translation_pairing'=>array(
