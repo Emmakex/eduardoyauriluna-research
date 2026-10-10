@@ -5,12 +5,14 @@ on:
     paths:
       - 'config/research-site-blueprint.json'
       - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-blueprint-store-quality.yml'
   push:
     branches: [main]
     paths:
       - 'config/research-site-blueprint.json'
       - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-blueprint-store-quality.yml'
 
 permissions:
@@ -52,6 +54,10 @@ jobs:
           extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
 
       - name: Install WordPress, Theme and Manager
         shell: bash
