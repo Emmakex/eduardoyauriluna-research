@@ -5,12 +5,14 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-evidence-admin-quality.yml'
   push:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-evidence-admin-quality.yml'
 
 permissions:
@@ -39,6 +41,10 @@ jobs:
           extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
 
       - name: Lint Academic Evidence admin files
         run: |
