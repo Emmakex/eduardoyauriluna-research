@@ -27,7 +27,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
 
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('greenfield-canonical','page-slots-update','page-create'), true)) {
+        if (! in_array($operation, array('greenfield-canonical','page-slots-update','page-create','page-remediate'), true)) {
             return $this->error('validation_failed', 'The requested operation is outside the bounded Remote Manager capability set.', 400);
         }
 
@@ -162,6 +162,13 @@ final class Eduardo_Research_Manager_Remote_Operations {
             $result = $this->page_editor->apply_preview((array) ($plan['prepared'] ?? array()));
         } elseif ('page-create' === $operation_type) {
             $result = $this->page_editor->apply_creation_preview((array) ($plan['prepared'] ?? array()));
+        } elseif ('page-remediate' === $operation_type) {
+            $prepared_plan = is_array($plan['prepared']['plan'] ?? null) ? $plan['prepared']['plan'] : array();
+            if (! $prepared_plan) { return $this->error('validation_failed', 'Stored Page remediation plan is incomplete.', 409); }
+            $result = Eduardo_Research_Manager::executor()->apply($prepared_plan);
+            if (! is_wp_error($result)) {
+                $result['verified'] = ! empty($result['verification']['verified']);
+            }
         } else {
             return $this->error('validation_failed', 'Stored remote operation type is unsupported.', 409);
         }
@@ -273,6 +280,11 @@ final class Eduardo_Research_Manager_Remote_Operations {
                 (string) ($target['key'] ?? ''),
                 (string) ($operation['result']['creation_token'] ?? '')
             );
+            if (is_wp_error($semantic)) { return $this->normalise_service_error($semantic, 409); }
+            $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
+        } elseif ('page-remediate' === $type) {
+            $check_id = sanitize_key((string) ($operation['requested']['check_id'] ?? ''));
+            $semantic = Eduardo_Research_Manager::remediation()->verify($check_id);
             if (is_wp_error($semantic)) { return $this->normalise_service_error($semantic, 409); }
             $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
         } else {
@@ -413,6 +425,9 @@ final class Eduardo_Research_Manager_Remote_Operations {
 
         $key = sanitize_key((string) ($payload['key'] ?? ''));
         if ('' === $key) { return $this->error('validation_failed', 'A Theme Page key is required.', 400); }
+        if (! isset(Eduardo_Research_Manager::contract()->pages()[$key])) {
+            return $this->error('validation_failed', 'The requested Page key is outside the active Research preset.', 400);
+        }
         if ('page-create' === $operation) {
             $prepared = $this->page_editor->preview_creation($key);
             if (is_wp_error($prepared)) { return $prepared; }
@@ -422,6 +437,28 @@ final class Eduardo_Research_Manager_Remote_Operations {
                 'target'=>array('resource'=>'page','key'=>$key,'languages'=>Eduardo_Research_Manager::contract()->languages()),
                 'requested'=>array(),
                 'apply_allowed'=>! empty($prepared['apply_allowed']),
+            );
+        }
+        if ('page-remediate' === $operation) {
+            $check_id = sanitize_key((string) ($payload['check_id'] ?? ('page-' . $key)));
+            $allowed_checks = array('page-' . $key);
+            if ('home' === $key) { $allowed_checks[] = 'front-page'; }
+            if (! in_array($check_id, $allowed_checks, true)) {
+                return $this->error('validation_failed', 'Page remediation may target only the Page structural check, plus front-page routing for Research Home.', 400);
+            }
+            $plan = Eduardo_Research_Manager::remediation()->build_plan(
+                $check_id,
+                sanitize_text_field((string) ($payload['reason'] ?? $this->default_reason($operation, array('key'=>$key))))
+            );
+            if (is_wp_error($plan)) { return $plan; }
+            $preview = Eduardo_Research_Manager::executor()->preview($plan);
+            if (is_wp_error($preview)) { return $preview; }
+            return array(
+                'prepared'=>array('plan'=>$plan,'check_id'=>$check_id),
+                'preview'=>$preview,
+                'target'=>array('resource'=>'page','key'=>$key,'languages'=>Eduardo_Research_Manager::contract()->languages()),
+                'requested'=>array('check_id'=>$check_id),
+                'apply_allowed'=>! empty($preview['apply_allowed']),
             );
         }
 
@@ -445,7 +482,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
         $target = is_array($operation['target'] ?? null) ? $operation['target'] : array();
         $key = sanitize_key((string) ($target['key'] ?? ''));
         if ('' === $key) { return $this->error('validation_failed', 'Page operation is missing its rendered verification target.', 409); }
-        $languages = 'page-create' === $type
+        $languages = in_array($type, array('page-create','page-remediate'), true)
             ? Eduardo_Research_Manager::contract()->languages()
             : array(sanitize_key((string) ($target['language'] ?? 'en')));
         $resources = array();
@@ -505,6 +542,9 @@ final class Eduardo_Research_Manager_Remote_Operations {
         }
         if ('page-create' === $operation) {
             return sprintf('Remote recovery of missing Theme Page: %s', (string) ($target['key'] ?? ''));
+        }
+        if ('page-remediate' === $operation) {
+            return sprintf('Remote bounded Page readiness remediation: %s', (string) ($target['key'] ?? ''));
         }
         return 'Remote canonical Greenfield operation';
     }
