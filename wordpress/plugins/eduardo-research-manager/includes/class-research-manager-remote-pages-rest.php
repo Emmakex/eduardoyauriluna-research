@@ -88,6 +88,14 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
             $id = (string) ($check['id'] ?? '');
             return 'page:' . $key === $resource || str_contains($id, 'page-' . $key) || str_contains($id, $key . '-page');
         }));
+        $remediation_report = Eduardo_Research_Manager::remediation()->inspect();
+        $remediation = array_values(array_filter((array) ($remediation_report['items'] ?? array()), static function ($item) use ($key): bool {
+            if (! is_array($item)) { return false; }
+            $resource = (string) ($item['resource'] ?? '');
+            $check_id = (string) ($item['check_id'] ?? '');
+            return ('page:' . $key === $resource && ('page-' . $key === $check_id || ('home' === $key && 'front-page' === $check_id)))
+                && ! empty($item['auto_remediable']);
+        }));
 
         return $this->response($request, array(
             'key'=>$key,
@@ -95,6 +103,12 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
             'stored'=>$stored,
             'rendered'=>$rendered,
             'diagnostics'=>$findings,
+            'remediation'=>array(
+                'supported_operation'=>'page-remediate',
+                'candidates'=>$remediation,
+                'candidate_count'=>count($remediation),
+                'boundary'=>'Page structural readiness only; metadata/canonical/schema optimisation belongs to M6.',
+            ),
             'ready'=>! in_array(false, array_map(static fn(array $row): bool => ! empty($row['verified']), $rendered), true),
             'verified_at'=>gmdate(DATE_W3C),
         ));
@@ -117,7 +131,7 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
         $transport = is_array($data['mutation_transport'] ?? null) ? $data['mutation_transport'] : array();
         $transport['available'] = true;
         $transport['milestone'] = 'M3';
-        $transport['supported_operations'] = array('greenfield-canonical','page-slots-update','page-create');
+        $transport['supported_operations'] = array('greenfield-canonical','page-slots-update','page-create','page-remediate');
         $transport['lifecycle'] = array('plan','apply','status','verify','rollback');
         $transport['exact_plan_required'] = true;
         $transport['stale_revision_protection'] = true;
@@ -130,6 +144,8 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
             'structured_slots_only'=>true,
             'create_missing_contract_page'=>true,
             'seo_geo_rendered_inspection'=>true,
+            'bounded_readiness_remediation'=>true,
+            'advanced_seo_geo_remediation_milestone'=>'M6',
             'arbitrary_wordpress_proxy'=>false,
         );
         $payload['data'] = $data;
