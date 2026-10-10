@@ -1,0 +1,114 @@
+name: Research Blueprint Hydration Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-blueprint-hydration-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-blueprint-hydration-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  hydration-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install WordPress, Theme and Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-hydration-wp
+          mkdir -p /tmp/research-hydration-wp
+          cd /tmp/research-hydration-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Research Hydration' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Bootstrap and hydrate canonical EN ES blueprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-hydration-wp
+          wp eval '
+          wp_set_current_user(1);
+          $path = getenv("GITHUB_WORKSPACE") . "/config/research-site-blueprint.json";
+          $blueprint = json_decode((string) file_get_contents($path), true);
+          if (! is_array($blueprint)) { fwrite(STDERR, "Blueprint JSON invalid\n"); exit(1); }
+
+          // Theme activation owns initial preset-page installation. Manager bootstrap must therefore be idempotent.
+          $boot_preview = Eduardo_Research_Manager::bootstrap()->preview($blueprint);
+          if (is_wp_error($boot_preview) || empty($boot_preview["apply_allowed"]) || 0 !== (int) $boot_preview["operation_count"] || 12 !== (int) $boot_preview["skipped_count"]) {
+              fwrite(STDERR, is_wp_error($boot_preview) ? $boot_preview->get_error_message() : wp_json_encode($boot_preview)); exit(1);
+          }
+          $boot = Eduardo_Research_Manager::bootstrap()->apply($blueprint);
+          if (is_wp_error($boot) || empty($boot["verified"]) || 0 !== (int) $boot["operation_count"] || 12 !== (int) $boot["skipped_count"]) {
+              fwrite(STDERR, is_wp_error($boot) ? $boot->get_error_message() : wp_json_encode($boot)); exit(1);
+          }
+
+          $preview = Eduardo_Research_Manager::hydrator()->preview($blueprint);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 24 !== (int) $preview["operation_count"] || ! empty($preview["requires_legacy_discovery"]) || ! empty($preview["requires_legacy_mapping"]) || ! empty($preview["requires_gutenberg_layout"])) {
+              fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1);
+          }
+
+          $hydrated = Eduardo_Research_Manager::hydrator()->apply($blueprint);
+          if (is_wp_error($hydrated) || empty($hydrated["verified"]) || 24 !== (int) $hydrated["operation_count"]) {
+              fwrite(STDERR, is_wp_error($hydrated) ? $hydrated->get_error_message() : wp_json_encode($hydrated)); exit(1);
+          }
+
+          $home_en = Eduardo_Research_Manager::pages()->verify_hydration("home", "en", [
+              "researcher-name"=>"Eduardo Jose Yauri Luna",
+              "researcher-headline"=>"Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes"
+          ]);
+          $home_es = Eduardo_Research_Manager::pages()->verify_hydration("home", "es", [
+              "researcher-name"=>"Eduardo Jose Yauri Luna",
+              "researcher-headline"=>"Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales"
+          ]);
+          if (is_wp_error($home_en) || empty($home_en["verified"]) || is_wp_error($home_es) || empty($home_es["verified"])) { exit(1); }
+
+          $second_preview = Eduardo_Research_Manager::hydrator()->preview($blueprint);
+          if (is_wp_error($second_preview) || 24 !== (int) $second_preview["operation_count"]) { exit(1); }
+          foreach ($second_preview["operations"] as $operation) {
+              if ("already-matching" !== (string) $operation["status"] || empty($operation["apply_allowed"])) { fwrite(STDERR, wp_json_encode($operation)); exit(1); }
+          }
+
+          $rollback = Eduardo_Research_Manager::hydrator()->rollback($hydrated["snapshot_ids"]);
+          if (is_wp_error($rollback) || count($hydrated["snapshot_ids"]) !== (int) $rollback["snapshot_count"]) { exit(1); }
+          $home_state = Eduardo_Research_Manager::pages()->inspect("home", "en");
+          if (is_wp_error($home_state) || ! empty($home_state["stored_slots"])) { fwrite(STDERR, wp_json_encode($home_state)); exit(1); }
+          ' --allow-root
