@@ -130,16 +130,16 @@ All normal site-management capabilities that define the sellable product must be
 
 The intended access model is:
 
-- **WordPress Admin / Manager:** primary operating surface for customers;
+- **WordPress Admin / Manager:** local operating/fallback surface for customers and administrators;
 - **WP-CLI:** optional automation and repeatable deployment surface;
 - **SSH:** optional bootstrap, infrastructure maintenance and emergency/recovery surface;
-- **authenticated Manager API:** future remote-management surface for managed service / multi-client operation without requiring client SSH credentials.
+- **authenticated Manager API:** remote-management surface for ChatGPT/managed operation without requiring client SSH credentials.
 
 A client must be able to install Theme + Manager as normal WordPress packages and use the product without granting server shell access.
 
 **Reason:** Requiring SSH would turn the Manager into an agency-only implementation tool. Access independence makes it installable, supportable and commercially reusable across shared hosting, managed WordPress, VPS, enterprise/on-premise and customer-controlled environments.
 
-**Product rule:** New Manager capabilities are incomplete if they exist only through WP-CLI/SSH. They must live in a shared service layer and be callable from the Manager UI; transport-specific adapters may then expose the same operation through WP-CLI or a secure API.
+**Product rule:** New Manager capabilities are incomplete if they exist only through WP-CLI/SSH. They must live in a shared service layer and be callable from the Manager UI and, when remotely governable, from the authenticated Manager API; transport-specific adapters may expose the same operation without duplicating business logic.
 
 **Reference:** `docs/19-manager-productization.md`
 
@@ -191,5 +191,44 @@ Manager verifies SEO/GEO/readiness/rendered state
 **Product rule:** A feature is commercially complete when the Manager can control the relevant website outcome end-to-end. Merely exposing raw WordPress fields or reporting a problem is not sufficient when a safe deterministic action can be provided.
 
 **Reference:** `docs/19-manager-productization.md`
+
+**Status:** Accepted
+
+---
+
+## ADR-015 — ChatGPT is the primary managed operating surface; Manager is the authenticated execution gateway
+
+**Decision:** For the managed operating model being proven on `eduardoyauriluna.com`, normal website instructions are given from the ChatGPT working conversation. ChatGPT must connect to WordPress through an authenticated Research Manager interface. The Research Manager is the authoritative bridge/gateway that validates, plans, executes, verifies, audits and, where supported, rolls back those operations.
+
+The intended operating hierarchy is:
+
+```text
+Eduardo → ChatGPT → authenticated Manager connector/API → shared Manager services → WordPress resources → Research Theme → rendered eduardoyauriluna.com
+```
+
+WordPress Admin remains a required local administrative/fallback and self-service surface, but it is not the preferred day-to-day operating surface for our managed Eduardo workflow. WP-CLI and SSH remain optional automation/bootstrap/support transports.
+
+The remote Manager interface is therefore **not a speculative later multi-client feature** for this project. A bounded, secure remote control path is a first-class requirement for proving the intended way we will govern `eduardoyauriluna.com`.
+
+Remote control must satisfy the following constraints:
+
+- typed/allowlisted Manager operations rather than arbitrary WordPress REST proxying;
+- no arbitrary PHP, SQL, filesystem or shell execution;
+- site-specific, revocable and rotatable credentials;
+- least-privilege scopes with read/write separation;
+- request identity/idempotency and replay protection;
+- Preview/plan before material mutation where required;
+- Apply of the exact plan rather than an unbounded recomputation;
+- stale-state/concurrency protection;
+- stored-state and rendered verification;
+- auditable operation IDs/results;
+- rollback for supported controlled operations;
+- local Manager operation remains available when the remote connection is disabled.
+
+The first acceptance target is not a generic SaaS control center. It is a real end-to-end operation on the Eduardo site where an instruction originating in ChatGPT is executed through the Manager and verified on the rendered public site.
+
+**Reason:** The Manager exists to let us govern WordPress with the same instruction-driven operating model used for Kairoseth/IA Empleado, while retaining WordPress as the customer's runtime. If ChatGPT still needs SSH, direct database access, arbitrary code execution or manual WordPress editing for routine work, the intended bridge has not been completed.
+
+**Canonical reference:** `docs/22-chat-governed-manager-contract.md`
 
 **Status:** Accepted
