@@ -9,6 +9,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Diagnostics $diagnostics = null;
     private static ?Eduardo_Research_Manager_Executor $executor = null;
     private static ?Eduardo_Research_Manager_Page_Resource $pages = null;
+    private static ?Eduardo_Research_Manager_Page_Editor $page_editor = null;
     private static ?Eduardo_Research_Manager_Insight_Resource $insights = null;
     private static ?Eduardo_Research_Manager_Line_Resource $lines = null;
     private static ?Eduardo_Research_Manager_Output_Resource $outputs = null;
@@ -33,6 +34,7 @@ final class Eduardo_Research_Manager {
         self::$diagnostics = new Eduardo_Research_Manager_Diagnostics(self::$contract);
         self::$executor = new Eduardo_Research_Manager_Executor();
         self::$pages = new Eduardo_Research_Manager_Page_Resource(self::$contract);
+        self::$page_editor = new Eduardo_Research_Manager_Page_Editor(self::$pages, self::$executor);
         self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::$contract);
         self::$lines = new Eduardo_Research_Manager_Line_Resource(self::$contract);
         self::$outputs = new Eduardo_Research_Manager_Output_Resource(self::$contract);
@@ -68,6 +70,7 @@ final class Eduardo_Research_Manager {
     public static function diagnostics(): Eduardo_Research_Manager_Diagnostics { if (! self::$diagnostics) { self::$diagnostics = new Eduardo_Research_Manager_Diagnostics(self::contract()); } return self::$diagnostics; }
     public static function executor(): Eduardo_Research_Manager_Executor { if (! self::$executor) { self::$executor = new Eduardo_Research_Manager_Executor(); } return self::$executor; }
     public static function pages(): Eduardo_Research_Manager_Page_Resource { if (! self::$pages) { self::$pages = new Eduardo_Research_Manager_Page_Resource(self::contract()); } return self::$pages; }
+    public static function page_editor(): Eduardo_Research_Manager_Page_Editor { if (! self::$page_editor) { self::$page_editor = new Eduardo_Research_Manager_Page_Editor(self::pages(), self::executor()); } return self::$page_editor; }
     public static function insights(): Eduardo_Research_Manager_Insight_Resource { if (! self::$insights) { self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::contract()); } return self::$insights; }
     public static function lines(): Eduardo_Research_Manager_Line_Resource { if (! self::$lines) { self::$lines = new Eduardo_Research_Manager_Line_Resource(self::contract()); } return self::$lines; }
     public static function outputs(): Eduardo_Research_Manager_Output_Resource { if (! self::$outputs) { self::$outputs = new Eduardo_Research_Manager_Output_Resource(self::contract()); } return self::$outputs; }
