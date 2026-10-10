@@ -201,15 +201,25 @@ final class Eduardo_Research_Manager_Remote_Operations {
 
         $blueprint = Eduardo_Research_Manager::blueprint_store()->canonical();
         if (is_wp_error($blueprint)) { return $blueprint; }
-        $preview = $this->pipeline->preview($blueprint);
-        if (is_wp_error($preview)) { return $preview; }
         $diagnostics = Eduardo_Research_Manager::diagnostics()->run();
-        $pending = $this->preview_change_count($preview);
+        $current_revision = $this->revision_fingerprint();
+        if (is_wp_error($current_revision)) { return $current_revision; }
+        $plan = $this->find_plan((string) ($operation['plan_id'] ?? ''));
+        $post_apply_revision = (string) ($operation['post_apply_revision'] ?? '');
+        $planned_blueprint_sha = (string) ($plan['blueprint_sha256'] ?? '');
+        $revision_matches = '' !== $post_apply_revision && hash_equals($post_apply_revision, $current_revision);
+        $blueprint_matches = '' !== $planned_blueprint_sha && hash_equals($planned_blueprint_sha, $this->blueprint_sha());
+        $apply_verified = ! empty($operation['result']['verified']);
+        $ready = ! empty($diagnostics['ready']);
         $stored = array(
-            'verified'=>0 === $pending && ! empty($diagnostics['ready']),
-            'pending_operation_count'=>$pending,
+            'verified'=>$revision_matches && $blueprint_matches && $apply_verified && $ready,
+            'revision_matches'=>$revision_matches,
+            'blueprint_matches'=>$blueprint_matches,
+            'apply_verified'=>$apply_verified,
+            'expected_revision'=>$post_apply_revision,
+            'current_revision'=>$current_revision,
             'readiness'=>array(
-                'ready'=>! empty($diagnostics['ready']),
+                'ready'=>$ready,
                 'summary'=>is_array($diagnostics['summary'] ?? null) ? $diagnostics['summary'] : array(),
             ),
             'verified_at'=>gmdate(DATE_W3C),
@@ -315,15 +325,6 @@ final class Eduardo_Research_Manager_Remote_Operations {
             }
         }
         return array('requested'=>true,'verified'=>$verified,'resources'=>$resources,'verified_at'=>gmdate(DATE_W3C));
-    }
-
-    private function preview_change_count(array $preview): int {
-        $count = 0;
-        foreach ((array) ($preview['phases'] ?? array()) as $phase) {
-            if ('deferred' === (string) ($phase['status'] ?? '')) { continue; }
-            $count += max(0, (int) ($phase['operation_count'] ?? 0));
-        }
-        return $count;
     }
 
     private function preview_risk(array $preview): string {
