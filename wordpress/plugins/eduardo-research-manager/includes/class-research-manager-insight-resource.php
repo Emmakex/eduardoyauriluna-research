@@ -37,6 +37,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
             'post_id'=>$post_id,
             'post_type'=>'post',
             'status'=>(string) $post->post_status,
+            'scheduled_at'=>$this->scheduled_at($post),
             'slug'=>(string) $post->post_name,
             'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,
@@ -147,7 +148,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
     public function verify(int $post_id, array $expected, ?string $creation_token = null): array|WP_Error {
         $record = $this->inspect($post_id);
         if (is_wp_error($record)) { return $record; }
-        $allowed = array('status','slug','title','excerpt','content','language','insight_type','line_ids');
+        $allowed = array('status','scheduled_at','slug','title','excerpt','content','language','insight_type','line_ids');
         $unknown = array_diff(array_keys($expected), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_insight_field_not_allowed', 'Insight verification requested unsupported fields.');
@@ -157,6 +158,9 @@ final class Eduardo_Research_Manager_Insight_Resource {
         foreach ($expected as $field => $value) {
             if ('line_ids' === $field) {
                 $value = $this->sanitize_verified_line_ids($value, (string) $record['language']);
+                if (is_wp_error($value)) { return $value; }
+            } elseif ('scheduled_at' === $field) {
+                $value = $this->canonical_schedule_at((string) $value);
                 if (is_wp_error($value)) { return $value; }
             } elseif ('language' === $field) { $value = sanitize_key((string) $value); }
             elseif ('insight_type' === $field || 'status' === $field) { $value = sanitize_key((string) $value); }
@@ -176,6 +180,19 @@ final class Eduardo_Research_Manager_Insight_Resource {
             'checks'=>$checks,
             'verified_at'=>gmdate(DATE_W3C),
         );
+    }
+
+    public function canonical_schedule_at(string $value): string|WP_Error {
+        $value = trim($value);
+        if ('' === $value) {
+            return new WP_Error('research_manager_invalid_insight_schedule', 'Insight scheduling requires an RFC3339 date and time.');
+        }
+        try {
+            $date = new DateTimeImmutable($value);
+        } catch (Throwable $error) {
+            return new WP_Error('research_manager_invalid_insight_schedule', 'Insight scheduling requires a valid RFC3339 date and time.');
+        }
+        return gmdate('Y-m-d\TH:i:s\Z', $date->getTimestamp());
     }
 
     public function find_created_by_token(string $token): int {
@@ -201,6 +218,14 @@ final class Eduardo_Research_Manager_Insight_Resource {
         if (! function_exists('eduardo_research_insight_types')) { return array(); }
         $types = eduardo_research_insight_types('en');
         return is_array($types) ? $types : array();
+    }
+
+    private function scheduled_at(WP_Post $post): string {
+        if ('future' !== (string) $post->post_status || '' === trim((string) $post->post_date_gmt) || '0000-00-00 00:00:00' === (string) $post->post_date_gmt) {
+            return '';
+        }
+        $timestamp = strtotime((string) $post->post_date_gmt . ' UTC');
+        return false === $timestamp ? '' : gmdate('Y-m-d\TH:i:s\Z', $timestamp);
     }
 
     private function sanitize_verified_line_ids(mixed $value, string $language): array|WP_Error {

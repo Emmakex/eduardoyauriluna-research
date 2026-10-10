@@ -80,6 +80,16 @@ final class Eduardo_Research_Manager_Insight_Editor {
         if (is_wp_error($current)) { return $current; }
         $baseline_checksum = $this->state_checksum($current);
 
+        if (array_key_exists('scheduled_at', $changes)) {
+            if (1 !== count($changes) || ! is_scalar($changes['scheduled_at'])) {
+                return new WP_Error(
+                    'research_manager_insight_schedule_requires_separate_operation',
+                    'Insight scheduling must be changed in its own Preview so timing remains independently reviewable and reversible.'
+                );
+            }
+            return $this->preview_schedule($post_id, (string) $changes['scheduled_at']);
+        }
+
         if (array_key_exists('status', $changes)) {
             if (1 !== count($changes)) {
                 return new WP_Error(
@@ -129,6 +139,70 @@ final class Eduardo_Research_Manager_Insight_Editor {
         );
     }
 
+    public function preview_schedule(int $post_id, string $publish_at): array|WP_Error {
+        $current = $this->insights->inspect($post_id);
+        if (is_wp_error($current)) { return $current; }
+        $from = sanitize_key((string) ($current['status'] ?? ''));
+        if (! in_array($from, array('draft','future'), true)) {
+            return new WP_Error(
+                'research_manager_insight_schedule_requires_draft',
+                'Only draft or already scheduled Research Insights may be scheduled. Move a published Insight to draft first.'
+            );
+        }
+
+        $scheduled_at = $this->insights->canonical_schedule_at($publish_at);
+        if (is_wp_error($scheduled_at)) { return $scheduled_at; }
+        $timestamp = strtotime($scheduled_at);
+        if (false === $timestamp || $timestamp <= time() + 60) {
+            return new WP_Error('research_manager_insight_schedule_not_future', 'Insight publication time must be safely in the future.');
+        }
+
+        $baseline_checksum = $this->state_checksum($current);
+        $expected = array('status'=>'future','scheduled_at'=>$scheduled_at);
+        if ('future' === $from && $scheduled_at === (string) ($current['scheduled_at'] ?? '')) {
+            $verification = $this->insights->verify($post_id, $expected);
+            if (is_wp_error($verification)) { return $verification; }
+            return array(
+                'mode'=>'schedule','status'=>'already-matching','apply_allowed'=>true,'plan'=>array(),'plan_id'=>'',
+                'preview'=>array('risk'=>'editorial-review','actions'=>array()),'post_id'=>$post_id,'expected'=>$expected,
+                'creation_token'=>'','baseline_checksum'=>$baseline_checksum,'from_status'=>$from,'scheduled_at'=>$scheduled_at,
+                'verification'=>$verification,
+            );
+        }
+
+        $material = array('post_id'=>$post_id,'from_status'=>$from,'scheduled_at'=>$scheduled_at,'baseline_checksum'=>$baseline_checksum);
+        $checksum = hash('sha256', (string) wp_json_encode($material));
+        $plan_id = 'erm-insight-schedule-' . substr($checksum, 0, 16);
+        return array(
+            'mode'=>'schedule',
+            'status'=>'change',
+            'apply_allowed'=>true,
+            'plan'=>array(),
+            'plan_id'=>$plan_id,
+            'preview'=>array(
+                'plan_id'=>$plan_id,
+                'intent'=>sprintf('Schedule Research Insight #%d for %s', $post_id, $scheduled_at),
+                'risk'=>'editorial-review',
+                'apply_allowed'=>true,
+                'apply_blocker'=>'',
+                'actions'=>array(array(
+                    'action'=>array('type'=>'insight_schedule','post_id'=>$post_id,'scheduled_at'=>$scheduled_at),
+                    'before'=>array('exists'=>true,'value'=>array('status'=>$from,'scheduled_at'=>(string) ($current['scheduled_at'] ?? ''))),
+                    'after'=>array('status'=>'future','scheduled_at'=>$scheduled_at),
+                    'changed'=>true,
+                    'risk'=>'editorial-review',
+                )),
+            ),
+            'post_id'=>$post_id,
+            'expected'=>$expected,
+            'creation_token'=>'',
+            'baseline_checksum'=>$baseline_checksum,
+            'from_status'=>$from,
+            'scheduled_at'=>$scheduled_at,
+            'schedule_checksum'=>$checksum,
+        );
+    }
+
     public function apply_preview(array $prepared): array|WP_Error {
         if (! current_user_can('manage_options')) {
             return new WP_Error('research_manager_forbidden', 'You are not allowed to apply interactive Insight changes.');
@@ -137,20 +211,20 @@ final class Eduardo_Research_Manager_Insight_Editor {
         $mode = sanitize_key((string) ($prepared['mode'] ?? ''));
         $status = sanitize_key((string) ($prepared['status'] ?? ''));
         $expected = is_array($prepared['expected'] ?? null) ? $prepared['expected'] : array();
-        if (! in_array($mode, array('create','update','status'), true) || ! $expected) {
+        if (! in_array($mode, array('create','update','status','schedule'), true) || ! $expected) {
             return new WP_Error('research_manager_insight_editor_preview_invalid', 'The prepared Insight preview is incomplete.');
         }
 
         if ('already-matching' !== $status && empty($prepared['apply_allowed'])) {
             return new WP_Error('research_manager_insight_editor_apply_blocked', 'The prepared Insight preview is not allowed to apply.');
         }
-        if ('status' !== $mode && 'already-matching' !== $status
+        if (! in_array($mode, array('status','schedule'), true) && 'already-matching' !== $status
             && (! is_array($prepared['plan'] ?? null) || ! $prepared['plan'])) {
             return new WP_Error('research_manager_insight_editor_apply_blocked', 'The prepared Insight preview is missing its mutation plan.');
         }
 
         $post_id = absint($prepared['post_id'] ?? 0);
-        if (in_array($mode, array('update','status'), true)) {
+        if (in_array($mode, array('update','status','schedule'), true)) {
             $baseline_checksum = sanitize_text_field((string) ($prepared['baseline_checksum'] ?? ''));
             if ($post_id <= 0 || '' === $baseline_checksum) {
                 return new WP_Error('research_manager_insight_editor_preview_invalid', 'Insight update Preview is missing its resource baseline.');
@@ -174,9 +248,8 @@ final class Eduardo_Research_Manager_Insight_Editor {
             return array('status'=>'already-matching','mode'=>$mode,'post_id'=>$post_id,'snapshot_id'=>'','verification'=>$verification,'verified'=>true);
         }
 
-        if ('status' === $mode) {
-            return $this->apply_status_preview($prepared);
-        }
+        if ('status' === $mode) { return $this->apply_status_preview($prepared); }
+        if ('schedule' === $mode) { return $this->apply_schedule_preview($prepared); }
 
         $plan = $prepared['plan'];
         $result = $this->executor->apply($plan);
@@ -221,6 +294,11 @@ final class Eduardo_Research_Manager_Insight_Editor {
         if ('' === $snapshot_id) {
             return new WP_Error('research_manager_insight_editor_snapshot_missing', 'An Insight editor snapshot ID is required for rollback.');
         }
+        $snapshot = $this->snapshots->get($snapshot_id);
+        $schedule = $this->schedule_snapshot_state($snapshot);
+        if (is_array($schedule)) {
+            return $this->rollback_schedule_snapshot($snapshot_id, $snapshot, $schedule);
+        }
         return $this->executor->rollback($snapshot_id);
     }
 
@@ -233,6 +311,9 @@ final class Eduardo_Research_Manager_Insight_Editor {
             return new WP_Error('research_manager_invalid_insight_status', 'Insight publication state may only transition between draft and publish.');
         }
         $from = sanitize_key((string) ($current['status'] ?? ''));
+        if (! in_array($from, array('draft','publish'), true)) {
+            return new WP_Error('research_manager_insight_scheduled_use_schedule_control', 'Scheduled Insights must be changed through the scheduling operation or its rollback.');
+        }
         $expected = array('status'=>$target);
         if ($target === $from) {
             $verification = $this->insights->verify($post_id, $expected);
@@ -324,6 +405,143 @@ final class Eduardo_Research_Manager_Insight_Editor {
         );
     }
 
+    private function apply_schedule_preview(array $prepared): array|WP_Error {
+        $post_id = absint($prepared['post_id'] ?? 0);
+        $from = sanitize_key((string) ($prepared['from_status'] ?? ''));
+        $scheduled_at = $this->insights->canonical_schedule_at((string) ($prepared['scheduled_at'] ?? ''));
+        $checksum = sanitize_text_field((string) ($prepared['schedule_checksum'] ?? ''));
+        if (is_wp_error($scheduled_at)) { return $scheduled_at; }
+        $timestamp = strtotime($scheduled_at);
+        if ($post_id <= 0 || ! in_array($from, array('draft','future'), true) || false === $timestamp || $timestamp <= time() + 60 || '' === $checksum) {
+            return new WP_Error('research_manager_insight_editor_preview_invalid', 'Prepared Insight scheduling Preview is invalid or no longer safely in the future.');
+        }
+
+        $post = get_post($post_id);
+        if (! $post instanceof WP_Post || 'post' !== $post->post_type) {
+            return new WP_Error('research_manager_insight_missing', 'Scheduled Research Insight no longer exists.');
+        }
+        $utc = (new DateTimeImmutable('@' . $timestamp))->setTimezone(new DateTimeZone('UTC'));
+        $local = $utc->setTimezone(wp_timezone());
+        $local_mysql = $local->format('Y-m-d H:i:s');
+        $gmt_mysql = $utc->format('Y-m-d H:i:s');
+
+        $snapshot_plan = array(
+            'id'=>(string) ($prepared['plan_id'] ?? ('erm-insight-schedule-' . substr($checksum, 0, 16))),
+            'checksum'=>$checksum,
+            'intent'=>sprintf('Schedule Research Insight #%d for %s', $post_id, $scheduled_at),
+        );
+        $before = array(
+            array(
+                'action'=>array('type'=>'post_field','post_id'=>$post_id,'field'=>'post_status','value'=>'future'),
+                'state'=>array('exists'=>true,'value'=>(string) $post->post_status),
+            ),
+            array(
+                'action'=>array('type'=>'post_field','post_id'=>$post_id,'field'=>'post_date','value'=>$local_mysql),
+                'state'=>array('exists'=>true,'value'=>(string) $post->post_date),
+            ),
+            array(
+                'action'=>array('type'=>'post_field','post_id'=>$post_id,'field'=>'post_date_gmt','value'=>$gmt_mysql),
+                'state'=>array('exists'=>true,'value'=>(string) $post->post_date_gmt),
+            ),
+        );
+        $snapshot_id = $this->snapshots->create($snapshot_plan, $before);
+
+        $written = wp_update_post(array(
+            'ID'=>$post_id,
+            'post_status'=>'future',
+            'post_date'=>$local_mysql,
+            'post_date_gmt'=>$gmt_mysql,
+            'edit_date'=>true,
+        ), true);
+        if (is_wp_error($written)) {
+            $this->executor->rollback($snapshot_id);
+            return $written;
+        }
+        clean_post_cache($post_id);
+
+        $verification = $this->insights->verify($post_id, array('status'=>'future','scheduled_at'=>$scheduled_at));
+        if (is_wp_error($verification) || empty($verification['verified'])) {
+            $this->rollback($snapshot_id);
+            return is_wp_error($verification)
+                ? $verification
+                : new WP_Error('research_manager_insight_editor_verification_failed', 'Insight scheduling failed verification and was rolled back.');
+        }
+
+        return array(
+            'status'=>'applied',
+            'mode'=>'schedule',
+            'post_id'=>$post_id,
+            'plan_id'=>(string) $snapshot_plan['id'],
+            'snapshot_id'=>$snapshot_id,
+            'scheduled_at'=>$scheduled_at,
+            'verification'=>$verification,
+            'verified'=>true,
+        );
+    }
+
+    private function schedule_snapshot_state(array $snapshot): array|false {
+        $records = is_array($snapshot['before'] ?? null) ? $snapshot['before'] : array();
+        if (3 !== count($records)) { return false; }
+        $post_id = 0;
+        $state = array();
+        foreach ($records as $record) {
+            if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { return false; }
+            $action = $record['action'];
+            if ('post_field' !== (string) ($action['type'] ?? '')) { return false; }
+            $field = sanitize_key((string) ($action['field'] ?? ''));
+            if (! in_array($field, array('post_status','post_date','post_date_gmt'), true)) { return false; }
+            $record_post_id = absint($action['post_id'] ?? 0);
+            if ($record_post_id <= 0 || ($post_id > 0 && $post_id !== $record_post_id)) { return false; }
+            $post_id = $record_post_id;
+            $state[$field] = $record['state']['value'] ?? null;
+        }
+        if ($post_id <= 0 || 3 !== count($state)) { return false; }
+        return array(
+            'post_id'=>$post_id,
+            'post_status'=>(string) $state['post_status'],
+            'post_date'=>(string) $state['post_date'],
+            'post_date_gmt'=>(string) $state['post_date_gmt'],
+        );
+    }
+
+    private function rollback_schedule_snapshot(string $snapshot_id, array $snapshot, array $state): array|WP_Error {
+        if ('rolled-back' === (string) ($snapshot['status'] ?? '')) {
+            return new WP_Error('research_manager_snapshot_used', 'This snapshot has already been rolled back.');
+        }
+        $post_id = absint($state['post_id'] ?? 0);
+        $post = get_post($post_id);
+        if (! $post instanceof WP_Post || 'post' !== $post->post_type) {
+            return new WP_Error('research_manager_resource_missing', 'Scheduled Research Insight no longer exists.');
+        }
+
+        $result = wp_update_post(array(
+            'ID'=>$post_id,
+            'post_status'=>(string) $state['post_status'],
+            'post_date'=>(string) $state['post_date'],
+            'post_date_gmt'=>(string) $state['post_date_gmt'],
+            'edit_date'=>true,
+        ), true);
+        if (is_wp_error($result)) { return $result; }
+        clean_post_cache($post_id);
+
+        $restored = get_post($post_id);
+        if (! $restored instanceof WP_Post
+            || (string) $restored->post_status !== (string) $state['post_status']
+            || (string) $restored->post_date !== (string) $state['post_date']
+            || (string) $restored->post_date_gmt !== (string) $state['post_date_gmt']) {
+            return new WP_Error('research_manager_rollback_failed', 'Scheduling rollback could not restore the exact previous calendar state.');
+        }
+
+        $this->snapshots->mark_rolled_back($snapshot_id);
+        return array(
+            'status'=>'rolled-back',
+            'snapshot_id'=>$snapshot_id,
+            'plan_id'=>(string) ($snapshot['plan_id'] ?? ''),
+            'restored'=>3,
+            'rolled_back_at'=>gmdate(DATE_W3C),
+        );
+    }
+
     private function expected_from_creation_action(array $action): array {
         $expected = array();
         foreach (array('status','slug','title','excerpt','content','language','insight_type') as $field) {
@@ -334,7 +552,7 @@ final class Eduardo_Research_Manager_Insight_Editor {
 
     private function state_checksum(array $record): string {
         $state = array();
-        foreach (array('post_id','status','slug','title','excerpt','content','language','insight_type','line_ids') as $field) {
+        foreach (array('post_id','status','scheduled_at','slug','title','excerpt','content','language','insight_type','line_ids') as $field) {
             $state[$field] = $record[$field] ?? null;
         }
         return hash('sha256', (string) wp_json_encode($state));
