@@ -14,20 +14,26 @@ final class Eduardo_Research_Manager_Remote_Operations {
     private Eduardo_Research_Manager_Greenfield_Pipeline $pipeline;
     private Eduardo_Research_Manager_Remote_Audit $audit;
     private Eduardo_Research_Manager_Page_Editor $page_editor;
+    private Eduardo_Research_Manager_Insight_Editor $insight_editor;
 
     public function __construct(
         ?Eduardo_Research_Manager_Greenfield_Pipeline $pipeline = null,
         ?Eduardo_Research_Manager_Remote_Audit $audit = null,
-        ?Eduardo_Research_Manager_Page_Editor $page_editor = null
+        ?Eduardo_Research_Manager_Page_Editor $page_editor = null,
+        ?Eduardo_Research_Manager_Insight_Editor $insight_editor = null
     ) {
         $this->pipeline = $pipeline ?: Eduardo_Research_Manager::pipeline();
         $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
         $this->page_editor = $page_editor ?: Eduardo_Research_Manager::page_editor();
+        $this->insight_editor = $insight_editor ?: Eduardo_Research_Manager::insight_editor();
     }
 
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('greenfield-canonical','page-slots-update','page-create','page-remediate'), true)) {
+        if (! in_array($operation, array(
+            'greenfield-canonical','page-slots-update','page-create','page-remediate',
+            'insight-create','insight-update',
+        ), true)) {
             return $this->error('validation_failed', 'The requested operation is outside the bounded Remote Manager capability set.', 400);
         }
 
@@ -166,9 +172,9 @@ final class Eduardo_Research_Manager_Remote_Operations {
             $prepared_plan = is_array($plan['prepared']['plan'] ?? null) ? $plan['prepared']['plan'] : array();
             if (! $prepared_plan) { return $this->error('validation_failed', 'Stored Page remediation plan is incomplete.', 409); }
             $result = Eduardo_Research_Manager::executor()->apply($prepared_plan);
-            if (! is_wp_error($result)) {
-                $result['verified'] = ! empty($result['verification']['verified']);
-            }
+            if (! is_wp_error($result)) { $result['verified'] = ! empty($result['verification']['verified']); }
+        } elseif ($this->is_insight_operation($operation_type)) {
+            $result = $this->insight_editor->apply_preview((array) ($plan['prepared'] ?? array()));
         } else {
             return $this->error('validation_failed', 'Stored remote operation type is unsupported.', 409);
         }
@@ -201,6 +207,9 @@ final class Eduardo_Research_Manager_Remote_Operations {
             'verified_at'=>'',
             'rolled_back_at'=>'',
         );
+        if ('insight-create' === $operation_type && ! empty($result['post_id'])) {
+            $operation['target']['post_id'] = (int) $result['post_id'];
+        }
         $post_revision = $this->revision_fingerprint();
         $operation['post_apply_revision'] = is_wp_error($post_revision) ? '' : $post_revision;
         $this->put_operation($operation);
@@ -287,6 +296,17 @@ final class Eduardo_Research_Manager_Remote_Operations {
             $semantic = Eduardo_Research_Manager::remediation()->verify($check_id);
             if (is_wp_error($semantic)) { return $this->normalise_service_error($semantic, 409); }
             $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
+        } elseif ($this->is_insight_operation($type)) {
+            $post_id = absint($operation['target']['post_id'] ?? $operation['result']['post_id'] ?? 0);
+            $expected = 'insight-create' === $type
+                ? (array) ($operation['requested']['data'] ?? array())
+                : (array) ($operation['requested']['changes'] ?? array());
+            if ($post_id <= 0 || ! $expected) {
+                return $this->error('validation_failed', 'Stored Insight operation is missing its verification target.', 409);
+            }
+            $semantic = Eduardo_Research_Manager::insights()->verify($post_id, $expected);
+            if (is_wp_error($semantic)) { return $this->normalise_service_error($semantic, 409); }
+            $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
         } else {
             return $this->error('validation_failed', 'Stored remote operation type is unsupported.', 409);
         }
@@ -355,9 +375,11 @@ final class Eduardo_Research_Manager_Remote_Operations {
         } else {
             $snapshot_id = (string) ($operation['snapshot_id'] ?? '');
             if ('' === $snapshot_id) {
-                return $this->error('rollback_unavailable', 'No rollback snapshot is available for this Page operation.', 409);
+                return $this->error('rollback_unavailable', 'No rollback snapshot is available for this operation.', 409);
             }
-            $result = $this->page_editor->rollback($snapshot_id);
+            $result = $this->is_insight_operation($type)
+                ? $this->insight_editor->rollback($snapshot_id)
+                : $this->page_editor->rollback($snapshot_id);
         }
         if (is_wp_error($result)) { return $this->normalise_service_error($result, 409); }
 
@@ -423,6 +445,39 @@ final class Eduardo_Research_Manager_Remote_Operations {
             );
         }
 
+        if ('insight-create' === $operation) {
+            $data = is_array($payload['data'] ?? null) ? $payload['data'] : array();
+            if (! $data) { return $this->error('validation_failed', 'insight-create requires a bounded Insight data object.', 400); }
+            $prepared = $this->insight_editor->preview_create($data);
+            if (is_wp_error($prepared)) { return $prepared; }
+            $expected = is_array($prepared['expected'] ?? null) ? $prepared['expected'] : array();
+            return array(
+                'prepared'=>$prepared,
+                'preview'=>is_array($prepared['preview'] ?? null) ? $prepared['preview'] : array(),
+                'target'=>array('resource'=>'insight','post_id'=>0,'language'=>(string) ($expected['language'] ?? 'en')),
+                'requested'=>array('data'=>$expected),
+                'apply_allowed'=>! empty($prepared['apply_allowed']),
+            );
+        }
+
+        if ('insight-update' === $operation) {
+            $post_id = absint($payload['post_id'] ?? 0);
+            $changes = is_array($payload['changes'] ?? null) ? $payload['changes'] : array();
+            if ($post_id <= 0 || ! $changes) { return $this->error('validation_failed', 'insight-update requires a managed Insight post_id and at least one bounded change.', 400); }
+            $before = $this->insight_editor->inspect($post_id);
+            if (is_wp_error($before)) { return $before; }
+            $prepared = $this->insight_editor->preview_update($post_id, $changes);
+            if (is_wp_error($prepared)) { return $prepared; }
+            $expected = is_array($prepared['expected'] ?? null) ? $prepared['expected'] : array();
+            return array(
+                'prepared'=>$prepared,
+                'preview'=>is_array($prepared['preview'] ?? null) ? $prepared['preview'] : array(),
+                'target'=>array('resource'=>'insight','post_id'=>$post_id,'language'=>(string) ($before['language'] ?? 'en')),
+                'requested'=>array('changes'=>$expected),
+                'apply_allowed'=>! empty($prepared['apply_allowed']),
+            );
+        }
+
         $key = sanitize_key((string) ($payload['key'] ?? ''));
         if ('' === $key) { return $this->error('validation_failed', 'A Theme Page key is required.', 400); }
         if (! isset(Eduardo_Research_Manager::contract()->pages()[$key])) {
@@ -479,6 +534,44 @@ final class Eduardo_Research_Manager_Remote_Operations {
     private function verify_rendered_operation(array $operation): array|WP_Error {
         $type = (string) ($operation['operation'] ?? '');
         if ('greenfield-canonical' === $type) { return $this->verify_rendered_site(); }
+        if ($this->is_insight_operation($type)) {
+            $post_id = absint($operation['target']['post_id'] ?? $operation['result']['post_id'] ?? 0);
+            if ($post_id <= 0) { return $this->error('validation_failed', 'Insight operation is missing its rendered verification target.', 409); }
+            $record = $this->insight_editor->inspect($post_id);
+            if (is_wp_error($record)) { return $this->normalise_service_error($record, 409); }
+            if ('publish' !== (string) ($record['status'] ?? '')) {
+                return array(
+                    'requested'=>true,
+                    'verified'=>true,
+                    'resources'=>array(array(
+                        'resource'=>'insight:' . $post_id,
+                        'post_id'=>$post_id,
+                        'verified'=>true,
+                        'skipped'=>true,
+                        'reason'=>'draft-or-non-public',
+                    )),
+                    'verified_at'=>gmdate(DATE_W3C),
+                );
+            }
+            $result = Eduardo_Research_Manager::rendered()->verify_record($post_id);
+            if (is_wp_error($result)) {
+                return array(
+                    'requested'=>true,
+                    'verified'=>false,
+                    'resources'=>array(array(
+                        'resource'=>'insight:' . $post_id,
+                        'post_id'=>$post_id,
+                        'verified'=>false,
+                        'error_code'=>$result->get_error_code(),
+                        'error'=>$result->get_error_message(),
+                    )),
+                    'verified_at'=>gmdate(DATE_W3C),
+                );
+            }
+            unset($result['body']);
+            return array('requested'=>true,'verified'=>! empty($result['verified']),'resources'=>array($result),'verified_at'=>gmdate(DATE_W3C));
+        }
+
         $target = is_array($operation['target'] ?? null) ? $operation['target'] : array();
         $key = sanitize_key((string) ($target['key'] ?? ''));
         if ('' === $key) { return $this->error('validation_failed', 'Page operation is missing its rendered verification target.', 409); }
@@ -546,7 +639,17 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if ('page-remediate' === $operation) {
             return sprintf('Remote bounded Page readiness remediation: %s', (string) ($target['key'] ?? ''));
         }
+        if ('insight-create' === $operation) {
+            return 'Remote creation of bounded Research Insight';
+        }
+        if ('insight-update' === $operation) {
+            return sprintf('Remote bounded Research Insight update: #%d', absint($target['post_id'] ?? 0));
+        }
         return 'Remote canonical Greenfield operation';
+    }
+
+    private function is_insight_operation(string $type): bool {
+        return in_array($type, array('insight-create','insight-update'), true);
     }
 
     private function blueprint_sha(): string {
