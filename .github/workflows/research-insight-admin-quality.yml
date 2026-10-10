@@ -40,6 +40,10 @@ jobs:
           coverage: none
           tools: wp-cli
 
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
       - name: Lint Insight admin files
         run: |
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-admin.php
