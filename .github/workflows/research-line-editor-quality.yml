@@ -1,0 +1,140 @@
+name: Research Line Editor Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-line-editor-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-line-editor-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  line-editor:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Research Line editor service
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-line-editor-wp
+          mkdir -p /tmp/research-line-editor-wp
+          cd /tmp/research-line-editor-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Line Editor' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Enforce evidence gate create update stale protection and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-editor-wp
+          wp eval '
+          wp_set_current_user(1);
+          $editor = Eduardo_Research_Manager::line_editor();
+          if (! $editor instanceof Eduardo_Research_Manager_Line_Editor) { exit(1); }
+          $data = [
+              "title"=>"CI Evidence-aware Research Line",
+              "slug"=>"ci-evidence-aware-research-line",
+              "excerpt"=>"Evidence-aware structured Research Line.",
+              "content"=>"<p>Research Line body.</p>",
+              "language"=>"en",
+              "status"=>"publish",
+              "evidence_status"=>"verified",
+              "research_status"=>"planned",
+              "central_question"=>"How should evidence-aware Research Lines be governed?",
+              "order"=>"90",
+              "topics"=>["Evidence governance","Research infrastructure"],
+              "methods"=>["Design Science Research","Controlled experiments"]
+          ];
+
+          $blocked = $editor->preview_create($data, false, "");
+          if (is_wp_error($blocked) || ! empty($blocked["apply_allowed"]) || "evidence-required" !== ($blocked["risk"] ?? "") || "" === ($blocked["apply_blocker"] ?? "")) {
+              fwrite(STDERR, is_wp_error($blocked) ? $blocked->get_error_message() : wp_json_encode($blocked)); exit(1);
+          }
+          $blocked_apply = $editor->apply_preview($blocked);
+          if (! is_wp_error($blocked_apply) || "research_manager_line_editor_apply_blocked" !== $blocked_apply->get_error_code()) { exit(1); }
+
+          $created_preview = $editor->preview_create($data, true, "CI evidence fixture");
+          if (is_wp_error($created_preview) || empty($created_preview["apply_allowed"]) || empty($created_preview["creation_token"])) { exit(1); }
+          $created = $editor->apply_preview($created_preview);
+          if (is_wp_error($created) || empty($created["verified"]) || empty($created["post_id"]) || empty($created["snapshot_id"])) {
+              fwrite(STDERR, is_wp_error($created) ? $created->get_error_message() : wp_json_encode($created)); exit(1);
+          }
+          $post_id = (int) $created["post_id"];
+          $record = $editor->inspect($post_id);
+          if (is_wp_error($record) || "verified" !== $record["evidence_status"] || "planned" !== $record["research_status"] || 2 !== count($record["topics"])) { exit(1); }
+          $listed = $editor->list("en");
+          if (is_wp_error($listed) || 1 !== count(array_filter($listed, static fn(array $row): bool => $post_id === (int) $row["post_id"]))) { exit(1); }
+
+          $editorial_preview = $editor->preview_update($post_id, ["excerpt"=>"Editorial-only update without evidence gate."], false, "");
+          if (is_wp_error($editorial_preview) || empty($editorial_preview["apply_allowed"]) || "editorial-review" !== ($editorial_preview["risk"] ?? "")) {
+              fwrite(STDERR, is_wp_error($editorial_preview) ? $editorial_preview->get_error_message() : wp_json_encode($editorial_preview)); exit(1);
+          }
+          $editorial = $editor->apply_preview($editorial_preview);
+          if (is_wp_error($editorial) || empty($editorial["verified"]) || empty($editorial["snapshot_id"])) { exit(1); }
+
+          $sensitive_changes = ["central_question"=>"How can evidence-aware Research Lines remain auditable and reproducible?","topics"=>["Evidence governance","Research infrastructure","Reproducibility"]];
+          $sensitive_blocked = $editor->preview_update($post_id, $sensitive_changes, false, "");
+          if (is_wp_error($sensitive_blocked) || ! empty($sensitive_blocked["apply_allowed"]) || "evidence-required" !== ($sensitive_blocked["risk"] ?? "")) { exit(1); }
+          $sensitive_preview = $editor->preview_update($post_id, $sensitive_changes, true, "CI verified Research Line update");
+          if (is_wp_error($sensitive_preview) || empty($sensitive_preview["apply_allowed"]) || empty($sensitive_preview["baseline_checksum"])) { exit(1); }
+          $sensitive = $editor->apply_preview($sensitive_preview);
+          if (is_wp_error($sensitive) || empty($sensitive["verified"]) || empty($sensitive["snapshot_id"])) { exit(1); }
+          $steady = $editor->preview_update($post_id, $sensitive_changes, true, "CI verified Research Line update");
+          if (is_wp_error($steady) || "already-matching" !== ($steady["status"] ?? "") || empty($steady["verification"]["verified"])) { exit(1); }
+
+          $rollback_sensitive = $editor->rollback((string) $sensitive["snapshot_id"]);
+          if (is_wp_error($rollback_sensitive)) { exit(1); }
+          $after_sensitive = $editor->inspect($post_id);
+          if (is_wp_error($after_sensitive) || 2 !== count($after_sensitive["topics"])) { exit(1); }
+
+          $stale = $editor->preview_update($post_id, ["excerpt"=>"Stale candidate."], false, "");
+          if (is_wp_error($stale) || empty($stale["baseline_checksum"])) { exit(1); }
+          wp_update_post(["ID"=>$post_id,"post_excerpt"=>"Concurrent external edit"]);
+          $stale_result = $editor->apply_preview($stale);
+          if (! is_wp_error($stale_result) || "research_manager_line_editor_stale_preview" !== $stale_result->get_error_code()) { exit(1); }
+
+          $rollback_editorial = $editor->rollback((string) $editorial["snapshot_id"]);
+          if (is_wp_error($rollback_editorial)) { exit(1); }
+          $rollback_create = $editor->rollback((string) $created["snapshot_id"]);
+          if (is_wp_error($rollback_create)) { exit(1); }
+          if (get_post($post_id) instanceof WP_Post && "trash" !== get_post_status($post_id)) { exit(1); }
+          ' --allow-root
