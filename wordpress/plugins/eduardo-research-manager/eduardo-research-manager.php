@@ -40,6 +40,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blu
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-bootstrap.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-hydrator.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-pairing.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-relations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
