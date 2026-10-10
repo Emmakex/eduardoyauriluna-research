@@ -9,6 +9,7 @@ require_once get_template_directory() . '/inc/research-content-language.php';
 require_once get_template_directory() . '/inc/research-model.php';
 require_once get_template_directory() . '/inc/research-evidence.php';
 require_once get_template_directory() . '/inc/research-objects.php';
+require_once get_template_directory() . '/inc/research-lines.php';
 require_once get_template_directory() . '/inc/research-relations.php';
 require_once get_template_directory() . '/inc/research-collections.php';
 require_once get_template_directory() . '/inc/research-insights.php';
