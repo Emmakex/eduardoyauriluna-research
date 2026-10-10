@@ -1,0 +1,104 @@
+name: Research Blueprint Store Quality
+
+on:
+  pull_request:
+    paths:
+      - 'config/research-site-blueprint.json'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-blueprint-store-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/research-site-blueprint.json'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-blueprint-store-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  blueprint-store:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify canonical blueprint is bundled byte-for-byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=config/research-site-blueprint.json
+          BUNDLED=wordpress/plugins/eduardo-research-manager/blueprints/eduardo-research.json
+          test -s "$ROOT"
+          test -s "$BUNDLED"
+          cmp "$ROOT" "$BUNDLED"
+          python3 -m json.tool "$BUNDLED" >/dev/null
+          test "$(sha256sum "$ROOT" | awk '{print $1}')" = "$(sha256sum "$BUNDLED" | awk '{print $1}')"
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install WordPress, Theme and Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-blueprint-store-wp
+          mkdir -p /tmp/research-blueprint-store-wp
+          cd /tmp/research-blueprint-store-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Blueprint Store' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Verify bundled blueprint service, metadata and export
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-blueprint-store-wp
+          wp eval '
+          wp_set_current_user(1);
+          $store = Eduardo_Research_Manager::blueprint_store();
+          if (! $store instanceof Eduardo_Research_Manager_Blueprint_Store) { exit(1); }
+          $blueprint = $store->canonical();
+          if (is_wp_error($blueprint) || 1 !== (int) $blueprint["version"] || ["en","es"] !== $blueprint["languages"] || 12 !== count($blueprint["pages"]) || 8 !== count($blueprint["lines"])) {
+              fwrite(STDERR, is_wp_error($blueprint) ? $blueprint->get_error_message() : wp_json_encode($blueprint)); exit(1);
+          }
+          $metadata = $store->metadata();
+          if (is_wp_error($metadata) || 64 !== strlen((string) $metadata["sha256"]) || (int) $metadata["bytes"] <= 0 || 20 !== (int) $metadata["summary"]["total_resources"]) {
+              fwrite(STDERR, is_wp_error($metadata) ? $metadata->get_error_message() : wp_json_encode($metadata)); exit(1);
+          }
+          $export = $store->export_json();
+          if (is_wp_error($export)) { fwrite(STDERR, $export->get_error_message()); exit(1); }
+          $decoded = json_decode($export, true);
+          if (! is_array($decoded) || "Eduardo Jose Yauri Luna" !== ($decoded["site"]["name"] ?? "") || "eduardo-research-blueprint-v1.json" !== $store->export_filename()) { exit(1); }
+          $preview = Eduardo_Research_Manager::pipeline()->preview($blueprint);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"])) { fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1); }
+          ' --allow-root
+
+      - name: Verify installable plugin package contains canonical blueprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/erm-package
+          cd wordpress/plugins
+          zip -rq /tmp/erm-package/eduardo-research-manager.zip eduardo-research-manager
+          unzip -l /tmp/erm-package/eduardo-research-manager.zip | grep -F 'eduardo-research-manager/blueprints/eduardo-research.json'
