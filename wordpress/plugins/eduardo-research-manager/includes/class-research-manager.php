@@ -77,6 +77,7 @@ final class Eduardo_Research_Manager {
             (new Eduardo_Research_Manager_Object_Admin())->register();
             (new Eduardo_Research_Manager_Translation_Admin())->register();
             (new Eduardo_Research_Manager_Evidence_Admin())->register();
+            (new Eduardo_Research_Manager_Connections_Admin())->register();
         }
     }
 
