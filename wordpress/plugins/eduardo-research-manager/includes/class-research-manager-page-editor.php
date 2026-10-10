@@ -23,6 +23,7 @@ final class Eduardo_Research_Manager_Page_Editor {
     public function preview(string $key, string $language, array $slots): array|WP_Error {
         $resource = $this->pages->inspect($key, $language);
         if (is_wp_error($resource)) { return $resource; }
+        $baseline_checksum = $this->state_checksum($resource);
 
         $plan = $this->pages->build_hydration_plan(
             $key,
@@ -43,6 +44,7 @@ final class Eduardo_Research_Manager_Page_Editor {
                 'key'=>$key,
                 'language'=>$language,
                 'slots'=>$slots,
+                'baseline_checksum'=>$baseline_checksum,
                 'apply_allowed'=>true,
                 'plan'=>array(),
                 'plan_id'=>'',
@@ -59,6 +61,7 @@ final class Eduardo_Research_Manager_Page_Editor {
             'key'=>$key,
             'language'=>$language,
             'slots'=>$slots,
+            'baseline_checksum'=>$baseline_checksum,
             'apply_allowed'=>! empty($preview['apply_allowed']),
             'plan'=>$plan,
             'plan_id'=>(string) ($plan['id'] ?? ''),
@@ -75,8 +78,18 @@ final class Eduardo_Research_Manager_Page_Editor {
         $key = sanitize_key((string) ($prepared['key'] ?? ''));
         $language = sanitize_key((string) ($prepared['language'] ?? ''));
         $slots = is_array($prepared['slots'] ?? null) ? $prepared['slots'] : array();
-        if ('' === $key || '' === $language || ! $slots) {
+        $baseline_checksum = sanitize_text_field((string) ($prepared['baseline_checksum'] ?? ''));
+        if ('' === $key || '' === $language || ! $slots || '' === $baseline_checksum) {
             return new WP_Error('research_manager_page_editor_preview_invalid', 'The prepared Page preview is incomplete.');
+        }
+
+        $current = $this->pages->inspect($key, $language);
+        if (is_wp_error($current)) { return $current; }
+        if (! hash_equals($baseline_checksum, $this->state_checksum($current))) {
+            return new WP_Error(
+                'research_manager_page_editor_stale_preview',
+                'The Page changed after Preview. Refresh the editor and prepare a new Preview before Apply.'
+            );
         }
 
         if ('already-matching' === (string) ($prepared['status'] ?? '')) {
@@ -141,5 +154,17 @@ final class Eduardo_Research_Manager_Page_Editor {
             return new WP_Error('research_manager_page_editor_snapshot_missing', 'A Page editor snapshot ID is required for rollback.');
         }
         return $this->executor->rollback($snapshot_id);
+    }
+
+    private function state_checksum(array $resource): string {
+        $state = array(
+            'key'=>(string) ($resource['key'] ?? ''),
+            'language'=>(string) ($resource['language'] ?? ''),
+            'page_id'=>(int) ($resource['page_id'] ?? 0),
+            'role'=>(string) ($resource['role'] ?? ''),
+            'model'=>(string) ($resource['model'] ?? ''),
+            'stored_slots'=>is_array($resource['stored_slots'] ?? null) ? $resource['stored_slots'] : array(),
+        );
+        return hash('sha256', (string) wp_json_encode($state));
     }
 }
