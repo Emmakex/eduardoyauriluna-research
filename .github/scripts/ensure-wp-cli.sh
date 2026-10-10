@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if command -v wp >/dev/null 2>&1 && wp --info >/dev/null 2>&1; then
+force_fallback="${WP_CLI_FORCE_FALLBACK:-0}"
+if [[ "$force_fallback" != "1" ]] && command -v wp >/dev/null 2>&1 && wp --info >/dev/null 2>&1; then
   echo "WP-CLI already available: $(command -v wp)"
   exit 0
 fi
