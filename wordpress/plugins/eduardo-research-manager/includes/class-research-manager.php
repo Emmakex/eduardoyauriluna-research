@@ -22,6 +22,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Rendered_Verifier $rendered = null;
     private static ?Eduardo_Research_Manager_Remediation $remediation = null;
     private static ?Eduardo_Research_Manager_Translation_Pairing $translations = null;
+    private static ?Eduardo_Research_Manager_Translation_Editor $translation_editor = null;
     private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
     private static ?Eduardo_Research_Manager_Blueprint $blueprint = null;
     private static ?Eduardo_Research_Manager_Blueprint_Store $blueprint_store = null;
@@ -50,6 +51,7 @@ final class Eduardo_Research_Manager {
         self::$rendered = new Eduardo_Research_Manager_Rendered_Verifier(self::$contract);
         self::$remediation = new Eduardo_Research_Manager_Remediation(self::$contract, self::$diagnostics, self::$pages);
         self::$translations = new Eduardo_Research_Manager_Translation_Pairing();
+        self::$translation_editor = new Eduardo_Research_Manager_Translation_Editor(self::$translations, self::$executor);
         self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         self::$blueprint = new Eduardo_Research_Manager_Blueprint();
         self::$blueprint_store = new Eduardo_Research_Manager_Blueprint_Store(self::$blueprint);
@@ -94,4 +96,5 @@ final class Eduardo_Research_Manager {
     public static function rendered(): Eduardo_Research_Manager_Rendered_Verifier { if (! self::$rendered) { self::$rendered = new Eduardo_Research_Manager_Rendered_Verifier(self::contract()); } return self::$rendered; }
     public static function remediation(): Eduardo_Research_Manager_Remediation { if (! self::$remediation) { self::$remediation = new Eduardo_Research_Manager_Remediation(self::contract(), self::diagnostics(), self::pages()); } return self::$remediation; }
     public static function translations(): Eduardo_Research_Manager_Translation_Pairing { if (! self::$translations) { self::$translations = new Eduardo_Research_Manager_Translation_Pairing(); } return self::$translations; }
+    public static function translation_editor(): Eduardo_Research_Manager_Translation_Editor { if (! self::$translation_editor) { self::$translation_editor = new Eduardo_Research_Manager_Translation_Editor(self::translations(), self::executor()); } return self::$translation_editor; }
 }
