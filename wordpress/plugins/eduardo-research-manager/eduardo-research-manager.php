@@ -45,6 +45,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-orc
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-crossref-adapter.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-openalex-adapter.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-zenodo-adapter.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-github-adapter.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-store.php';
