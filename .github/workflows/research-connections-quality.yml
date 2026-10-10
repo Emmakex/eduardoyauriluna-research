@@ -38,8 +38,11 @@ jobs:
           coverage: none
           tools: wp-cli
 
-      - name: Lint academic connections service
-        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php
+      - name: Lint academic connections files
+        shell: bash
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections-admin.php
 
       - name: Install Research WordPress
         shell: bash
@@ -113,4 +116,33 @@ jobs:
           if ("0000-0000-0000-0000" !== (string)$status["identifier"]) { exit(1); }
           if (! empty($status["write_enabled"])) { exit(1); }
           if ("oauth" !== (string)$status["mode"]) { exit(1); }
+          ' --allow-root
+
+      - name: Render Academic Connections and workspace navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-connections-wp
+          wp eval '
+          wp_set_current_user(1);
+          ob_start(); (new Eduardo_Research_Manager_Connections_Admin())->render(); $connections=(string)ob_get_clean();
+          foreach ([
+              "Academic Connections","Read before write","ORCID","Google Scholar","Crossref","Zenodo","OpenAlex","GitHub",
+              "LINKED","AVAILABLE","0000-0000-0000-0000","Manage verified academic identifiers",
+              "EDUARDO_RESEARCH_ORCID_CLIENT_ID","no Scholar scraping dependency"
+          ] as $needle) {
+              if (false===strpos($connections,$needle)) { fwrite(STDERR,"missing connections marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($connections,"CLIENT_SECRET=")) { fwrite(STDERR,"secret material leaked\n"); exit(1); }
+
+          ob_start(); (new Eduardo_Research_Manager_Workspace())->render(); $workspace=(string)ob_get_clean();
+          foreach (["Academic Connections","admin.php?page=eduardo-research-connections","ready or linked providers"] as $needle) {
+              if (false===strpos($workspace,$needle)) { fwrite(STDERR,"missing workspace connection marker: {$needle}\n"); exit(1); }
+          }
+
+          (new Eduardo_Research_Manager_Workspace())->menu();
+          global $submenu;
+          $slugs=[];
+          foreach ((array)($submenu["eduardo-research-workspace"] ?? []) as $item) { if (isset($item[2])) { $slugs[]=(string)$item[2]; } }
+          if (! in_array("eduardo-research-connections",$slugs,true)) { fwrite(STDERR,"Academic Connections submenu missing\n"); exit(1); }
           ' --allow-root
