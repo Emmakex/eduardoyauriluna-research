@@ -1,0 +1,206 @@
+name: Research Crossref Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-crossref-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-crossref-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  crossref:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Crossref adapter
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-adapter.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-crossref-wp
+          mkdir -p /tmp/research-crossref-wp
+          cd /tmp/research-crossref-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Crossref' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Verify exact DOI contract and normalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-wp
+          wp eval '
+          $adapter = Eduardo_Research_Manager::crossref();
+          if (! $adapter instanceof Eduardo_Research_Manager_Crossref_Adapter) { exit(1); }
+          $caps = $adapter->capabilities();
+          if (empty($caps["exact_doi_lookup"]) || empty($caps["metadata_read"]) || empty($caps["output_reconciliation_preview"])) { exit(1); }
+          if (! empty($caps["name_matching"]) || ! empty($caps["external_write"])) { exit(1); }
+          $cases = [
+              "10.1234/ABC.DEF"=>"10.1234/abc.def",
+              "doi:10.5555/Example-01"=>"10.5555/example-01",
+              "https://doi.org/10.1000/XYZ_123"=>"10.1000/xyz_123"
+          ];
+          foreach ($cases as $input=>$expected) {
+              if ($expected !== $adapter->normalize_doi($input)) { fwrite(STDERR,"DOI normalization mismatch: {$input}\n"); exit(1); }
+          }
+          foreach (["Eduardo Jose Yauri Luna","not-a-doi","10.12/x","https://example.com/10.1234/x"] as $invalid) {
+              if ("" !== $adapter->normalize_doi($invalid)) { fwrite(STDERR,"invalid DOI accepted: {$invalid}\n"); exit(1); }
+          }
+          $invalid = $adapter->lookup("Eduardo Jose Yauri Luna");
+          if (! is_wp_error($invalid) || "research_manager_crossref_invalid_doi" !== $invalid->get_error_code()) { exit(1); }
+          $config = $adapter->configuration();
+          if (empty($config["public_api"]) || ! empty($config["secrets_required"]) || ! empty($config["external_write"])) { exit(1); }
+          ' --allow-root
+
+      - name: Read and normalize exact DOI metadata with mocked Crossref HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-wp
+          wp eval '
+          $seen_url="";
+          $seen_agent="";
+          add_filter("pre_http_request",static function($pre,$args,$url) use (&$seen_url,&$seen_agent){
+              $seen_url=(string)$url;
+              $headers=is_array($args["headers"] ?? null) ? $args["headers"] : [];
+              $seen_agent=(string)($headers["User-Agent"] ?? "");
+              return [
+                  "headers"=>[],
+                  "body"=>wp_json_encode(["status"=>"ok","message"=>[
+                      "DOI"=>"10.1234/CROSSREF.TEST",
+                      "title"=>["Crossref Verified Research Output"],
+                      "subtitle"=>["Synthetic subtitle"],
+                      "author"=>[
+                          ["given"=>"Eduardo Jose","family"=>"Yauri Luna"],
+                          ["given"=>"Ada","family"=>"Lovelace"]
+                      ],
+                      "published-online"=>["date-parts"=>[[2026,10,9]]],
+                      "container-title"=>["Journal of Synthetic Research"],
+                      "publisher"=>"Synthetic Academic Press",
+                      "type"=>"journal-article",
+                      "URL"=>"https://doi.org/10.1234/CROSSREF.TEST",
+                      "reference-count"=>12,
+                      "is-referenced-by-count"=>7
+                  ]]),
+                  "response"=>["code"=>200,"message"=>"OK"],
+                  "cookies"=>[]
+              ];
+          },10,3);
+          $result = Eduardo_Research_Manager::crossref()->lookup("https://doi.org/10.1234/CROSSREF.TEST");
+          if (is_wp_error($result)) { fwrite(STDERR,$result->get_error_message()); exit(1); }
+          if (false===strpos($seen_url,"https://api.crossref.org/works/10.1234%2Fcrossref.test")) { fwrite(STDERR,"unexpected Crossref URL: {$seen_url}\n"); exit(1); }
+          if (false===strpos($seen_agent,"EduardoResearchManager/")) { fwrite(STDERR,"Crossref User-Agent missing\n"); exit(1); }
+          $m=$result["metadata"];
+          $expected=[
+              "doi"=>"10.1234/crossref.test",
+              "title"=>"Crossref Verified Research Output",
+              "publication_date"=>"2026-10-09",
+              "venue"=>"Journal of Synthetic Research",
+              "publisher"=>"Synthetic Academic Press",
+              "crossref_type"=>"journal-article"
+          ];
+          foreach ($expected as $key=>$value) { if ($value !== (string)($m[$key] ?? "")) { fwrite(STDERR,"metadata mismatch: {$key}\n"); exit(1); } }
+          if (["Eduardo Jose Yauri Luna","Ada Lovelace"] !== $m["authors"]) { fwrite(STDERR,"author normalization mismatch\n"); exit(1); }
+          if (12 !== (int)$m["reference_count"] || 7 !== (int)$m["is_referenced_by_count"]) { exit(1); }
+          if (! empty($result["external_write"])) { exit(1); }
+          ' --allow-root
+
+      - name: Reject Crossref DOI response mismatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-wp
+          wp eval '
+          add_filter("pre_http_request",static function(){
+              return ["headers"=>[],"body"=>wp_json_encode(["message"=>["DOI"=>"10.9999/other"]]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+          });
+          $result = Eduardo_Research_Manager::crossref()->lookup("10.1234/requested");
+          if (! is_wp_error($result) || "research_manager_crossref_doi_mismatch" !== $result->get_error_code()) { exit(1); }
+          ' --allow-root
+
+      - name: Preview Research Output reconciliation without mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-wp
+          wp eval '
+          $post_id=wp_insert_post([
+              "post_type"=>"research_output","post_status"=>"publish",
+              "post_title"=>"Local Working Title","post_name"=>"local-working-title"
+          ]);
+          update_post_meta($post_id,"_research_language","en");
+          update_post_meta($post_id,"_research_output_type","article");
+          update_post_meta($post_id,"_research_publication_date","2026");
+          update_post_meta($post_id,"_research_venue","Local Venue");
+          update_post_meta($post_id,"_research_doi","10.1234/crossref.test");
+          update_post_meta($post_id,"_research_authors",["Eduardo Jose Yauri Luna"]);
+          $before=[
+              "post"=>get_post($post_id,ARRAY_A),
+              "meta"=>get_post_meta($post_id),
+              "evidence"=>get_option("eduardo_research_evidence",[])
+          ];
+          add_filter("pre_http_request",static function(){
+              return [
+                  "headers"=>[],
+                  "body"=>wp_json_encode(["message"=>[
+                      "DOI"=>"10.1234/crossref.test",
+                      "title"=>["Crossref Verified Research Output"],
+                      "author"=>[["given"=>"Eduardo Jose","family"=>"Yauri Luna"],["given"=>"Ada","family"=>"Lovelace"]],
+                      "published"=>["date-parts"=>[[2026,10,9]]],
+                      "container-title"=>["Journal of Synthetic Research"],
+                      "publisher"=>"Synthetic Academic Press",
+                      "type"=>"journal-article",
+                      "URL"=>"https://doi.org/10.1234/crossref.test"
+                  ]]),
+                  "response"=>["code"=>200,"message"=>"OK"],
+                  "cookies"=>[]
+              ];
+          });
+          $preview=Eduardo_Research_Manager::crossref()->preview_for_output($post_id);
+          if (is_wp_error($preview)) { fwrite(STDERR,$preview->get_error_message()); exit(1); }
+          if ("preview" !== $preview["status"] || empty($preview["has_differences"]) || empty($preview["requires_reconciliation"])) { exit(1); }
+          if (! empty($preview["automatic_local_apply"]) || ! empty($preview["external_write"])) { exit(1); }
+          if (! empty($preview["comparison"]["doi"]["matches"]) === false) { /* DOI should match; keep explicit check below. */ }
+          if (empty($preview["comparison"]["doi"]["matches"])) { fwrite(STDERR,"exact DOI unexpectedly differed\n"); exit(1); }
+          if (! empty($preview["comparison"]["title"]["matches"])) { fwrite(STDERR,"title difference not detected\n"); exit(1); }
+          if (! empty($preview["comparison"]["authors"]["matches"])) { fwrite(STDERR,"author difference not detected\n"); exit(1); }
+          $after=[
+              "post"=>get_post($post_id,ARRAY_A),
+              "meta"=>get_post_meta($post_id),
+              "evidence"=>get_option("eduardo_research_evidence",[])
+          ];
+          if (maybe_serialize($before) !== maybe_serialize($after)) { fwrite(STDERR,"Crossref preview mutated local Research state\n"); exit(1); }
+          ' --allow-root
