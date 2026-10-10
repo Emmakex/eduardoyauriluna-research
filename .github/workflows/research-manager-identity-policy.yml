@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-manager-identity-policy.yml'
   push:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-manager-identity-policy.yml'
 
 permissions:
@@ -37,6 +39,10 @@ jobs:
           extensions: mysqli,mbstring
           coverage: none
           tools: wp-cli
+
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
 
       - name: Install clean WordPress with Theme and Manager
         shell: bash
