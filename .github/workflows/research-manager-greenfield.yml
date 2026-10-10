@@ -30,6 +30,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-orchestrator.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-contract-shape.php
+          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-blueprint.php
       - name: Greenfield is explicit default
         run: |
           grep -F "public const GREENFIELD = 'greenfield';" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
