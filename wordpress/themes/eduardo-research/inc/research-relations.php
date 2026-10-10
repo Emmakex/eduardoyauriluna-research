@@ -18,7 +18,7 @@ function eduardo_research_sanitize_relation_ids($value): array {
 }
 
 function eduardo_research_register_relation_meta(): void {
-    foreach (eduardo_research_relation_source_types() as $post_type) {
+    foreach (eduardo_research_relation_object_types() as $post_type) {
         register_post_meta($post_type, '_research_line_ids', array(
             'type'=>'array',
             'single'=>true,
@@ -27,6 +27,13 @@ function eduardo_research_register_relation_meta(): void {
             'auth_callback'=>static fn() => current_user_can('edit_posts'),
         ));
     }
+    register_post_meta('post', '_research_insight_line_relations', array(
+        'type'=>'array',
+        'single'=>true,
+        'show_in_rest'=>array('schema'=>array('type'=>'array','items'=>array('type'=>'integer'))),
+        'sanitize_callback'=>'eduardo_research_sanitize_relation_ids',
+        'auth_callback'=>static fn() => current_user_can('edit_posts'),
+    ));
 }
 add_action('init', 'eduardo_research_register_relation_meta', 17);
 
@@ -49,7 +56,8 @@ function eduardo_research_post_line_ids(int $post_id, ?string $language = null):
     if (! in_array($post_type, eduardo_research_relation_source_types(), true)) { return array(); }
     if ('post' === $post_type && ! eduardo_research_is_managed_insight($post_id)) { return array(); }
     $language = $language ?: eduardo_research_post_language($post_id);
-    $ids = eduardo_research_sanitize_relation_ids(get_post_meta($post_id, '_research_line_ids', true));
+    $meta_key = 'post' === $post_type ? '_research_insight_line_relations' : '_research_line_ids';
+    $ids = eduardo_research_sanitize_relation_ids(get_post_meta($post_id, $meta_key, true));
     return array_values(array_filter($ids, static fn(int $line_id): bool => eduardo_research_line_is_verified_public($line_id, $language)));
 }
 
