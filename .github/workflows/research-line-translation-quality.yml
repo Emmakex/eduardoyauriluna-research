@@ -1,0 +1,122 @@
+name: Research Line Translation Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-line-translation-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-line-translation-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pairing:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-line-pairs-wp
+          mkdir -p /tmp/research-line-pairs-wp
+          cd /tmp/research-line-pairs-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Line Pairing' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Create and pair canonical bilingual Research Lines
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-pairs-wp
+          wp eval '
+          wp_set_current_user(1);
+          $blueprint = json_decode((string) file_get_contents(getenv("GITHUB_WORKSPACE") . "/config/research-site-blueprint.json"), true);
+          if (! is_array($blueprint)) { exit(1); }
+
+          $boot = Eduardo_Research_Manager::bootstrap()->apply($blueprint);
+          if (is_wp_error($boot) || empty($boot["verified"]) || 8 !== (int) $boot["operation_count"]) {
+              fwrite(STDERR, is_wp_error($boot) ? $boot->get_error_message() : wp_json_encode($boot)); exit(1);
+          }
+
+          if (! Eduardo_Research_Manager::blueprint_pairing() instanceof Eduardo_Research_Manager_Blueprint_Pairing) { exit(1); }
+          $preview = Eduardo_Research_Manager::blueprint_pairing()->preview($blueprint);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 4 !== (int) $preview["operation_count"] || ! empty($preview["requires_legacy_discovery"]) || ! empty($preview["requires_legacy_mapping"])) {
+              fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1);
+          }
+
+          $paired = Eduardo_Research_Manager::blueprint_pairing()->apply($blueprint);
+          if (is_wp_error($paired) || empty($paired["verified"]) || 4 !== (int) $paired["operation_count"] || 4 !== count($paired["snapshot_ids"])) {
+              fwrite(STDERR, is_wp_error($paired) ? $paired->get_error_message() : wp_json_encode($paired)); exit(1);
+          }
+
+          $pairs = [
+              ["autonomous-ai-agents-business-processes","agentes-autonomos-ia-procesos-empresariales"],
+              ["human-ai-collaboration-responsible-autonomy","colaboracion-humano-ia-autonomia-responsable"],
+              ["digital-transformation-ai-adoption-smes","transformacion-digital-adopcion-ia-pymes"],
+              ["ai-mediated-information-discovery-generative-search","descubrimiento-informacion-ia-busqueda-generativa"]
+          ];
+          foreach ($pairs as [$en_slug,$es_slug]) {
+              $en = Eduardo_Research_Manager::lines()->find_by_slug($en_slug, "en");
+              $es = Eduardo_Research_Manager::lines()->find_by_slug($es_slug, "es");
+              if ($en <= 0 || $es <= 0) { exit(1); }
+              $check = Eduardo_Research_Manager::translations()->verify_pair($en, $es);
+              if (is_wp_error($check) || empty($check["verified"])) { exit(1); }
+              if (eduardo_research_translation_post_id($en, "es") !== $es || eduardo_research_translation_post_id($es, "en") !== $en) { exit(1); }
+              if (false === strpos((string) get_permalink($en), "/research/lines/") || false === strpos((string) get_permalink($es), "/es/investigacion/lineas/")) { exit(1); }
+              $en_state = Eduardo_Research_Manager::translations()->inspect($en);
+              $es_state = Eduardo_Research_Manager::translations()->inspect($es);
+              if (is_wp_error($en_state) || is_wp_error($es_state) || "content/research-statement/research-statement-v1.md" !== $en_state["evidence_reference"] || $en_state["evidence_reference"] !== $es_state["evidence_reference"]) { exit(1); }
+          }
+
+          $second = Eduardo_Research_Manager::blueprint_pairing()->preview($blueprint);
+          if (is_wp_error($second) || 4 !== (int) $second["operation_count"]) { exit(1); }
+          foreach ($second["operations"] as $operation) {
+              if ("already-matching" !== $operation["status"] || empty($operation["apply_allowed"])) { exit(1); }
+          }
+
+          $rollback = Eduardo_Research_Manager::blueprint_pairing()->rollback($paired["snapshot_ids"]);
+          if (is_wp_error($rollback) || 4 !== (int) $rollback["snapshot_count"]) { exit(1); }
+          foreach ($pairs as [$en_slug,$es_slug]) {
+              $en = Eduardo_Research_Manager::lines()->find_by_slug($en_slug, "en");
+              $es = Eduardo_Research_Manager::lines()->find_by_slug($es_slug, "es");
+              $unpaired = Eduardo_Research_Manager::translations()->verify_unpaired($en);
+              if (is_wp_error($unpaired) || empty($unpaired["verified"]) || $es <= 0) { exit(1); }
+          }
+          ' --allow-root
