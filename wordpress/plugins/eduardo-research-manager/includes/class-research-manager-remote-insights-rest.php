@@ -118,16 +118,33 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
         $read['insight'] = 'site.read';
         $read['insight_seo_geo'] = 'site.diagnostics';
         $data['read_endpoints'] = $read;
+
+        $transport = is_array($data['mutation_transport'] ?? null) ? $data['mutation_transport'] : array();
+        $supported = is_array($transport['supported_operations'] ?? null) ? $transport['supported_operations'] : array();
+        foreach (array('insight-create','insight-update') as $operation) {
+            if (! in_array($operation, $supported, true)) { $supported[] = $operation; }
+        }
+        $transport['available'] = true;
+        $transport['milestone'] = 'M4';
+        $transport['supported_operations'] = $supported;
+        $transport['lifecycle'] = array('plan','apply','status','verify','rollback');
+        $transport['exact_plan_required'] = true;
+        $transport['stale_revision_protection'] = true;
+        $transport['idempotency'] = true;
+        $data['mutation_transport'] = $transport;
+
         $data['insight_control'] = array(
             'milestone'=>'M4',
             'inventory'=>true,
             'inspection'=>true,
             'languages'=>Eduardo_Research_Manager::contract()->languages(),
             'editorial_types'=>array_keys(Eduardo_Research_Manager::insights()->types()),
-            'statuses'=>array('draft','publish'),
+            'creation_statuses'=>array('draft','publish'),
+            'update_fields'=>array('title','excerpt','content','language','insight_type'),
             'rendered_seo_geo_inspection'=>true,
             'translation_inspection'=>true,
-            'remote_mutations'=>'next-m4-slice',
+            'remote_mutations'=>array('insight-create','insight-update'),
+            'existing_status_transition'=>'pending-next-m4-slice',
             'advanced_seo_geo_optimisation'=>'M6',
             'arbitrary_wordpress_proxy'=>false,
         );
