@@ -25,6 +25,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Blueprint_Hydrator $hydrator = null;
     private static ?Eduardo_Research_Manager_Blueprint_Pairing $blueprint_pairing = null;
     private static ?Eduardo_Research_Manager_Blueprint_Relations $blueprint_relations = null;
+    private static ?Eduardo_Research_Manager_Greenfield_Pipeline $pipeline = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -47,6 +48,7 @@ final class Eduardo_Research_Manager {
         self::$hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(self::$blueprint, self::$pages, self::$executor);
         self::$blueprint_pairing = new Eduardo_Research_Manager_Blueprint_Pairing(self::$blueprint, self::$lines, self::$translations, self::$executor);
         self::$blueprint_relations = new Eduardo_Research_Manager_Blueprint_Relations(self::$blueprint, self::$lines, self::$executor);
+        self::$pipeline = new Eduardo_Research_Manager_Greenfield_Pipeline(self::$bootstrap, self::$blueprint_pairing, self::$hydrator, self::$blueprint_relations);
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
@@ -58,6 +60,7 @@ final class Eduardo_Research_Manager {
     public static function hydrator(): Eduardo_Research_Manager_Blueprint_Hydrator { if (! self::$hydrator) { self::$hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(self::blueprint(), self::pages(), self::executor()); } return self::$hydrator; }
     public static function blueprint_pairing(): Eduardo_Research_Manager_Blueprint_Pairing { if (! self::$blueprint_pairing) { self::$blueprint_pairing = new Eduardo_Research_Manager_Blueprint_Pairing(self::blueprint(), self::lines(), self::translations(), self::executor()); } return self::$blueprint_pairing; }
     public static function blueprint_relations(): Eduardo_Research_Manager_Blueprint_Relations { if (! self::$blueprint_relations) { self::$blueprint_relations = new Eduardo_Research_Manager_Blueprint_Relations(self::blueprint(), self::lines(), self::executor()); } return self::$blueprint_relations; }
+    public static function pipeline(): Eduardo_Research_Manager_Greenfield_Pipeline { if (! self::$pipeline) { self::$pipeline = new Eduardo_Research_Manager_Greenfield_Pipeline(self::bootstrap(), self::blueprint_pairing(), self::hydrator(), self::blueprint_relations()); } return self::$pipeline; }
     public static function contract(): Eduardo_Research_Manager_Contract { if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); } return self::$contract; }
     public static function diagnostics(): Eduardo_Research_Manager_Diagnostics { if (! self::$diagnostics) { self::$diagnostics = new Eduardo_Research_Manager_Diagnostics(self::contract()); } return self::$diagnostics; }
     public static function executor(): Eduardo_Research_Manager_Executor { if (! self::$executor) { self::$executor = new Eduardo_Research_Manager_Executor(); } return self::$executor; }
