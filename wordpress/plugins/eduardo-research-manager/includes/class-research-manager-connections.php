@@ -14,56 +14,36 @@ final class Eduardo_Research_Manager_Connections {
     public function providers(): array {
         return array(
             'orcid'=>array(
-                'label'=>'ORCID',
-                'mode'=>'oauth',
-                'priority'=>10,
+                'label'=>'ORCID','mode'=>'oauth','priority'=>10,
                 'capabilities'=>array('authenticated_identifier','profile_read','works_read','reconcile'),
-                'write_enabled'=>false,
-                'configuration'=>array(
-                    'EDUARDO_RESEARCH_ORCID_CLIENT_ID',
-                    'EDUARDO_RESEARCH_ORCID_CLIENT_SECRET',
-                    'EDUARDO_RESEARCH_ORCID_REDIRECT_URI',
-                ),
+                'write_enabled'=>false,'ready_without_configuration'=>false,
+                'configuration'=>array('EDUARDO_RESEARCH_ORCID_CLIENT_ID','EDUARDO_RESEARCH_ORCID_CLIENT_SECRET','EDUARDO_RESEARCH_ORCID_REDIRECT_URI'),
             ),
             'google_scholar'=>array(
-                'label'=>'Google Scholar',
-                'mode'=>'manual_link',
-                'priority'=>20,
+                'label'=>'Google Scholar','mode'=>'manual_link','priority'=>20,
                 'capabilities'=>array('profile_link','bibtex_import','csv_import','academic_meta'),
-                'write_enabled'=>false,
-                'configuration'=>array(),
+                'write_enabled'=>false,'ready_without_configuration'=>false,'configuration'=>array(),
             ),
             'crossref'=>array(
-                'label'=>'Crossref',
-                'mode'=>'public_api',
-                'priority'=>30,
+                'label'=>'Crossref','mode'=>'public_api','priority'=>30,
                 'capabilities'=>array('doi_lookup','metadata_read','reconcile'),
-                'write_enabled'=>false,
-                'configuration'=>array(),
+                'write_enabled'=>false,'ready_without_configuration'=>true,'configuration'=>array(),
             ),
             'zenodo'=>array(
-                'label'=>'Zenodo',
-                'mode'=>'token_read',
-                'priority'=>40,
+                'label'=>'Zenodo','mode'=>'token_read','priority'=>40,
                 'capabilities'=>array('record_read','doi_link','reconcile'),
-                'write_enabled'=>false,
+                'write_enabled'=>false,'ready_without_configuration'=>false,
                 'configuration'=>array('EDUARDO_RESEARCH_ZENODO_TOKEN'),
             ),
             'openalex'=>array(
-                'label'=>'OpenAlex',
-                'mode'=>'public_api',
-                'priority'=>50,
+                'label'=>'OpenAlex','mode'=>'public_api','priority'=>50,
                 'capabilities'=>array('author_search','author_read','works_read','metrics_read','reconcile'),
-                'write_enabled'=>false,
-                'configuration'=>array(),
+                'write_enabled'=>false,'ready_without_configuration'=>true,'configuration'=>array(),
             ),
             'github'=>array(
-                'label'=>'GitHub',
-                'mode'=>'manual_link',
-                'priority'=>60,
+                'label'=>'GitHub','mode'=>'manual_link','priority'=>60,
                 'capabilities'=>array('profile_link','software_link','repository_metadata'),
-                'write_enabled'=>false,
-                'configuration'=>array(),
+                'write_enabled'=>false,'ready_without_configuration'=>false,'configuration'=>array(),
             ),
         );
     }
@@ -83,7 +63,7 @@ final class Eduardo_Research_Manager_Connections {
             $status = $this->status((string) $provider);
             if (! is_wp_error($status)) { $statuses[$provider] = $status; }
         }
-        uasort($statuses, function (array $left, array $right): int {
+        uasort($statuses, static function (array $left, array $right): int {
             return (int) ($left['priority'] ?? 999) <=> (int) ($right['priority'] ?? 999);
         });
         return $statuses;
@@ -93,29 +73,27 @@ final class Eduardo_Research_Manager_Connections {
         $definition = $this->provider($provider);
         if (is_wp_error($definition)) { return $definition; }
         $provider = (string) $definition['provider'];
-
         $store = get_option('eduardo_research_connections', array());
         $store = is_array($store) ? $store : array();
         $stored = is_array($store[$provider] ?? null) ? $store[$provider] : array();
         $configuration = $this->validate_configuration($provider);
         $identifier = $this->verified_identifier($provider);
 
-        $allowed = array('disconnected','configured','linked','connected','error');
+        $allowed = array('disconnected','available','configured','linked','connected','error');
         $state = sanitize_key($this->scalar($stored['status'] ?? ''));
         if (! in_array($state, $allowed, true)) { $state = 'disconnected'; }
+        $required = is_array($configuration['required'] ?? null) ? $configuration['required'] : array();
 
         if ('disconnected' === $state && ! is_wp_error($identifier) && $identifier) {
             $state = 'linked';
-        } elseif ('disconnected' === $state && ! empty($configuration['configured'])) {
+        } elseif ('disconnected' === $state && $required && ! empty($configuration['configured'])) {
             $state = 'configured';
+        } elseif ('disconnected' === $state && ! empty($definition['ready_without_configuration'])) {
+            $state = 'available';
         }
 
-        $identifier_value = ! is_wp_error($identifier) && is_array($identifier)
-            ? $this->scalar($identifier['value'] ?? '')
-            : '';
-        $identifier_url = ! is_wp_error($identifier) && is_array($identifier)
-            ? $this->scalar($identifier['url'] ?? '')
-            : '';
+        $identifier_value = ! is_wp_error($identifier) && is_array($identifier) ? $this->scalar($identifier['value'] ?? '') : '';
+        $identifier_url = ! is_wp_error($identifier) && is_array($identifier) ? $this->scalar($identifier['url'] ?? '') : '';
 
         return array(
             'provider'=>$provider,
@@ -142,9 +120,7 @@ final class Eduardo_Research_Manager_Connections {
         $missing = array();
         foreach ($required as $constant) {
             $constant = (string) $constant;
-            if (! defined($constant) || '' === trim($this->scalar(constant($constant)))) {
-                $missing[] = $constant;
-            }
+            if (! defined($constant) || '' === trim($this->scalar(constant($constant)))) { $missing[] = $constant; }
         }
         return array(
             'provider'=>(string) $definition['provider'],
@@ -157,7 +133,7 @@ final class Eduardo_Research_Manager_Connections {
 
     public function overview(): array {
         $statuses = $this->statuses();
-        $summary = array('connected'=>0,'linked'=>0,'configured'=>0,'disconnected'=>0,'error'=>0);
+        $summary = array('connected'=>0,'linked'=>0,'configured'=>0,'available'=>0,'disconnected'=>0,'error'=>0);
         foreach ($statuses as $status) {
             $state = (string) ($status['status'] ?? 'disconnected');
             if (! isset($summary[$state])) { $state = 'disconnected'; }
@@ -206,9 +182,9 @@ final class Eduardo_Research_Manager_Connections {
             'openalex'=>array('openalex','openalex.org'),
             'github'=>array('github','github.com'),
         );
-        foreach ($patterns as $provider => $needles) {
+        foreach ($patterns as $candidate => $needles) {
             foreach ($needles as $needle) {
-                if (str_contains($haystack, $needle)) { return (string) $provider; }
+                if (str_contains($haystack, $needle)) { return (string) $candidate; }
             }
         }
         return '';
