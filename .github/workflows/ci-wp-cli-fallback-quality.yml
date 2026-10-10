@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - '.github/scripts/ensure-wp-cli.sh'
-      - '.github/workflows/ci-wp-cli-fallback-quality.yml'
-      - '.github/workflows/research-insight-editor-quality.yml'
+      - '.github/scripts/check-wp-cli-workflows.sh'
+      - '.github/workflows/**'
   push:
     branches: [main]
     paths:
       - '.github/scripts/ensure-wp-cli.sh'
-      - '.github/workflows/ci-wp-cli-fallback-quality.yml'
-      - '.github/workflows/research-insight-editor-quality.yml'
+      - '.github/scripts/check-wp-cli-workflows.sh'
+      - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -25,6 +25,9 @@ jobs:
         with:
           php-version: '8.1'
           coverage: none
+      - name: Enforce WP-CLI workflow bootstrap contract
+        shell: bash
+        run: bash .github/scripts/check-wp-cli-workflows.sh
       - name: Exercise forced WP-CLI fallback
         shell: bash
         env:
