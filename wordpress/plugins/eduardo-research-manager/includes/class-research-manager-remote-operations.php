@@ -24,8 +24,8 @@ final class Eduardo_Research_Manager_Remote_Operations {
 
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if ('greenfield.canonical' !== $operation) {
-            return $this->error('validation_failed', 'M2 only permits the bounded greenfield.canonical operation. Page/content operations are introduced in later milestones.', 400);
+        if ('greenfield-canonical' !== $operation) {
+            return $this->error('validation_failed', 'M2 only permits the bounded greenfield-canonical operation. Page/content operations are introduced in later milestones.', 400);
         }
 
         $blueprint = Eduardo_Research_Manager::blueprint_store()->canonical();
@@ -44,7 +44,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
         $material = array(
             'operation'=>$operation,
             'source_revision'=>$source_revision,
-            'blueprint_sha256'=>(string) ($this->blueprint_sha() ?? ''),
+            'blueprint_sha256'=>$this->blueprint_sha(),
             'preview'=>$this->stable_value($preview),
             'reason'=>$reason,
             'connection_id'=>$connection_id,
@@ -59,7 +59,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
             'confirmation_class'=>$confirmation_class,
             'confirmation_required'=>true,
             'source_revision'=>$source_revision,
-            'blueprint_sha256'=>(string) ($this->blueprint_sha() ?? ''),
+            'blueprint_sha256'=>$this->blueprint_sha(),
             'preview'=>$preview,
             'apply_allowed'=>! empty($preview['apply_allowed']),
             'created_at'=>gmdate(DATE_W3C, $now),
@@ -133,7 +133,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
 
         $blueprint = Eduardo_Research_Manager::blueprint_store()->canonical();
         if (is_wp_error($blueprint)) { return $blueprint; }
-        if (! hash_equals((string) ($plan['blueprint_sha256'] ?? ''), (string) ($this->blueprint_sha() ?? ''))) {
+        if (! hash_equals((string) ($plan['blueprint_sha256'] ?? ''), $this->blueprint_sha())) {
             return $this->error('stale_revision', 'The canonical Research blueprint changed after Preview. Create a fresh plan.', 409);
         }
 
@@ -195,7 +195,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if ((string) ($operation['connection_id'] ?? '') !== (string) ($actor['connection_id'] ?? '')) {
             return $this->error('scope_denied', 'This operation belongs to a different remote connection.', 403);
         }
-        if (! in_array((string) ($operation['status'] ?? ''), array('applied','verified'), true)) {
+        if (! in_array((string) ($operation['status'] ?? ''), array('applied','verified','verification-failed'), true)) {
             return $this->error('validation_failed', 'Only applied operations can be verified.', 409);
         }
 
@@ -290,7 +290,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if (is_wp_error($preview)) { return $preview; }
         $diagnostics = Eduardo_Research_Manager::diagnostics()->run();
         $state = array(
-            'blueprint_sha256'=>(string) ($this->blueprint_sha() ?? ''),
+            'blueprint_sha256'=>$this->blueprint_sha(),
             'mode'=>Eduardo_Research_Manager_Mode::current(),
             'preview'=>$this->stable_value($preview),
             'diagnostics'=>$this->stable_value($diagnostics),
@@ -305,13 +305,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
             foreach (Eduardo_Research_Manager::contract()->languages() as $language) {
                 $result = Eduardo_Research_Manager::rendered()->verify_page((string) $key, (string) $language);
                 if (is_wp_error($result)) {
-                    $resources[] = array(
-                        'resource'=>'page:' . $key,
-                        'language'=>$language,
-                        'verified'=>false,
-                        'error_code'=>$result->get_error_code(),
-                        'error'=>$result->get_error_message(),
-                    );
+                    $resources[] = array('resource'=>'page:' . $key,'language'=>$language,'verified'=>false,'error_code'=>$result->get_error_code(),'error'=>$result->get_error_message());
                     $verified = false;
                     continue;
                 }
@@ -320,12 +314,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
                 $verified = $verified && ! empty($result['verified']);
             }
         }
-        return array(
-            'requested'=>true,
-            'verified'=>$verified,
-            'resources'=>$resources,
-            'verified_at'=>gmdate(DATE_W3C),
-        );
+        return array('requested'=>true,'verified'=>$verified,'resources'=>$resources,'verified_at'=>gmdate(DATE_W3C));
     }
 
     private function preview_change_count(array $preview): int {
@@ -370,64 +359,15 @@ final class Eduardo_Research_Manager_Remote_Operations {
         return $result;
     }
 
-    private function public_plan(array $plan): array {
-        unset($plan['expires_unix']);
-        return $plan;
-    }
-
-    private function public_operation(array $operation): array {
-        return $operation;
-    }
-
-    private function find_plan(string $plan_id): array {
-        $plans = $this->plans();
-        $plan = $plans[sanitize_text_field($plan_id)] ?? array();
-        return is_array($plan) ? $plan : array();
-    }
-
-    private function find_operation(string $operation_id): array {
-        $operations = $this->operations();
-        $operation = $operations[sanitize_text_field($operation_id)] ?? array();
-        return is_array($operation) ? $operation : array();
-    }
-
-    private function put_plan(array $plan): void {
-        $plans = $this->plans();
-        $plans[(string) $plan['plan_id']] = $plan;
-        while (count($plans) > self::PLAN_LIMIT) { array_shift($plans); }
-        $this->save_option(self::PLANS_OPTION, $plans);
-    }
-
-    private function put_operation(array $operation): void {
-        $operations = $this->operations();
-        $operations[(string) $operation['operation_id']] = $operation;
-        while (count($operations) > self::OPERATION_LIMIT) { array_shift($operations); }
-        $this->save_option(self::OPERATIONS_OPTION, $operations);
-    }
-
-    private function plans(): array {
-        $plans = get_option(self::PLANS_OPTION, array());
-        return is_array($plans) ? $plans : array();
-    }
-
-    private function operations(): array {
-        $operations = get_option(self::OPERATIONS_OPTION, array());
-        return is_array($operations) ? $operations : array();
-    }
-
-    private function save_option(string $name, array $value): void {
-        if (false === get_option($name, false)) { add_option($name, $value, '', false); return; }
-        update_option($name, $value, false);
-    }
-
-    private function has_snapshots(array $snapshots): bool {
-        foreach ($snapshots as $ids) {
-            if (is_array($ids) && $ids) { return true; }
-        }
-        return false;
-    }
-
-    private function error(string $code, string $message, int $status, array $extra = array()): WP_Error {
-        return new WP_Error($code, $message, array_merge(array('status'=>$status), $extra));
-    }
+    private function public_plan(array $plan): array { unset($plan['expires_unix']); return $plan; }
+    private function public_operation(array $operation): array { return $operation; }
+    private function find_plan(string $plan_id): array { $plans = $this->plans(); $plan = $plans[sanitize_text_field($plan_id)] ?? array(); return is_array($plan) ? $plan : array(); }
+    private function find_operation(string $operation_id): array { $operations = $this->operations(); $operation = $operations[sanitize_text_field($operation_id)] ?? array(); return is_array($operation) ? $operation : array(); }
+    private function put_plan(array $plan): void { $plans = $this->plans(); $plans[(string) $plan['plan_id']] = $plan; while (count($plans) > self::PLAN_LIMIT) { array_shift($plans); } $this->save_option(self::PLANS_OPTION, $plans); }
+    private function put_operation(array $operation): void { $operations = $this->operations(); $operations[(string) $operation['operation_id']] = $operation; while (count($operations) > self::OPERATION_LIMIT) { array_shift($operations); } $this->save_option(self::OPERATIONS_OPTION, $operations); }
+    private function plans(): array { $plans = get_option(self::PLANS_OPTION, array()); return is_array($plans) ? $plans : array(); }
+    private function operations(): array { $operations = get_option(self::OPERATIONS_OPTION, array()); return is_array($operations) ? $operations : array(); }
+    private function save_option(string $name, array $value): void { if (false === get_option($name, false)) { add_option($name, $value, '', false); return; } update_option($name, $value, false); }
+    private function has_snapshots(array $snapshots): bool { foreach ($snapshots as $ids) { if (is_array($ids) && $ids) { return true; } } return false; }
+    private function error(string $code, string $message, int $status, array $extra = array()): WP_Error { return new WP_Error($code, $message, array_merge(array('status'=>$status), $extra)); }
 }
