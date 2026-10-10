@@ -144,3 +144,52 @@ A client must be able to install Theme + Manager as normal WordPress packages an
 **Reference:** `docs/19-manager-productization.md`
 
 **Status:** Accepted
+
+---
+
+## ADR-014 — Manager is the WordPress website operating control plane
+
+**Decision:** The sellable product is not primarily a deployment helper, migration utility or diagnostics dashboard. The Manager must let us operate a WordPress website with the same direct, structured workflow used on custom products such as Kairoseth or IA Empleado.
+
+From the Manager, an authorised operator must progressively be able to create, modify, publish, optimise and verify the complete site without manually rebuilding pages in Gutenberg or moving through disconnected WordPress screens.
+
+The product scope includes:
+
+- creating complete pages from Theme/preset contracts;
+- controlling page sections, structured content and visual/style configuration owned by the Theme;
+- creating and maintaining navigation and internal relationships;
+- creating, editing, scheduling and optimising blog posts / Insights;
+- managing reusable media and metadata;
+- managing multilingual content and route relationships;
+- applying SEO optimisation to pages, posts and structured entities;
+- applying GEO / machine-discoverability optimisation;
+- managing schema, canonical, hreflang, metadata and indexability;
+- detecting and correcting site-wide consistency/readiness problems;
+- previewing, applying, verifying and rolling back meaningful controlled changes;
+- supporting reusable presets so the same operating model can be deployed across many WordPress businesses.
+
+WordPress provides the widely adopted CMS/runtime and ecosystem. The Theme provides deterministic rendering. The Manager provides the higher-level website operating layer.
+
+The intended interaction is therefore closer to managing a custom application than to using a conventional page builder:
+
+```text
+Intent / site operation
+        ↓
+Manager
+        ↓
+shared application services
+        ↓
+structured WordPress resources + Theme contracts
+        ↓
+Theme renders the website
+        ↓
+Manager verifies SEO/GEO/readiness/rendered state
+```
+
+**Reason:** A large commercial opportunity exists because many companies already run WordPress. We should bring our structured, direct website-building and continuous-optimisation workflow to that installed base instead of forcing every customer onto a new bespoke stack.
+
+**Product rule:** A feature is commercially complete when the Manager can control the relevant website outcome end-to-end. Merely exposing raw WordPress fields or reporting a problem is not sufficient when a safe deterministic action can be provided.
+
+**Reference:** `docs/19-manager-productization.md`
+
+**Status:** Accepted
