@@ -260,7 +260,7 @@ final class Eduardo_Research_Manager_GitHub_Adapter {
         );
         $token = $this->token();
         if ('' !== $token) { $headers['Authorization'] = 'Bearer ' . $token; }
-        $response = wp_remote_get($url, array('timeout'=>15,'headers'=>$headers));
+        $response = wp_remote_get($url, array('timeout'=>15,'redirection'=>0,'headers'=>$headers));
         if (is_wp_error($response)) {
             return $this->connection_error('research_manager_github_request_failed', $response->get_error_message());
         }
