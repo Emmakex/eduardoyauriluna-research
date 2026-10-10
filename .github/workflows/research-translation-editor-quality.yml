@@ -1,0 +1,142 @@
+name: Research Translation Editor Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-translation-editor-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-translation-editor-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  translation-editor:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Translation editor service
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-translation-editor-wp
+          mkdir -p /tmp/research-translation-editor-wp
+          cd /tmp/research-translation-editor-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Translation Editor' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Pair unpair stale-protect and rollback structured translations
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-editor-wp
+          wp eval '
+          wp_set_current_user(1);
+          $editor = Eduardo_Research_Manager::translation_editor();
+          if (! $editor instanceof Eduardo_Research_Manager_Translation_Editor) { exit(1); }
+          if (! isset($editor->supported_types()["research_output"], $editor->supported_types()["post"])) { exit(1); }
+
+          $en = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"English controlled output","post_name"=>"english-controlled-output"]);
+          $es = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Resultado controlado español","post_name"=>"resultado-controlado-espanol"]);
+          update_post_meta($en, "_research_language", "en"); update_post_meta($es, "_research_language", "es");
+
+          $en_candidates = $editor->list_candidates("research_output", "en");
+          $es_candidates = $editor->list_candidates("research_output", "es");
+          if (is_wp_error($en_candidates) || is_wp_error($es_candidates) || 1 !== count($en_candidates) || 1 !== count($es_candidates) || (int) $en_candidates[0]["post_id"] !== (int) $en || (int) $es_candidates[0]["post_id"] !== (int) $es) { exit(1); }
+          $invalid = $editor->list_candidates("page", "en");
+          if (! is_wp_error($invalid) || "research_manager_translation_type_unsupported" !== $invalid->get_error_code()) { exit(1); }
+
+          $blocked = $editor->preview_pair($en, $es);
+          if (is_wp_error($blocked) || ! empty($blocked["apply_allowed"]) || "evidence-required" !== ($blocked["risk"] ?? "") || empty($blocked["apply_blocker"])) { fwrite(STDERR, wp_json_encode($blocked)); exit(1); }
+          $blocked_apply = $editor->apply_preview($blocked);
+          if (! is_wp_error($blocked_apply) || "research_manager_translation_editor_apply_blocked" !== $blocked_apply->get_error_code()) { exit(1); }
+
+          $reference = "CI verified bilingual Research Output source";
+          $prepared = $editor->preview_pair($en, $es, true, $reference);
+          if (is_wp_error($prepared) || empty($prepared["apply_allowed"]) || "change" !== ($prepared["status"] ?? "") || "evidence-required" !== ($prepared["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $applied = $editor->apply_preview($prepared);
+          if (is_wp_error($applied) || empty($applied["verified"]) || empty($applied["snapshot_id"])) { fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() : wp_json_encode($applied)); exit(1); }
+          if ($reference !== get_post_meta($en, "_eduardo_research_translation_evidence", true) || $reference !== get_post_meta($es, "_eduardo_research_translation_evidence", true)) { exit(1); }
+
+          $matching = $editor->preview_pair($en, $es, true, $reference);
+          if (is_wp_error($matching) || "already-matching" !== ($matching["status"] ?? "") || empty($matching["apply_allowed"])) { fwrite(STDERR, wp_json_encode($matching)); exit(1); }
+          $noop = $editor->apply_preview($matching);
+          if (is_wp_error($noop) || "already-matching" !== ($noop["status"] ?? "") || empty($noop["verified"])) { exit(1); }
+
+          $unpair_blocked = $editor->preview_unpair($en);
+          if (is_wp_error($unpair_blocked) || ! empty($unpair_blocked["apply_allowed"]) || "evidence-required" !== ($unpair_blocked["risk"] ?? "")) { exit(1); }
+          $unpair = $editor->preview_unpair($en, true, "CI verified unpair source");
+          if (is_wp_error($unpair) || empty($unpair["apply_allowed"])) { exit(1); }
+          wp_update_post(["ID"=>$es,"post_status"=>"draft"]);
+          $stale = $editor->apply_preview($unpair);
+          if (! is_wp_error($stale) || "research_manager_translation_editor_stale_preview" !== $stale->get_error_code()) { exit(1); }
+          wp_update_post(["ID"=>$es,"post_status"=>"publish"]);
+          $unpaired = $editor->apply_preview($unpair);
+          if (is_wp_error($unpaired) || empty($unpaired["verified"]) || empty($unpaired["snapshot_id"])) { exit(1); }
+          $a = Eduardo_Research_Manager::translations()->verify_unpaired($en); $b = Eduardo_Research_Manager::translations()->verify_unpaired($es);
+          if (is_wp_error($a) || empty($a["verified"]) || is_wp_error($b) || empty($b["verified"])) { exit(1); }
+          $rollback = $editor->rollback((string) $unpaired["snapshot_id"]);
+          if (is_wp_error($rollback)) { exit(1); }
+          $paired = Eduardo_Research_Manager::translations()->verify_pair($en, $es);
+          if (is_wp_error($paired) || empty($paired["verified"])) { exit(1); }
+          ' --allow-root
+
+      - name: Pair Insight translations without academic evidence gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-translation-editor-wp
+          wp eval '
+          wp_set_current_user(1);
+          $editor = Eduardo_Research_Manager::translation_editor();
+          $en = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"English translation note","post_name"=>"english-translation-note"]);
+          $es = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Nota de traducción española","post_name"=>"nota-traduccion-espanola"]);
+          update_post_meta($en, "_research_language", "en"); update_post_meta($es, "_research_language", "es");
+          update_post_meta($en, "_research_insight_type", "research_note"); update_post_meta($es, "_research_insight_type", "research_note");
+          $candidates = $editor->list_candidates("post", "en");
+          if (is_wp_error($candidates) || 1 !== count(array_filter($candidates, static fn($row) => (int) ($row["post_id"] ?? 0) === (int) $en))) { exit(1); }
+          $prepared = $editor->preview_pair($en, $es);
+          if (is_wp_error($prepared) || empty($prepared["apply_allowed"]) || "editorial-review" !== ($prepared["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $applied = $editor->apply_preview($prepared);
+          if (is_wp_error($applied) || empty($applied["verified"]) || empty($applied["snapshot_id"])) { exit(1); }
+          $rolled = $editor->rollback((string) $applied["snapshot_id"]);
+          if (is_wp_error($rolled)) { exit(1); }
+          $a = Eduardo_Research_Manager::translations()->verify_unpaired($en); $b = Eduardo_Research_Manager::translations()->verify_unpaired($es);
+          if (is_wp_error($a) || empty($a["verified"]) || is_wp_error($b) || empty($b["verified"])) { exit(1); }
+          ' --allow-root
