@@ -15,24 +15,27 @@ final class Eduardo_Research_Manager_Remote_Operations {
     private Eduardo_Research_Manager_Remote_Audit $audit;
     private Eduardo_Research_Manager_Page_Editor $page_editor;
     private Eduardo_Research_Manager_Insight_Editor $insight_editor;
+    private Eduardo_Research_Manager_Translation_Editor $translation_editor;
 
     public function __construct(
         ?Eduardo_Research_Manager_Greenfield_Pipeline $pipeline = null,
         ?Eduardo_Research_Manager_Remote_Audit $audit = null,
         ?Eduardo_Research_Manager_Page_Editor $page_editor = null,
-        ?Eduardo_Research_Manager_Insight_Editor $insight_editor = null
+        ?Eduardo_Research_Manager_Insight_Editor $insight_editor = null,
+        ?Eduardo_Research_Manager_Translation_Editor $translation_editor = null
     ) {
         $this->pipeline = $pipeline ?: Eduardo_Research_Manager::pipeline();
         $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
         $this->page_editor = $page_editor ?: Eduardo_Research_Manager::page_editor();
         $this->insight_editor = $insight_editor ?: Eduardo_Research_Manager::insight_editor();
+        $this->translation_editor = $translation_editor ?: Eduardo_Research_Manager::translation_editor();
     }
 
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
         if (! in_array($operation, array(
             'greenfield-canonical','page-slots-update','page-create','page-remediate',
-            'insight-create','insight-update',
+            'insight-create','insight-update','insight-pair','insight-unpair',
         ), true)) {
             return $this->error('validation_failed', 'The requested operation is outside the bounded Remote Manager capability set.', 400);
         }
@@ -175,6 +178,8 @@ final class Eduardo_Research_Manager_Remote_Operations {
             if (! is_wp_error($result)) { $result['verified'] = ! empty($result['verification']['verified']); }
         } elseif ($this->is_insight_operation($operation_type)) {
             $result = $this->insight_editor->apply_preview((array) ($plan['prepared'] ?? array()));
+        } elseif ($this->is_insight_translation_operation($operation_type)) {
+            $result = $this->translation_editor->apply_preview((array) ($plan['prepared'] ?? array()));
         } else {
             return $this->error('validation_failed', 'Stored remote operation type is unsupported.', 409);
         }
@@ -307,6 +312,26 @@ final class Eduardo_Research_Manager_Remote_Operations {
             $semantic = Eduardo_Research_Manager::insights()->verify($post_id, $expected);
             if (is_wp_error($semantic)) { return $this->normalise_service_error($semantic, 409); }
             $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
+        } elseif ('insight-pair' === $type) {
+            $first_id = absint($operation['requested']['first_id'] ?? 0);
+            $second_id = absint($operation['requested']['second_id'] ?? 0);
+            $semantic = Eduardo_Research_Manager::translations()->verify_pair($first_id, $second_id);
+            if (is_wp_error($semantic)) { return $this->normalise_service_error($semantic, 409); }
+            $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
+        } elseif ('insight-unpair' === $type) {
+            $first_id = absint($operation['requested']['first_id'] ?? 0);
+            $second_id = absint($operation['requested']['second_id'] ?? 0);
+            $first = Eduardo_Research_Manager::translations()->verify_unpaired($first_id);
+            if (is_wp_error($first)) { return $this->normalise_service_error($first, 409); }
+            $second = Eduardo_Research_Manager::translations()->verify_unpaired($second_id);
+            if (is_wp_error($second)) { return $this->normalise_service_error($second, 409); }
+            $semantic = array(
+                'verified'=>! empty($first['verified']) && ! empty($second['verified']),
+                'first'=>$first,
+                'second'=>$second,
+                'verified_at'=>gmdate(DATE_W3C),
+            );
+            $stored_verified = $revision_matches && $contract_matches && $apply_verified && ! empty($semantic['verified']);
         } else {
             return $this->error('validation_failed', 'Stored remote operation type is unsupported.', 409);
         }
@@ -377,9 +402,13 @@ final class Eduardo_Research_Manager_Remote_Operations {
             if ('' === $snapshot_id) {
                 return $this->error('rollback_unavailable', 'No rollback snapshot is available for this operation.', 409);
             }
-            $result = $this->is_insight_operation($type)
-                ? $this->insight_editor->rollback($snapshot_id)
-                : $this->page_editor->rollback($snapshot_id);
+            if ($this->is_insight_translation_operation($type)) {
+                $result = $this->translation_editor->rollback($snapshot_id);
+            } elseif ($this->is_insight_operation($type)) {
+                $result = $this->insight_editor->rollback($snapshot_id);
+            } else {
+                $result = $this->page_editor->rollback($snapshot_id);
+            }
         }
         if (is_wp_error($result)) { return $this->normalise_service_error($result, 409); }
 
@@ -478,6 +507,51 @@ final class Eduardo_Research_Manager_Remote_Operations {
             );
         }
 
+        if ('insight-pair' === $operation) {
+            $first_id = absint($payload['first_id'] ?? 0);
+            $second_id = absint($payload['second_id'] ?? 0);
+            if ($first_id <= 0 || $second_id <= 0 || $first_id === $second_id) {
+                return $this->error('validation_failed', 'insight-pair requires two different managed Research Insight IDs.', 400);
+            }
+            $first = $this->insight_editor->inspect($first_id);
+            if (is_wp_error($first)) { return $first; }
+            $second = $this->insight_editor->inspect($second_id);
+            if (is_wp_error($second)) { return $second; }
+            $prepared = $this->translation_editor->preview_pair($first_id, $second_id, false, '');
+            if (is_wp_error($prepared)) { return $prepared; }
+            return array(
+                'prepared'=>$prepared,
+                'preview'=>is_array($prepared['preview'] ?? null) ? $prepared['preview'] : array(),
+                'target'=>array('resource'=>'insight-translation','first_id'=>$first_id,'second_id'=>$second_id),
+                'requested'=>array('first_id'=>$first_id,'second_id'=>$second_id),
+                'apply_allowed'=>! empty($prepared['apply_allowed']),
+            );
+        }
+
+        if ('insight-unpair' === $operation) {
+            $post_id = absint($payload['post_id'] ?? 0);
+            if ($post_id <= 0) { return $this->error('validation_failed', 'insight-unpair requires a managed Research Insight post_id.', 400); }
+            $managed = $this->insight_editor->inspect($post_id);
+            if (is_wp_error($managed)) { return $managed; }
+            $state = $this->translation_editor->inspect($post_id);
+            if (is_wp_error($state)) { return $state; }
+            $counterpart_id = absint($state['counterpart_id'] ?? 0);
+            if ($counterpart_id <= 0 || empty($state['counterpart_exists'])) {
+                return $this->error('validation_failed', 'The managed Research Insight is not currently paired.', 400);
+            }
+            $counterpart = $this->insight_editor->inspect($counterpart_id);
+            if (is_wp_error($counterpart)) { return $counterpart; }
+            $prepared = $this->translation_editor->preview_unpair($post_id, false, '');
+            if (is_wp_error($prepared)) { return $prepared; }
+            return array(
+                'prepared'=>$prepared,
+                'preview'=>is_array($prepared['preview'] ?? null) ? $prepared['preview'] : array(),
+                'target'=>array('resource'=>'insight-translation','first_id'=>$post_id,'second_id'=>$counterpart_id),
+                'requested'=>array('first_id'=>$post_id,'second_id'=>$counterpart_id),
+                'apply_allowed'=>! empty($prepared['apply_allowed']),
+            );
+        }
+
         $key = sanitize_key((string) ($payload['key'] ?? ''));
         if ('' === $key) { return $this->error('validation_failed', 'A Theme Page key is required.', 400); }
         if (! isset(Eduardo_Research_Manager::contract()->pages()[$key])) {
@@ -534,6 +608,27 @@ final class Eduardo_Research_Manager_Remote_Operations {
     private function verify_rendered_operation(array $operation): array|WP_Error {
         $type = (string) ($operation['operation'] ?? '');
         if ('greenfield-canonical' === $type) { return $this->verify_rendered_site(); }
+        if ($this->is_insight_translation_operation($type)) {
+            $ids = array_values(array_unique(array_filter(array_map('absint', array(
+                $operation['requested']['first_id'] ?? 0,
+                $operation['requested']['second_id'] ?? 0,
+            )))));
+            if (2 !== count($ids)) { return $this->error('validation_failed', 'Insight translation operation is missing its two rendered verification targets.', 409); }
+            $resources = array();
+            $verified = true;
+            foreach ($ids as $post_id) {
+                $result = Eduardo_Research_Manager::rendered()->verify_record($post_id);
+                if (is_wp_error($result)) {
+                    $resources[] = array('resource'=>'insight:' . $post_id,'post_id'=>$post_id,'verified'=>false,'error_code'=>$result->get_error_code(),'error'=>$result->get_error_message());
+                    $verified = false;
+                    continue;
+                }
+                unset($result['body']);
+                $resources[] = $result;
+                $verified = $verified && ! empty($result['verified']);
+            }
+            return array('requested'=>true,'verified'=>$verified,'resources'=>$resources,'verified_at'=>gmdate(DATE_W3C));
+        }
         if ($this->is_insight_operation($type)) {
             $post_id = absint($operation['target']['post_id'] ?? $operation['result']['post_id'] ?? 0);
             if ($post_id <= 0) { return $this->error('validation_failed', 'Insight operation is missing its rendered verification target.', 409); }
@@ -645,11 +740,21 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if ('insight-update' === $operation) {
             return sprintf('Remote bounded Research Insight update: #%d', absint($target['post_id'] ?? 0));
         }
+        if ('insight-pair' === $operation) {
+            return sprintf('Remote EN/ES Research Insight pairing: #%d ↔ #%d', absint($target['first_id'] ?? 0), absint($target['second_id'] ?? 0));
+        }
+        if ('insight-unpair' === $operation) {
+            return sprintf('Remote EN/ES Research Insight unpairing: #%d ↔ #%d', absint($target['first_id'] ?? 0), absint($target['second_id'] ?? 0));
+        }
         return 'Remote canonical Greenfield operation';
     }
 
     private function is_insight_operation(string $type): bool {
         return in_array($type, array('insight-create','insight-update'), true);
+    }
+
+    private function is_insight_translation_operation(string $type): bool {
+        return in_array($type, array('insight-pair','insight-unpair'), true);
     }
 
     private function blueprint_sha(): string {
