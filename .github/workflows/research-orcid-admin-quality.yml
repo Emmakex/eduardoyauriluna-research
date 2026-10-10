@@ -1,0 +1,155 @@
+name: Research ORCID Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - '.github/workflows/research-orcid-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - '.github/workflows/research-orcid-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  orcid-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint ORCID admin surface
+        shell: bash
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-orcid-admin-wp
+          mkdir -p /tmp/research-orcid-admin-wp
+          cd /tmp/research-orcid-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research ORCID Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Render secure ORCID setup and register actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-orcid-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $admin = new Eduardo_Research_Manager_Connections_Admin();
+          $admin->register();
+          foreach ([
+              "admin_post_eduardo_research_orcid_connect"=>"handle_orcid_connect",
+              "admin_post_eduardo_research_orcid_callback"=>"handle_orcid_callback",
+              "admin_post_eduardo_research_orcid_preview"=>"handle_orcid_preview",
+              "admin_post_eduardo_research_orcid_disconnect"=>"handle_orcid_disconnect"
+          ] as $hook=>$method) {
+              if (false === has_action($hook,[$admin,$method])) { fwrite(STDERR,"missing ORCID admin hook: {$hook}\n"); exit(1); }
+          }
+          ob_start(); $admin->render(); $html=(string)ob_get_clean();
+          foreach ([
+              "ORCID authenticated connection","INCOMPLETE","External writes","DISABLED",
+              "EDUARDO_RESEARCH_ORCID_CLIENT_ID","EDUARDO_RESEARCH_ORCID_CLIENT_SECRET","EDUARDO_RESEARCH_ORCID_REDIRECT_URI"
+          ] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing ORCID setup marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"ci-secret")) { fwrite(STDERR,"secret material rendered\n"); exit(1); }
+          ' --allow-root
+
+      - name: Render configured Connect ORCID control
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-orcid-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          define("EDUARDO_RESEARCH_ORCID_CLIENT_ID","APP-CI-ORCID");
+          define("EDUARDO_RESEARCH_ORCID_CLIENT_SECRET","ci-secret-never-render");
+          define("EDUARDO_RESEARCH_ORCID_REDIRECT_URI","https://example.test/wp-admin/admin-post.php?action=eduardo_research_orcid_callback");
+          define("EDUARDO_RESEARCH_ORCID_ENVIRONMENT","sandbox");
+          delete_option("eduardo_research_connections");
+          delete_option("eduardo_research_orcid_token");
+          delete_option("eduardo_research_evidence");
+          ob_start(); (new Eduardo_Research_Manager_Connections_Admin())->render(); $html=(string)ob_get_clean();
+          foreach (["OAuth configuration","READY","Connect ORCID","eduardo_research_orcid_connect","SANDBOX"] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing configured ORCID marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"ci-secret-never-render")) { fwrite(STDERR,"ORCID client secret rendered\n"); exit(1); }
+          ' --allow-root
+
+      - name: Render connected controls and reconciliation preview without token leakage
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-orcid-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          define("EDUARDO_RESEARCH_ORCID_CLIENT_ID","APP-CI-ORCID");
+          define("EDUARDO_RESEARCH_ORCID_CLIENT_SECRET","ci-secret-never-render");
+          define("EDUARDO_RESEARCH_ORCID_REDIRECT_URI","https://example.test/wp-admin/admin-post.php?action=eduardo_research_orcid_callback");
+          define("EDUARDO_RESEARCH_ORCID_ENVIRONMENT","sandbox");
+          update_option("eduardo_research_connections",[
+              "orcid"=>[
+                  "status"=>"connected","mode"=>"oauth","identifier"=>"0000-0002-1825-0097",
+                  "identifier_url"=>"https://sandbox.orcid.org/0000-0002-1825-0097","last_error"=>""
+              ]
+          ],false);
+          update_option("eduardo_research_orcid_token",[
+              "access_token"=>"ci-access-token-never-render","refresh_token"=>"ci-refresh-token-never-render",
+              "orcid"=>"0000-0002-1825-0097","environment"=>"sandbox"
+          ],false);
+          set_transient("eduardo_research_orcid_preview_1",[
+              "provider"=>"orcid","status"=>"preview","identifier"=>"0000-0002-1825-0097",
+              "remote_profile"=>["display_name"=>"Eduardo Jose Yauri Luna"],
+              "remote_works"=>[["title"=>"Synthetic research work","publication_date"=>"2026-10-10"]],
+              "remote_work_count"=>1,"identifier_matches"=>true,"requires_reconciliation"=>true,
+              "automatic_local_apply"=>false,"external_write"=>false
+          ],900);
+          ob_start(); (new Eduardo_Research_Manager_Connections_Admin())->render(); $html=(string)ob_get_clean();
+          foreach ([
+              "CONNECTED","0000-0002-1825-0097","Preview ORCID reconciliation","Disconnect ORCID",
+              "ORCID reconciliation preview","Eduardo Jose Yauri Luna","Synthetic research work","Preview only.","Automatic local apply"
+          ] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing connected ORCID marker: {$needle}\n"); exit(1); }
+          }
+          foreach (["ci-access-token-never-render","ci-refresh-token-never-render","ci-secret-never-render"] as $secret) {
+              if (false!==strpos($html,$secret)) { fwrite(STDERR,"secret/token material rendered\n"); exit(1); }
+          }
+          ' --allow-root
