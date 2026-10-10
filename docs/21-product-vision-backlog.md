@@ -4,9 +4,108 @@
 
 Bring the direct website-development workflow used on custom applications into WordPress through a reusable Manager + Theme product.
 
-## Capability groups
+For `eduardoyauriluna.com`, the primary managed workflow is explicitly:
 
-### 1. Site creation
+```text
+Eduardo → ChatGPT → authenticated Research Manager → shared Manager services → WordPress/Theme → rendered site → verification back to ChatGPT
+```
+
+Canonical contract: `docs/22-chat-governed-manager-contract.md`.
+
+## Priority order for the Eduardo Research implementation
+
+### P0. Chat-governed Manager foundation
+
+- versioned Manager REST namespace;
+- site-specific connection identity;
+- local enable/disable/revoke/rotate controls;
+- read/write scopes;
+- capability discovery;
+- request IDs and idempotency;
+- stale-state/revision protection;
+- audit records;
+- typed operation errors;
+- read-only status/version/readiness/diagnostics endpoints;
+- CI for authentication, scopes and secret non-disclosure.
+
+### P1. Remote plan / operation lifecycle
+
+- create Preview/plan from a typed operation;
+- plan ID and expiry;
+- exact-plan Apply;
+- operation ID/status;
+- stored verification;
+- rendered verification;
+- rollback for supported operations;
+- deterministic retry behavior;
+- operation audit retrieval.
+
+### P2. Page control from ChatGPT
+
+- inspect Theme-controlled Pages;
+- create supported missing Page resources;
+- update structured slots;
+- control bounded Theme variants;
+- manage language pairing;
+- page-level SEO/GEO inspection/remediation;
+- public rendered verification;
+- rollback.
+
+This is the first required real end-to-end proof on `eduardoyauriluna.com`.
+
+### P3. Editorial control from ChatGPT
+
+- create/edit/schedule/publish Posts/Insights;
+- taxonomy and authorship;
+- media relationships/metadata;
+- internal relationships;
+- translations;
+- SEO/GEO preparation;
+- rendered verification.
+
+### P4. Research object control from ChatGPT
+
+Expose the existing bounded service-layer capabilities for:
+
+- Research Lines;
+- Publications;
+- Projects;
+- Research Software;
+- Datasets;
+- evidence/provenance;
+- relations and translations.
+
+### P5. SEO/GEO continuous optimisation from ChatGPT
+
+- analyse whole site;
+- prioritise deterministic issues;
+- prepare remediation plans;
+- Preview;
+- Apply;
+- Verify;
+- Rollback where appropriate;
+- rerun readiness;
+- separate automatic fixes from editorial/evidence/manual review.
+
+### P6. Design control from ChatGPT
+
+- preset-level palette;
+- typography tokens;
+- spacing/density tokens;
+- component/section variants;
+- responsive/accessibility constraints;
+- no arbitrary CSS/code execution as the normal control path.
+
+### P7. Real-site operating acceptance
+
+- run routine Eduardo site operation through ChatGPT → Manager;
+- record every bypass to WordPress Admin/SSH/manual code;
+- convert normal bypasses into Manager backlog items;
+- prove Page, Insight and SEO/GEO end-to-end operations on the rendered real site.
+
+## Supporting capability groups
+
+### Site creation
 - preset selection;
 - Greenfield bootstrap;
 - page/route creation;
@@ -14,7 +113,7 @@ Bring the direct website-development workflow used on custom applications into W
 - multilingual structure;
 - baseline SEO/GEO configuration.
 
-### 2. Page operations
+### Page operations
 - create page from role/contract;
 - edit structured sections and content;
 - control bounded Theme variants;
@@ -22,7 +121,7 @@ Bring the direct website-development workflow used on custom applications into W
 - preview and verify frontend;
 - page-level SEO/GEO optimisation.
 
-### 3. Editorial operations
+### Editorial operations
 - create/edit/schedule/publish Posts/Insights;
 - taxonomy and authorship;
 - media and internal relationships;
@@ -30,7 +129,7 @@ Bring the direct website-development workflow used on custom applications into W
 - update/freshness workflows;
 - rendered verification.
 
-### 4. Design operations
+### Design operations
 - preset-level palette;
 - typography tokens;
 - spacing/layout tokens;
@@ -38,7 +137,7 @@ Bring the direct website-development workflow used on custom applications into W
 - responsive/accessibility constraints;
 - no arbitrary layout drift.
 
-### 5. SEO/GEO operations
+### SEO/GEO operations
 - metadata;
 - canonicals/hreflang;
 - schema;
@@ -50,14 +149,14 @@ Bring the direct website-development workflow used on custom applications into W
 - machine discoverability;
 - deterministic remediation.
 
-### 6. Media operations
+### Media operations
 - asset inventory;
 - assignment;
 - alt/descriptive metadata;
 - performance checks;
 - duplicate/unused detection.
 
-### 7. Continuous optimisation
+### Continuous optimisation
 - analyse whole site;
 - prioritise issues;
 - prepare safe changes;
@@ -67,14 +166,16 @@ Bring the direct website-development workflow used on custom applications into W
 - Rollback where appropriate;
 - record audit/result.
 
-### 8. Multi-client operation
-- local WordPress Manager remains primary runtime;
-- optional secure remote API;
-- site-specific revocable credentials;
-- read-only monitoring first;
-- bounded remote mutations later;
-- no permanent SSH dependency.
+## Later product layers — not current Eduardo priority
+
+Only after the single-site ChatGPT-governed Eduardo flow is proven:
+
+- generic multi-client control center;
+- generic onboarding across unrelated Themes;
+- commercial billing/subscriptions;
+- customer fleet dashboards;
+- broader existing-site/migration automation for `emmake.com` and other sites.
 
 ## Commercial completeness
 
-A capability is not complete merely because it exists in code or WP-CLI. It is complete when an authorised customer can use it through the Manager to achieve the intended website result, with suitable safety and verification.
+A capability is not complete merely because it exists in code, Admin UI or WP-CLI. For the managed Eduardo workflow it is complete when ChatGPT can use the authenticated Manager to achieve the intended website result with bounded permissions, Preview/Apply/Verify semantics, auditability and rendered verification where applicable.
