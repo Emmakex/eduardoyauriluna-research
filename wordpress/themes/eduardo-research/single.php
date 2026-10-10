@@ -44,6 +44,9 @@ get_header(); ?>
   <?php elseif (in_array($type, eduardo_research_relation_object_types(), true)) : ?>
     <?php eduardo_research_render_research_context($post_id); ?>
     <?php eduardo_research_render_related_objects($post_id); ?>
+  <?php elseif ('post' === $type && function_exists('eduardo_research_is_managed_insight') && eduardo_research_is_managed_insight($post_id)) : ?>
+    <?php eduardo_research_render_research_context($post_id); ?>
+    <?php eduardo_research_render_related_objects($post_id); ?>
   <?php endif; ?>
 
   <?php
