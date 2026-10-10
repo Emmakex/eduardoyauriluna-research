@@ -104,15 +104,15 @@ jobs:
               "Research Workspace","GREENFIELD","Authoring workspace","Operating model",
               "Greenfield Site &amp; Pages","Academic Evidence","Research Lines","Research Objects","Research Insights","EN/ES Translations",
               "2 EN/ES lines","1 EN/ES objects","1 EN/ES insights","1 evidence records","1 bilateral pairs",
-              "page=eduardo-research-manager","page=eduardo-research-evidence","page=eduardo-research-lines",
-              "page=eduardo-research-objects","page=eduardo-research-insights","page=eduardo-research-translations",
+              "admin.php?page=eduardo-research-manager","admin.php?page=eduardo-research-evidence","admin.php?page=eduardo-research-lines",
+              "admin.php?page=eduardo-research-objects","admin.php?page=eduardo-research-insights","admin.php?page=eduardo-research-translations",
               "no Gutenberg layout composition is required"
           ] as $needle) {
               if (false===strpos($html,$needle)) { fwrite(STDERR,"missing workspace marker: {$needle}\n"); exit(1); }
           }
           ' --allow-root
 
-      - name: Register top-level Research admin menu
+      - name: Register Research admin menu and authoring submenus
         shell: bash
         run: |
           set -euo pipefail
@@ -120,10 +120,26 @@ jobs:
           wp eval '
           wp_set_current_user(1);
           do_action("admin_menu");
-          global $menu;
-          $found=false;
+          global $menu, $submenu;
+          $top=false;
           foreach ((array)$menu as $item) {
-              if (isset($item[2]) && "eduardo-research-workspace" === (string)$item[2] && "Research" === (string)$item[0]) { $found=true; break; }
+              if (isset($item[2]) && "eduardo-research-workspace" === (string)$item[2] && "Research" === wp_strip_all_tags((string)$item[0])) { $top=true; break; }
           }
-          if (! $found) { fwrite(STDERR,"Research workspace menu not registered\n"); exit(1); }
+          if (! $top) { fwrite(STDERR,"Research workspace menu not registered\n"); exit(1); }
+          $expected=[
+              "eduardo-research-workspace",
+              "eduardo-research-manager",
+              "eduardo-research-evidence",
+              "eduardo-research-lines",
+              "eduardo-research-objects",
+              "eduardo-research-insights",
+              "eduardo-research-translations"
+          ];
+          $actual=[];
+          foreach ((array)($submenu["eduardo-research-workspace"] ?? []) as $item) {
+              if (isset($item[2])) { $actual[]=(string)$item[2]; }
+          }
+          foreach ($expected as $slug) {
+              if (! in_array($slug,$actual,true)) { fwrite(STDERR,"missing Research submenu: {$slug}\n"); exit(1); }
+          }
           ' --allow-root
