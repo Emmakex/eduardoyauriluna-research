@@ -13,6 +13,7 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
 
     public function register(): void {
         add_action('rest_api_init', array($this, 'register_routes'));
+        add_filter('rest_request_after_callbacks', array($this, 'augment_capabilities'), 10, 3);
     }
 
     public function register_routes(): void {
@@ -97,6 +98,43 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
             'ready'=>! in_array(false, array_map(static fn(array $row): bool => ! empty($row['verified']), $rendered), true),
             'verified_at'=>gmdate(DATE_W3C),
         ));
+    }
+
+    public function augment_capabilities(mixed $response, mixed $handler, WP_REST_Request $request): mixed {
+        if ('/' . Eduardo_Research_Manager_Remote_REST::NAMESPACE . '/capabilities' !== $request->get_route()) {
+            return $response;
+        }
+        if (is_wp_error($response) || ! $response instanceof WP_REST_Response) { return $response; }
+        $payload = $response->get_data();
+        if (! is_array($payload) || ! is_array($payload['data'] ?? null)) { return $response; }
+
+        $data = $payload['data'];
+        $read = is_array($data['read_endpoints'] ?? null) ? $data['read_endpoints'] : array();
+        $read['pages'] = 'site.read';
+        $read['page'] = 'site.read';
+        $read['page_seo_geo'] = 'site.diagnostics';
+        $data['read_endpoints'] = $read;
+        $transport = is_array($data['mutation_transport'] ?? null) ? $data['mutation_transport'] : array();
+        $transport['available'] = true;
+        $transport['milestone'] = 'M3';
+        $transport['supported_operations'] = array('greenfield-canonical','page-slots-update','page-create');
+        $transport['lifecycle'] = array('plan','apply','status','verify','rollback');
+        $transport['exact_plan_required'] = true;
+        $transport['stale_revision_protection'] = true;
+        $transport['idempotency'] = true;
+        $data['mutation_transport'] = $transport;
+        $data['page_control'] = array(
+            'inventory'=>true,
+            'inspection'=>true,
+            'languages'=>Eduardo_Research_Manager::contract()->languages(),
+            'structured_slots_only'=>true,
+            'create_missing_contract_page'=>true,
+            'seo_geo_rendered_inspection'=>true,
+            'arbitrary_wordpress_proxy'=>false,
+        );
+        $payload['data'] = $data;
+        $response->set_data($payload);
+        return $response;
     }
 
     private function response(WP_REST_Request $request, array $data): WP_REST_Response {
