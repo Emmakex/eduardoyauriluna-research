@@ -50,8 +50,8 @@ jobs:
         run: |
           php -l wordpress/themes/eduardo-research/inc/research-scholar.php
           php -l wordpress/themes/eduardo-research/functions.php
-          if grep -E 'wp_remote_(get|post|request)|curl_exec|file_get_contents\([[:space:]]*["'"']https?://.*scholar\.google' wordpress/themes/eduardo-research/inc/research-scholar.php; then
-            echo 'Google Scholar contract must not scrape or call Scholar endpoints.' >&2
+          if grep -E 'wp_remote_(get|post|request)|curl_exec|file_get_contents' wordpress/themes/eduardo-research/inc/research-scholar.php; then
+            echo 'Google Scholar contract must not perform remote reads or scrape Scholar.' >&2
             exit 1
           fi
 
