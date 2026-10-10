@@ -24,6 +24,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Translation_Pairing $translations = null;
     private static ?Eduardo_Research_Manager_Translation_Editor $translation_editor = null;
     private static ?Eduardo_Research_Manager_Evidence_Editor $evidence_editor = null;
+    private static ?Eduardo_Research_Manager_Connections $connections = null;
     private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
     private static ?Eduardo_Research_Manager_Blueprint $blueprint = null;
     private static ?Eduardo_Research_Manager_Blueprint_Store $blueprint_store = null;
@@ -54,6 +55,7 @@ final class Eduardo_Research_Manager {
         self::$translations = new Eduardo_Research_Manager_Translation_Pairing();
         self::$translation_editor = new Eduardo_Research_Manager_Translation_Editor(self::$translations, self::$executor);
         self::$evidence_editor = new Eduardo_Research_Manager_Evidence_Editor(self::$executor);
+        self::$connections = new Eduardo_Research_Manager_Connections(self::$evidence_editor);
         self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         self::$blueprint = new Eduardo_Research_Manager_Blueprint();
         self::$blueprint_store = new Eduardo_Research_Manager_Blueprint_Store(self::$blueprint);
@@ -107,4 +109,5 @@ final class Eduardo_Research_Manager {
     public static function translations(): Eduardo_Research_Manager_Translation_Pairing { if (! self::$translations) { self::$translations = new Eduardo_Research_Manager_Translation_Pairing(); } return self::$translations; }
     public static function translation_editor(): Eduardo_Research_Manager_Translation_Editor { if (! self::$translation_editor) { self::$translation_editor = new Eduardo_Research_Manager_Translation_Editor(self::translations(), self::executor()); } return self::$translation_editor; }
     public static function evidence_editor(): Eduardo_Research_Manager_Evidence_Editor { if (! self::$evidence_editor) { self::$evidence_editor = new Eduardo_Research_Manager_Evidence_Editor(self::executor()); } return self::$evidence_editor; }
+    public static function connections(): Eduardo_Research_Manager_Connections { if (! self::$connections) { self::$connections = new Eduardo_Research_Manager_Connections(self::evidence_editor()); } return self::$connections; }
 }

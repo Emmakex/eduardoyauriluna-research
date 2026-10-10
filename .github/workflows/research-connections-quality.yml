@@ -1,0 +1,116 @@
+name: Research Connections Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-connections-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/workflows/research-connections-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  connections:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint academic connections service
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-connections-wp
+          mkdir -p /tmp/research-connections-wp
+          cd /tmp/research-connections-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Connections' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Verify normalized provider registry without network access
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-connections-wp
+          wp eval '
+          $service = Eduardo_Research_Manager::connections();
+          if (! $service instanceof Eduardo_Research_Manager_Connections) { exit(1); }
+          $providers = $service->providers();
+          $expected = ["orcid","google_scholar","crossref","zenodo","openalex","github"];
+          if ($expected !== array_keys($providers)) { fwrite(STDERR,"provider registry mismatch\n"); exit(1); }
+          foreach ($providers as $provider=>$definition) {
+              if (! empty($definition["write_enabled"])) { fwrite(STDERR,"writes unexpectedly enabled: {$provider}\n"); exit(1); }
+          }
+          $statuses = $service->statuses();
+          $expected_states = [
+              "orcid"=>"disconnected",
+              "google_scholar"=>"disconnected",
+              "crossref"=>"available",
+              "zenodo"=>"disconnected",
+              "openalex"=>"available",
+              "github"=>"disconnected"
+          ];
+          foreach ($expected_states as $provider=>$state) {
+              if ($state !== (string)($statuses[$provider]["status"] ?? "")) { fwrite(STDERR,"unexpected {$provider} state\n"); exit(1); }
+          }
+          $orcid_config = $service->validate_configuration("orcid");
+          if (is_wp_error($orcid_config) || ! empty($orcid_config["configured"]) || 3 !== count($orcid_config["missing"] ?? [])) { exit(1); }
+          if (! empty($orcid_config["secrets_exposed"])) { exit(1); }
+          $overview = $service->overview();
+          if (6 !== (int)($overview["provider_count"] ?? 0) || ! empty($overview["writes_enabled"])) { exit(1); }
+          ' --allow-root
+
+      - name: Resolve verified identifier evidence without claiming OAuth
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-connections-wp
+          wp eval '
+          update_option("eduardo_research_evidence",[
+              "identifiers"=>[[
+                  "id"=>"orcid-test-fixture",
+                  "status"=>"verified",
+                  "label"=>"ORCID",
+                  "value"=>"0000-0000-0000-0000",
+                  "url"=>"https://orcid.org/0000-0000-0000-0000",
+                  "evidence_reference"=>"CI synthetic identifier fixture",
+                  "verified_at"=>gmdate(DATE_W3C)
+              ]]
+          ],false);
+          $status = Eduardo_Research_Manager::connections()->status("orcid");
+          if (is_wp_error($status)) { exit(1); }
+          if ("linked" !== (string)$status["status"]) { fwrite(STDERR,"verified ORCID evidence was not linked\n"); exit(1); }
+          if ("0000-0000-0000-0000" !== (string)$status["identifier"]) { exit(1); }
+          if (! empty($status["write_enabled"])) { exit(1); }
+          if ("oauth" !== (string)$status["mode"]) { exit(1); }
+          ' --allow-root
