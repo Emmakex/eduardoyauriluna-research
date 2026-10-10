@@ -1,0 +1,192 @@
+name: Research Object Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-object-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-object-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  object-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Research Object admin files
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-object-admin-wp
+          mkdir -p /tmp/research-object-admin-wp
+          cd /tmp/research-object-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Object Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Render all Research Object authoring forms
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-object-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $cases = [
+              "output"=>["Create Research Output","Authors JSON","Output type","Academic review status"],
+              "project"=>["Create Research Project","Project status","Research question","Methods"],
+              "software"=>["Create Research Software","Software status","Programming languages","Repository URL"],
+              "dataset"=>["Create Research Dataset","Access level","Methodology","Formats"],
+          ];
+          foreach ($cases as $kind=>$markers) {
+              $_GET = ["erm_object_kind"=>$kind,"erm_object_language"=>"en"];
+              ob_start(); (new Eduardo_Research_Manager_Object_Admin())->render(); $html = (string) ob_get_clean();
+              foreach (array_merge(["Research Objects","Evidence-aware structured authoring","Academic evidence gate"],$markers) as $needle) {
+                  if (false === strpos($html, $needle)) { fwrite(STDERR, "{$kind} missing marker: {$needle}\n"); exit(1); }
+              }
+          }
+          ' --allow-root
+
+      - name: Prove admin evidence gate blocks Research Output creation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-object-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "editor_mode"=>"create","object_kind"=>"output","title"=>"Admin Controlled Output","slug"=>"admin-controlled-output",
+              "language"=>"en","status"=>"draft","excerpt"=>"Controlled output summary.","content"=>"<p>Controlled output content.</p>",
+              "output_type"=>"technical_report","review_status"=>"working_draft","publication_date"=>"2026-10-10","venue"=>"Research Manager CI",
+              "doi"=>"","authors_json"=>"[\"Eduardo Jose Yauri Luna\"]","evidence_reference"=>"",
+              "_wpnonce"=>wp_create_nonce("erm_object_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Object_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_object_preview_1");
+          if (! is_array($prepared) || "output" !== ($prepared["kind"] ?? "") || ! empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "") || empty($prepared["apply_blocker"])) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_GET = ["erm_object_kind"=>"output","erm_object_language"=>"en"];
+          ob_start(); (new Eduardo_Research_Manager_Object_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html, "Apply is blocked") || false !== strpos($html, "Apply prepared Research Object change")) { exit(1); }
+          delete_transient("eduardo_research_manager_object_preview_1");
+          ' --allow-root
+
+      - name: Preview and apply evidence-confirmed Research Output creation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-object-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "editor_mode"=>"create","object_kind"=>"output","title"=>"Admin Controlled Output","slug"=>"admin-controlled-output",
+              "language"=>"en","status"=>"draft","excerpt"=>"Controlled output summary.","content"=>"<p>Controlled output content.</p>",
+              "output_type"=>"technical_report","review_status"=>"working_draft","publication_date"=>"2026-10-10","venue"=>"Research Manager CI",
+              "doi"=>"","authors_json"=>"[{\"display_name\":\"Eduardo Jose Yauri Luna\",\"is_site_researcher\":true}]",
+              "evidence_confirmed"=>"1","evidence_reference"=>"CI controlled Research Output source",
+              "_wpnonce"=>wp_create_nonce("erm_object_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Object_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_object_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_object_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Object_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $edit = get_transient("eduardo_research_manager_object_edit_1");
+          if (! is_array($edit) || "output" !== ($edit["kind"] ?? "") || "create" !== ($edit["mode"] ?? "") || empty($edit["post_id"]) || empty($edit["snapshot_id"])) { fwrite(STDERR, wp_json_encode($edit)); exit(1); }
+          $post_id = (int) $edit["post_id"];
+          $record = Eduardo_Research_Manager::object_editor()->inspect("output", $post_id);
+          if (is_wp_error($record) || "Admin Controlled Output" !== $record["title"] || "technical_report" !== $record["output_type"] || "1" !== $record["output_type_verified"] || "working_draft" !== $record["review_status"] || "1" !== $record["review_status_verified"] || 1 !== count($record["authors"])) { exit(1); }
+          update_option("research_object_admin_fixture_id", $post_id, false);
+          $_GET = ["erm_object_kind"=>"output","erm_object_language"=>"en","erm_object_id"=>$post_id];
+          ob_start(); (new Eduardo_Research_Manager_Object_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["Admin Controlled Output","Edit selected Research Output","View rendered record","Permanent slug","Rollback latest Research Object edit"] as $needle) {
+              if (false === strpos($html, $needle)) { fwrite(STDERR, "missing post-create marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Preview apply and rollback editorial Research Output update
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-object-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $post_id = (int) get_option("research_object_admin_fixture_id", 0);
+          $record = Eduardo_Research_Manager::object_editor()->inspect("output", $post_id);
+          $_POST = [
+              "editor_mode"=>"update","object_kind"=>"output","post_id"=>$post_id,"title"=>$record["title"],"language"=>$record["language"],
+              "excerpt"=>"Editorial-only update from Research Object admin.","content"=>$record["content"],"output_type"=>$record["output_type"],
+              "review_status"=>$record["review_status"],"publication_date"=>$record["publication_date"],"venue"=>$record["venue"],"doi"=>$record["doi"],
+              "authors_json"=>wp_json_encode($record["authors"]),"evidence_reference"=>"","_wpnonce"=>wp_create_nonce("erm_object_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Object_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_object_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "editorial-review" !== ($prepared["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_object_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Object_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $post_id = (int) get_option("research_object_admin_fixture_id", 0);
+          $record = Eduardo_Research_Manager::object_editor()->inspect("output", $post_id);
+          $edit = get_transient("eduardo_research_manager_object_edit_1");
+          if (is_wp_error($record) || "Editorial-only update from Research Object admin." !== $record["excerpt"] || ! is_array($edit) || "update" !== ($edit["mode"] ?? "") || empty($edit["snapshot_id"])) { exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_object_rollback")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Object_Admin())->handle_rollback();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $post_id = (int) get_option("research_object_admin_fixture_id", 0);
+          $record = Eduardo_Research_Manager::object_editor()->inspect("output", $post_id);
+          if (is_wp_error($record) || "Controlled output summary." !== $record["excerpt"] || get_transient("eduardo_research_manager_object_edit_1")) { exit(1); }
+          delete_option("research_object_admin_fixture_id");
+          ' --allow-root
