@@ -1,0 +1,216 @@
+name: Research Line Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-line-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-line-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  line-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Research Line admin files
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-line-admin-wp
+          mkdir -p /tmp/research-line-admin-wp
+          cd /tmp/research-line-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Line Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Render Research Line authoring screen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_GET["erm_line_language"] = "en";
+          ob_start(); (new Eduardo_Research_Manager_Line_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["Research Lines","Evidence-aware authoring","Create Research Line","Academic evidence gate","Preview new Research Line","Existing Research Lines"] as $needle) {
+              if (false === strpos($html, $needle)) { fwrite(STDERR, "missing marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Prove admin evidence gate blocks unsupported creation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "editor_mode"=>"create",
+              "title"=>"Admin Evidence Research Line",
+              "slug"=>"admin-evidence-research-line",
+              "language"=>"en",
+              "status"=>"publish",
+              "evidence_status"=>"verified",
+              "research_status"=>"planned",
+              "order"=>"80",
+              "excerpt"=>"Evidence-aware line from the Manager.",
+              "central_question"=>"How can a controlled Research Manager preserve evidence discipline?",
+              "topics"=>"Research infrastructure\nEvidence governance",
+              "methods"=>"Design Science Research\nControlled experiments",
+              "content"=>"<p>Evidence-aware Research Line content.</p>",
+              "evidence_reference"=>"",
+              "_wpnonce"=>wp_create_nonce("erm_line_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Line_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_line_preview_1");
+          if (! is_array($prepared) || "create" !== ($prepared["status"] ?? "") || ! empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "") || empty($prepared["apply_blocker"])) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_GET["erm_line_language"] = "en";
+          ob_start(); (new Eduardo_Research_Manager_Line_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html, "Apply is blocked") || false !== strpos($html, "Apply prepared Research Line change")) { exit(1); }
+          delete_transient("eduardo_research_manager_line_preview_1");
+          ' --allow-root
+
+      - name: Preview and apply evidence-confirmed Research Line creation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = [
+              "editor_mode"=>"create",
+              "title"=>"Admin Evidence Research Line",
+              "slug"=>"admin-evidence-research-line",
+              "language"=>"en",
+              "status"=>"publish",
+              "evidence_status"=>"verified",
+              "research_status"=>"planned",
+              "order"=>"80",
+              "excerpt"=>"Evidence-aware line from the Manager.",
+              "central_question"=>"How can a controlled Research Manager preserve evidence discipline?",
+              "topics"=>"Research infrastructure\nEvidence governance",
+              "methods"=>"Design Science Research\nControlled experiments",
+              "content"=>"<p>Evidence-aware Research Line content.</p>",
+              "evidence_confirmed"=>"1",
+              "evidence_reference"=>"CI controlled Research Line source",
+              "_wpnonce"=>wp_create_nonce("erm_line_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Line_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_line_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "") || empty($prepared["creation_token"])) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_line_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Line_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $edit = get_transient("eduardo_research_manager_line_edit_1");
+          if (! is_array($edit) || "create" !== ($edit["mode"] ?? "") || empty($edit["post_id"]) || empty($edit["snapshot_id"])) { fwrite(STDERR, wp_json_encode($edit)); exit(1); }
+          $post_id = (int) $edit["post_id"];
+          $record = Eduardo_Research_Manager::line_editor()->inspect($post_id);
+          if (is_wp_error($record) || "Admin Evidence Research Line" !== $record["title"] || "verified" !== $record["evidence_status"] || "planned" !== $record["research_status"] || 2 !== count($record["topics"])) { exit(1); }
+          update_option("research_line_admin_fixture_id", $post_id, false);
+          $_GET["erm_line_language"] = "en"; $_GET["erm_line_id"] = $post_id;
+          ob_start(); (new Eduardo_Research_Manager_Line_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["Admin Evidence Research Line","Edit selected Research Line","Permanent slug","Rollback latest Research Line edit"] as $needle) {
+              if (false === strpos($html, $needle)) { fwrite(STDERR, "missing post-create marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Apply editorial-only Research Line update without evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $post_id = (int) get_option("research_line_admin_fixture_id", 0);
+          $record = Eduardo_Research_Manager::line_editor()->inspect($post_id);
+          $_POST = [
+              "editor_mode"=>"update","post_id"=>$post_id,
+              "title"=>$record["title"],"language"=>$record["language"],"evidence_status"=>$record["evidence_status"],"research_status"=>$record["research_status"],"order"=>$record["order"],
+              "excerpt"=>"Editorial-only update from the Research Line admin.","central_question"=>$record["central_question"],
+              "topics"=>implode("\n",$record["topics"]),"methods"=>implode("\n",$record["methods"]),"content"=>$record["content"],
+              "evidence_reference"=>"","_wpnonce"=>wp_create_nonce("erm_line_preview")
+          ]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Line_Admin())->handle_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_line_preview_1");
+          if (! is_array($prepared) || empty($prepared["apply_allowed"]) || "editorial-review" !== ($prepared["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_line_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Line_Admin())->handle_apply();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $post_id = (int) get_option("research_line_admin_fixture_id", 0);
+          $record = Eduardo_Research_Manager::line_editor()->inspect($post_id);
+          $edit = get_transient("eduardo_research_manager_line_edit_1");
+          if (is_wp_error($record) || "Editorial-only update from the Research Line admin." !== $record["excerpt"] || ! is_array($edit) || "update" !== ($edit["mode"] ?? "") || empty($edit["snapshot_id"])) { exit(1); }
+          ' --allow-root
+
+      - name: Roll back editorial update then original creation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-line-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_line_rollback")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Line_Admin())->handle_rollback();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $post_id = (int) get_option("research_line_admin_fixture_id", 0);
+          $record = Eduardo_Research_Manager::line_editor()->inspect($post_id);
+          if (is_wp_error($record) || "Evidence-aware line from the Manager." !== $record["excerpt"]) { exit(1); }
+          $created = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>1,"meta_key"=>"_research_line_order","meta_value"=>"80","suppress_filters"=>true]);
+          if (! isset($created[0]) || (int) $created[0]->ID !== $post_id) { exit(1); }
+          delete_option("research_line_admin_fixture_id");
+          ' --allow-root
