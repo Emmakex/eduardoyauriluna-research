@@ -6,7 +6,7 @@ if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Blueprint {
     private const VERSION = 1;
-    private const RESOURCE_KEYS = array('pages','insights','outputs','projects','software','datasets');
+    private const RESOURCE_KEYS = array('pages','insights','lines','outputs','projects','software','datasets');
 
     public function validate(array $blueprint): array|WP_Error {
         if (! Eduardo_Research_Manager_Mode::is_greenfield()) {

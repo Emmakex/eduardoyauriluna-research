@@ -1,0 +1,120 @@
+name: Research Lines Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-lines-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-lines-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  line-lifecycle:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install Research Theme and Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-lines-wp
+          mkdir -p /tmp/research-lines-wp
+          cd /tmp/research-lines-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Lines Test' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Verify evidence gate, create, update and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-lines-wp
+          wp eval '
+          wp_set_current_user(1);
+          if (! Eduardo_Research_Manager::lines() instanceof Eduardo_Research_Manager_Line_Resource) { exit(1); }
+
+          $data = [
+              "title"=>"Controlled Research Line",
+              "slug"=>"controlled-research-line",
+              "language"=>"en",
+              "status"=>"publish",
+              "evidence_status"=>"verified",
+              "research_status"=>"planned",
+              "central_question"=>"How can a controlled line be represented safely?",
+              "order"=>"10",
+              "topics"=>["AI systems","Governance"],
+              "methods"=>["Design Science Research"]
+          ];
+
+          $blocked = Eduardo_Research_Manager::lines()->build_creation_plan($data, "Blocked line without evidence");
+          if (is_wp_error($blocked)) { fwrite(STDERR, $blocked->get_error_message()); exit(1); }
+          $blocked_preview = Eduardo_Research_Manager::executor()->preview($blocked);
+          if (is_wp_error($blocked_preview) || ! empty($blocked_preview["apply_allowed"]) || "evidence-required" !== (string) $blocked_preview["risk"]) { exit(1); }
+
+          $invalid = $data; $invalid["evidence_status"] = "unverified";
+          $invalid_plan = Eduardo_Research_Manager::lines()->build_creation_plan($invalid, "Invalid public unverified line", ["evidence_confirmed"=>true,"evidence_reference"=>"CI"]);
+          if (! is_wp_error($invalid_plan) || "research_manager_unverified_line_publish" !== $invalid_plan->get_error_code()) { exit(1); }
+
+          $plan = Eduardo_Research_Manager::lines()->build_creation_plan($data, "Create controlled Research Line", ["evidence_confirmed"=>true,"evidence_reference"=>"CI controlled line"]);
+          if (is_wp_error($plan)) { fwrite(STDERR, $plan->get_error_message()); exit(1); }
+          $preview = Eduardo_Research_Manager::executor()->preview($plan);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"])) { exit(1); }
+          $created = Eduardo_Research_Manager::executor()->apply($plan);
+          if (is_wp_error($created) || "applied" !== (string) $created["status"]) { fwrite(STDERR, is_wp_error($created) ? $created->get_error_message() : wp_json_encode($created)); exit(1); }
+          $token = (string) $plan["actions"][0]["creation_token"];
+          $line_id = Eduardo_Research_Manager::lines()->find_created_by_token($token);
+          if ($line_id <= 0 || ! eduardo_research_line_is_verified_public($line_id, "en")) { exit(1); }
+          $verified = Eduardo_Research_Manager::lines()->verify($line_id, ["research_status"=>"planned","central_question"=>$data["central_question"],"topics"=>$data["topics"]], $token);
+          if (is_wp_error($verified) || empty($verified["verified"])) { exit(1); }
+
+          $update_plan = Eduardo_Research_Manager::lines()->build_update_plan($line_id, ["research_status"=>"active","topics"=>["AI systems","Governance","Reliability"]], "Update controlled Research Line", ["evidence_confirmed"=>true,"evidence_reference"=>"CI controlled update"]);
+          if (is_wp_error($update_plan)) { fwrite(STDERR, $update_plan->get_error_message()); exit(1); }
+          $updated = Eduardo_Research_Manager::executor()->apply($update_plan);
+          if (is_wp_error($updated) || empty($updated["snapshot_id"])) { exit(1); }
+          $updated_check = Eduardo_Research_Manager::lines()->verify($line_id, ["research_status"=>"active","topics"=>["AI systems","Governance","Reliability"]]);
+          if (is_wp_error($updated_check) || empty($updated_check["verified"])) { exit(1); }
+
+          $undo_update = Eduardo_Research_Manager::executor()->rollback((string) $updated["snapshot_id"]);
+          if (is_wp_error($undo_update)) { exit(1); }
+          $restored = Eduardo_Research_Manager::lines()->verify($line_id, ["research_status"=>"planned","topics"=>$data["topics"]]);
+          if (is_wp_error($restored) || empty($restored["verified"])) { exit(1); }
+
+          $undo_create = Eduardo_Research_Manager::executor()->rollback((string) $created["snapshot_id"]);
+          if (is_wp_error($undo_create) || 0 !== Eduardo_Research_Manager::lines()->find_created_by_token($token)) { exit(1); }
+          ' --allow-root

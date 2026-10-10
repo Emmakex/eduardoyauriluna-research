@@ -71,14 +71,24 @@ jobs:
           $blueprint = json_decode((string) file_get_contents($path), true);
           if (! is_array($blueprint)) { fwrite(STDERR, "Blueprint JSON invalid\n"); exit(1); }
 
-          // Theme activation owns initial preset-page installation. Manager bootstrap must therefore be idempotent.
+          // Theme activation owns preset-page installation; Manager bootstrap creates the 8 evidence-backed Research Lines.
           $boot_preview = Eduardo_Research_Manager::bootstrap()->preview($blueprint);
-          if (is_wp_error($boot_preview) || empty($boot_preview["apply_allowed"]) || 0 !== (int) $boot_preview["operation_count"] || 12 !== (int) $boot_preview["skipped_count"]) {
+          if (is_wp_error($boot_preview) || empty($boot_preview["apply_allowed"]) || 8 !== (int) $boot_preview["operation_count"] || 12 !== (int) $boot_preview["skipped_count"]) {
               fwrite(STDERR, is_wp_error($boot_preview) ? $boot_preview->get_error_message() : wp_json_encode($boot_preview)); exit(1);
           }
           $boot = Eduardo_Research_Manager::bootstrap()->apply($blueprint);
-          if (is_wp_error($boot) || empty($boot["verified"]) || 0 !== (int) $boot["operation_count"] || 12 !== (int) $boot["skipped_count"]) {
+          if (is_wp_error($boot) || empty($boot["verified"]) || 8 !== (int) $boot["operation_count"] || 12 !== (int) $boot["skipped_count"]) {
               fwrite(STDERR, is_wp_error($boot) ? $boot->get_error_message() : wp_json_encode($boot)); exit(1);
+          }
+          $lines = get_posts(["post_type"=>"research_line","post_status"=>"publish","posts_per_page"=>20,"suppress_filters"=>true]);
+          if (8 !== count($lines)) { fwrite(STDERR, "Expected 8 Research Lines\n"); exit(1); }
+          foreach ($lines as $line) {
+              if (! $line instanceof WP_Post || "verified" !== (string) get_post_meta($line->ID, "_research_evidence_status", true)) { exit(1); }
+          }
+
+          $repeat_boot = Eduardo_Research_Manager::bootstrap()->preview($blueprint);
+          if (is_wp_error($repeat_boot) || 0 !== (int) $repeat_boot["operation_count"] || 20 !== (int) $repeat_boot["skipped_count"]) {
+              fwrite(STDERR, is_wp_error($repeat_boot) ? $repeat_boot->get_error_message() : wp_json_encode($repeat_boot)); exit(1);
           }
 
           $preview = Eduardo_Research_Manager::hydrator()->preview($blueprint);
