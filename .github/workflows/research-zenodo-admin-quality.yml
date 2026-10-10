@@ -1,0 +1,207 @@
+name: Research Zenodo Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-zenodo-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-zenodo-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  zenodo-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint Zenodo Academic Connections surface
+        shell: bash
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-zenodo-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-zenodo-adapter.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-zenodo-admin-wp
+          mkdir -p /tmp/research-zenodo-admin-wp
+          cd /tmp/research-zenodo-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp config set EDUARDO_RESEARCH_ZENODO_TOKEN 'zenodo-admin-secret-token' --allow-root
+          wp config set EDUARDO_RESEARCH_ZENODO_ENVIRONMENT 'sandbox' --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Zenodo Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Seed verified ORCID and local Research objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-zenodo-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          update_option("eduardo_research_evidence",[
+              "identifiers"=>[[
+                  "id"=>"orcid-zenodo-admin-ci",
+                  "status"=>"verified",
+                  "label"=>"ORCID",
+                  "value"=>"0000-0002-1825-0097",
+                  "url"=>"https://orcid.org/0000-0002-1825-0097",
+                  "evidence_reference"=>"CI exact ORCID fixture",
+                  "verified_at"=>gmdate(DATE_W3C)
+              ]]
+          ],false);
+          $output=wp_insert_post(["post_type"=>"research_output","post_status"=>"draft","post_title"=>"Zenodo output","post_name"=>"zenodo-admin-output"],true);
+          $software=wp_insert_post(["post_type"=>"research_software","post_status"=>"draft","post_title"=>"Zenodo software","post_name"=>"zenodo-admin-software"],true);
+          $dataset=wp_insert_post(["post_type"=>"research_dataset","post_status"=>"draft","post_title"=>"Zenodo dataset","post_name"=>"zenodo-admin-dataset"],true);
+          foreach ([["id"=>$output,"doi"=>"10.5281/zenodo.1101"],["id"=>$software,"doi"=>"10.5281/zenodo.2200"],["id"=>$dataset,"doi"=>"10.5281/zenodo.3301"]] as $fixture) {
+              if (is_wp_error($fixture["id"])) { exit(1); }
+              update_post_meta((int)$fixture["id"],"_research_language","en");
+              update_post_meta((int)$fixture["id"],"_research_doi",$fixture["doi"]);
+          }
+          update_option("zenodo_admin_ids",[(int)$output,(int)$software,(int)$dataset],false);
+          update_option("zenodo_admin_before",wp_json_encode([
+              Eduardo_Research_Manager::outputs()->inspect((int)$output),
+              Eduardo_Research_Manager::software()->inspect((int)$software),
+              Eduardo_Research_Manager::datasets()->inspect((int)$dataset),
+          ]),false);
+          ' --allow-root
+
+      - name: Render Zenodo Preview control without leaking token
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-zenodo-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $admin=new Eduardo_Research_Manager_Zenodo_Admin();
+          $admin->register();
+          if (! has_action("admin_post_eduardo_research_zenodo_preview",[$admin,"handle_preview"])) { fwrite(STDERR,"Zenodo Preview action missing\n"); exit(1); }
+          ob_start(); $admin->render(); $html=(string)ob_get_clean();
+          foreach (["Zenodo published records","SANDBOX","EXACT VERIFIED ORCID IN CREATOR METADATA","0000-0002-1825-0097","Preview Zenodo records and DOI reconciliation","Deposit write / publish","DISABLED"] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing Zenodo admin marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"zenodo-admin-secret-token") || false!==strpos($html,"eduardo_research_zenodo_apply") || false!==strpos($html,"Apply Zenodo")) {
+              fwrite(STDERR,"Zenodo surface leaked a secret or exposed Apply\n"); exit(1);
+          }
+          ' --allow-root
+
+      - name: Run Zenodo Preview handler with mocked exact-ORCID reads
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-zenodo-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          add_filter("pre_http_request",static function($pre,$args,$url){
+              if (! str_contains($url,"sandbox.zenodo.org/api/records")) { return $pre; }
+              if ("Bearer zenodo-admin-secret-token"!==(string)($args["headers"]["Authorization"] ?? "")) { fwrite(STDERR,"Zenodo token missing from Authorization header\n"); exit(1); }
+              if (false!==strpos($url,"zenodo-admin-secret-token")) { fwrite(STDERR,"Zenodo token leaked into URL\n"); exit(1); }
+              $query=[]; parse_str((string)wp_parse_url($url,PHP_URL_QUERY),$query);
+              if ("\"0000-0002-1825-0097\""!==(string)($query["q"] ?? "")) { fwrite(STDERR,"Zenodo query was not exact ORCID\n"); exit(1); }
+              return ["headers"=>[],"body"=>wp_json_encode([
+                  "hits"=>[
+                      "total"=>4,
+                      "hits"=>[
+                          [
+                              "id"=>1101,
+                              "pids"=>["doi"=>["identifier"=>"10.5281/zenodo.1101"]],
+                              "metadata"=>[
+                                  "title"=>"Zenodo output","publication_date"=>"2026-01-10","resource_type"=>["type"=>"publication"],
+                                  "creators"=>[["person_or_org"=>["name"=>"Yauri Luna, Eduardo Jose","identifiers"=>[["scheme"=>"orcid","identifier"=>"0000-0002-1825-0097"]]]]],
+                                  "license"=>["id"=>"cc-by-4.0"]
+                              ],
+                              "links"=>["self_html"=>"https://sandbox.zenodo.org/records/1101"]
+                          ],
+                          [
+                              "id"=>2201,"doi"=>"10.5281/zenodo.2201","conceptdoi"=>"10.5281/zenodo.2200",
+                              "metadata"=>[
+                                  "title"=>"Zenodo software remote version","publication_date"=>"2026-02-20","upload_type"=>"software","version"=>"1.1.0",
+                                  "creators"=>[["name"=>"Yauri Luna, Eduardo Jose","orcid"=>"0000-0002-1825-0097"]],"license"=>"MIT"
+                              ],
+                              "links"=>["html"=>"https://sandbox.zenodo.org/records/2201"]
+                          ],
+                          [
+                              "id"=>4401,"doi"=>"10.5281/zenodo.4401",
+                              "metadata"=>[
+                                  "title"=>"Remote only Zenodo dataset","publication_date"=>"2026-03-05","upload_type"=>"dataset",
+                                  "creators"=>[["name"=>"Yauri Luna, Eduardo Jose","orcid"=>"0000-0002-1825-0097"]]
+                              ],
+                              "links"=>["html"=>"https://sandbox.zenodo.org/records/4401"]
+                          ],
+                          [
+                              "id"=>9999,"doi"=>"10.5281/zenodo.9999",
+                              "metadata"=>[
+                                  "title"=>"Incidental ORCID mention","publication_date"=>"2026-03-06","upload_type"=>"dataset",
+                                  "creators"=>[["name"=>"Other Researcher","orcid"=>"0000-0001-5109-3700"]]
+                              ]
+                          ]
+                      ]
+                  ]
+              ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+          },10,3);
+          $_POST=["_wpnonce"=>wp_create_nonce("erm_zenodo_preview")]; $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_Zenodo_Admin())->handle_preview();
+          ' --allow-root
+
+      - name: Render Zenodo reconciliation and prove zero local mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-zenodo-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $preview=get_transient("eduardo_research_zenodo_preview_1");
+          if (! is_array($preview) || "preview"!==($preview["status"] ?? "") || "exact_verified_orcid_in_creator_metadata"!==($preview["identity_basis"] ?? "")) { fwrite(STDERR,wp_json_encode($preview)); exit(1); }
+          if (3!==(int)($preview["remote_record_count"] ?? 0) || 2!==(int)($preview["local_doi_match_count"] ?? 0) || 1!==count((array)($preview["remote_without_local"] ?? []))) { fwrite(STDERR,wp_json_encode($preview)); exit(1); }
+          ob_start(); (new Eduardo_Research_Manager_Zenodo_Admin())->render(); $html=(string)ob_get_clean();
+          foreach (["Zenodo reconciliation preview","Remote records","Local DOI matches","OUTPUT","SOFTWARE","concept_doi","Remote only Zenodo dataset","Preview only."] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing rendered Zenodo marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"zenodo-admin-secret-token") || false!==strpos($html,"eduardo_research_zenodo_apply") || false!==strpos($html,"Apply Zenodo")) { fwrite(STDERR,"Zenodo Preview exposed secret or Apply control\n"); exit(1); }
+          $ids=(array)get_option("zenodo_admin_ids",[]);
+          $after=wp_json_encode([
+              Eduardo_Research_Manager::outputs()->inspect((int)($ids[0] ?? 0)),
+              Eduardo_Research_Manager::software()->inspect((int)($ids[1] ?? 0)),
+              Eduardo_Research_Manager::datasets()->inspect((int)($ids[2] ?? 0)),
+          ]);
+          if ((string)get_option("zenodo_admin_before","")!==$after) { fwrite(STDERR,"Zenodo admin Preview mutated local Research objects\n"); exit(1); }
+          delete_option("zenodo_admin_ids"); delete_option("zenodo_admin_before");
+          ' --allow-root
