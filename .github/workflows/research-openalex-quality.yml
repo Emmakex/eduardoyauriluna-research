@@ -1,0 +1,186 @@
+name: Research OpenAlex Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-openalex-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-openalex-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  openalex:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint OpenAlex adapter
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-openalex-adapter.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-openalex-wp
+          mkdir -p /tmp/research-openalex-wp
+          cd /tmp/research-openalex-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research OpenAlex' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Verify exact ORCID identity contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-openalex-wp
+          wp eval '
+          $adapter = Eduardo_Research_Manager::openalex();
+          if (! $adapter instanceof Eduardo_Research_Manager_OpenAlex_Adapter) { exit(1); }
+          $caps = $adapter->capabilities();
+          foreach (["exact_orcid_author_lookup","author_read","works_read","metrics_read","doi_reconciliation_preview"] as $cap) {
+              if (empty($caps[$cap])) { fwrite(STDERR,"missing OpenAlex capability: {$cap}\n"); exit(1); }
+          }
+          if (! empty($caps["name_matching"]) || ! empty($caps["external_write"])) { exit(1); }
+          $config = $adapter->configuration();
+          if (empty($config["configured"]) || empty($config["public_api"]) || ! empty($config["api_key_required"]) || ! empty($config["secrets_exposed"])) { exit(1); }
+          if ("0000-0002-1825-0097" !== $adapter->normalize_orcid("https://orcid.org/0000-0002-1825-0097")) { exit(1); }
+          if ("" !== $adapter->normalize_orcid("0000-0000-0000-0000")) { fwrite(STDERR,"invalid ORCID checksum accepted\n"); exit(1); }
+          if ("A1234567890" !== $adapter->normalize_author_id("https://openalex.org/A1234567890")) { exit(1); }
+          if ("" !== $adapter->normalize_author_id("Eduardo Jose Yauri Luna")) { fwrite(STDERR,"name accepted as OpenAlex author identity\n"); exit(1); }
+          ' --allow-root
+
+      - name: Preview exact-ORCID OpenAlex reconciliation with mocked HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-openalex-wp
+          wp eval '
+          wp_set_current_user(1);
+          update_option("eduardo_research_evidence",[
+              "identifiers"=>[[
+                  "id"=>"orcid-openalex-ci",
+                  "status"=>"verified",
+                  "label"=>"ORCID",
+                  "value"=>"0000-0002-1825-0097",
+                  "url"=>"https://orcid.org/0000-0002-1825-0097",
+                  "evidence_reference"=>"CI exact ORCID fixture",
+                  "verified_at"=>gmdate(DATE_W3C)
+              ]]
+          ],false);
+
+          $post_id = wp_insert_post([
+              "post_type"=>"research_output",
+              "post_status"=>"draft",
+              "post_title"=>"Exact DOI local output",
+              "post_name"=>"exact-doi-local-output"
+          ],true);
+          if (is_wp_error($post_id)) { fwrite(STDERR,$post_id->get_error_message()); exit(1); }
+          update_post_meta((int)$post_id,"_research_language","en");
+          update_post_meta((int)$post_id,"_research_doi","10.5555/openalex.match");
+          $before = wp_json_encode(Eduardo_Research_Manager::outputs()->inspect((int)$post_id));
+
+          $GLOBALS["openalex_author_filter"]="";
+          $GLOBALS["openalex_works_filter"]="";
+          add_filter("pre_http_request",static function($pre,$args,$url){
+              if (false !== $pre) { return $pre; }
+              $query=[]; parse_str((string)wp_parse_url($url,PHP_URL_QUERY),$query);
+              if (str_contains($url,"api.openalex.org/authors")) {
+                  $GLOBALS["openalex_author_filter"]=(string)($query["filter"] ?? "");
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "meta"=>["count"=>1],
+                      "results"=>[[
+                          "id"=>"https://openalex.org/A1234567890",
+                          "display_name"=>"Eduardo Jose Yauri Luna",
+                          "orcid"=>"https://orcid.org/0000-0002-1825-0097",
+                          "observed_orcids"=>["https://orcid.org/0000-0002-1825-0097"],
+                          "works_count"=>2,
+                          "cited_by_count"=>11,
+                          "summary_stats"=>["h_index"=>2,"i10_index"=>1,"2yr_mean_citedness"=>1.5],
+                          "last_known_institutions"=>[["display_name"=>"Synthetic Research Lab","ror"=>"https://ror.org/00synthetic","country_code"=>"ES","type"=>"education"]],
+                          "updated_date"=>"2026-10-10T00:00:00Z"
+                      ]]
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              if (str_contains($url,"api.openalex.org/works")) {
+                  $GLOBALS["openalex_works_filter"]=(string)($query["filter"] ?? "");
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "meta"=>["count"=>2],
+                      "results"=>[
+                          [
+                              "id"=>"https://openalex.org/W1234567890",
+                              "doi"=>"https://doi.org/10.5555/openalex.match",
+                              "title"=>"Exact DOI local output",
+                              "publication_date"=>"2026-01-15",
+                              "publication_year"=>2026,
+                              "type"=>"article",
+                              "primary_location"=>["source"=>["display_name"=>"Synthetic Journal"]],
+                              "authorships"=>[["author"=>["display_name"=>"Eduardo Jose Yauri Luna"]]],
+                              "cited_by_count"=>7,
+                              "open_access"=>["is_oa"=>true,"oa_status"=>"gold"]
+                          ],
+                          [
+                              "id"=>"https://openalex.org/W2234567890",
+                              "doi"=>"https://doi.org/10.5555/openalex.remote-only",
+                              "title"=>"Remote only work",
+                              "publication_date"=>"2025-09-01",
+                              "publication_year"=>2025,
+                              "type"=>"article",
+                              "primary_location"=>["source"=>["display_name"=>"Another Journal"]],
+                              "authorships"=>[["author"=>["display_name"=>"Eduardo Jose Yauri Luna"]]],
+                              "cited_by_count"=>4,
+                              "open_access"=>["is_oa"=>false,"oa_status"=>"closed"]
+                          ]
+                      ]
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              return $pre;
+          },10,3);
+
+          $preview = Eduardo_Research_Manager::openalex()->preview_from_verified_orcid();
+          if (is_wp_error($preview)) { fwrite(STDERR,$preview->get_error_message()); exit(1); }
+          if ("preview" !== (string)$preview["status"] || "exact_verified_orcid" !== (string)$preview["identity_basis"]) { exit(1); }
+          if ("0000-0002-1825-0097" !== (string)$preview["orcid"] || "A1234567890" !== (string)($preview["author"]["openalex_id"] ?? "")) { exit(1); }
+          if (2 !== (int)$preview["remote_work_count"] || 1 !== (int)$preview["local_doi_match_count"]) { exit(1); }
+          if (empty($preview["local_doi_matches"][0]["title_matches"])) { exit(1); }
+          if (! empty($preview["automatic_local_apply"]) || ! empty($preview["name_matching"]) || ! empty($preview["external_write"])) { exit(1); }
+          if ("orcid:0000-0002-1825-0097" !== $GLOBALS["openalex_author_filter"]) { fwrite(STDERR,"OpenAlex did not resolve by exact ORCID filter\n"); exit(1); }
+          if ("author.id:A1234567890" !== $GLOBALS["openalex_works_filter"]) { fwrite(STDERR,"OpenAlex works were not constrained to exact author ID\n"); exit(1); }
+          $after = wp_json_encode(Eduardo_Research_Manager::outputs()->inspect((int)$post_id));
+          if ($before !== $after) { fwrite(STDERR,"OpenAlex Preview mutated the local Research Output\n"); exit(1); }
+          ' --allow-root
