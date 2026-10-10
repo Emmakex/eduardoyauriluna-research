@@ -37,7 +37,7 @@ final class Eduardo_Research_Manager_Connections {
             ),
             'openalex'=>array(
                 'label'=>'OpenAlex','mode'=>'public_api','priority'=>50,
-                'capabilities'=>array('author_search','author_read','works_read','metrics_read','reconcile'),
+                'capabilities'=>array('exact_orcid_author_lookup','author_read','works_read','metrics_read','doi_reconcile'),
                 'write_enabled'=>false,'ready_without_configuration'=>true,'configuration'=>array(),
             ),
             'github'=>array(
