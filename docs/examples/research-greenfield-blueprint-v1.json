@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "site": {
+    "identity": "Eduardo Jose Yauri Luna",
+    "purpose": "research-profile"
+  },
+  "languages": ["en", "es"],
+  "pages": [
+    {"key": "home"},
+    {"key": "about"},
+    {"key": "research"},
+    {"key": "publications"},
+    {"key": "projects"},
+    {"key": "insights"},
+    {"key": "contact"}
+  ],
+  "insights": [],
+  "outputs": [],
+  "projects": [],
+  "software": [],
+  "datasets": []
+}
