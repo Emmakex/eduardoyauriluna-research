@@ -64,6 +64,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-tra
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-evidence-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-connections-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-zenodo-admin.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-github-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-crossref-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
