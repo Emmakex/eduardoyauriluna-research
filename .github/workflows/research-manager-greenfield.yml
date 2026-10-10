@@ -5,6 +5,7 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'docs/11-greenfield-runtime-contract.md'
+      - 'docs/12-greenfield-next-microphases.md'
       - '.github/workflows/research-manager-greenfield.yml'
   push:
     branches: [main]
@@ -20,12 +21,16 @@ jobs:
       - name: PHP syntax
         run: |
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
+          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-orchestrator.php
       - name: Greenfield is explicit default
         run: |
           grep -F "public const GREENFIELD = 'greenfield';" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
           grep -F "get_option('eduardo_research_manager_mode', self::GREENFIELD)" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
           grep -F "'legacy_discovery' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
           grep -F "'legacy_mapping' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
+          grep -F "'requires_legacy_discovery' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
+          grep -F "'requires_legacy_mapping' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
