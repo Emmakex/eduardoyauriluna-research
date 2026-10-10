@@ -72,6 +72,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rem
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-request-guard.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-pages-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
@@ -83,6 +84,9 @@ register_activation_hook(__FILE__, static function (): void {
 });
 
 add_action('plugins_loaded', array('Eduardo_Research_Manager', 'boot'));
+add_action('plugins_loaded', static function (): void {
+    (new Eduardo_Research_Manager_Remote_Pages_REST(Eduardo_Research_Manager::remote_rest()))->register();
+}, 11);
 
 if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
     add_action('plugins_loaded', static function (): void {

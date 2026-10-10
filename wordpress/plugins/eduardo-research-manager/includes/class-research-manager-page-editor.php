@@ -20,6 +20,51 @@ final class Eduardo_Research_Manager_Page_Editor {
         return $this->pages->inspect($key, $language);
     }
 
+    public function inventory(): array {
+        $items = array();
+        foreach (Eduardo_Research_Manager::contract()->pages() as $key => $definition) {
+            $state = Eduardo_Research_Manager::contract()->page_state((string) $key);
+            $row = array(
+                'key'=>(string) $key,
+                'exists'=>! empty($state['exists']),
+                'page_id'=>(int) ($state['id'] ?? 0),
+                'role'=>(string) ($definition['role'] ?? ''),
+                'model'=>(string) ($definition['model'] ?? ''),
+                'languages'=>array(),
+            );
+            foreach (Eduardo_Research_Manager::contract()->languages() as $language) {
+                if (empty($state['exists'])) {
+                    $row['languages'][(string) $language] = array(
+                        'language'=>(string) $language,
+                        'available'=>false,
+                        'url'=>'',
+                        'allowed_slots'=>array_keys($this->pages->slot_schema((string) $key, (string) $language)),
+                    );
+                    continue;
+                }
+                $resource = $this->pages->inspect((string) $key, (string) $language);
+                $row['languages'][(string) $language] = is_wp_error($resource)
+                    ? array('language'=>(string) $language,'available'=>false,'error_code'=>$resource->get_error_code(),'error'=>$resource->get_error_message())
+                    : array(
+                        'language'=>(string) $language,
+                        'available'=>true,
+                        'url'=>(string) ($resource['url'] ?? ''),
+                        'contract_aligned'=>! empty($resource['contract_aligned']),
+                        'allowed_slots'=>(array) ($resource['allowed_slots'] ?? array()),
+                        'stored_slots'=>(array) ($resource['stored_slots'] ?? array()),
+                        'effective_slots'=>(array) ($resource['effective_slots'] ?? array()),
+                    );
+            }
+            $items[] = $row;
+        }
+        return array(
+            'items'=>$items,
+            'count'=>count($items),
+            'languages'=>Eduardo_Research_Manager::contract()->languages(),
+            'generated_at'=>gmdate(DATE_W3C),
+        );
+    }
+
     public function preview(string $key, string $language, array $slots): array|WP_Error {
         $resource = $this->pages->inspect($key, $language);
         if (is_wp_error($resource)) { return $resource; }
@@ -145,6 +190,73 @@ final class Eduardo_Research_Manager_Page_Editor {
             'verification'=>$semantic,
             'verified'=>true,
         );
+    }
+
+    public function preview_creation(string $key): array|WP_Error {
+        $key = sanitize_key($key);
+        $plan = $this->pages->build_creation_plan($key, sprintf('Interactive Page editor: create missing %s Page', $key));
+        if (is_wp_error($plan)) { return $plan; }
+        $preview = $this->executor->preview($plan);
+        if (is_wp_error($preview)) { return $preview; }
+        $action = is_array($plan['actions'][0] ?? null) ? $plan['actions'][0] : array();
+        $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
+        if ('' === $creation_token) {
+            return new WP_Error('research_manager_page_editor_preview_invalid', 'The Page creation plan is missing provenance.');
+        }
+        return array(
+            'status'=>'create',
+            'key'=>$key,
+            'creation_token'=>$creation_token,
+            'apply_allowed'=>! empty($preview['apply_allowed']),
+            'plan'=>$plan,
+            'plan_id'=>(string) ($plan['id'] ?? ''),
+            'preview'=>$preview,
+        );
+    }
+
+    public function apply_creation_preview(array $prepared): array|WP_Error {
+        if (! current_user_can('manage_options')) {
+            return new WP_Error('research_manager_forbidden', 'You are not allowed to create Theme-owned Pages.');
+        }
+        $key = sanitize_key((string) ($prepared['key'] ?? ''));
+        $token = sanitize_text_field((string) ($prepared['creation_token'] ?? ''));
+        $plan = is_array($prepared['plan'] ?? null) ? $prepared['plan'] : array();
+        if ('' === $key || '' === $token || ! $plan || empty($prepared['apply_allowed'])) {
+            return new WP_Error('research_manager_page_editor_preview_invalid', 'The prepared Page creation preview is incomplete.');
+        }
+        $state = Eduardo_Research_Manager::contract()->page_state($key);
+        if (! empty($state['exists'])) {
+            return new WP_Error('research_manager_page_editor_stale_preview', 'The Theme Page appeared after Preview. Prepare a fresh Page operation.');
+        }
+        $result = $this->executor->apply($plan);
+        if (is_wp_error($result)) { return $result; }
+        $verification = $this->pages->verify_creation($key, $token);
+        if (is_wp_error($verification) || empty($verification['verified'])) {
+            $snapshot_id = (string) ($result['snapshot_id'] ?? '');
+            if ('' !== $snapshot_id) { $this->executor->rollback($snapshot_id); }
+            return is_wp_error($verification)
+                ? $verification
+                : new WP_Error('research_manager_page_editor_verification_failed', 'Created Page failed contract verification and was rolled back.');
+        }
+        return array(
+            'status'=>(string) ($result['status'] ?? 'applied'),
+            'key'=>$key,
+            'page_id'=>(int) ($verification['page_id'] ?? 0),
+            'url'=>(string) ($verification['url'] ?? ''),
+            'creation_token'=>$token,
+            'plan_id'=>(string) ($plan['id'] ?? ''),
+            'snapshot_id'=>(string) ($result['snapshot_id'] ?? ''),
+            'verification'=>$verification,
+            'verified'=>true,
+        );
+    }
+
+    public function verify_slots(string $key, string $language, array $slots): array|WP_Error {
+        return $this->pages->verify_hydration($key, $language, $slots);
+    }
+
+    public function verify_creation(string $key, string $creation_token): array|WP_Error {
+        return $this->pages->verify_creation($key, $creation_token);
     }
 
     public function rollback(string $snapshot_id): array|WP_Error {
