@@ -1,0 +1,165 @@
+name: Research Greenfield Bundle Quality
+
+on:
+  pull_request:
+    paths:
+      - 'config/research-site-blueprint.json'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'scripts/build-greenfield-bundle.sh'
+      - 'scripts/install-greenfield-bundle.sh'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-greenfield-bundle-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/research-site-blueprint.json'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'scripts/build-greenfield-bundle.sh'
+      - 'scripts/install-greenfield-bundle.sh'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-greenfield-bundle-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bundle-install-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Build standalone Greenfield bundle
+        shell: bash
+        env:
+          GREENFIELD_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          bash scripts/build-greenfield-bundle.sh
+          BUNDLE="$(find dist/greenfield -maxdepth 1 -type f -name 'eduardo-research-greenfield-*.zip' | head -n 1)"
+          test -n "$BUNDLE"
+          test -s "$BUNDLE"
+          test -s "$BUNDLE.sha256"
+          unzip -t "$BUNDLE"
+          (
+            cd "$(dirname "$BUNDLE")"
+            sha256sum -c "$(basename "$BUNDLE").sha256"
+          )
+          printf 'GREENFIELD_BUNDLE=%s\n' "$BUNDLE" >> "$GITHUB_ENV"
+
+      - name: Extract bundle away from repository sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-greenfield-bundle
+          mkdir -p /tmp/research-greenfield-bundle
+          unzip -q "$GREENFIELD_BUNDLE" -d /tmp/research-greenfield-bundle
+          BUNDLE_DIR="$(find /tmp/research-greenfield-bundle -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$BUNDLE_DIR"
+          test -s "$BUNDLE_DIR/manifest.json"
+          test -s "$BUNDLE_DIR/SHA256SUMS"
+          test -x "$BUNDLE_DIR/install.sh"
+          (
+            cd "$BUNDLE_DIR"
+            sha256sum -c SHA256SUMS
+          )
+          printf 'GREENFIELD_BUNDLE_DIR=%s\n' "$BUNDLE_DIR" >> "$GITHUB_ENV"
+
+      - name: Verify bundle manifest contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$GREENFIELD_BUNDLE_DIR/manifest.json" <<'PY'
+          import json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          assert manifest['schema_version'] == 1
+          assert manifest['bundle'] == 'eduardo-research-greenfield'
+          assert manifest['theme']['slug'] == 'eduardo-research'
+          assert manifest['theme']['version'] == '1.0.0'
+          assert manifest['manager']['slug'] == 'eduardo-research-manager'
+          assert manifest['manager']['version'] == '0.9.0'
+          assert manifest['blueprint']['languages'] == ['en', 'es']
+          assert len(manifest['blueprint']['sha256']) == 64
+          assert manifest['install_flow'] == [
+              'verify-checksums', 'install-theme', 'install-manager', 'preview', 'apply', 'status'
+          ]
+          PY
+
+      - name: Install clean WordPress core only
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-greenfield-target
+          mkdir -p /tmp/research-greenfield-target
+          cd /tmp/research-greenfield-target
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Greenfield Bundle Target' --admin_user=admin --admin_password="$(php -r 'echo bin2hex(random_bytes(16));')" --admin_email=research@example.test --skip-email --allow-root
+
+      - name: Install from standalone bundle
+        shell: bash
+        env:
+          GREENFIELD_WP_PATH: /tmp/research-greenfield-target
+          GREENFIELD_ADMIN_USER: admin
+        run: bash "$GREENFIELD_BUNDLE_DIR/install.sh"
+
+      - name: Verify installed bundle state and readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-target
+          test "$(wp theme get eduardo-research --field=status --allow-root)" = "active"
+          test "$(wp plugin get eduardo-research-manager --field=status --allow-root)" = "active"
+          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.0.0"
+          test "$(wp plugin get eduardo-research-manager --field=version --allow-root)" = "0.9.0"
+          test "$(wp post list --post_type=research_line --post_status=publish --format=count --allow-root)" = "8"
+          wp eval '
+          $report = Eduardo_Research_Manager::diagnostics()->run();
+          if (empty($report["ready"]) || 0 !== (int) $report["summary"]["fail"]) {
+              fwrite(STDERR, wp_json_encode($report)); exit(1);
+          }
+          $metadata = Eduardo_Research_Manager::blueprint_store()->metadata();
+          if (is_wp_error($metadata) || 20 !== (int) $metadata["summary"]["total_resources"]) { exit(1); }
+          ' --allow-root
+
+      - name: Prove repeated Greenfield Apply is idempotent
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-target
+          OUTPUT="$(wp research-manager greenfield apply --user=admin --yes --allow-root)"
+          printf '%s\n' "$OUTPUT"
+          grep -F '"mutated": false' <<<"$OUTPUT"
+          grep -F 'already matched the bundled blueprint' <<<"$OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eduardo-research-greenfield-bundle
+          path: |
+            dist/greenfield/*.zip
+            dist/greenfield/*.sha256
+          if-no-files-found: error
