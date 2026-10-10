@@ -12,7 +12,66 @@ The Manager now covers:
 - Theme-owned Page hydration/reversible creation;
 - EN/ES Insights;
 - evidence-aware Publications, Projects, Software and Datasets;
-- HTTP-level rendered frontend verification.
+- HTTP-level rendered frontend verification;
+- M1 authenticated, read-only remote bridge for the ChatGPT-governed operating model.
+
+## M1 remote Manager bridge
+
+The remote bridge is the first transport layer for the canonical operating path:
+
+```text
+Eduardo → ChatGPT → authenticated Research Manager → shared Manager services → WordPress / Research Theme
+```
+
+M1 deliberately exposes **read-only** operations. Remote mutations remain unavailable until M2 implements the exact Plan → Apply → Verify → Rollback operation lifecycle.
+
+### REST namespace
+
+`/wp-json/research-manager/v1`
+
+Read endpoints:
+
+- `GET /status` — `site.read`;
+- `GET /versions` — `site.read`;
+- `GET /capabilities` — `site.read`;
+- `GET /readiness` — `site.diagnostics`;
+- `GET /diagnostics` — `site.diagnostics`.
+
+### Authentication and request protection
+
+Remote credentials are site-specific and bound to a local WordPress administrator. The raw bearer token is shown only when generated or rotated; WordPress persists only its password hash and a non-secret prefix.
+
+Authenticated calls require:
+
+- `Authorization: Bearer <token>`;
+- `X-Research-Manager-Request-Id`;
+- `X-Research-Manager-Nonce`;
+- `X-Research-Manager-Timestamp`.
+
+The bridge enforces:
+
+- revocable/rotatable credentials;
+- explicit scopes;
+- local administrator capability validation;
+- HTTPS outside local/development environments;
+- timestamp validity window;
+- nonce replay protection;
+- per-connection rate limiting;
+- request/idempotency primitives for M2;
+- bounded audit records that never contain bearer tokens or credential hashes.
+
+### Local control
+
+WordPress → Tools → Research Manager Remote provides the local security console for:
+
+- generating a connection token;
+- rotating it;
+- enabling/disabling remote access;
+- revoking the credential immediately;
+- selecting scopes;
+- viewing recent non-secret audit events.
+
+No SSH access, WordPress administrator password sharing, arbitrary PHP/SQL/filesystem execution or generic WordPress REST proxy is part of the remote contract.
 
 ## Evidence discipline
 
@@ -57,6 +116,10 @@ Preview → Apply → stored Verify → rendered Verify → keep/rollback decisi
 - `software()` — research software, release/repository/DOI metadata.
 - `datasets()` — research datasets, access/provenance/methodology/DOI metadata.
 - `rendered()` — HTTP-level public result verification.
+- `remote_credentials()` — local remote identity/credential/scopes.
+- `remote_audit()` — bounded non-secret remote audit trail.
+- `remote_guard()` — timestamp, replay, rate and idempotency guards.
+- `remote_rest()` — versioned read-only remote adapter over shared Manager services.
 
 Research objects share an internal executor registry for creation, stored-state verification and provenance-safe rollback, while each resource keeps its own validation contract.
 
@@ -64,12 +127,13 @@ Research objects share an internal executor registry for creation, stored-state 
 
 Generic mutations remain narrow. Dedicated resource creation actions do not grant arbitrary WordPress publishing control. Snapshots are bounded, non-autoloaded and one-shot for rollback.
 
-## Admin surface
+The M1 remote bridge does not expose mutation routes. M2 must reuse these same application services rather than create an unrestricted remote WordPress administration path.
 
-WordPress → Tools → Research Manager exposes readiness/control-plane state. Resource UX is added only on top of verified services; raw arbitrary-write controls remain absent.
+## Admin surfaces
 
-## Next implementation blocks
+- WordPress → Tools → Research Manager — readiness/control-plane state and structured site operations.
+- WordPress → Tools → Research Manager Remote — local connection security, scopes, rotation/revocation and audit.
 
-1. Readiness remediation plans wired to Preview/Apply.
-2. EN/ES record pairing and translation operations.
-3. External academic connectors behind explicit authorization and evidence gates.
+## Next implementation block
+
+**M2 — remote operation lifecycle:** exact plan IDs, state fingerprints, plan expiry, Preview, exact-plan Apply, stale-state rejection, operation status, stored verification, rendered verification, rollback, retry/idempotency acceptance and audit correlation.

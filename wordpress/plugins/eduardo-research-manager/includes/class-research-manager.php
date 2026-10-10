@@ -39,6 +39,10 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Blueprint_Pairing $blueprint_pairing = null;
     private static ?Eduardo_Research_Manager_Blueprint_Relations $blueprint_relations = null;
     private static ?Eduardo_Research_Manager_Greenfield_Pipeline $pipeline = null;
+    private static ?Eduardo_Research_Manager_Remote_Credentials $remote_credentials = null;
+    private static ?Eduardo_Research_Manager_Remote_Audit $remote_audit = null;
+    private static ?Eduardo_Research_Manager_Remote_Request_Guard $remote_guard = null;
+    private static ?Eduardo_Research_Manager_Remote_REST $remote_rest = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -75,6 +79,11 @@ final class Eduardo_Research_Manager {
         self::$blueprint_pairing = new Eduardo_Research_Manager_Blueprint_Pairing(self::$blueprint, self::$lines, self::$translations, self::$executor);
         self::$blueprint_relations = new Eduardo_Research_Manager_Blueprint_Relations(self::$blueprint, self::$lines, self::$executor);
         self::$pipeline = new Eduardo_Research_Manager_Greenfield_Pipeline(self::$bootstrap, self::$blueprint_pairing, self::$hydrator, self::$blueprint_relations);
+        self::$remote_credentials = new Eduardo_Research_Manager_Remote_Credentials();
+        self::$remote_audit = new Eduardo_Research_Manager_Remote_Audit();
+        self::$remote_guard = new Eduardo_Research_Manager_Remote_Request_Guard();
+        self::$remote_rest = new Eduardo_Research_Manager_Remote_REST(self::$remote_credentials, self::$remote_guard, self::$remote_audit);
+        self::$remote_rest->register();
 
         // The workspace only registers an admin_menu callback, so it is safe to register
         // in every runtime. This also keeps WP-CLI/admin test harnesses deterministic.
@@ -89,6 +98,7 @@ final class Eduardo_Research_Manager {
             (new Eduardo_Research_Manager_Evidence_Admin())->register();
             (new Eduardo_Research_Manager_Connections_Admin())->register();
             (new Eduardo_Research_Manager_Crossref_Admin())->register();
+            (new Eduardo_Research_Manager_Remote_Admin(self::$remote_credentials, self::$remote_audit))->register();
         }
     }
 
@@ -127,4 +137,8 @@ final class Eduardo_Research_Manager {
     public static function openalex(): Eduardo_Research_Manager_OpenAlex_Adapter { if (! self::$openalex) { self::$openalex = new Eduardo_Research_Manager_OpenAlex_Adapter(); } return self::$openalex; }
     public static function zenodo(): Eduardo_Research_Manager_Zenodo_Adapter { if (! self::$zenodo) { self::$zenodo = new Eduardo_Research_Manager_Zenodo_Adapter(); } return self::$zenodo; }
     public static function github(): Eduardo_Research_Manager_GitHub_Adapter { if (! self::$github) { self::$github = new Eduardo_Research_Manager_GitHub_Adapter(); } return self::$github; }
+    public static function remote_credentials(): Eduardo_Research_Manager_Remote_Credentials { if (! self::$remote_credentials) { self::$remote_credentials = new Eduardo_Research_Manager_Remote_Credentials(); } return self::$remote_credentials; }
+    public static function remote_audit(): Eduardo_Research_Manager_Remote_Audit { if (! self::$remote_audit) { self::$remote_audit = new Eduardo_Research_Manager_Remote_Audit(); } return self::$remote_audit; }
+    public static function remote_guard(): Eduardo_Research_Manager_Remote_Request_Guard { if (! self::$remote_guard) { self::$remote_guard = new Eduardo_Research_Manager_Remote_Request_Guard(); } return self::$remote_guard; }
+    public static function remote_rest(): Eduardo_Research_Manager_Remote_REST { if (! self::$remote_rest) { self::$remote_rest = new Eduardo_Research_Manager_Remote_REST(self::remote_credentials(), self::remote_guard(), self::remote_audit()); } return self::$remote_rest; }
 }

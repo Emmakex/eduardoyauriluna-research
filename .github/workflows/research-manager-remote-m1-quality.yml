@@ -1,0 +1,208 @@
+name: Research Manager Remote M1 Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-manager-remote-m1-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-manager-remote-m1-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remote-m1:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint M1 bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-request-guard.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-admin.php
+
+      - name: Install clean Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-manager-remote-m1
+          mkdir -p /tmp/research-manager-remote-m1
+          cd /tmp/research-manager-remote-m1
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp config set WP_ENVIRONMENT_TYPE development --type=constant --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Manager Remote M1' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Verify M1 security and read API
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/research-manager-remote-m1-test.php <<'PHP'
+          <?php
+          wp_set_current_user(1);
+          $credentials = Eduardo_Research_Manager::remote_credentials();
+          $audit = Eduardo_Research_Manager::remote_audit();
+
+          function fail_m1(string $message, mixed $context = null): never {
+              fwrite(STDERR, "M1 FAIL: {$message}\n");
+              if (null !== $context) { fwrite(STDERR, wp_json_encode($context, JSON_PRETTY_PRINT) . "\n"); }
+              exit(1);
+          }
+
+          function remote_request(string $route, string $token = '', ?string $nonce = null, ?string $request_id = null, ?int $timestamp = null): WP_REST_Response {
+              $request = new WP_REST_Request('GET', '/research-manager/v1/' . ltrim($route, '/'));
+              if ('' !== $token) { $request->set_header('Authorization', 'Bearer ' . $token); }
+              $request->set_header('X-Research-Manager-Request-Id', $request_id ?: 'req-' . wp_generate_uuid4());
+              $request->set_header('X-Research-Manager-Nonce', $nonce ?: 'nonce-' . str_replace('-', '', wp_generate_uuid4()));
+              $request->set_header('X-Research-Manager-Timestamp', (string) ($timestamp ?? time()));
+              return rest_do_request($request);
+          }
+
+          rest_get_server();
+          $routes = rest_get_server()->get_routes();
+          foreach (array('status','versions','capabilities','readiness','diagnostics') as $endpoint) {
+              $route = '/research-manager/v1/' . $endpoint;
+              if (! isset($routes[$route])) { fail_m1('route not registered: ' . $route); }
+          }
+
+          $unauth = remote_request('status');
+          if (401 !== $unauth->get_status() || 'authentication_failed' !== (string) ($unauth->get_data()['code'] ?? '')) {
+              fail_m1('unauthenticated request was not rejected', $unauth->get_data());
+          }
+
+          $issued = $credentials->issue_token(array('site.read','site.diagnostics'), 1, 'CI ChatGPT Bridge');
+          if (is_wp_error($issued) || empty($issued['token'])) { fail_m1('token issuance failed', is_wp_error($issued) ? $issued->get_error_message() : $issued); }
+          $token1 = (string) $issued['token'];
+          $stored = get_option('eduardo_research_manager_remote_connection', array());
+          $stored_json = wp_json_encode($stored);
+          if (false !== strpos($stored_json, $token1) || isset($stored['token'])) { fail_m1('raw token persisted in connection state', $stored); }
+          if (empty($stored['token_hash'])) { fail_m1('hashed credential missing'); }
+
+          foreach (array('status','versions','capabilities','readiness','diagnostics') as $endpoint) {
+              $response = remote_request($endpoint, $token1);
+              if (200 !== $response->get_status()) { fail_m1($endpoint . ' did not return 200', $response->get_data()); }
+              $json = wp_json_encode($response->get_data());
+              if (false !== strpos($json, $token1) || false !== strpos($json, 'token_hash')) { fail_m1($endpoint . ' leaked credential material', $response->get_data()); }
+              if (empty($response->get_data()['request_id'])) { fail_m1($endpoint . ' omitted request_id'); }
+          }
+
+          $capabilities = remote_request('capabilities', $token1)->get_data();
+          $cap_data = $capabilities['data'] ?? array();
+          if (! in_array('site.read', $cap_data['granted_scopes'] ?? array(), true) || ! in_array('site.diagnostics', $cap_data['granted_scopes'] ?? array(), true)) {
+              fail_m1('capabilities omitted granted scopes', $cap_data);
+          }
+          if (true === ($cap_data['mutation_transport']['available'] ?? true)) { fail_m1('M1 unexpectedly exposes mutation transport', $cap_data); }
+
+          $credentials->set_scopes(array('site.read'));
+          $denied = remote_request('readiness', $token1);
+          if (403 !== $denied->get_status() || 'scope_denied' !== (string) ($denied->get_data()['code'] ?? '')) {
+              fail_m1('scope denial failed', $denied->get_data());
+          }
+          $credentials->set_scopes(array('site.read','site.diagnostics'));
+
+          $replay_nonce = 'nonce-replay-1234567890';
+          $first = remote_request('status', $token1, $replay_nonce, 'req-replay-first');
+          if (200 !== $first->get_status()) { fail_m1('first replay control request failed', $first->get_data()); }
+          $replay = remote_request('status', $token1, $replay_nonce, 'req-replay-second');
+          if (409 !== $replay->get_status() || 'validation_failed' !== (string) ($replay->get_data()['code'] ?? '')) {
+              fail_m1('nonce replay was not rejected', $replay->get_data());
+          }
+
+          $expired = remote_request('status', $token1, null, null, time() - 1000);
+          if (401 !== $expired->get_status() || 'validation_failed' !== (string) ($expired->get_data()['code'] ?? '')) {
+              fail_m1('expired request timestamp was not rejected', $expired->get_data());
+          }
+
+          $disabled_state = $credentials->set_enabled(false);
+          if (is_wp_error($disabled_state)) { fail_m1('disable failed', $disabled_state->get_error_message()); }
+          $disabled = remote_request('status', $token1);
+          if (401 !== $disabled->get_status() || 'authentication_failed' !== (string) ($disabled->get_data()['code'] ?? '')) {
+              fail_m1('disabled connection still authenticated', $disabled->get_data());
+          }
+          $enabled_state = $credentials->set_enabled(true);
+          if (is_wp_error($enabled_state)) { fail_m1('re-enable failed', $enabled_state->get_error_message()); }
+          if (200 !== remote_request('status', $token1)->get_status()) { fail_m1('re-enabled connection did not authenticate'); }
+
+          $rotated = $credentials->rotate(1);
+          if (is_wp_error($rotated) || empty($rotated['token'])) { fail_m1('rotation failed'); }
+          $token2 = (string) $rotated['token'];
+          if ($token1 === $token2) { fail_m1('rotation reused the previous token'); }
+          $old = remote_request('status', $token1);
+          if (401 !== $old->get_status() || 'authentication_failed' !== (string) ($old->get_data()['code'] ?? '')) {
+              fail_m1('old token remained valid after rotation', $old->get_data());
+          }
+          if (200 !== remote_request('status', $token2)->get_status()) { fail_m1('rotated token is not valid'); }
+
+          $credentials->revoke();
+          $revoked = remote_request('status', $token2);
+          if (401 !== $revoked->get_status() || 'authentication_failed' !== (string) ($revoked->get_data()['code'] ?? '')) {
+              fail_m1('revoked token remained valid', $revoked->get_data());
+          }
+
+          $audit_json = wp_json_encode(get_option('eduardo_research_manager_remote_audit', array()));
+          if (false !== strpos($audit_json, $token1) || false !== strpos($audit_json, $token2) || false !== strpos($audit_json, 'token_hash')) {
+              fail_m1('audit log leaked credential material');
+          }
+          if (count($audit->recent(200)) < 10) { fail_m1('expected audit events were not recorded'); }
+
+          ob_start();
+          (new Eduardo_Research_Manager_Remote_Admin($credentials, $audit))->render();
+          $admin_html = (string) ob_get_clean();
+          foreach (array('Research Manager Remote','Connection state','Connection controls','Scopes','Recent remote audit') as $needle) {
+              if (false === strpos($admin_html, $needle)) { fail_m1('remote admin marker missing: ' . $needle); }
+          }
+          if (false !== strpos($admin_html, 'token_hash') || false !== strpos($admin_html, $token1) || false !== strpos($admin_html, $token2)) {
+              fail_m1('remote admin leaked credential material');
+          }
+
+          echo "M1 remote Manager security/read API acceptance OK\n";
+          PHP
+
+          cd /tmp/research-manager-remote-m1
+          wp eval-file /tmp/research-manager-remote-m1-test.php --allow-root
