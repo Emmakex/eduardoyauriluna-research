@@ -29,6 +29,10 @@ final class Eduardo_Research_Manager_Insight_Resource {
             return new WP_Error('research_manager_insight_unmanaged', 'The requested WordPress post does not have a valid Research Insight editorial type.');
         }
 
+        $line_ids = function_exists('eduardo_research_post_line_ids')
+            ? eduardo_research_post_line_ids($post_id, $language)
+            : array_values(array_unique(array_filter(array_map('absint', (array) get_post_meta($post_id, '_research_line_ids', true)))));
+
         return array(
             'post_id'=>$post_id,
             'post_type'=>'post',
@@ -39,6 +43,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
             'content'=>(string) $post->post_content,
             'language'=>$language,
             'insight_type'=>$insight_type,
+            'line_ids'=>$line_ids,
             'creation_token'=>(string) get_post_meta($post_id, '_eduardo_research_manager_creation_token', true),
             'url'=>(string) get_permalink($post),
         );
@@ -74,7 +79,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
             return new WP_Error('research_manager_empty_update', 'At least one Insight field must be supplied.');
         }
 
-        $allowed = array('title','excerpt','content','language','insight_type');
+        $allowed = array('title','excerpt','content','language','insight_type','line_ids');
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error(
@@ -85,6 +90,14 @@ final class Eduardo_Research_Manager_Insight_Resource {
 
         $actions = array();
         foreach ($changes as $field => $value) {
+            if ('line_ids' === $field) {
+                $line_ids = $this->sanitize_verified_line_ids($value, (string) $current['language']);
+                if (is_wp_error($line_ids)) { return $line_ids; }
+                if (maybe_serialize($line_ids) !== maybe_serialize((array) $current['line_ids'])) {
+                    $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_line_ids','value'=>$line_ids);
+                }
+                continue;
+            }
             if (! is_scalar($value)) {
                 return new WP_Error('research_manager_invalid_insight_value', sprintf('Insight field "%s" must be scalar.', $field));
             }
@@ -92,6 +105,12 @@ final class Eduardo_Research_Manager_Insight_Resource {
                 $value = sanitize_key((string) $value);
                 if (! in_array($value, $this->languages(), true)) {
                     return new WP_Error('research_manager_unknown_language', 'Insight language is outside the active Research preset.');
+                }
+                if ((array) $current['line_ids']) {
+                    $line_check = $this->sanitize_verified_line_ids((array) $current['line_ids'], $value);
+                    if (is_wp_error($line_check)) {
+                        return new WP_Error('research_manager_insight_language_relation_conflict', 'Insight language cannot change while its Research Line relations belong to another language. Update relations first.');
+                    }
                 }
                 if ($value !== (string) $current['language']) {
                     $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_language','value'=>$value);
@@ -128,7 +147,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
     public function verify(int $post_id, array $expected, ?string $creation_token = null): array|WP_Error {
         $record = $this->inspect($post_id);
         if (is_wp_error($record)) { return $record; }
-        $allowed = array('status','slug','title','excerpt','content','language','insight_type');
+        $allowed = array('status','slug','title','excerpt','content','language','insight_type','line_ids');
         $unknown = array_diff(array_keys($expected), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_insight_field_not_allowed', 'Insight verification requested unsupported fields.');
@@ -136,7 +155,10 @@ final class Eduardo_Research_Manager_Insight_Resource {
 
         $checks = array('route'=>'' !== (string) $record['url']);
         foreach ($expected as $field => $value) {
-            if ('language' === $field) { $value = sanitize_key((string) $value); }
+            if ('line_ids' === $field) {
+                $value = $this->sanitize_verified_line_ids($value, (string) $record['language']);
+                if (is_wp_error($value)) { return $value; }
+            } elseif ('language' === $field) { $value = sanitize_key((string) $value); }
             elseif ('insight_type' === $field || 'status' === $field) { $value = sanitize_key((string) $value); }
             elseif ('slug' === $field) { $value = sanitize_title((string) $value); }
             else { $value = $this->sanitize_editorial_field($field, (string) $value); }
@@ -179,6 +201,20 @@ final class Eduardo_Research_Manager_Insight_Resource {
         if (! function_exists('eduardo_research_insight_types')) { return array(); }
         $types = eduardo_research_insight_types('en');
         return is_array($types) ? $types : array();
+    }
+
+    private function sanitize_verified_line_ids(mixed $value, string $language): array|WP_Error {
+        if (null === $value || array() === $value) { return array(); }
+        if (! is_array($value)) {
+            return new WP_Error('research_manager_invalid_insight_relations', 'Insight Research Line relations must be an array of IDs.');
+        }
+        $ids = array_values(array_unique(array_filter(array_map('absint', $value))));
+        foreach ($ids as $line_id) {
+            if (! function_exists('eduardo_research_line_is_verified_public') || ! eduardo_research_line_is_verified_public($line_id, $language)) {
+                return new WP_Error('research_manager_unverified_insight_line_relation', 'Insights may only relate to verified Research Lines in the same language.');
+            }
+        }
+        return $ids;
     }
 
     private function validate_contract(): bool|WP_Error {
