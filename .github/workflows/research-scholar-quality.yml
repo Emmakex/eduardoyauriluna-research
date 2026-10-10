@@ -1,0 +1,212 @@
+name: Research Google Scholar Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-scholar-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-scholar-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scholar:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint Scholar contract
+        shell: bash
+        run: |
+          php -l wordpress/themes/eduardo-research/inc/research-scholar.php
+          php -l wordpress/themes/eduardo-research/functions.php
+          if grep -E 'wp_remote_(get|post|request)|curl_exec|file_get_contents\([[:space:]]*["'"']https?://.*scholar\.google' wordpress/themes/eduardo-research/inc/research-scholar.php; then
+            echo 'Google Scholar contract must not scrape or call Scholar endpoints.' >&2
+            exit 1
+          fi
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-scholar-wp
+          mkdir -p /tmp/research-scholar-wp
+          cd /tmp/research-scholar-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Jose Yauri Luna' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Store verified manual Scholar profile through Evidence control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-scholar-wp
+          wp eval '
+          wp_set_current_user(1);
+          $editor=Eduardo_Research_Manager::evidence_editor();
+          $data=[
+              "status"=>"verified",
+              "label"=>"Google Scholar",
+              "value"=>"ScholarProfileCI",
+              "url"=>"https://scholar.google.com/citations?user=ScholarProfileCI"
+          ];
+          $preview=$editor->preview_record("identifiers","",$data,true,"CI verified Google Scholar profile");
+          if (is_wp_error($preview) || empty($preview["apply_allowed"])) { fwrite(STDERR,is_wp_error($preview)?$preview->get_error_message():wp_json_encode($preview)); exit(1); }
+          $applied=$editor->apply_preview($preview);
+          if (is_wp_error($applied) || empty($applied["verified"])) { fwrite(STDERR,is_wp_error($applied)?$applied->get_error_message():wp_json_encode($applied)); exit(1); }
+          $status=Eduardo_Research_Manager::connections()->status("google_scholar");
+          if (is_wp_error($status) || "linked"!==($status["status"] ?? "") || "manual_link"!==($status["mode"] ?? "")) { fwrite(STDERR,wp_json_encode($status)); exit(1); }
+          if ("ScholarProfileCI"!==($status["identifier"] ?? "") || "https://scholar.google.com/citations?user=ScholarProfileCI"!==($status["identifier_url"] ?? "")) { exit(1); }
+          ' --allow-root
+
+      - name: Seed Scholar-ready and bounded Research Outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-scholar-wp
+          wp eval '
+          $create=static function(string $slug,string $title,string $type,string $date,array $authors,array $extra=[]): int {
+              $id=wp_insert_post([
+                  "post_type"=>"research_output","post_status"=>"publish","post_title"=>$title,"post_name"=>$slug,
+                  "post_excerpt"=>"Author-written abstract for Scholar indexing.",
+                  "post_content"=>"Public scholarly record content."
+              ],true);
+              if (is_wp_error($id)) { fwrite(STDERR,$id->get_error_message()); exit(1); }
+              update_post_meta((int)$id,"_research_language","en");
+              update_post_meta((int)$id,"_research_output_type",$type);
+              update_post_meta((int)$id,"_research_output_type_verified","1");
+              if (""!==$date) { update_post_meta((int)$id,"_research_publication_date",$date); }
+              update_post_meta((int)$id,"_research_authors",$authors);
+              foreach ($extra as $key=>$value) { update_post_meta((int)$id,$key,$value); }
+              return (int)$id;
+          };
+          $journal=$create("scholar-journal","Verified journal paper","journal_article","2026-04-09",[
+              ["display_name"=>"Eduardo Jose Yauri Luna","orcid"=>"0000-0002-1825-0097","is_site_researcher"=>true],
+              ["display_name"=>"Ana Example"]
+          ],[
+              "_research_venue"=>"Journal of Applied Digital Research",
+              "_research_volume"=>"12","_research_issue"=>"3","_research_pages"=>"101-119",
+              "_research_doi"=>"10.5555/scholar.verified","_research_doi_verified"=>"1",
+              "_research_pdf_url"=>"https://eduardoyauriluna.com/publications/scholar-journal.pdf"
+          ]);
+          $conference=$create("scholar-conference","Verified conference paper","conference_paper","2025",[
+              ["display_name"=>"Eduardo Jose Yauri Luna"]
+          ],[
+              "_research_venue"=>"International Conference on Applied AI",
+              "_research_doi"=>"10.5555/scholar.unverified","_research_doi_verified"=>"0"
+          ]);
+          $incomplete=$create("scholar-incomplete","Incomplete scholarly record","journal_article","2026",[],[
+              "_research_venue"=>"Should Not Emit"
+          ]);
+          update_option("scholar_ci_ids",[$journal,$conference,$incomplete],false);
+          ' --allow-root
+
+      - name: Verify Scholar payload normalization without HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-scholar-wp
+          wp eval '
+          $ids=(array)get_option("scholar_ci_ids",[]);
+          $journal=eduardo_research_scholar_citation_data((int)($ids[0] ?? 0));
+          if (["2026/4/9"]!==($journal["citation_publication_date"] ?? [])) { fwrite(STDERR,wp_json_encode($journal)); exit(1); }
+          if (["Eduardo Jose Yauri Luna","Ana Example"]!==($journal["citation_author"] ?? [])) { exit(1); }
+          if (["Journal of Applied Digital Research"]!==($journal["citation_journal_title"] ?? []) || isset($journal["citation_conference_title"])) { exit(1); }
+          if (["10.5555/scholar.verified"]!==($journal["citation_doi"] ?? [])) { exit(1); }
+          if (["101"]!==($journal["citation_firstpage"] ?? []) || ["119"]!==($journal["citation_lastpage"] ?? [])) { exit(1); }
+          $conference=eduardo_research_scholar_citation_data((int)($ids[1] ?? 0));
+          if (["International Conference on Applied AI"]!==($conference["citation_conference_title"] ?? []) || isset($conference["citation_journal_title"])) { fwrite(STDERR,wp_json_encode($conference)); exit(1); }
+          if (isset($conference["citation_doi"])) { fwrite(STDERR,"Unverified DOI leaked into Scholar metadata\n"); exit(1); }
+          if ([]!==eduardo_research_scholar_citation_data((int)($ids[2] ?? 0))) { fwrite(STDERR,"Incomplete Scholar record emitted partial metadata\n"); exit(1); }
+          foreach (["2026-02-30","not-a-date",""] as $bad) { if (""!==eduardo_research_scholar_publication_date($bad)) { exit(1); } }
+          ' --allow-root
+
+      - name: Start public WordPress server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-scholar-wp
+          wp server --host=127.0.0.1 --port=8080 --allow-root > /tmp/research-scholar-server.log 2>&1 &
+          echo $! > /tmp/research-scholar-server.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/research-scholar-server.log >&2
+          exit 1
+
+      - name: Verify Scholar-ready journal page over real HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          html="$(curl -fsS http://127.0.0.1:8080/publications/scholar-journal/)"
+          test "$(printf '%s' "$html" | grep -o 'name="citation_title"' | wc -l)" -eq 1
+          test "$(printf '%s' "$html" | grep -o 'name="citation_author"' | wc -l)" -eq 2
+          test "$(printf '%s' "$html" | grep -o '<link rel="canonical"' | wc -l)" -eq 1
+          printf '%s' "$html" | grep -F 'content="Verified journal paper"'
+          printf '%s' "$html" | grep -F 'content="Eduardo Jose Yauri Luna"'
+          printf '%s' "$html" | grep -F 'content="Ana Example"'
+          printf '%s' "$html" | grep -F 'name="citation_publication_date" content="2026/4/9"'
+          printf '%s' "$html" | grep -F 'name="citation_journal_title" content="Journal of Applied Digital Research"'
+          printf '%s' "$html" | grep -F 'name="citation_doi" content="10.5555/scholar.verified"'
+          printf '%s' "$html" | grep -F 'name="citation_pdf_url" content="https://eduardoyauriluna.com/publications/scholar-journal.pdf"'
+          printf '%s' "$html" | grep -F 'name="citation_firstpage" content="101"'
+          printf '%s' "$html" | grep -F 'name="citation_lastpage" content="119"'
+          printf '%s' "$html" | grep -F 'Author-written abstract for Scholar indexing.'
+          printf '%s' "$html" | grep -F 'Authors'
+          printf '%s' "$html" | grep -F 'https://scholar.google.com/citations?user=ScholarProfileCI'
+
+      - name: Verify conference semantics and incomplete suppression
+        shell: bash
+        run: |
+          set -euo pipefail
+          conference="$(curl -fsS http://127.0.0.1:8080/publications/scholar-conference/)"
+          printf '%s' "$conference" | grep -F 'name="citation_conference_title" content="International Conference on Applied AI"'
+          if printf '%s' "$conference" | grep -F 'name="citation_journal_title"'; then exit 1; fi
+          if printf '%s' "$conference" | grep -F 'name="citation_doi"'; then exit 1; fi
+          incomplete="$(curl -fsS http://127.0.0.1:8080/publications/scholar-incomplete/)"
+          if printf '%s' "$incomplete" | grep -F 'name="citation_title"'; then exit 1; fi
+          if printf '%s' "$incomplete" | grep -F 'name="citation_author"'; then exit 1; fi
+
+      - name: Stop public server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/research-scholar-server.pid ]; then kill "$(cat /tmp/research-scholar-server.pid)" 2>/dev/null || true; fi
