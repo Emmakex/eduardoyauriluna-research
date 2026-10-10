@@ -1,0 +1,182 @@
+name: Research GitHub Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-github-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-github-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  github-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Ensure WP-CLI is available
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Lint GitHub Academic Connections surface
+        shell: bash
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-github-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-github-adapter.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-github-admin-wp
+          mkdir -p /tmp/research-github-admin-wp
+          cd /tmp/research-github-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp config set EDUARDO_RESEARCH_GITHUB_TOKEN 'github-admin-secret-token' --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research GitHub Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Seed exact local Research Software fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-github-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $id=wp_insert_post([
+              "post_type"=>"research_software","post_status"=>"draft","post_title"=>"research-tool","post_name"=>"github-admin-research-tool",
+              "post_excerpt"=>"Selected GitHub research software fixture.","post_content"=>"Controlled local Research Software record."
+          ],true);
+          if (is_wp_error($id)) { fwrite(STDERR,$id->get_error_message()); exit(1); }
+          update_post_meta((int)$id,"_research_language","en");
+          update_post_meta((int)$id,"_research_repository_url","https://github.com/Emmakex/research-tool.git");
+          update_post_meta((int)$id,"_research_software_version","v1.2.3");
+          update_post_meta((int)$id,"_research_release_date","2026-10-01");
+          update_post_meta((int)$id,"_research_license","MIT");
+          update_post_meta((int)$id,"_research_programming_languages",["PHP"]);
+          update_option("github_admin_fixture_id",(int)$id,false);
+          update_option("github_admin_before",wp_json_encode(Eduardo_Research_Manager::software()->inspect((int)$id)),false);
+          update_option("github_admin_count_before",count(get_posts(["post_type"=>"research_software","post_status"=>"any","posts_per_page"=>-1,"fields"=>"ids"])),false);
+          ' --allow-root
+
+      - name: Render explicit repository selector without token or Apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-github-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $admin=new Eduardo_Research_Manager_GitHub_Admin();
+          $admin->register();
+          if (! has_action("admin_post_eduardo_research_github_preview",[$admin,"handle_preview"])) { fwrite(STDERR,"GitHub Preview action missing\n"); exit(1); }
+          if (! has_action("admin_footer-tools_page_eduardo-research-connections",[$admin,"render"])) { fwrite(STDERR,"GitHub Connections mount missing\n"); exit(1); }
+          ob_start(); $admin->render(); $html=(string)ob_get_clean();
+          foreach (["GitHub Research Software repository","ONE EXPLICIT EXACT REPOSITORY","PUBLIC READ","CONFIGURED","Account / organization repository listing","Repository search / GraphQL discovery","Preview selected GitHub repository","DISABLED"] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing GitHub admin marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"github-admin-secret-token") || false!==strpos($html,"eduardo_research_github_apply") || false!==strpos($html,"Apply GitHub")) {
+              fwrite(STDERR,"GitHub selector leaked secret or Apply control\n"); exit(1);
+          }
+          ' --allow-root
+
+      - name: Run GitHub Preview handler with exactly bounded mocked repository reads
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-github-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $calls=[];
+          add_filter("pre_http_request",static function($pre,$args,$url) use (&$calls){
+              $calls[]=$url;
+              if ("Bearer github-admin-secret-token"!==(string)($args["headers"]["Authorization"] ?? "")) { fwrite(STDERR,"GitHub admin token missing from Authorization header\n"); exit(1); }
+              if (false!==strpos($url,"github-admin-secret-token")) { fwrite(STDERR,"GitHub admin token leaked into URL\n"); exit(1); }
+              if (0!==(int)($args["redirection"] ?? -1)) { fwrite(STDERR,"GitHub credential request allowed redirects\n"); exit(1); }
+              $base="https://api.github.com/repos/Emmakex/research-tool";
+              if ($url===$base) {
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "id"=>123456,"full_name"=>"Emmakex/research-tool","name"=>"research-tool","owner"=>["login"=>"Emmakex"],
+                      "description"=>"Selected GitHub research software fixture.","html_url"=>"https://github.com/Emmakex/research-tool",
+                      "homepage"=>"https://example.test/research-tool","default_branch"=>"main","language"=>"PHP",
+                      "topics"=>["research-software","reproducible-research"],"license"=>["spdx_id"=>"MIT","name"=>"MIT License"],
+                      "archived"=>false,"fork"=>false,"visibility"=>"public","stargazers_count"=>12,"forks_count"=>3,"open_issues_count"=>1,
+                      "created_at"=>"2026-01-01T00:00:00Z","updated_at"=>"2026-10-01T00:00:00Z","pushed_at"=>"2026-10-02T00:00:00Z"
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              if ($url===$base."/releases/latest") {
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "tag_name"=>"v1.2.3","name"=>"Research release 1.2.3","published_at"=>"2026-10-01T09:30:00Z",
+                      "html_url"=>"https://github.com/Emmakex/research-tool/releases/tag/v1.2.3","prerelease"=>false,"draft"=>false
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              if ($url===$base."/contents/CITATION.cff?ref=main") {
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "type"=>"file","path"=>"CITATION.cff","sha"=>"citation-admin-sha","size"=>512,
+                      "html_url"=>"https://github.com/Emmakex/research-tool/blob/main/CITATION.cff",
+                      "download_url"=>"https://raw.githubusercontent.com/Emmakex/research-tool/main/CITATION.cff"
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              fwrite(STDERR,"unexpected GitHub admin API call: {$url}\n"); exit(1);
+          },10,3);
+          $_POST=["repository"=>"https://github.com/Emmakex/research-tool.git","_wpnonce"=>wp_create_nonce("erm_github_preview")]; $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_GitHub_Admin())->handle_preview();
+          ' --allow-root
+
+      - name: Render selected repository reconciliation and prove zero mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-github-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $preview=get_transient("eduardo_research_github_preview_1");
+          if (! is_array($preview) || "preview"!==($preview["status"] ?? "") || "explicit_exact_repository"!==($preview["selection_basis"] ?? "")) { fwrite(STDERR,wp_json_encode($preview)); exit(1); }
+          if ("Emmakex/research-tool"!==($preview["selected_repository"] ?? "") || empty($preview["has_local_match"]) || empty($preview["citation_cff"]["present"])) { fwrite(STDERR,wp_json_encode($preview)); exit(1); }
+          if ("v1.2.3"!==($preview["latest_release"]["tag_name"] ?? "") || "MIT"!==($preview["remote"]["license_spdx"] ?? "")) { exit(1); }
+          ob_start(); (new Eduardo_Research_Manager_GitHub_Admin())->render(); $html=(string)ob_get_clean();
+          foreach (["GitHub Research Software preview","Emmakex/research-tool","research-software, reproducible-research","MIT License","v1.2.3","CITATION.cff","PRESENT","Research Software candidate","Exact local Research Software reconciliation","MATCH","Preview only."] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing rendered GitHub marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"github-admin-secret-token") || false!==strpos($html,"eduardo_research_github_apply") || false!==strpos($html,"Apply GitHub")) { fwrite(STDERR,"GitHub Preview exposed secret or Apply control\n"); exit(1); }
+          $id=(int)get_option("github_admin_fixture_id",0);
+          $after=wp_json_encode(Eduardo_Research_Manager::software()->inspect($id));
+          if ((string)get_option("github_admin_before","")!==$after) { fwrite(STDERR,"GitHub admin Preview mutated local Research Software\n"); exit(1); }
+          $count=count(get_posts(["post_type"=>"research_software","post_status"=>"any","posts_per_page"=>-1,"fields"=>"ids"]));
+          if ((int)get_option("github_admin_count_before",0)!==$count) { fwrite(STDERR,"GitHub admin Preview changed Research Software count\n"); exit(1); }
+          foreach (["account_repository_listing","non_selected_repository_discovery","automatic_publication","automatic_local_apply","external_write"] as $flag) {
+              if (! array_key_exists($flag,$preview) || false!==$preview[$flag]) { fwrite(STDERR,"unsafe GitHub Preview flag: {$flag}\n"); exit(1); }
+          }
+          ' --allow-root
