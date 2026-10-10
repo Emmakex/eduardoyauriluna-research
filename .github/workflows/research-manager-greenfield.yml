@@ -7,6 +7,7 @@ on:
       - 'docs/11-greenfield-runtime-contract.md'
       - 'docs/12-greenfield-next-microphases.md'
       - 'docs/13-greenfield-acceptance.md'
+      - 'docs/14-greenfield-site-blueprint-contract.md'
       - '.github/workflows/research-manager-greenfield.yml'
   push:
     branches: [main]
@@ -23,6 +24,7 @@ jobs:
         run: |
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
@@ -36,3 +38,4 @@ jobs:
           grep -F "'legacy_mapping' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
           grep -F "'requires_legacy_discovery' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
           grep -F "'requires_legacy_mapping' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
+          grep -F "'requires_gutenberg_layout' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php
