@@ -63,8 +63,12 @@ final class Eduardo_Research_Manager {
         self::$blueprint_pairing = new Eduardo_Research_Manager_Blueprint_Pairing(self::$blueprint, self::$lines, self::$translations, self::$executor);
         self::$blueprint_relations = new Eduardo_Research_Manager_Blueprint_Relations(self::$blueprint, self::$lines, self::$executor);
         self::$pipeline = new Eduardo_Research_Manager_Greenfield_Pipeline(self::$bootstrap, self::$blueprint_pairing, self::$hydrator, self::$blueprint_relations);
+
+        // The workspace only registers an admin_menu callback, so it is safe to register
+        // in every runtime. This also keeps WP-CLI/admin test harnesses deterministic.
+        (new Eduardo_Research_Manager_Workspace())->register();
+
         if (is_admin()) {
-            (new Eduardo_Research_Manager_Workspace())->register();
             (new Eduardo_Research_Manager_Admin())->register();
             (new Eduardo_Research_Manager_Insight_Admin())->register();
             (new Eduardo_Research_Manager_Line_Admin())->register();
