@@ -1,0 +1,161 @@
+name: Research Object Editor Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-object-editor-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-object-editor-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  object-editor:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Research object editor
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-object-editor-wp
+          mkdir -p /tmp/research-object-editor-wp
+          cd /tmp/research-object-editor-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Object Editor' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Create update verify stale-protect and rollback Research objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-object-editor-wp
+          wp eval '
+          wp_set_current_user(1);
+          $editor = Eduardo_Research_Manager::object_editor();
+          $kinds = $editor->supported_kinds();
+          if (array_keys($kinds) !== ["output","project","software","dataset"]) { fwrite(STDERR, "unexpected kinds\n"); exit(1); }
+          $invalid = $editor->list("unknown", "en");
+          if (! is_wp_error($invalid) || "research_manager_unknown_object_kind" !== $invalid->get_error_code()) { exit(1); }
+
+          $fixtures = [
+              "output"=>[
+                  "title"=>"Controlled Research Output","slug"=>"controlled-research-output","language"=>"en","status"=>"draft",
+                  "excerpt"=>"Output summary.","content"=>"<p>Output content.</p>","output_type"=>"","review_status"=>"",
+                  "publication_date"=>"","venue"=>"","doi"=>"","authors"=>[],"line_ids"=>[]
+              ],
+              "project"=>[
+                  "title"=>"Controlled Research Project","slug"=>"controlled-research-project","language"=>"en","status"=>"draft",
+                  "excerpt"=>"Project summary.","content"=>"<p>Project content.</p>","project_status"=>"","question"=>"",
+                  "role"=>"","start_date"=>"","end_date"=>"","partner"=>"","funding"=>"","project_url"=>"","methods"=>[],"line_ids"=>[]
+              ],
+              "software"=>[
+                  "title"=>"Controlled Research Software","slug"=>"controlled-research-software","language"=>"en","status"=>"draft",
+                  "excerpt"=>"Software summary.","content"=>"<p>Software content.</p>","software_status"=>"","version"=>"","release_date"=>"",
+                  "repository_url"=>"","archive_url"=>"","license"=>"","documentation_url"=>"","doi"=>"","programming_languages"=>[],"line_ids"=>[]
+              ],
+              "dataset"=>[
+                  "title"=>"Controlled Research Dataset","slug"=>"controlled-research-dataset","language"=>"en","status"=>"draft",
+                  "excerpt"=>"Dataset summary.","content"=>"<p>Dataset content.</p>","version"=>"","publication_date"=>"","repository"=>"",
+                  "doi"=>"","license"=>"","access_level"=>"","methodology"=>"","provenance"=>"","size"=>"","documentation_url"=>"",
+                  "ethics_notes"=>"","formats"=>[],"line_ids"=>[]
+              ],
+          ];
+
+          $created = [];
+          foreach ($fixtures as $kind=>$data) {
+              $blocked = $editor->preview_create($kind, $data, false, "");
+              if (is_wp_error($blocked) || ! empty($blocked["apply_allowed"]) || "evidence-required" !== ($blocked["risk"] ?? "") || empty($blocked["apply_blocker"])) {
+                  fwrite(STDERR, "evidence gate failed for {$kind}: " . wp_json_encode($blocked) . "\n"); exit(1);
+              }
+              $blocked_apply = $editor->apply_preview($blocked);
+              if (! is_wp_error($blocked_apply) || "research_manager_object_editor_apply_blocked" !== $blocked_apply->get_error_code()) { exit(1); }
+
+              $prepared = $editor->preview_create($kind, $data, true, "CI verified {$kind} source");
+              if (is_wp_error($prepared) || empty($prepared["apply_allowed"]) || "evidence-required" !== ($prepared["risk"] ?? "") || empty($prepared["creation_token"])) {
+                  fwrite(STDERR, "create preview failed for {$kind}: " . wp_json_encode($prepared) . "\n"); exit(1);
+              }
+              $applied = $editor->apply_preview($prepared);
+              if (is_wp_error($applied) || empty($applied["verified"]) || empty($applied["post_id"]) || empty($applied["snapshot_id"])) {
+                  fwrite(STDERR, "create apply failed for {$kind}: " . (is_wp_error($applied) ? $applied->get_error_message() : wp_json_encode($applied)) . "\n"); exit(1);
+              }
+              $post_id = (int) $applied["post_id"];
+              $record = $editor->inspect($kind, $post_id);
+              if (is_wp_error($record) || $data["title"] !== $record["title"] || "en" !== $record["language"]) { exit(1); }
+              $listed = $editor->list($kind, "en");
+              if (is_wp_error($listed) || 1 !== count(array_filter($listed, static fn($row) => (int) ($row["post_id"] ?? 0) === $post_id))) { exit(1); }
+              $created[$kind] = ["post_id"=>$post_id,"snapshot_id"=>(string) $applied["snapshot_id"]];
+          }
+
+          $output_id = (int) $created["output"]["post_id"];
+          $output = $editor->inspect("output", $output_id);
+          $same = $editor->preview_update("output", $output_id, ["title"=>$output["title"]]);
+          if (is_wp_error($same) || "already-matching" !== ($same["status"] ?? "")) { exit(1); }
+
+          $project_id = (int) $created["project"]["post_id"];
+          $editorial = $editor->preview_update("project", $project_id, ["excerpt"=>"Editorial-only project update."]);
+          if (is_wp_error($editorial) || empty($editorial["apply_allowed"]) || "editorial-review" !== ($editorial["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($editorial)); exit(1); }
+          $editorial_apply = $editor->apply_preview($editorial);
+          if (is_wp_error($editorial_apply) || empty($editorial_apply["verified"]) || empty($editorial_apply["snapshot_id"])) { exit(1); }
+          $updated = $editor->inspect("project", $project_id);
+          if (is_wp_error($updated) || "Editorial-only project update." !== $updated["excerpt"]) { exit(1); }
+          $rolled = $editor->rollback((string) $editorial_apply["snapshot_id"]);
+          if (is_wp_error($rolled)) { exit(1); }
+          $restored = $editor->inspect("project", $project_id);
+          if (is_wp_error($restored) || "Project summary." !== $restored["excerpt"]) { exit(1); }
+
+          $sensitive = $editor->preview_update("project", $project_id, ["question"=>"How should controlled research objects preserve provenance?"]);
+          if (is_wp_error($sensitive) || ! empty($sensitive["apply_allowed"]) || "evidence-required" !== ($sensitive["risk"] ?? "")) { fwrite(STDERR, wp_json_encode($sensitive)); exit(1); }
+          $sensitive_ok = $editor->preview_update("project", $project_id, ["question"=>"How should controlled research objects preserve provenance?"], true, "CI verified project question");
+          if (is_wp_error($sensitive_ok) || empty($sensitive_ok["apply_allowed"]) || "evidence-required" !== ($sensitive_ok["risk"] ?? "")) { exit(1); }
+          $sensitive_apply = $editor->apply_preview($sensitive_ok);
+          if (is_wp_error($sensitive_apply) || empty($sensitive_apply["verified"])) { exit(1); }
+          if (is_wp_error($editor->rollback((string) $sensitive_apply["snapshot_id"]))) { exit(1); }
+
+          $stale = $editor->preview_update("project", $project_id, ["excerpt"=>"Prepared stale update."]);
+          if (is_wp_error($stale) || empty($stale["apply_allowed"])) { exit(1); }
+          wp_update_post(["ID"=>$project_id,"post_title"=>"Concurrent project title"]);
+          $stale_apply = $editor->apply_preview($stale);
+          if (! is_wp_error($stale_apply) || "research_manager_object_editor_stale_preview" !== $stale_apply->get_error_code()) { exit(1); }
+          wp_update_post(["ID"=>$project_id,"post_title"=>"Controlled Research Project"]);
+
+          $dataset_id = (int) $created["dataset"]["post_id"];
+          $dataset_rollback = $editor->rollback((string) $created["dataset"]["snapshot_id"]);
+          if (is_wp_error($dataset_rollback) || get_post($dataset_id) instanceof WP_Post) { exit(1); }
+          ' --allow-root
