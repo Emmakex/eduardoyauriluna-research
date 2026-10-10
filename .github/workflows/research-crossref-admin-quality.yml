@@ -1,0 +1,184 @@
+name: Research Crossref Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - '.github/workflows/research-crossref-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - '.github/workflows/research-crossref-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  crossref-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Crossref admin surface
+        shell: bash
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-adapter.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-crossref-admin-wp
+          mkdir -p /tmp/research-crossref-admin-wp
+          cd /tmp/research-crossref-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Crossref Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Seed a Research Output with exact DOI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-admin-wp
+          wp eval '
+          $post_id=wp_insert_post([
+              "post_type"=>"research_output","post_status"=>"publish",
+              "post_title"=>"Local Crossref Candidate","post_name"=>"local-crossref-candidate"
+          ]);
+          if (is_wp_error($post_id) || $post_id<=0) { exit(1); }
+          update_post_meta($post_id,"_research_language","en");
+          update_post_meta($post_id,"_research_output_type","article");
+          update_post_meta($post_id,"_research_review_status","working");
+          update_post_meta($post_id,"_research_publication_date","2026");
+          update_post_meta($post_id,"_research_venue","Local Venue");
+          update_post_meta($post_id,"_research_doi","10.1234/crossref.ui");
+          update_post_meta($post_id,"_research_authors",["Eduardo Jose Yauri Luna"]);
+          update_option("ci_crossref_output_id",$post_id,false);
+          ' --allow-root
+
+      - name: Register DOI Reconciliation submenu and render selected output
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $admin=new Eduardo_Research_Manager_Crossref_Admin();
+          $admin->register();
+          if (false===has_action("admin_post_eduardo_research_crossref_preview_output",[$admin,"handle_preview"])) { exit(1); }
+          (new Eduardo_Research_Manager_Workspace())->menu();
+          $admin->menu();
+          global $submenu;
+          $found=false;
+          foreach ((array)($submenu["eduardo-research-workspace"] ?? []) as $item) {
+              if (isset($item[2]) && "eduardo-research-crossref"===(string)$item[2]) { $found=true; break; }
+          }
+          if (! $found) { fwrite(STDERR,"Crossref DOI Reconciliation submenu missing\n"); exit(1); }
+          $id=(int)get_option("ci_crossref_output_id");
+          $_GET["erm_output_id"]=$id;
+          ob_start(); $admin->render(); $html=(string)ob_get_clean();
+          foreach ([
+              "Crossref DOI Reconciliation","Exact DOI only.","Local Crossref Candidate","10.1234/crossref.ui",
+              "Preview Crossref metadata","Names, titles and fuzzy searches are rejected","Edit this Research Output"
+          ] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing Crossref admin marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"Apply Crossref")) { fwrite(STDERR,"unsafe Crossref Apply surfaced\n"); exit(1); }
+          ' --allow-root
+
+      - name: Run Crossref Preview handler with mocked exact DOI response
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $id=(int)get_option("ci_crossref_output_id");
+          add_filter("pre_http_request",static function($pre,$args,$url){
+              if (false===strpos((string)$url,"https://api.crossref.org/works/10.1234%2Fcrossref.ui")) {
+                  return new WP_Error("ci_unexpected_crossref_url","Unexpected Crossref URL: ".$url);
+              }
+              return [
+                  "headers"=>[],
+                  "body"=>wp_json_encode(["message"=>[
+                      "DOI"=>"10.1234/crossref.ui",
+                      "title"=>["Authoritative Crossref Title"],
+                      "author"=>[["given"=>"Eduardo Jose","family"=>"Yauri Luna"],["given"=>"Ada","family"=>"Lovelace"]],
+                      "published-online"=>["date-parts"=>[[2026,10,10]]],
+                      "container-title"=>["Authoritative Journal"],
+                      "publisher"=>"Academic Fixture Press",
+                      "type"=>"journal-article",
+                      "URL"=>"https://doi.org/10.1234/crossref.ui",
+                      "reference-count"=>5,
+                      "is-referenced-by-count"=>3
+                  ]]),
+                  "response"=>["code"=>200,"message"=>"OK"],
+                  "cookies"=>[]
+              ];
+          },10,3);
+          $_POST=[
+              "post_id"=>$id,
+              "doi"=>"https://doi.org/10.1234/crossref.ui",
+              "_wpnonce"=>wp_create_nonce("erm_crossref_preview_output")
+          ];
+          $_REQUEST=$_POST;
+          (new Eduardo_Research_Manager_Crossref_Admin())->handle_preview();
+          ' --allow-root
+
+      - name: Render field-by-field Crossref differences with no Apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-crossref-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $id=(int)get_option("ci_crossref_output_id");
+          $preview=get_transient("eduardo_research_crossref_preview_1");
+          if (! is_array($preview) || $id!==(int)($preview["post_id"] ?? 0)) { fwrite(STDERR,"Crossref preview transient missing\n"); exit(1); }
+          if (empty($preview["has_differences"]) || ! empty($preview["automatic_local_apply"]) || ! empty($preview["external_write"])) { exit(1); }
+          $_GET["erm_output_id"]=$id;
+          ob_start(); (new Eduardo_Research_Manager_Crossref_Admin())->render(); $html=(string)ob_get_clean();
+          foreach ([
+              "Crossref reconciliation preview","Authoritative Crossref Title","Authoritative Journal","Academic Fixture Press",
+              "Eduardo Jose Yauri Luna, Ada Lovelace","DIFFERS","MATCH","References","Cited by",
+              "Automatic local Apply","External writes","DISABLED","No automatic Apply exists in this microphase"
+          ] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing Crossref preview marker: {$needle}\n"); exit(1); }
+          }
+          if (false!==strpos($html,"Apply Crossref")) { fwrite(STDERR,"Crossref preview exposed Apply\n"); exit(1); }
+          $local=Eduardo_Research_Manager::outputs()->inspect($id);
+          if (is_wp_error($local) || "Local Crossref Candidate"!==(string)$local["title"] || "Local Venue"!==(string)$local["venue"]) {
+              fwrite(STDERR,"Crossref admin preview mutated local output\n"); exit(1);
+          }
+          ' --allow-root
