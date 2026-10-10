@@ -80,6 +80,16 @@ final class Eduardo_Research_Manager_Insight_Editor {
         if (is_wp_error($current)) { return $current; }
         $baseline_checksum = $this->state_checksum($current);
 
+        if (array_key_exists('scheduled_at', $changes)) {
+            if (1 !== count($changes) || ! is_scalar($changes['scheduled_at'])) {
+                return new WP_Error(
+                    'research_manager_insight_schedule_requires_separate_operation',
+                    'Insight scheduling must be changed in its own Preview so timing remains independently reviewable and reversible.'
+                );
+            }
+            return $this->preview_schedule($post_id, (string) $changes['scheduled_at']);
+        }
+
         if (array_key_exists('status', $changes)) {
             if (1 !== count($changes)) {
                 return new WP_Error(
@@ -238,12 +248,8 @@ final class Eduardo_Research_Manager_Insight_Editor {
             return array('status'=>'already-matching','mode'=>$mode,'post_id'=>$post_id,'snapshot_id'=>'','verification'=>$verification,'verified'=>true);
         }
 
-        if ('status' === $mode) {
-            return $this->apply_status_preview($prepared);
-        }
-        if ('schedule' === $mode) {
-            return $this->apply_schedule_preview($prepared);
-        }
+        if ('status' === $mode) { return $this->apply_status_preview($prepared); }
+        if ('schedule' === $mode) { return $this->apply_schedule_preview($prepared); }
 
         $plan = $prepared['plan'];
         $result = $this->executor->apply($plan);
@@ -435,12 +441,7 @@ final class Eduardo_Research_Manager_Insight_Editor {
         );
         $snapshot_id = $this->snapshots->create($snapshot_plan, $before);
 
-        $written = wp_update_post(array(
-            'ID'=>$post_id,
-            'post_status'=>'future',
-            'post_date'=>$local_mysql,
-            'post_date_gmt'=>$gmt_mysql,
-        ), true);
+        $written = wp_update_post(array('ID'=>$post_id,'post_status'=>'future','post_date'=>$local_mysql,'post_date_gmt'=>$gmt_mysql), true);
         if (is_wp_error($written)) {
             $this->executor->rollback($snapshot_id);
             return $written;
