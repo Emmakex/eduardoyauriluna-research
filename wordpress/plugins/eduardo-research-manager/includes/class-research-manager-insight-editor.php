@@ -334,7 +334,7 @@ final class Eduardo_Research_Manager_Insight_Editor {
 
     private function state_checksum(array $record): string {
         $state = array();
-        foreach (array('post_id','status','slug','title','excerpt','content','language','insight_type') as $field) {
+        foreach (array('post_id','status','slug','title','excerpt','content','language','insight_type','line_ids') as $field) {
             $state[$field] = $record[$field] ?? null;
         }
         return hash('sha256', (string) wp_json_encode($state));

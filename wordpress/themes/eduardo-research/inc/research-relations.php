@@ -1,10 +1,14 @@
 <?php
-/** Verified relationships between Research Lines and public research objects. */
+/** Verified relationships between Research Lines, Insights and public research objects. */
 declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_relation_object_types(): array {
     return array('research_output','research_project','research_software','research_dataset');
+}
+
+function eduardo_research_relation_source_types(): array {
+    return array_merge(eduardo_research_relation_object_types(), array('post'));
 }
 
 function eduardo_research_sanitize_relation_ids($value): array {
@@ -23,6 +27,13 @@ function eduardo_research_register_relation_meta(): void {
             'auth_callback'=>static fn() => current_user_can('edit_posts'),
         ));
     }
+    register_post_meta('post', '_research_insight_line_relations', array(
+        'type'=>'array',
+        'single'=>true,
+        'show_in_rest'=>array('schema'=>array('type'=>'array','items'=>array('type'=>'integer'))),
+        'sanitize_callback'=>'eduardo_research_sanitize_relation_ids',
+        'auth_callback'=>static fn() => current_user_can('edit_posts'),
+    ));
 }
 add_action('init', 'eduardo_research_register_relation_meta', 17);
 
@@ -34,10 +45,19 @@ function eduardo_research_line_is_verified_public(int $line_id, ?string $languag
     return eduardo_research_post_language($line_id) === $language;
 }
 
+function eduardo_research_is_managed_insight(int $post_id): bool {
+    if ('post' !== get_post_type($post_id) || ! metadata_exists('post', $post_id, '_research_insight_type')) { return false; }
+    $type = sanitize_key((string) get_post_meta($post_id, '_research_insight_type', true));
+    return function_exists('eduardo_research_insight_types') && array_key_exists($type, eduardo_research_insight_types('en'));
+}
+
 function eduardo_research_post_line_ids(int $post_id, ?string $language = null): array {
-    if (! in_array(get_post_type($post_id), eduardo_research_relation_object_types(), true)) { return array(); }
+    $post_type = (string) get_post_type($post_id);
+    if (! in_array($post_type, eduardo_research_relation_source_types(), true)) { return array(); }
+    if ('post' === $post_type && ! eduardo_research_is_managed_insight($post_id)) { return array(); }
     $language = $language ?: eduardo_research_post_language($post_id);
-    $ids = eduardo_research_sanitize_relation_ids(get_post_meta($post_id, '_research_line_ids', true));
+    $meta_key = 'post' === $post_type ? '_research_insight_line_relations' : '_research_line_ids';
+    $ids = eduardo_research_sanitize_relation_ids(get_post_meta($post_id, $meta_key, true));
     return array_values(array_filter($ids, static fn(int $line_id): bool => eduardo_research_line_is_verified_public($line_id, $language)));
 }
 
@@ -99,7 +119,7 @@ function eduardo_research_render_research_context(int $post_id): void {
     if (! $line_ids) { return; }
     $es = 'es' === eduardo_research_current_language();
     ?>
-    <section class="research-section research-relations-section research-section-soft">
+    <section class="research-section research-relations-section research-section-soft" data-research-relations="lines">
       <div class="research-shell">
         <div class="research-section-heading">
           <div><div class="research-eyebrow"><?php echo esc_html($es ? 'Contexto de investigación' : 'Research context'); ?></div><h2><?php echo esc_html($es ? 'Líneas relacionadas' : 'Related research lines'); ?></h2></div>
@@ -107,7 +127,7 @@ function eduardo_research_render_research_context(int $post_id): void {
         </div>
         <div class="research-grid research-relation-line-grid">
           <?php foreach ($line_ids as $line_id) : $line = get_post($line_id); if (! $line instanceof WP_Post) { continue; } ?>
-            <a class="research-relation-line-card" href="<?php echo esc_url((string) get_permalink($line_id)); ?>">
+            <a class="research-relation-line-card" data-research-line-id="<?php echo esc_attr((string) $line_id); ?>" href="<?php echo esc_url((string) get_permalink($line_id)); ?>">
               <span class="research-card-kicker"><?php echo esc_html($es ? 'Línea verificada' : 'Verified line'); ?></span>
               <strong><?php echo esc_html(get_the_title($line_id)); ?></strong>
               <?php $question = eduardo_research_meta_value($line_id, '_research_central_question'); if ($question) : ?><span><?php echo esc_html($question); ?></span><?php endif; ?>
@@ -124,7 +144,7 @@ function eduardo_research_render_related_objects(int $post_id): void {
     $type = get_post_type($post_id);
     if ('research_line' === $type) {
         $query = eduardo_research_related_objects_query_for_line($post_id, 24);
-    } elseif (in_array($type, eduardo_research_relation_object_types(), true)) {
+    } elseif (in_array($type, eduardo_research_relation_object_types(), true) || ('post' === $type && eduardo_research_is_managed_insight($post_id))) {
         $query = eduardo_research_related_objects_query_for_post($post_id, 12);
     } else {
         return;
@@ -132,7 +152,7 @@ function eduardo_research_render_related_objects(int $post_id): void {
     if (! $query->have_posts()) { wp_reset_postdata(); return; }
     $es = 'es' === eduardo_research_current_language();
     ?>
-    <section class="research-section research-relations-section">
+    <section class="research-section research-relations-section" data-research-relations="objects">
       <div class="research-shell">
         <div class="research-section-heading">
           <div><div class="research-eyebrow"><?php echo esc_html($es ? 'Red de investigación' : 'Research network'); ?></div><h2><?php echo esc_html($es ? 'Trabajos relacionados' : 'Related research objects'); ?></h2></div>
