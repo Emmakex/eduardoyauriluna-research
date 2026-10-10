@@ -43,6 +43,7 @@ jobs:
         run: |
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php
 
       - name: Install Research WordPress
         shell: bash
@@ -145,4 +146,78 @@ jobs:
           $slugs=[];
           foreach ((array)($submenu["eduardo-research-workspace"] ?? []) as $item) { if (isset($item[2])) { $slugs[]=(string)$item[2]; } }
           if (! in_array("eduardo-research-connections",$slugs,true)) { fwrite(STDERR,"Academic Connections submenu missing\n"); exit(1); }
+          ' --allow-root
+
+      - name: Exercise secure ORCID OAuth and read-only sync preview with mocked HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-connections-wp
+          wp eval '
+          wp_set_current_user(1);
+          define("EDUARDO_RESEARCH_ORCID_CLIENT_ID","APP-CI-ORCID");
+          define("EDUARDO_RESEARCH_ORCID_CLIENT_SECRET","ci-secret-never-render");
+          define("EDUARDO_RESEARCH_ORCID_REDIRECT_URI","https://example.test/wp-admin/admin-post.php?action=eduardo_research_orcid_callback");
+          define("EDUARDO_RESEARCH_ORCID_ENVIRONMENT","sandbox");
+
+          $adapter = Eduardo_Research_Manager::orcid();
+          if (! $adapter instanceof Eduardo_Research_Manager_Orcid_Adapter) { exit(1); }
+          $caps = $adapter->capabilities();
+          if (empty($caps["oauth"]) || empty($caps["profile_read"]) || empty($caps["works_read"]) || ! empty($caps["external_write"])) { exit(1); }
+          $config = $adapter->configuration();
+          if (empty($config["configured"]) || "sandbox" !== $config["environment"] || ! empty($config["secrets_exposed"])) { exit(1); }
+          if (array_key_exists("client_secret",$config)) { fwrite(STDERR,"ORCID secret leaked from configuration model\n"); exit(1); }
+
+          $begin = $adapter->begin_authorization();
+          if (is_wp_error($begin) || false===strpos($begin["authorization_url"],"https://sandbox.orcid.org/oauth/authorize")) { exit(1); }
+          parse_str((string)wp_parse_url($begin["authorization_url"],PHP_URL_QUERY),$query);
+          if ("/authenticate" !== (string)($query["scope"] ?? "") || empty($query["state"])) { exit(1); }
+          $invalid = $adapter->exchange_code("ci-code","wrong-state");
+          if (! is_wp_error($invalid) || "research_manager_orcid_oauth_state_invalid" !== $invalid->get_error_code()) { exit(1); }
+
+          $begin = $adapter->begin_authorization();
+          parse_str((string)wp_parse_url($begin["authorization_url"],PHP_URL_QUERY),$query);
+          $state=(string)$query["state"];
+
+          add_filter("pre_http_request",static function($pre,$args,$url){
+              if (str_contains($url,"/oauth/token")) {
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "access_token"=>"ci-access-token","token_type"=>"bearer","refresh_token"=>"ci-refresh-token",
+                      "scope"=>"/authenticate","orcid"=>"0000-0002-1825-0097","name"=>"Eduardo Jose Yauri Luna"
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              if (str_contains($url,"/person")) {
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "name"=>[
+                          "given-names"=>["value"=>"Eduardo Jose"],
+                          "family-name"=>["value"=>"Yauri Luna"],
+                          "credit-name"=>["value"=>"Eduardo Jose Yauri Luna"]
+                      ],
+                      "biography"=>["content"=>"Synthetic ORCID profile fixture"]
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              if (str_contains($url,"/works")) {
+                  return ["headers"=>[],"body"=>wp_json_encode([
+                      "group"=>[["work-summary"=>[[]]]]
+                  ]),"response"=>["code"=>200,"message"=>"OK"],"cookies"=>[]];
+              }
+              return $pre;
+          },10,3);
+
+          $connected = $adapter->exchange_code("ci-code",$state);
+          if (is_wp_error($connected) || "connected" !== $connected["status"] || "0000-0002-1825-0097" !== $connected["identifier"]) { exit(1); }
+          $status = Eduardo_Research_Manager::connections()->status("orcid");
+          if (is_wp_error($status) || "connected" !== $status["status"] || false!==strpos(wp_json_encode($status),"ci-access-token")) { exit(1); }
+
+          $evidence_before = wp_json_encode(get_option("eduardo_research_evidence",[]));
+          $profile = $adapter->profile();
+          if (is_wp_error($profile) || "Eduardo Jose Yauri Luna" !== (string)($profile["profile"]["display_name"] ?? "")) { exit(1); }
+          $preview = $adapter->sync_preview();
+          if (is_wp_error($preview) || "preview" !== $preview["status"] || empty($preview["identifier_matches"])) { exit(1); }
+          if (empty($preview["requires_reconciliation"]) || ! empty($preview["automatic_local_apply"]) || ! empty($preview["external_write"])) { exit(1); }
+          if ($evidence_before !== wp_json_encode(get_option("eduardo_research_evidence",[]))) { fwrite(STDERR,"ORCID preview mutated Academic Evidence\n"); exit(1); }
+
+          $disconnect = $adapter->disconnect();
+          if (is_wp_error($disconnect) || empty($disconnect["token_removed"]) || "linked" !== $disconnect["status"]) { exit(1); }
+          if (false !== get_option("eduardo_research_orcid_token",false)) { fwrite(STDERR,"ORCID token was not removed\n"); exit(1); }
           ' --allow-root
