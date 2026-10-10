@@ -25,6 +25,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-pla
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-snapshots.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-executor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-resource.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-insight-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-line-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-output-resource.php';
