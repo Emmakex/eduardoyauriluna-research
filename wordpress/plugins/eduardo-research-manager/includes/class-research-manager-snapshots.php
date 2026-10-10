@@ -6,7 +6,13 @@ if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Snapshots {
     private const OPTION = 'eduardo_research_manager_snapshots';
-    private const LIMIT = 25;
+
+    /**
+     * Keep the store bounded while allowing one complete Greenfield site run
+     * (and several recent runs) to remain fully reversible. The canonical
+     * pipeline already spans more than the former 25-snapshot limit.
+     */
+    private const LIMIT = 200;
 
     public function create(array $plan, array $before): string {
         $snapshots = $this->all();
