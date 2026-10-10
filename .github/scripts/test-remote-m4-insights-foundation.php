@@ -40,23 +40,38 @@ if (is_wp_error($blueprint)) { fail_m4_foundation('canonical blueprint unavailab
 $seed = Eduardo_Research_Manager::pipeline()->apply($blueprint);
 if (is_wp_error($seed) || empty($seed['verified'])) { fail_m4_foundation('canonical seed failed', $seed); }
 
-$create_preview = Eduardo_Research_Manager::insight_editor()->preview_create(array(
-    'title'=>'Remote M4 Foundation Insight',
-    'slug'=>'remote-m4-foundation-insight',
-    'excerpt'=>'Structured excerpt for M4.',
-    'content'=>'<p>Structured editorial body for the M4 remote Manager foundation.</p>',
+$draft_preview = Eduardo_Research_Manager::insight_editor()->preview_create(array(
+    'title'=>'Remote M4 Draft Insight',
+    'slug'=>'remote-m4-draft-insight',
+    'excerpt'=>'Structured draft excerpt for M4.',
+    'content'=>'<p>Structured draft body for the M4 remote Manager foundation.</p>',
     'language'=>'en',
     'insight_type'=>'research_note',
     'status'=>'draft',
 ));
-if (is_wp_error($create_preview) || empty($create_preview['apply_allowed'])) { fail_m4_foundation('Insight create preview failed', $create_preview); }
-$created = Eduardo_Research_Manager::insight_editor()->apply_preview($create_preview);
-if (is_wp_error($created) || empty($created['verified']) || empty($created['post_id'])) { fail_m4_foundation('Insight create apply failed', $created); }
-$post_id = (int) $created['post_id'];
-$create_snapshot = (string) ($created['snapshot_id'] ?? '');
+if (is_wp_error($draft_preview) || empty($draft_preview['apply_allowed'])) { fail_m4_foundation('draft Insight create preview failed', $draft_preview); }
+$draft_created = Eduardo_Research_Manager::insight_editor()->apply_preview($draft_preview);
+if (is_wp_error($draft_created) || empty($draft_created['verified']) || empty($draft_created['post_id'])) { fail_m4_foundation('draft Insight create apply failed', $draft_created); }
+$draft_id = (int) $draft_created['post_id'];
+$draft_snapshot = (string) ($draft_created['snapshot_id'] ?? '');
 
-$record = Eduardo_Research_Manager::insight_editor()->inspect($post_id);
-if (is_wp_error($record) || 'draft' !== (string) ($record['status'] ?? '')) { fail_m4_foundation('created Insight is not draft', $record); }
+$draft_record = Eduardo_Research_Manager::insight_editor()->inspect($draft_id);
+if (is_wp_error($draft_record) || 'draft' !== (string) ($draft_record['status'] ?? '')) { fail_m4_foundation('created draft Insight is not draft', $draft_record); }
+
+$published_preview = Eduardo_Research_Manager::insight_editor()->preview_create(array(
+    'title'=>'Remote M4 Published Insight',
+    'slug'=>'remote-m4-published-insight',
+    'excerpt'=>'Structured published excerpt for M4.',
+    'content'=>'<p>Structured published body for rendered M4 verification.</p>',
+    'language'=>'en',
+    'insight_type'=>'research_note',
+    'status'=>'publish',
+));
+if (is_wp_error($published_preview) || empty($published_preview['apply_allowed'])) { fail_m4_foundation('published Insight create preview failed', $published_preview); }
+$published_created = Eduardo_Research_Manager::insight_editor()->apply_preview($published_preview);
+if (is_wp_error($published_created) || empty($published_created['verified']) || empty($published_created['post_id'])) { fail_m4_foundation('published Insight create apply failed', $published_created); }
+$published_id = (int) $published_created['post_id'];
+$published_snapshot = (string) ($published_created['snapshot_id'] ?? '');
 
 rest_get_server();
 $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(
@@ -79,39 +94,34 @@ foreach (array(
 $cap = m4_foundation_request('GET', 'capabilities', $token)->get_data();
 if (empty($cap['data']['insight_control']['inventory'])
     || ! in_array('draft', (array) ($cap['data']['insight_control']['statuses'] ?? array()), true)
-    || ! in_array('publish', (array) ($cap['data']['insight_control']['statuses'] ?? array()), true)) {
-    fail_m4_foundation('capabilities do not advertise M4 Insight foundation', $cap);
+    || ! in_array('publish', (array) ($cap['data']['insight_control']['statuses'] ?? array()), true)
+    || 'next-m4-slice' !== (string) ($cap['data']['insight_control']['remote_mutations'] ?? '')) {
+    fail_m4_foundation('capabilities do not advertise bounded M4 Insight foundation', $cap);
 }
 
 $inventory = m4_foundation_request('GET', 'insights', $token, array('language'=>'en'));
 if (200 !== $inventory->get_status()) { fail_m4_foundation('Insight inventory failed', $inventory->get_data()); }
 $items = (array) ($inventory->get_data()['data']['items'] ?? array());
-if (! array_filter($items, static fn(array $row): bool => $post_id === (int) ($row['post_id'] ?? 0))) {
-    fail_m4_foundation('created Insight missing from remote inventory', $inventory->get_data());
+foreach (array($draft_id, $published_id) as $expected_id) {
+    if (! array_filter($items, static fn(array $row): bool => $expected_id === (int) ($row['post_id'] ?? 0))) {
+        fail_m4_foundation('managed Insight missing from remote inventory', array('post_id'=>$expected_id,'inventory'=>$inventory->get_data()));
+    }
 }
 
-$inspect = m4_foundation_request('GET', 'insights/' . $post_id, $token);
+$inspect = m4_foundation_request('GET', 'insights/' . $draft_id, $token);
 if (200 !== $inspect->get_status() || 'draft' !== (string) ($inspect->get_data()['data']['status'] ?? '')) {
-    fail_m4_foundation('remote Insight inspection failed', $inspect->get_data());
+    fail_m4_foundation('remote draft Insight inspection failed', $inspect->get_data());
 }
 
-$draft_seo = m4_foundation_request('GET', 'insights/' . $post_id . '/seo-geo', $token);
+$draft_seo = m4_foundation_request('GET', 'insights/' . $draft_id . '/seo-geo', $token);
 if (200 !== $draft_seo->get_status()
     || ! empty($draft_seo->get_data()['data']['rendered']['available'])
     || empty($draft_seo->get_data()['data']['stored_ready'])) {
     fail_m4_foundation('draft Insight SEO/GEO inspection contract invalid', $draft_seo->get_data());
 }
 
-$publish_preview = Eduardo_Research_Manager::insight_editor()->preview_update($post_id, array('status'=>'publish'));
-if (is_wp_error($publish_preview) || empty($publish_preview['apply_allowed'])) { fail_m4_foundation('publish preview failed', $publish_preview); }
-$publish = Eduardo_Research_Manager::insight_editor()->apply_preview($publish_preview);
-if (is_wp_error($publish) || empty($publish['verified'])) { fail_m4_foundation('publish apply failed', $publish); }
-$publish_snapshot = (string) ($publish['snapshot_id'] ?? '');
-$published = Eduardo_Research_Manager::insight_editor()->inspect($post_id);
-if (is_wp_error($published) || 'publish' !== (string) ($published['status'] ?? '')) { fail_m4_foundation('Insight did not publish', $published); }
-
-fake_rendered_insight($post_id);
-$published_seo = m4_foundation_request('GET', 'insights/' . $post_id . '/seo-geo', $token);
+fake_rendered_insight($published_id);
+$published_seo = m4_foundation_request('GET', 'insights/' . $published_id . '/seo-geo', $token);
 remove_all_filters('pre_http_request');
 if (200 !== $published_seo->get_status()
     || empty($published_seo->get_data()['data']['rendered']['available'])
@@ -119,15 +129,11 @@ if (200 !== $published_seo->get_status()
     fail_m4_foundation('published Insight rendered verification failed', $published_seo->get_data());
 }
 
-if ('' === $publish_snapshot) { fail_m4_foundation('publish transition produced no rollback snapshot'); }
-$rollback_publish = Eduardo_Research_Manager::insight_editor()->rollback($publish_snapshot);
-if (is_wp_error($rollback_publish)) { fail_m4_foundation('publish rollback failed', $rollback_publish->get_error_message()); }
-$restored = Eduardo_Research_Manager::insight_editor()->inspect($post_id);
-if (is_wp_error($restored) || 'draft' !== (string) ($restored['status'] ?? '')) { fail_m4_foundation('publish rollback did not restore draft', $restored); }
-
-if ('' === $create_snapshot) { fail_m4_foundation('Insight creation produced no rollback snapshot'); }
-$rollback_create = Eduardo_Research_Manager::insight_editor()->rollback($create_snapshot);
-if (is_wp_error($rollback_create)) { fail_m4_foundation('creation rollback failed', $rollback_create->get_error_message()); }
-if (get_post($post_id) instanceof WP_Post) { fail_m4_foundation('creation rollback did not remove Manager-owned Insight'); }
+foreach (array($published_snapshot=>$published_id, $draft_snapshot=>$draft_id) as $snapshot_id => $post_id) {
+    if ('' === (string) $snapshot_id) { fail_m4_foundation('Insight creation produced no rollback snapshot', $post_id); }
+    $rollback = Eduardo_Research_Manager::insight_editor()->rollback((string) $snapshot_id);
+    if (is_wp_error($rollback)) { fail_m4_foundation('Insight creation rollback failed', $rollback->get_error_message()); }
+    if (get_post((int) $post_id) instanceof WP_Post) { fail_m4_foundation('creation rollback did not remove Manager-owned Insight', $post_id); }
+}
 
 fwrite(STDOUT, "M4 Insight foundation OK\n");
