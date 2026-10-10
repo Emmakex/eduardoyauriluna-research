@@ -1,0 +1,129 @@
+name: Research Greenfield Pipeline Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-greenfield-pipeline-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/workflows/research-greenfield-pipeline-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-greenfield-pipeline-wp
+          mkdir -p /tmp/research-greenfield-pipeline-wp
+          cd /tmp/research-greenfield-pipeline-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Greenfield Pipeline' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Apply, re-preview and rollback canonical pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-pipeline-wp
+          wp eval '
+          wp_set_current_user(1);
+          $blueprint = json_decode((string) file_get_contents(getenv("GITHUB_WORKSPACE") . "/config/research-site-blueprint.json"), true);
+          if (! is_array($blueprint)) { exit(1); }
+          if (! Eduardo_Research_Manager::pipeline() instanceof Eduardo_Research_Manager_Greenfield_Pipeline) { exit(1); }
+
+          $preview = Eduardo_Research_Manager::pipeline()->preview($blueprint);
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 8 !== (int) $preview["phases"]["bootstrap"]["operation_count"] || "deferred" !== $preview["phases"]["pairing"]["status"] || 24 !== (int) $preview["phases"]["hydration"]["operation_count"] || "deferred" !== $preview["phases"]["relations"]["status"]) {
+              fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1);
+          }
+
+          $applied = Eduardo_Research_Manager::pipeline()->apply($blueprint);
+          if (is_wp_error($applied) || empty($applied["verified"]) || 36 !== (int) $applied["snapshot_count"]) {
+              fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() : wp_json_encode($applied)); exit(1);
+          }
+          if (8 !== (int) $applied["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $applied["phases"]["pairing"]["operation_count"] || 24 !== (int) $applied["phases"]["hydration"]["operation_count"] || 0 !== (int) $applied["phases"]["relations"]["operation_count"]) { exit(1); }
+
+          $steady = Eduardo_Research_Manager::pipeline()->preview($blueprint);
+          if (is_wp_error($steady) || empty($steady["apply_allowed"]) || 0 !== (int) $steady["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $steady["phases"]["pairing"]["operation_count"] || 24 !== (int) $steady["phases"]["hydration"]["operation_count"] || 0 !== (int) $steady["phases"]["relations"]["operation_count"]) { exit(1); }
+          foreach ($steady["phases"]["pairing"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { exit(1); } }
+          foreach ($steady["phases"]["hydration"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { exit(1); } }
+
+          $rollback = Eduardo_Research_Manager::pipeline()->rollback($applied["snapshots"]);
+          if (is_wp_error($rollback) || 36 !== (int) $rollback["snapshot_count"]) { exit(1); }
+          $lines = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
+          if (0 !== count($lines)) { exit(1); }
+          $home = Eduardo_Research_Manager::pages()->inspect("home", "en");
+          if (is_wp_error($home) || ! empty($home["stored_slots"])) { exit(1); }
+          ' --allow-root
+
+      - name: Roll back every completed phase when final relations fail
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-greenfield-pipeline-wp
+          wp eval '
+          wp_set_current_user(1);
+          $blueprint = json_decode((string) file_get_contents(getenv("GITHUB_WORKSPACE") . "/config/research-site-blueprint.json"), true);
+          $blueprint["projects"][] = [
+              "title"=>"Atomic Failure Fixture",
+              "slug"=>"atomic-failure-fixture",
+              "language"=>"en",
+              "status"=>"publish",
+              "project_status"=>"planning",
+              "question"=>"Will prior Greenfield phases roll back when relation resolution fails?",
+              "role"=>"CI fixture",
+              "line_refs"=>["missing-line-reference"],
+              "evidence"=>["confirmed"=>true,"reference"=>"CI atomic rollback fixture"]
+          ];
+          $failed = Eduardo_Research_Manager::pipeline()->apply($blueprint);
+          if (! is_wp_error($failed) || "research_manager_greenfield_pipeline_failed" !== $failed->get_error_code()) { exit(1); }
+          $data = $failed->get_error_data();
+          if (! is_array($data) || "relations" !== ($data["failed_phase"] ?? "")) { fwrite(STDERR, wp_json_encode($data)); exit(1); }
+          foreach (["bootstrap","pairing","hydration"] as $phase) {
+              if (empty($data["rollback"][$phase]["rolled_back"])) { fwrite(STDERR, wp_json_encode($data["rollback"])); exit(1); }
+          }
+          if (get_page_by_path("atomic-failure-fixture", OBJECT, "research_project") instanceof WP_Post) { exit(1); }
+          $lines = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
+          if (0 !== count($lines)) { exit(1); }
+          $home = Eduardo_Research_Manager::pages()->inspect("home", "en");
+          if (is_wp_error($home) || ! empty($home["stored_slots"])) { exit(1); }
+          ' --allow-root
