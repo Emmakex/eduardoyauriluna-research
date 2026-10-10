@@ -374,13 +374,23 @@ final class Eduardo_Research_Manager_Remote_Operations {
         $blueprint = Eduardo_Research_Manager::blueprint_store()->canonical();
         if (is_wp_error($blueprint)) { return $blueprint; }
         $preview = $this->pipeline->preview($blueprint);
-        if (is_wp_error($preview)) { return $preview; }
+        $preview_state = is_wp_error($preview)
+            ? array(
+                'degraded'=>true,
+                'error_code'=>$preview->get_error_code(),
+                'error_message'=>$preview->get_error_message(),
+                'error_data'=>$this->stable_value($preview->get_error_data()),
+            )
+            : array(
+                'degraded'=>false,
+                'preview'=>$this->stable_value($preview),
+            );
         $diagnostics = Eduardo_Research_Manager::diagnostics()->run();
         $state = array(
             'blueprint_sha256'=>$this->blueprint_sha(),
             'contract_fingerprint'=>$this->contract_fingerprint(),
             'mode'=>Eduardo_Research_Manager_Mode::current(),
-            'preview'=>$this->stable_value($preview),
+            'pipeline_state'=>$preview_state,
             'diagnostics'=>$this->stable_value($diagnostics),
         );
         return hash('sha256', (string) wp_json_encode($state));
