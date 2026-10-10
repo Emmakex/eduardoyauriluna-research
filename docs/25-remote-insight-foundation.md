@@ -4,22 +4,25 @@
 
 This document defines the first repository-level slice of M4 from the canonical ChatGPT-governed Manager roadmap.
 
-The objective is to make Research Insights a first-class managed surface before exposing remote mutation types through the exact M2 operation lifecycle.
+The objective is to make Research Insights a first-class remotely inspectable managed surface before exposing Insight mutation types through the exact M2 operation lifecycle.
 
 ## Implemented in this slice
 
-### Shared editorial service
+### Existing shared editorial service remains authoritative
 
-`Eduardo_Research_Manager_Insight_Resource` now treats publication state as part of the bounded Insight contract.
+This slice deliberately keeps the existing `Eduardo_Research_Manager_Insight_Resource` and `Insight_Editor` mutation contract intact.
 
-Supported creation/update states are intentionally limited to:
+The Manager already supports bounded Insight creation through the shared service with `draft` or `publish` as creation states. Existing update mutations remain limited to the currently approved editorial fields:
 
-- `draft`
-- `publish`
+- title;
+- excerpt;
+- content;
+- language;
+- Insight type.
 
-The service rejects unsupported states instead of forwarding arbitrary WordPress post statuses.
+Publication-state transitions for an existing Insight are **not** opened in this foundation PR, because the central `Eduardo_Research_Manager_Plan` contract currently reserves `post_status` mutation for Theme-owned Page structural remediation.
 
-This matters because publication must remain a shared Manager capability. The Remote Manager must not invent a second publication implementation that differs from the local Admin/editor path.
+That guardrail is intentional. The next M4 slice must extend the central mutation contract explicitly for Research Insights instead of bypassing it in REST.
 
 ### Authenticated remote read surface
 
@@ -53,7 +56,7 @@ It exposes:
 - inspection support;
 - EN/ES language support;
 - allowed editorial types;
-- bounded `draft` / `publish` states;
+- valid Insight creation states (`draft`, `publish`);
 - rendered SEO/GEO inspection;
 - translation inspection;
 - `remote_mutations = next-m4-slice`.
@@ -63,15 +66,13 @@ It exposes:
 A dedicated fresh-WordPress CI acceptance proves:
 
 1. canonical Research Greenfield baseline installs successfully;
-2. Insight creation Preview does not bypass the shared service;
-3. a draft Insight can be created and verified;
-4. the authenticated remote inventory exposes it;
+2. a draft Insight can be created through the shared Manager editor and verified;
+3. a published Insight can be created through the shared Manager editor and verified;
+4. the authenticated remote inventory exposes both managed records;
 5. authenticated individual inspection returns the same managed state;
-6. draft SEO/GEO inspection does not pretend the post is publicly rendered;
-7. the shared editor can Preview and Apply `draft -> publish`;
-8. a published Insight passes rendered `Article` verification;
-9. publication rollback restores the exact draft state;
-10. creation rollback removes the Manager-owned Insight by snapshot/provenance.
+6. draft SEO/GEO inspection does not pretend the draft is publicly rendered;
+7. a published Insight passes rendered `Article` verification;
+8. creation rollback removes both Manager-owned Insights by snapshot/provenance.
 
 ## Explicit non-goals of this slice
 
@@ -79,14 +80,16 @@ This slice does not yet expose `insight-create` or `insight-update` as remote M2
 
 `Plan -> Apply -> Verify -> Rollback`
 
-It also does not yet implement:
+The next mutation slice must explicitly extend the central Plan contract for any approved publication-state transition; it must not route around that contract.
+
+This slice also does not yet implement:
 
 - remote translation pair/unpair mutations;
 - relationships/internal-link authoring;
-- scheduling beyond bounded draft/publish;
+- scheduling;
 - advanced metadata/canonical/schema remediation, which remains M6;
 - real `eduardoyauriluna.com` mutation, which remains M8 acceptance.
 
 ## Product rule
 
-Insight work must converge on one shared Manager service. REST is an adapter, not a second editorial engine.
+Insight work must converge on one shared Manager service. REST is an adapter, not a second editorial engine. Existing mutation guardrails stay authoritative until deliberately extended with tests.
