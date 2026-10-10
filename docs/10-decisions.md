@@ -119,3 +119,28 @@ Manager changes must follow the established safety workflow where applicable: **
 **Reference:** `docs/15-manager-control-plane.md`
 
 **Status:** Accepted
+
+---
+
+## ADR-013 — Manager must not depend on SSH for normal operation
+
+**Decision:** SSH and WP-CLI are deployment, automation, recovery and support transports. They are not runtime dependencies of the Research/SEO-GEO Manager.
+
+All normal site-management capabilities that define the sellable product must be executable from inside WordPress through the Manager control plane. The same application/service layer should be reusable by the WordPress admin UI, WP-CLI commands and a future authenticated remote API instead of implementing separate mutation paths.
+
+The intended access model is:
+
+- **WordPress Admin / Manager:** primary operating surface for customers;
+- **WP-CLI:** optional automation and repeatable deployment surface;
+- **SSH:** optional bootstrap, infrastructure maintenance and emergency/recovery surface;
+- **authenticated Manager API:** future remote-management surface for managed service / multi-client operation without requiring client SSH credentials.
+
+A client must be able to install Theme + Manager as normal WordPress packages and use the product without granting server shell access.
+
+**Reason:** Requiring SSH would turn the Manager into an agency-only implementation tool. Access independence makes it installable, supportable and commercially reusable across shared hosting, managed WordPress, VPS, enterprise/on-premise and customer-controlled environments.
+
+**Product rule:** New Manager capabilities are incomplete if they exist only through WP-CLI/SSH. They must live in a shared service layer and be callable from the Manager UI; transport-specific adapters may then expose the same operation through WP-CLI or a secure API.
+
+**Reference:** `docs/19-manager-productization.md`
+
+**Status:** Accepted
