@@ -1,6 +1,5 @@
 <?php
 /** Fresh-WordPress acceptance for bounded Remote Manager M3 Page control. */
-declare(strict_types=1);
 
 wp_set_current_user(1);
 
