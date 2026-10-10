@@ -55,6 +55,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blu
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-pairing.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-relations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield-pipeline.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield-cli.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-workspace.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-insight-admin.php';
@@ -76,3 +77,9 @@ register_activation_hook(__FILE__, static function (): void {
 });
 
 add_action('plugins_loaded', array('Eduardo_Research_Manager', 'boot'));
+
+if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
+    add_action('plugins_loaded', static function (): void {
+        WP_CLI::add_command('research-manager greenfield', 'Eduardo_Research_Manager_Greenfield_CLI');
+    }, 20);
+}
