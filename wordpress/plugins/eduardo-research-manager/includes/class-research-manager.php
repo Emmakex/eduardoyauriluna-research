@@ -19,6 +19,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Translation_Pairing $translations = null;
     private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
     private static ?Eduardo_Research_Manager_Blueprint $blueprint = null;
+    private static ?Eduardo_Research_Manager_Blueprint_Compiler $blueprint_compiler = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -35,12 +36,11 @@ final class Eduardo_Research_Manager {
         self::$translations = new Eduardo_Research_Manager_Translation_Pairing();
         self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         self::$blueprint = new Eduardo_Research_Manager_Blueprint();
+        self::$blueprint_compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::$blueprint);
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
-    public static function mode(): array {
-        return Eduardo_Research_Manager_Mode::describe();
-    }
+    public static function mode(): array { return Eduardo_Research_Manager_Mode::describe(); }
     public static function greenfield(): Eduardo_Research_Manager_Greenfield {
         if (! self::$greenfield) { self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::contract()); }
         return self::$greenfield;
@@ -48,6 +48,10 @@ final class Eduardo_Research_Manager {
     public static function blueprint(): Eduardo_Research_Manager_Blueprint {
         if (! self::$blueprint) { self::$blueprint = new Eduardo_Research_Manager_Blueprint(); }
         return self::$blueprint;
+    }
+    public static function blueprint_compiler(): Eduardo_Research_Manager_Blueprint_Compiler {
+        if (! self::$blueprint_compiler) { self::$blueprint_compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::blueprint()); }
+        return self::$blueprint_compiler;
     }
     public static function contract(): Eduardo_Research_Manager_Contract {
         if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); }
