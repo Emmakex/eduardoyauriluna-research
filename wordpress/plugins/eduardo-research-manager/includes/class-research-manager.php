@@ -20,6 +20,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Translation_Pairing $translations = null;
     private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
     private static ?Eduardo_Research_Manager_Blueprint $blueprint = null;
+    private static ?Eduardo_Research_Manager_Blueprint_Store $blueprint_store = null;
     private static ?Eduardo_Research_Manager_Blueprint_Compiler $compiler = null;
     private static ?Eduardo_Research_Manager_Bootstrap $bootstrap = null;
     private static ?Eduardo_Research_Manager_Blueprint_Hydrator $hydrator = null;
@@ -43,6 +44,7 @@ final class Eduardo_Research_Manager {
         self::$translations = new Eduardo_Research_Manager_Translation_Pairing();
         self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         self::$blueprint = new Eduardo_Research_Manager_Blueprint();
+        self::$blueprint_store = new Eduardo_Research_Manager_Blueprint_Store(self::$blueprint);
         self::$compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::$blueprint, self::$greenfield);
         self::$bootstrap = new Eduardo_Research_Manager_Bootstrap(self::$compiler, self::$executor);
         self::$hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(self::$blueprint, self::$pages, self::$executor);
@@ -55,6 +57,7 @@ final class Eduardo_Research_Manager {
     public static function mode(): array { return Eduardo_Research_Manager_Mode::describe(); }
     public static function greenfield(): Eduardo_Research_Manager_Greenfield { if (! self::$greenfield) { self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::contract()); } return self::$greenfield; }
     public static function blueprint(): Eduardo_Research_Manager_Blueprint { if (! self::$blueprint) { self::$blueprint = new Eduardo_Research_Manager_Blueprint(); } return self::$blueprint; }
+    public static function blueprint_store(): Eduardo_Research_Manager_Blueprint_Store { if (! self::$blueprint_store) { self::$blueprint_store = new Eduardo_Research_Manager_Blueprint_Store(self::blueprint()); } return self::$blueprint_store; }
     public static function compiler(): Eduardo_Research_Manager_Blueprint_Compiler { if (! self::$compiler) { self::$compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::blueprint(), self::greenfield()); } return self::$compiler; }
     public static function bootstrap(): Eduardo_Research_Manager_Bootstrap { if (! self::$bootstrap) { self::$bootstrap = new Eduardo_Research_Manager_Bootstrap(self::compiler(), self::executor()); } return self::$bootstrap; }
     public static function hydrator(): Eduardo_Research_Manager_Blueprint_Hydrator { if (! self::$hydrator) { self::$hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(self::blueprint(), self::pages(), self::executor()); } return self::$hydrator; }
