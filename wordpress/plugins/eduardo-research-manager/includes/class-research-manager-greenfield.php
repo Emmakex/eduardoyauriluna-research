@@ -27,6 +27,7 @@ final class Eduardo_Research_Manager_Greenfield {
         return array(
             'pages' => Eduardo_Research_Manager::pages(),
             'insights' => Eduardo_Research_Manager::insights(),
+            'lines' => Eduardo_Research_Manager::lines(),
             'outputs' => Eduardo_Research_Manager::outputs(),
             'projects' => Eduardo_Research_Manager::projects(),
             'software' => Eduardo_Research_Manager::software(),
