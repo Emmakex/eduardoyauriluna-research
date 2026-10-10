@@ -42,10 +42,10 @@ final class Eduardo_Research_Manager_GitHub_Adapter {
 
         $owner = '';
         $repo = '';
-        if (preg_match('#^https?://github\.com/([^/]+)/([^/?#]+?)(?:\.git)?/?$#i', $selected, $match)) {
+        if (preg_match('~^https?://github\.com/([^/]+)/([^/?#]+?)(?:\.git)?/?$~i', $selected, $match)) {
             $owner = rawurldecode((string) $match[1]);
             $repo = rawurldecode((string) $match[2]);
-        } elseif (preg_match('#^([^/\s]+)/([^/\s]+)$#', $selected, $match)) {
+        } elseif (preg_match('~^([^/\s]+)/([^/\s]+)$~', $selected, $match)) {
             $owner = (string) $match[1];
             $repo = (string) $match[2];
             if (str_ends_with(strtolower($repo), '.git')) { $repo = substr($repo, 0, -4); }
