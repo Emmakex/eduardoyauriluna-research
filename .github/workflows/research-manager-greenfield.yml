@@ -31,12 +31,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
-          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
-          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-orchestrator.php
-          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-contract-shape.php
-          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-blueprint.php
-          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-no-legacy.php
-          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode-isolation.php
+          for test_file in wordpress/plugins/eduardo-research-manager/tests/*.php; do php -l "$test_file"; done
       - name: Greenfield is explicit default
         run: |
           grep -F "public const GREENFIELD = 'greenfield';" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
