@@ -71,11 +71,10 @@ foreach (array(
 
 $cap = m3_request('GET', 'capabilities', $token)->get_data();
 $supported = (array) ($cap['data']['mutation_transport']['supported_operations'] ?? array());
-if ('M3' !== (string) ($cap['data']['mutation_transport']['milestone'] ?? '')
-    || ! in_array('page-slots-update', $supported, true)
+if (! in_array('page-slots-update', $supported, true)
     || ! in_array('page-create', $supported, true)
     || empty($cap['data']['page_control']['structured_slots_only'])) {
-    fail_m3('capabilities do not advertise bounded M3 Page control', $cap);
+    fail_m3('capabilities do not preserve bounded M3 Page control', $cap);
 }
 
 $inventory_response = m3_request('GET', 'pages', $token);
@@ -237,7 +236,6 @@ $invalid = m3_request('POST', 'operations/plan', $token, array(
     'payload'=>array('key'=>'contact','language'=>'en','slots'=>array('not-a-theme-slot'=>'x')),
 ));
 if (400 !== $invalid->get_status()) { fail_m3('unknown Theme slot was not rejected as validation error', $invalid->get_data()); }
-
 $audit = get_option('eduardo_research_manager_remote_audit', array());
 $audit_json = (string) wp_json_encode($audit);
 foreach (array($plan_id, $operation_id, $create_operation_id, $apply_request_id, $rollback_request_id) as $needle) {

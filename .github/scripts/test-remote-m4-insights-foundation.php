@@ -92,11 +92,12 @@ foreach (array(
 }
 
 $cap = m4_foundation_request('GET', 'capabilities', $token)->get_data();
+$statuses = (array) ($cap['data']['insight_control']['creation_statuses'] ?? $cap['data']['insight_control']['statuses'] ?? array());
 if (empty($cap['data']['insight_control']['inventory'])
-    || ! in_array('draft', (array) ($cap['data']['insight_control']['statuses'] ?? array()), true)
-    || ! in_array('publish', (array) ($cap['data']['insight_control']['statuses'] ?? array()), true)
-    || 'next-m4-slice' !== (string) ($cap['data']['insight_control']['remote_mutations'] ?? '')) {
-    fail_m4_foundation('capabilities do not advertise bounded M4 Insight foundation', $cap);
+    || ! in_array('draft', $statuses, true)
+    || ! in_array('publish', $statuses, true)
+    || empty($cap['data']['insight_control']['rendered_seo_geo_inspection'])) {
+    fail_m4_foundation('capabilities do not preserve bounded M4 Insight foundation', $cap);
 }
 
 $inventory = m4_foundation_request('GET', 'insights', $token, array('language'=>'en'));
