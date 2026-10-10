@@ -1,332 +1,340 @@
 # Roadmap
 
-## Architecture principle
+## Canonical architecture
 
-`eduardoyauriluna.com` is a greenfield WordPress implementation.
+`eduardoyauriluna.com` is a **Greenfield WordPress Research site**.
 
-There is no legacy site or installed theme to audit or migrate. We start from a clean WordPress installation, install the reusable SEO/GEO Theme, and build the `research` preset directly on top of that foundation.
+The operational target is not manual WordPress management. The accepted control path is:
 
-Implementation order:
+```text
+Eduardo → ChatGPT → authenticated Research Manager → shared Manager services → WordPress resources → Research Theme → rendered eduardoyauriluna.com → verification back to ChatGPT
+```
 
-1. Clean WordPress installation
-2. SEO/GEO Theme installation
-3. `research` preset
-4. Academic content model
-5. Real site hydration and validation
-6. Research Manager control plane
-7. Academic connections
-8. Research outputs and visibility
-9. Doctoral application 2027
+The Research Theme owns deterministic frontend rendering. The Research Manager owns controlled site operations. ChatGPT is the primary managed instruction surface. WordPress Admin is the local/fallback/self-service surface. WP-CLI and SSH are optional bootstrap/automation/support transports.
 
-The Theme must remain functional without the Research Manager. The Manager is the operational control plane for creation, modification, hydration, optimisation, verification, synchronization and readiness.
+Canonical contract: `docs/22-chat-governed-manager-contract.md`.
+Accepted decision: ADR-015 in `docs/10-decisions.md`.
+Primary execution tracker: issue #97.
 
-### Apply everything learned from SEO/GEO Theme
+---
 
-The Research implementation must reuse the existing product model instead of creating a parallel academic stack:
+## Permanent anti-drift rules
 
-- preset contracts;
-- expected pages and roles;
-- content contracts;
-- structured page models and slots;
-- evidence/verification groups;
-- Theme-native SEO/GEO authority;
-- deterministic Theme rendering;
-- rendered frontend verification;
-- environment/navigation integrity checks;
-- readiness diagnostics;
-- controlled mutations with Preview → Apply → Verify → Rollback.
+1. The current validation target is `eduardoyauriluna.com`.
+2. Do not introduce migration/audit logic into the Greenfield creation path.
+3. The Theme owns public layout/rendering; Gutenberg is not the layout authority.
+4. Routine website operations must be expressible through Manager services.
+5. Managed remote operation goes through the authenticated Manager; no direct DB/filesystem/shell bypass for normal work.
+6. Admin, REST and WP-CLI adapters reuse shared Manager business logic.
+7. Material mutations preserve Preview → Apply → Verify → Rollback where the operation contract supports it.
+8. Every remote mutation is scoped, auditable and safe against duplicate retries/stale state.
+9. Multi-client SaaS/Control Center work must not displace the single-site Eduardo acceptance path.
+10. Status reporting must distinguish repository implementation, CI verification, real-site deployment and real ChatGPT-through-Manager verification.
 
-Reference: `docs/13-seo-geo-theme-inheritance.md` and `docs/15-manager-control-plane.md`.
-
-### Frontend authority
-
-The SEO/GEO Theme owns the public frontend. Gutenberg is not the layout authority for controlled preset pages.
-
-- preset pages render through Theme contracts, structured models and slots;
-- WordPress Page records may provide routing/status/translation mapping;
-- controlled pages must not depend on Gutenberg blocks or page-builder markup;
-- Gutenberg may be used only as a bounded content editor where explicitly useful, such as an editorial body slot;
-- the future Manager hydrates structured Theme slots rather than generating Gutenberg layouts.
-
-Reference: `docs/14-theme-owned-frontend.md`.
+---
 
 ## Phase 0 — Research identity foundation ✅
 
-**Goal:** establish a documented and consistent research identity.
+Completed foundation includes:
 
-- [x] Canonical researcher name: Eduardo Jose Yauri Luna
-- [x] Canonical domain: eduardoyauriluna.com
-- [x] Repository created
-- [x] README and documentation baseline
-- [x] Integration strategy documented
-- [x] Short academic biography
-- [x] Long academic biography
-- [x] Research statement v1
-- [x] Academic CV source structure
+- canonical researcher identity: Eduardo Jose Yauri Luna;
+- canonical domain: `eduardoyauriluna.com`;
+- English primary / Spanish secondary direction;
+- research identity/content documentation;
+- academic CV/research statement source structure;
+- integration strategy and academic evidence discipline.
 
-## Phase 1 — Greenfield WordPress foundation
+---
 
-**Goal:** create a clean implementation target for the Research preset.
+## Phase 1 — Greenfield WordPress + Theme foundation
 
-- [ ] Fresh WordPress installation
-- [ ] Reusable SEO/GEO Theme installed from our current Theme project
-- [ ] Minimal required plugins only
-- [ ] English primary / Spanish secondary architecture prepared
-- [ ] Permalink strategy defined
-- [ ] Development/staging workflow defined
-- [ ] Theme-controlled frontend; no Gutenberg/page-builder layout dependency
-- [ ] Define where Gutenberg is disabled and where bounded editorial body editing is allowed
-- [ ] Baseline performance, accessibility and security settings
+### Repository state
 
-**Important:** no legacy-theme audit, content migration or compatibility layer is required.
+Implemented/CI-backed work already includes the Research Theme, Research preset contracts, Theme-owned pages/surfaces, multilingual behavior, SEO/academic rendering and installable packaging.
 
-## Phase 2 — Theme preset: `research`
+### Real-site acceptance still required
 
-**Goal:** create the complete academic visual/content presentation layer before building the Manager.
+- [ ] supported clean WordPress target confirmed for `eduardoyauriluna.com`;
+- [ ] Research Theme installed/activated on the real target;
+- [ ] Manager installed/activated on the real target;
+- [ ] expected permalink/language/domain state confirmed;
+- [ ] production mobile/accessibility/performance validation;
+- [ ] final visual/palette review on the real rendered site.
 
-### Theme contract first
+---
 
-- [ ] Register/select `research` as a normal SEO/GEO Theme preset
-- [ ] Define expected pages and page roles
-- [ ] Define `primary_intent`, `required_sections` and `internal_targets`
-- [ ] Define structured page model IDs
-- [ ] Define required slots / `required_any`
-- [ ] Define evidence/verification groups
-- [ ] Ensure pages render without Gutenberg layout markup
-- [ ] Preserve Theme-native SEO/GEO authority
-- [ ] Ensure compatibility with existing frontend-verification/readiness mechanisms
+## Phase 2 — Research Theme / preset ✅ repository implementation
 
-### Design system
+Repository implementation includes the Theme-owned frontend model, page/single/archive surfaces, research collections/entities, responsive behavior, semantic rendering, SEO/GEO authority and the Research visual direction.
 
-- [ ] Research typography system
-- [ ] Academic/technology visual language
-- [ ] Spacing and layout tokens
-- [ ] Light/dark behavior if retained by the base theme
-- [ ] Responsive behavior
-- [ ] Accessible interaction states
+The Theme remains independently renderable and must never become dependent on a chat connection.
 
-### Templates
+### Remaining acceptance
 
-- [ ] Home
-- [ ] About
-- [ ] Research
-- [ ] Publications archive
-- [ ] Publication single
-- [ ] Projects archive
-- [ ] Project single
-- [ ] Research Software archive/single
-- [ ] Datasets archive/single
-- [ ] CV
-- [ ] Contact
-- [ ] Insights
+- [ ] verify all intended Theme surfaces on real `eduardoyauriluna.com`;
+- [ ] verify EN/ES public routes/hreflang on real domain;
+- [ ] verify production Core Web Vitals/accessibility;
+- [ ] close any frontend gaps discovered only on real hosting.
 
-### Components
+---
 
-- [ ] Researcher hero
-- [ ] Research interests
-- [ ] Research-line cards
-- [ ] Publication card
-- [ ] DOI / citation block
-- [ ] Project card
-- [ ] Research software card
-- [ ] Dataset card
-- [ ] Academic profile links
-- [ ] Research timeline
-- [ ] Metrics presentation component
+## Phase 3 — Academic content model ✅ repository implementation
 
-## Phase 3 — Academic content model
+Implemented structured domain includes:
 
-**Goal:** define the data contract the Theme actually needs, based on the implemented frontend.
+- Research Lines;
+- Publications / outputs;
+- Projects;
+- Research Software;
+- Datasets;
+- Insights;
+- evidence/provenance;
+- EN/ES relationships;
+- academic identifiers/metadata contracts;
+- Scholar/Schema-oriented output.
 
-- [ ] Researcher profile model
-- [ ] Research lines taxonomy/model
-- [ ] Publication CPT
-- [ ] Research project CPT
-- [ ] Dataset CPT
-- [ ] Research software CPT
-- [ ] Talk / conference output model
-- [ ] Review/publication status taxonomy
-- [ ] Academic identifier fields
-- [ ] DOI and citation fields
-- [ ] Author model and author ordering
-- [ ] Stable canonical URLs
-- [ ] Schema.org mappings
-- [ ] Google Scholar-compatible citation metadata
-- [ ] Bounded rich-text/body fields only where the Theme contract permits them
+Remaining work is primarily real content/evidence population and real-site acceptance.
 
-The content model is validated against real rendered templates before the Manager is implemented.
+---
 
-## Phase 4 — Hydrate `eduardoyauriluna.com`
+## Phase 4 — Research Manager core ✅ substantial repository implementation
 
-**Goal:** use the Research preset as a real production case and discover any missing requirements before Manager development.
+The Manager already contains shared services and Admin surfaces for major domain areas, including:
 
-- [ ] Home content
-- [ ] About content
-- [ ] Research agenda
-- [ ] Research lines
-- [ ] Initial project records
-- [ ] CV content
-- [ ] Academic profile placeholders/verified identifiers
-- [ ] English primary content
-- [ ] Spanish translations
-- [ ] Mobile validation
-- [ ] Accessibility validation
-- [ ] Performance validation
-- [ ] Academic SEO validation
-- [ ] GEO/entity clarity validation
-- [ ] Internal-link graph validation
+- blueprint/Greenfield lifecycle;
+- diagnostics/readiness;
+- structured Pages;
+- Insights;
+- Research Lines;
+- Research Objects;
+- translations;
+- evidence;
+- remediation;
+- rendered verification;
+- academic connector adapters;
+- snapshot/executor/rollback infrastructure;
+- WP-CLI Greenfield adapter;
+- standalone install bundle.
 
-## Phase 5 — Research Manager control plane
+This phase is not equivalent to remote ChatGPT governance; it is the engine that the bridge will expose.
 
-**Goal:** extend the existing SEO/GEO Manager operating model so the whole Research site can be created, modified, optimised and verified from structured sources.
+---
 
-### Site/content control
+# Phase 5 — ChatGPT-governed Manager bridge — CURRENT PRIMARY WORK
 
-- [ ] Overview dashboard
-- [ ] Create/resolve Theme-controlled Pages
-- [ ] Create/update Posts / Insights
-- [ ] Researcher identity editor
-- [ ] Research lines manager
-- [ ] Publications manager
-- [ ] Projects manager
-- [ ] Research software manager
-- [ ] Datasets manager
-- [ ] CV/academic profile manager
-- [ ] Academic identifiers manager
-- [ ] Navigation/internal relationships manager
-- [ ] Media metadata manager
-- [ ] Translation/language relationship control
+**Goal:** make the Research Manager the authenticated bridge through which we govern the real WordPress site from this ChatGPT workflow.
 
-### Structured hydration
+Primary tracker: #97.
 
-- [ ] Detect preset/page contract
-- [ ] Detect model ID and structured slots
-- [ ] Hydrate required/optional slots
-- [ ] Respect `required_any` groups
-- [ ] Flag evidence-required fields
-- [ ] No Gutenberg layout generation
+## M1 — Remote Manager foundation
 
-### SEO/GEO optimisation
+- [ ] versioned REST namespace, e.g. `/wp-json/research-manager/v1/`;
+- [ ] site-specific remote connection identity;
+- [ ] local WordPress enable/disable/revoke controls;
+- [ ] credential rotation;
+- [ ] read/write scope model;
+- [ ] `/capabilities` discovery;
+- [ ] request IDs/idempotency primitives;
+- [ ] replay/expiry protection;
+- [ ] audit record model;
+- [ ] typed remote error contract;
+- [ ] authenticated `/status`;
+- [ ] `/versions`;
+- [ ] `/readiness` / diagnostics reads;
+- [ ] CI for authentication/scopes/revocation/no-secret exposure.
 
-- [ ] Title/meta control through Theme-native authority
-- [ ] Canonical control
-- [ ] Robots/indexability
-- [ ] Open Graph
-- [ ] Schema / academic schema
-- [ ] Hreflang
-- [ ] Sitemap rules
-- [ ] Internal-link optimisation
-- [ ] Entity/authorship checks
-- [ ] Extractable summary/direct-answer checks
-- [ ] Academic discoverability checks
-- [ ] Scholar-compatible citation metadata checks
-- [ ] DOI/ORCID identifier completeness
-- [ ] Media/alt/accessibility checks
+**M1 done when:** ChatGPT-compatible tooling can securely read live Manager/site state with a revocable site-specific credential, but cannot mutate anything without write scopes.
 
-### Diagnostics and safety
+## M2 — Plan / operation lifecycle
 
-- [ ] Structure diagnostics
-- [ ] Content/slot diagnostics
-- [ ] Navigation/environment leakage diagnostics
-- [ ] Orphan resource detection
-- [ ] Frontend rendered verification
-- [ ] Preview → Apply → Verify → Rollback
-- [ ] Audit log
-- [ ] Permissions/capabilities
-- [ ] Research Readiness dashboard
-- [ ] Actionable next-action mapping: auto-fix / hydrate / review / evidence / external action
+- [ ] generic operation/request IDs;
+- [ ] source revision/fingerprint;
+- [ ] plan ID and plan expiry;
+- [ ] typed Preview response;
+- [ ] risk/confirmation class;
+- [ ] exact-plan Apply;
+- [ ] stale plan/revision rejection;
+- [ ] operation status retrieval;
+- [ ] stored-state verification;
+- [ ] rendered verification;
+- [ ] rollback invocation where supported;
+- [ ] retry/idempotency acceptance;
+- [ ] audit correlation.
 
-Reusable implementation belongs in the main Theme/Manager product repository. This repository remains the source of truth for Eduardo Jose Yauri Luna-specific content, configuration, requirements and decisions.
+**M2 done when:** a remote caller can safely plan, apply and verify a bounded mutation without duplicate writes or silent stale overwrites.
 
-Reference: `docs/15-manager-control-plane.md`.
+## M3 — Pages from ChatGPT
+
+- [ ] inspect Theme-controlled Pages remotely;
+- [ ] inspect structured slots/current revision;
+- [ ] create supported missing Theme Page;
+- [ ] update structured Page slots;
+- [ ] manage permitted Theme variant(s);
+- [ ] pair EN/ES Page resources;
+- [ ] Page-level SEO/GEO inspect/remediate;
+- [ ] Preview exact change;
+- [ ] Apply exact plan;
+- [ ] stored verify;
+- [ ] rendered verify;
+- [ ] rollback supported change;
+- [ ] complete first real Page mutation on `eduardoyauriluna.com` originating from ChatGPT.
+
+**M3 is the first end-to-end proof of the product model.**
+
+## M4 — Insights/blog from ChatGPT
+
+- [ ] create draft Insight;
+- [ ] update title/excerpt/body;
+- [ ] taxonomy/author;
+- [ ] internal/research relationships;
+- [ ] translation pair;
+- [ ] media metadata/assignment where supported;
+- [ ] SEO/GEO preparation;
+- [ ] schedule;
+- [ ] publish/update/archive;
+- [ ] rendered verification;
+- [ ] first real Insight operation from ChatGPT.
+
+## M5 — Research objects from ChatGPT
+
+Expose existing service-layer capabilities through the authenticated bridge for:
+
+- [ ] Research Lines;
+- [ ] Publications;
+- [ ] Projects;
+- [ ] Research Software;
+- [ ] Datasets;
+- [ ] evidence/provenance;
+- [ ] relations;
+- [ ] translations.
+
+Identity/evidence-sensitive changes remain more strongly gated.
+
+## M6 — SEO/GEO optimisation from ChatGPT
+
+- [ ] live site/readiness diagnostics retrieval;
+- [ ] deterministic remediation grouping/planning;
+- [ ] title/meta remediation;
+- [ ] canonical/hreflang/indexability checks/remediation;
+- [ ] Schema checks/remediation;
+- [ ] sitemap/crawlability checks;
+- [ ] internal-link optimisation;
+- [ ] entity/authorship/direct-answer/GEO checks;
+- [ ] evidence/provenance checks;
+- [ ] Preview → Apply → Verify;
+- [ ] rerun readiness and report residual manual/editorial/evidence actions;
+- [ ] first real SEO/GEO remediation from ChatGPT on the rendered site.
+
+## M7 — Bounded Theme design control from ChatGPT
+
+- [ ] palette/design token selection;
+- [ ] typography tokens;
+- [ ] spacing/density tokens;
+- [ ] Theme-supported section/component variants;
+- [ ] preserve responsive/accessibility rules;
+- [ ] rendered visual/state verification where practical;
+- [ ] no arbitrary CSS/PHP execution as normal control path.
+
+## M8 — Real-site operating acceptance
+
+- [ ] supported Theme + Manager installed on real site;
+- [ ] remote connection enabled locally;
+- [ ] ChatGPT can read live status/capabilities;
+- [ ] real Page task completed end-to-end;
+- [ ] real Insight task completed end-to-end;
+- [ ] real SEO/GEO task completed end-to-end;
+- [ ] rollback proven for one supported operation;
+- [ ] audit records proven without secrets;
+- [ ] read-only scope mode proven;
+- [ ] revocation proven to immediately block remote use;
+- [ ] normal bypasses to Admin/SSH/manual code recorded;
+- [ ] every normal bypass converted into Manager backlog.
+
+**Phase 5 done when:** routine management of the Eduardo site can genuinely be driven from ChatGPT through the Manager, with real rendered verification.
+
+---
 
 ## Phase 6 — Academic connections
 
-**Goal:** connect the proven Manager/content model to external research infrastructure.
+Existing repository adapters include ORCID, Crossref, OpenAlex, Zenodo, GitHub research-software preview and Scholar-compatible metadata.
 
-Priority order:
+Real-data/production work remains:
 
-- [ ] ORCID
-- [ ] Google Scholar profile linkage and indexing readiness
-- [ ] Crossref
-- [ ] Zenodo
-- [ ] OpenAlex
-- [ ] GitHub research software integration
+- [ ] verified ORCID supplied/confirmed;
+- [ ] real external identity reconciliation;
+- [ ] production tokens where optional authenticated reads require them;
+- [ ] real connection status exposed through Manager remote read surface;
+- [ ] any external writes remain explicitly gated and are not implied by remote website-management permission.
 
-Secondary:
+---
 
-- [ ] Semantic Scholar
-- [ ] ResearchGate
-- [ ] Web of Science Researcher Profile
-- [ ] Scopus Author ID when available
+## Phase 7 — Real research content/output portfolio
 
-Rules:
+- [ ] real Research Lines reviewed;
+- [ ] initial real Projects;
+- [ ] initial real Publications/outputs with correct status;
+- [ ] Research Software records;
+- [ ] Datasets where appropriate;
+- [ ] evidence/source references;
+- [ ] DOI/identifier linkage where real and verified;
+- [ ] EN/ES content review.
 
-- no fabricated identifiers;
-- no dependency on Google Scholar scraping;
-- external writes require explicit authorization;
-- imported metadata must preserve source and retrieval timestamp;
-- curated local data must not be silently overwritten.
+No fabricated academic identifiers or publication status.
 
-## Phase 7 — Research outputs
-
-Target: create a credible initial portfolio, clearly labelled by output type and review status.
-
-Candidate themes:
-
-1. Autonomous AI agents for SME administrative processes
-2. SEO/GEO and visibility in generative search
-3. Digital transformation and automation barriers in SMEs
-4. Research software release with reproducible documentation
-5. Dataset related to one empirical study, when ethically and legally appropriate
-
-For each output:
-
-- [ ] Research question
-- [ ] Literature review
-- [ ] Methodology
-- [ ] Ethics/privacy review where relevant
-- [ ] Evidence/data
-- [ ] Limitations
-- [ ] Reproducibility assets
-- [ ] Publication venue/status
-- [ ] DOI where appropriate
-- [ ] ORCID linkage
+---
 
 ## Phase 8 — Academic visibility
 
-- [ ] ORCID profile complete
-- [ ] CVN / FECYT
-- [ ] Google Scholar profile
-- [ ] Zenodo profile
-- [ ] OpenAlex author identity resolved
-- [ ] Semantic Scholar author page claimed where possible
-- [ ] ResearchGate profile
-- [ ] LinkedIn updated with research positioning
-- [ ] Search result consistency audit for researcher name
+- [ ] ORCID profile complete;
+- [ ] Google Scholar indexing/profile linkage readiness;
+- [ ] Zenodo/OpenAlex identity resolution;
+- [ ] CVN/FECYT where appropriate;
+- [ ] external profile consistency;
+- [ ] researcher-name search consistency audit.
+
+---
 
 ## Phase 9 — Doctoral application 2027
 
-- [ ] Define doctoral research proposal
-- [ ] Select target programmes
-- [ ] Identify potential supervisors
-- [ ] Review supervisors' recent publications
-- [ ] Prepare outreach package
-- [ ] Academic CV final
-- [ ] Research statement final
-- [ ] Research proposal final
-- [ ] Portfolio of research outputs
-- [ ] Contact supervisors before formal application windows where appropriate
-- [ ] Submit applications
+- [ ] define doctoral proposal;
+- [ ] select target programmes;
+- [ ] identify supervisors;
+- [ ] review recent supervisor work;
+- [ ] prepare outreach package;
+- [ ] final academic CV;
+- [ ] final research statement;
+- [ ] final research proposal;
+- [ ] credible portfolio of research outputs;
+- [ ] outreach/application execution.
 
-## Definition of ready
+---
 
-A doctoral application is considered research-profile ready when a reviewer can independently verify:
+## Work explicitly deferred until Eduardo M1–M8 is proven
 
-- who the researcher is;
-- what the research agenda is;
-- what outputs exist and their exact status;
-- what methods and evidence have been used;
-- where persistent identifiers resolve;
-- what software/data support the work;
-- and how the proposed PhD follows coherently from prior experience and research activity.
+- generic multi-client SaaS Control Center;
+- fleet management across many customer sites;
+- billing/subscriptions;
+- arbitrary Theme compatibility;
+- broad existing-site migration/adoption product work;
+- `emmake.com` as active implementation priority;
+- unrestricted remote WordPress administrator proxying.
+
+`emmake.com` remains the second real validation scenario for existing-site adoption, but this repository/workstream stays focused on `eduardoyauriluna.com` until the ChatGPT-governed Greenfield path is proven.
+
+---
+
+## Definition of current success
+
+For this phase of the project, success means that Eduardo can give a routine website instruction in ChatGPT and the system can:
+
+1. connect to the live Research Manager;
+2. inspect current state;
+3. prepare a bounded plan;
+4. show/validate the Preview as required;
+5. Apply through shared Manager services;
+6. verify stored state;
+7. verify the rendered public site;
+8. return the real result/URL/status;
+9. preserve an audit record;
+10. roll back when supported;
+11. do all of this without SSH, direct DB access or arbitrary code execution for the normal operation.
