@@ -1,0 +1,70 @@
+name: Research Manager Remote M6 SEO GEO Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/test-remote-m6-seo-geo.php'
+      - '.github/workflows/research-manager-remote-m6-seo-geo-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - '.github/scripts/test-remote-m6-seo-geo.php'
+      - '.github/workflows/research-manager-remote-m6-seo-geo-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remote-m6-seo-geo:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Ensure WP-CLI
+        run: bash .github/scripts/ensure-wp-cli.sh
+      - name: Lint M6 SEO GEO control
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l .github/scripts/test-remote-m6-seo-geo.php
+      - name: Install clean Research WordPress
+        run: |
+          rm -rf /tmp/research-manager-remote-m6-seo-geo
+          mkdir -p /tmp/research-manager-remote-m6-seo-geo
+          cd /tmp/research-manager-remote-m6-seo-geo
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp config set WP_ENVIRONMENT_TYPE development --type=constant --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Manager Remote M6 SEO GEO' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+      - name: Verify M6 SEO GEO diagnostics and deterministic remediation
+        run: |
+          cd /tmp/research-manager-remote-m6-seo-geo
+          wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-m6-seo-geo.php" --allow-root

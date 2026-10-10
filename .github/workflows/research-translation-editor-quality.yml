@@ -113,7 +113,9 @@ jobs:
           $stale = $editor->apply_preview($unpair);
           if (! is_wp_error($stale) || "research_manager_translation_editor_stale_preview" !== $stale->get_error_code()) { exit(1); }
           wp_update_post(["ID"=>$es,"post_status"=>"publish"]);
-          $unpaired = $editor->apply_preview($unpair);
+          $fresh_unpair = $editor->preview_unpair($en, true, "CI verified unpair source");
+          if (is_wp_error($fresh_unpair) || empty($fresh_unpair["apply_allowed"])) { exit(1); }
+          $unpaired = $editor->apply_preview($fresh_unpair);
           if (is_wp_error($unpaired) || empty($unpaired["verified"]) || empty($unpaired["snapshot_id"])) { exit(1); }
           $a = Eduardo_Research_Manager::translations()->verify_unpaired($en); $b = Eduardo_Research_Manager::translations()->verify_unpaired($es);
           if (is_wp_error($a) || empty($a["verified"]) || is_wp_error($b) || empty($b["verified"])) { exit(1); }
