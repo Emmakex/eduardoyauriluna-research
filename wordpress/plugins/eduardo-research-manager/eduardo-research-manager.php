@@ -76,6 +76,8 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rem
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-insights-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-insight-pairing-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-insight-pairing-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-object-operations.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-objects-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
@@ -91,6 +93,7 @@ add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_Pages_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Insights_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Insight_Pairing_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Objects_REST(Eduardo_Research_Manager::remote_rest()))->register();
 }, 11);
 
 if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
