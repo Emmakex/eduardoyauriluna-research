@@ -10,6 +10,7 @@ on:
       - 'docs/14-greenfield-site-blueprint-contract.md'
       - 'docs/15-greenfield-implementation-notes.md'
       - 'docs/16-greenfield-milestone-summary.md'
+      - 'docs/17-greenfield-blueprint-status-vocabulary.md'
       - '.github/workflows/research-manager-greenfield.yml'
   push:
     branches: [main]
@@ -27,6 +28,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
