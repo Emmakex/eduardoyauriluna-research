@@ -132,10 +132,17 @@ final class Eduardo_Research_Manager_GitHub_Adapter {
         if ($local) {
             foreach ($candidate as $field => $remote_value) {
                 $local_value = $local[$field] ?? (is_array($remote_value) ? array() : '');
+                $matches = maybe_serialize($local_value) === maybe_serialize($remote_value);
+                if ('repository_url' === $field) {
+                    $local_repository = $this->normalize_repository((string) $local_value);
+                    $remote_repository = $this->normalize_repository((string) $remote_value);
+                    $matches = $local_repository && $remote_repository
+                        && strtolower((string) $local_repository['full_name']) === strtolower((string) $remote_repository['full_name']);
+                }
                 $comparison[$field] = array(
                     'local'=>$local_value,
                     'remote'=>$remote_value,
-                    'matches'=>maybe_serialize($local_value) === maybe_serialize($remote_value),
+                    'matches'=>$matches,
                     'candidate'=>! empty($remote_value),
                 );
             }
