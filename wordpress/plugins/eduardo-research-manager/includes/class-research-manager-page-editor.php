@@ -79,8 +79,14 @@ final class Eduardo_Research_Manager_Page_Editor {
         $language = sanitize_key((string) ($prepared['language'] ?? ''));
         $slots = is_array($prepared['slots'] ?? null) ? $prepared['slots'] : array();
         $baseline_checksum = sanitize_text_field((string) ($prepared['baseline_checksum'] ?? ''));
+        $status = (string) ($prepared['status'] ?? '');
         if ('' === $key || '' === $language || ! $slots || '' === $baseline_checksum) {
             return new WP_Error('research_manager_page_editor_preview_invalid', 'The prepared Page preview is incomplete.');
+        }
+
+        if ('already-matching' !== $status
+            && (empty($prepared['apply_allowed']) || ! is_array($prepared['plan'] ?? null) || ! $prepared['plan'])) {
+            return new WP_Error('research_manager_page_editor_apply_blocked', 'The prepared Page preview is not allowed to apply.');
         }
 
         $current = $this->pages->inspect($key, $language);
@@ -92,7 +98,7 @@ final class Eduardo_Research_Manager_Page_Editor {
             );
         }
 
-        if ('already-matching' === (string) ($prepared['status'] ?? '')) {
+        if ('already-matching' === $status) {
             $verification = $this->pages->verify_hydration($key, $language, $slots);
             if (is_wp_error($verification)) { return $verification; }
             if (empty($verification['verified'])) {
@@ -106,10 +112,6 @@ final class Eduardo_Research_Manager_Page_Editor {
                 'verification'=>$verification,
                 'verified'=>true,
             );
-        }
-
-        if (empty($prepared['apply_allowed']) || ! is_array($prepared['plan'] ?? null) || ! $prepared['plan']) {
-            return new WP_Error('research_manager_page_editor_apply_blocked', 'The prepared Page preview is not allowed to apply.');
         }
 
         $plan = $prepared['plan'];
