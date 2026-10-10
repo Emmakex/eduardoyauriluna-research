@@ -1,0 +1,170 @@
+name: Research Page Editor Admin Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-page-editor-admin-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-page-editor-admin-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  page-editor-admin:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Page editor admin files
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-editor.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-page-editor-admin-wp
+          mkdir -p /tmp/research-page-editor-admin-wp
+          cd /tmp/research-page-editor-admin-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Research Page Editor Admin' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Render structured Page editor controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-page-editor-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_GET["erm_page_key"] = "home";
+          $_GET["erm_page_language"] = "en";
+          ob_start(); (new Eduardo_Research_Manager_Admin())->render(); $html = (string) ob_get_clean();
+          foreach (["Structured Page editor","Preview structured changes","Theme Page","Language","Gutenberg layout composition is not used"] as $needle) {
+              if (false === strpos($html, $needle)) { fwrite(STDERR, "missing marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Reject stale prepared Page previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-page-editor-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $resource = Eduardo_Research_Manager::page_editor()->inspect("home", "en");
+          if (is_wp_error($resource)) { exit(1); }
+          $schema = Eduardo_Research_Manager::pages()->slot_schema("home", "en");
+          $slot = "";
+          foreach ($schema as $candidate => $default) { if (! is_array($default)) { $slot = (string) $candidate; break; } }
+          if ("" === $slot) { exit(1); }
+          $original = (string) ($resource["effective_slots"][$slot] ?? "");
+          $prepared = Eduardo_Research_Manager::page_editor()->preview("home", "en", [$slot=>$original . " [stale preview]"]);
+          if (is_wp_error($prepared) || empty($prepared["baseline_checksum"])) { exit(1); }
+          $stored = is_array($resource["stored_slots"]) ? $resource["stored_slots"] : [];
+          update_option((string) $resource["option_key"], array_replace($stored, [$slot=>$original . " [external change]" ]), false);
+          $result = Eduardo_Research_Manager::page_editor()->apply_preview($prepared);
+          if (! is_wp_error($result) || "research_manager_page_editor_stale_preview" !== $result->get_error_code()) { exit(1); }
+          update_option((string) $resource["option_key"], $stored, false);
+          ' --allow-root
+
+      - name: Prepare Page change through admin action
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-page-editor-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $resource = Eduardo_Research_Manager::page_editor()->inspect("home", "en");
+          $schema = Eduardo_Research_Manager::pages()->slot_schema("home", "en");
+          $slot = "";
+          foreach ($schema as $candidate => $default) { if (! is_array($default)) { $slot = (string) $candidate; break; } }
+          if (is_wp_error($resource) || "" === $slot) { exit(1); }
+          $original = (string) ($resource["effective_slots"][$slot] ?? "");
+          $target = $original . " [admin edit]";
+          update_option("research_page_editor_admin_fixture", ["slot"=>$slot,"original"=>$original,"target"=>$target], false);
+          $_POST = ["page_key"=>"home","page_language"=>"en","slots"=>[$slot=>$target],"_wpnonce"=>wp_create_nonce("erm_page_preview")];
+          $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Admin())->handle_preview_page();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $prepared = get_transient("eduardo_research_manager_page_preview_1");
+          if (! is_array($prepared) || "change" !== ($prepared["status"] ?? "") || empty($prepared["apply_allowed"]) || empty($prepared["baseline_checksum"]) || empty($prepared["plan"])) { fwrite(STDERR, wp_json_encode($prepared)); exit(1); }
+          $_GET["erm_page_key"] = "home"; $_GET["erm_page_language"] = "en";
+          ob_start(); (new Eduardo_Research_Manager_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html, "Prepared Page change") || false === strpos($html, "Apply prepared Page change")) { exit(1); }
+          ' --allow-root
+
+      - name: Apply prepared Page change through admin action
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-page-editor-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_page_apply")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Admin())->handle_apply_page_preview();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $fixture = get_option("research_page_editor_admin_fixture", []);
+          $resource = Eduardo_Research_Manager::page_editor()->inspect("home", "en");
+          $edit = get_transient("eduardo_research_manager_page_edit_1");
+          if (is_wp_error($resource) || ($fixture["target"] ?? "") !== (string) ($resource["effective_slots"][$fixture["slot"]] ?? "")) { exit(1); }
+          if (! is_array($edit) || empty($edit["snapshot_id"]) || "home" !== ($edit["key"] ?? "") || "en" !== ($edit["language"] ?? "")) { fwrite(STDERR, wp_json_encode($edit)); exit(1); }
+          if (false !== get_transient("eduardo_research_manager_page_preview_1")) { exit(1); }
+          $_GET["erm_page_key"] = "home"; $_GET["erm_page_language"] = "en";
+          ob_start(); (new Eduardo_Research_Manager_Admin())->render(); $html = (string) ob_get_clean();
+          if (false === strpos($html, "Latest interactive Page edit") || false === strpos($html, "Rollback latest Page edit")) { exit(1); }
+          ' --allow-root
+
+      - name: Roll back Page edit through admin action
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-page-editor-admin-wp
+          wp eval '
+          wp_set_current_user(1);
+          $_POST = ["_wpnonce"=>wp_create_nonce("erm_page_rollback")]; $_REQUEST = $_POST;
+          (new Eduardo_Research_Manager_Admin())->handle_rollback_page_edit();
+          ' --allow-root
+          wp eval '
+          wp_set_current_user(1);
+          $fixture = get_option("research_page_editor_admin_fixture", []);
+          $resource = Eduardo_Research_Manager::page_editor()->inspect("home", "en");
+          if (is_wp_error($resource) || ($fixture["original"] ?? "") !== (string) ($resource["effective_slots"][$fixture["slot"]] ?? "")) { exit(1); }
+          if (false !== get_transient("eduardo_research_manager_page_edit_1")) { exit(1); }
+          delete_option("research_page_editor_admin_fixture");
+          ' --allow-root
