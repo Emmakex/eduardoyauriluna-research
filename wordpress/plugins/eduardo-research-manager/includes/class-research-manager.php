@@ -10,6 +10,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Executor $executor = null;
     private static ?Eduardo_Research_Manager_Page_Resource $pages = null;
     private static ?Eduardo_Research_Manager_Insight_Resource $insights = null;
+    private static ?Eduardo_Research_Manager_Line_Resource $lines = null;
     private static ?Eduardo_Research_Manager_Output_Resource $outputs = null;
     private static ?Eduardo_Research_Manager_Project_Resource $projects = null;
     private static ?Eduardo_Research_Manager_Software_Resource $software = null;
@@ -29,6 +30,7 @@ final class Eduardo_Research_Manager {
         self::$executor = new Eduardo_Research_Manager_Executor();
         self::$pages = new Eduardo_Research_Manager_Page_Resource(self::$contract);
         self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::$contract);
+        self::$lines = new Eduardo_Research_Manager_Line_Resource(self::$contract);
         self::$outputs = new Eduardo_Research_Manager_Output_Resource(self::$contract);
         self::$projects = new Eduardo_Research_Manager_Project_Resource(self::$contract);
         self::$software = new Eduardo_Research_Manager_Software_Resource(self::$contract);
@@ -55,6 +57,7 @@ final class Eduardo_Research_Manager {
     public static function executor(): Eduardo_Research_Manager_Executor { if (! self::$executor) { self::$executor = new Eduardo_Research_Manager_Executor(); } return self::$executor; }
     public static function pages(): Eduardo_Research_Manager_Page_Resource { if (! self::$pages) { self::$pages = new Eduardo_Research_Manager_Page_Resource(self::contract()); } return self::$pages; }
     public static function insights(): Eduardo_Research_Manager_Insight_Resource { if (! self::$insights) { self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::contract()); } return self::$insights; }
+    public static function lines(): Eduardo_Research_Manager_Line_Resource { if (! self::$lines) { self::$lines = new Eduardo_Research_Manager_Line_Resource(self::contract()); } return self::$lines; }
     public static function outputs(): Eduardo_Research_Manager_Output_Resource { if (! self::$outputs) { self::$outputs = new Eduardo_Research_Manager_Output_Resource(self::contract()); } return self::$outputs; }
     public static function projects(): Eduardo_Research_Manager_Project_Resource { if (! self::$projects) { self::$projects = new Eduardo_Research_Manager_Project_Resource(self::contract()); } return self::$projects; }
     public static function software(): Eduardo_Research_Manager_Software_Resource { if (! self::$software) { self::$software = new Eduardo_Research_Manager_Software_Resource(self::contract()); } return self::$software; }
