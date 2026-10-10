@@ -29,7 +29,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
                     $operations[] = array('resource'=>'page','key'=>$key,'language'=>$language,'status'=>'blocked','reason'=>$state->get_error_code());
                     continue;
                 }
-                $plan = Eduardo_Research_Manager::pages()->build_creation_plan($key, $language);
+                $plan = Eduardo_Research_Manager::pages()->build_creation_plan($key);
                 if (is_wp_error($plan)) {
                     $operations[] = array('resource'=>'page','key'=>$key,'language'=>$language,'status'=>'blocked','reason'=>$plan->get_error_code());
                     continue;
@@ -38,7 +38,14 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
                 continue;
             }
 
-            $operations[] = array('resource'=>'page','key'=>$key,'language'=>$language,'status'=>'already-matching','post_id'=>(int) $state['post_id']);
+            $operations[] = array(
+                'resource'=>'page',
+                'key'=>$key,
+                'language'=>$language,
+                'status'=>! empty($state['contract_aligned']) ? 'already-matching' : 'blocked',
+                'page_id'=>(int) ($state['page_id'] ?? 0),
+                'reason'=>! empty($state['contract_aligned']) ? null : 'research_manager_page_contract_drift',
+            );
         }
 
         return array(
