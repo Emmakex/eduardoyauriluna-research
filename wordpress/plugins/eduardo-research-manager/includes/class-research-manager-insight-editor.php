@@ -7,13 +7,16 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Insight_Editor {
     private Eduardo_Research_Manager_Insight_Resource $insights;
     private Eduardo_Research_Manager_Executor $executor;
+    private Eduardo_Research_Manager_Snapshots $snapshots;
 
     public function __construct(
         ?Eduardo_Research_Manager_Insight_Resource $insights = null,
-        ?Eduardo_Research_Manager_Executor $executor = null
+        ?Eduardo_Research_Manager_Executor $executor = null,
+        ?Eduardo_Research_Manager_Snapshots $snapshots = null
     ) {
         $this->insights = $insights ?: Eduardo_Research_Manager::insights();
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
+        $this->snapshots = $snapshots ?: new Eduardo_Research_Manager_Snapshots();
     }
 
     public function list(string $language = ''): array|WP_Error {
@@ -77,6 +80,16 @@ final class Eduardo_Research_Manager_Insight_Editor {
         if (is_wp_error($current)) { return $current; }
         $baseline_checksum = $this->state_checksum($current);
 
+        if (array_key_exists('status', $changes)) {
+            if (1 !== count($changes)) {
+                return new WP_Error(
+                    'research_manager_insight_status_requires_separate_operation',
+                    'Insight publication state must be changed in its own Preview so publish/unpublish remains independently reviewable and reversible.'
+                );
+            }
+            return $this->preview_status_change($post_id, $current, $changes['status'], $baseline_checksum);
+        }
+
         $plan = $this->insights->build_update_plan($post_id, $changes, sprintf('Interactive Insight editor: update Insight #%d', $post_id));
         if (is_wp_error($plan)) {
             if ('research_manager_no_change' !== $plan->get_error_code()) { return $plan; }
@@ -124,17 +137,20 @@ final class Eduardo_Research_Manager_Insight_Editor {
         $mode = sanitize_key((string) ($prepared['mode'] ?? ''));
         $status = sanitize_key((string) ($prepared['status'] ?? ''));
         $expected = is_array($prepared['expected'] ?? null) ? $prepared['expected'] : array();
-        if (! in_array($mode, array('create','update'), true) || ! $expected) {
+        if (! in_array($mode, array('create','update','status'), true) || ! $expected) {
             return new WP_Error('research_manager_insight_editor_preview_invalid', 'The prepared Insight preview is incomplete.');
         }
 
-        if ('already-matching' !== $status
-            && (empty($prepared['apply_allowed']) || ! is_array($prepared['plan'] ?? null) || ! $prepared['plan'])) {
+        if ('already-matching' !== $status && empty($prepared['apply_allowed'])) {
             return new WP_Error('research_manager_insight_editor_apply_blocked', 'The prepared Insight preview is not allowed to apply.');
+        }
+        if ('status' !== $mode && 'already-matching' !== $status
+            && (! is_array($prepared['plan'] ?? null) || ! $prepared['plan'])) {
+            return new WP_Error('research_manager_insight_editor_apply_blocked', 'The prepared Insight preview is missing its mutation plan.');
         }
 
         $post_id = absint($prepared['post_id'] ?? 0);
-        if ('update' === $mode) {
+        if (in_array($mode, array('update','status'), true)) {
             $baseline_checksum = sanitize_text_field((string) ($prepared['baseline_checksum'] ?? ''));
             if ($post_id <= 0 || '' === $baseline_checksum) {
                 return new WP_Error('research_manager_insight_editor_preview_invalid', 'Insight update Preview is missing its resource baseline.');
@@ -156,6 +172,10 @@ final class Eduardo_Research_Manager_Insight_Editor {
                 return new WP_Error('research_manager_insight_editor_verification_failed', 'The Insight no longer matches the prepared Preview.');
             }
             return array('status'=>'already-matching','mode'=>$mode,'post_id'=>$post_id,'snapshot_id'=>'','verification'=>$verification,'verified'=>true);
+        }
+
+        if ('status' === $mode) {
+            return $this->apply_status_preview($prepared);
         }
 
         $plan = $prepared['plan'];
@@ -202,6 +222,106 @@ final class Eduardo_Research_Manager_Insight_Editor {
             return new WP_Error('research_manager_insight_editor_snapshot_missing', 'An Insight editor snapshot ID is required for rollback.');
         }
         return $this->executor->rollback($snapshot_id);
+    }
+
+    private function preview_status_change(int $post_id, array $current, mixed $requested_status, string $baseline_checksum): array|WP_Error {
+        if (! is_scalar($requested_status)) {
+            return new WP_Error('research_manager_invalid_insight_status', 'Insight publication state must be draft or publish.');
+        }
+        $target = sanitize_key((string) $requested_status);
+        if (! in_array($target, array('draft','publish'), true)) {
+            return new WP_Error('research_manager_invalid_insight_status', 'Insight publication state may only transition between draft and publish.');
+        }
+        $from = sanitize_key((string) ($current['status'] ?? ''));
+        $expected = array('status'=>$target);
+        if ($target === $from) {
+            $verification = $this->insights->verify($post_id, $expected);
+            if (is_wp_error($verification)) { return $verification; }
+            return array(
+                'mode'=>'status','status'=>'already-matching','apply_allowed'=>true,'plan'=>array(),'plan_id'=>'',
+                'preview'=>array('risk'=>'editorial-review','actions'=>array()),'post_id'=>$post_id,'expected'=>$expected,
+                'creation_token'=>'','baseline_checksum'=>$baseline_checksum,'from_status'=>$from,'to_status'=>$target,
+                'verification'=>$verification,
+            );
+        }
+
+        $material = array('post_id'=>$post_id,'from_status'=>$from,'to_status'=>$target,'baseline_checksum'=>$baseline_checksum);
+        $checksum = hash('sha256', (string) wp_json_encode($material));
+        $plan_id = 'erm-insight-status-' . substr($checksum, 0, 16);
+        return array(
+            'mode'=>'status',
+            'status'=>'change',
+            'apply_allowed'=>true,
+            'plan'=>array(),
+            'plan_id'=>$plan_id,
+            'preview'=>array(
+                'plan_id'=>$plan_id,
+                'intent'=>sprintf('Change Research Insight #%d publication state from %s to %s', $post_id, $from, $target),
+                'risk'=>'editorial-review',
+                'apply_allowed'=>true,
+                'apply_blocker'=>'',
+                'actions'=>array(array(
+                    'action'=>array('type'=>'insight_status','post_id'=>$post_id,'status'=>$target),
+                    'before'=>array('exists'=>true,'value'=>$from),
+                    'after'=>$target,
+                    'changed'=>true,
+                    'risk'=>'editorial-review',
+                )),
+            ),
+            'post_id'=>$post_id,
+            'expected'=>$expected,
+            'creation_token'=>'',
+            'baseline_checksum'=>$baseline_checksum,
+            'from_status'=>$from,
+            'to_status'=>$target,
+            'status_checksum'=>$checksum,
+        );
+    }
+
+    private function apply_status_preview(array $prepared): array|WP_Error {
+        $post_id = absint($prepared['post_id'] ?? 0);
+        $from = sanitize_key((string) ($prepared['from_status'] ?? ''));
+        $to = sanitize_key((string) ($prepared['to_status'] ?? ''));
+        $checksum = sanitize_text_field((string) ($prepared['status_checksum'] ?? ''));
+        if ($post_id <= 0 || ! in_array($from, array('draft','publish'), true) || ! in_array($to, array('draft','publish'), true) || $from === $to || '' === $checksum) {
+            return new WP_Error('research_manager_insight_editor_preview_invalid', 'Prepared Insight publication-state Preview is invalid.');
+        }
+
+        $snapshot_plan = array(
+            'id'=>(string) ($prepared['plan_id'] ?? ('erm-insight-status-' . substr($checksum, 0, 16))),
+            'checksum'=>$checksum,
+            'intent'=>sprintf('Change Research Insight #%d publication state from %s to %s', $post_id, $from, $to),
+        );
+        $before = array(array(
+            'action'=>array('type'=>'post_field','post_id'=>$post_id,'field'=>'post_status','value'=>$to),
+            'state'=>array('exists'=>true,'value'=>$from),
+        ));
+        $snapshot_id = $this->snapshots->create($snapshot_plan, $before);
+
+        $written = wp_update_post(array('ID'=>$post_id,'post_status'=>$to), true);
+        if (is_wp_error($written)) {
+            $this->executor->rollback($snapshot_id);
+            return $written;
+        }
+        clean_post_cache($post_id);
+
+        $verification = $this->insights->verify($post_id, array('status'=>$to));
+        if (is_wp_error($verification) || empty($verification['verified'])) {
+            $this->executor->rollback($snapshot_id);
+            return is_wp_error($verification)
+                ? $verification
+                : new WP_Error('research_manager_insight_editor_verification_failed', 'Insight publication-state change failed verification and was rolled back.');
+        }
+
+        return array(
+            'status'=>'applied',
+            'mode'=>'status',
+            'post_id'=>$post_id,
+            'plan_id'=>(string) $snapshot_plan['id'],
+            'snapshot_id'=>$snapshot_id,
+            'verification'=>$verification,
+            'verified'=>true,
+        );
     }
 
     private function expected_from_creation_action(array $action): array {
