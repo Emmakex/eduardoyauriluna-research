@@ -126,7 +126,7 @@ final class Eduardo_Research_Manager_Admin {
             <?php foreach ($diagnostics['checks'] as $check) : ?>
               <tr>
                 <td><strong><?php echo esc_html((string) $check['label']); ?></strong></td>
-                <td><?php echo esc_html(strtoupper((string) $check['status'])); ?></td>
+                <td><?php echo esc_html(strtoupper((string) $check['status']); ?></td>
                 <td><?php echo esc_html((string) $check['message']); ?></td>
                 <td><?php echo '' === (string) $check['next_action'] ? '—' : esc_html((string) $check['next_action']); ?></td>
               </tr>
