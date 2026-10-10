@@ -42,7 +42,7 @@ final class Eduardo_Research_Manager_Connections {
             ),
             'github'=>array(
                 'label'=>'GitHub','mode'=>'manual_link','priority'=>60,
-                'capabilities'=>array('profile_link','software_link','repository_metadata'),
+                'capabilities'=>array('profile_link','explicit_repository_preview','repository_metadata','latest_release','citation_cff','research_software_reconcile'),
                 'write_enabled'=>false,'ready_without_configuration'=>false,'configuration'=>array(),
             ),
         );
