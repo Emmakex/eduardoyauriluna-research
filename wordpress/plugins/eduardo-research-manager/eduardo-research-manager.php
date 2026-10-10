@@ -18,6 +18,7 @@ define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.9.0');
 define('EDUARDO_RESEARCH_MANAGER_FILE', __FILE__);
 define('EDUARDO_RESEARCH_MANAGER_DIR', plugin_dir_path(__FILE__));
 
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-mode.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-contract.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-diagnostics.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-plan.php';
@@ -32,11 +33,16 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-dat
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rendered-verifier.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remediation.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-pairing.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
 register_activation_hook(__FILE__, static function (): void {
     update_option('eduardo_research_manager_version', EDUARDO_RESEARCH_MANAGER_VERSION, false);
+    if (false === get_option('eduardo_research_manager_mode', false)) {
+        add_option('eduardo_research_manager_mode', Eduardo_Research_Manager_Mode::GREENFIELD, '', false);
+    }
 });
 
 add_action('plugins_loaded', array('Eduardo_Research_Manager', 'boot'));
