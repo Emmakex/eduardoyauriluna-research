@@ -140,11 +140,16 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
             'languages'=>Eduardo_Research_Manager::contract()->languages(),
             'editorial_types'=>array_keys(Eduardo_Research_Manager::insights()->types()),
             'creation_statuses'=>array('draft','publish'),
-            'update_fields'=>array('title','excerpt','content','language','insight_type'),
+            'update_fields'=>array('title','excerpt','content','language','insight_type','status'),
+            'status_transition'=>array(
+                'available'=>true,
+                'allowed'=>array('draft','publish'),
+                'separate_preview_required'=>true,
+                'generic_post_status_contract_unchanged'=>true,
+            ),
             'rendered_seo_geo_inspection'=>true,
             'translation_inspection'=>true,
             'remote_mutations'=>array('insight-create','insight-update'),
-            'existing_status_transition'=>'pending-next-m4-slice',
             'advanced_seo_geo_optimisation'=>'M6',
             'arbitrary_wordpress_proxy'=>false,
         );
