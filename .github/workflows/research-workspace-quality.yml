@@ -1,0 +1,129 @@
+name: Research Workspace Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-workspace-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/research-workspace-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Lint Research Workspace
+        run: php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-workspace.php
+
+      - name: Install Research WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-workspace-wp
+          mkdir -p /tmp/research-workspace-wp
+          cd /tmp/research-workspace-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Jose Yauri Luna' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+
+      - name: Seed representative authoring records
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-workspace-wp
+          wp eval '
+          $insight = wp_insert_post(["post_type"=>"post","post_status"=>"publish","post_title"=>"Workspace insight","post_name"=>"workspace-insight"]);
+          update_post_meta($insight,"_research_language","en");
+          update_post_meta($insight,"_research_insight_type","research_note");
+
+          $line_en = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Workspace Research Line","post_name"=>"workspace-research-line"]);
+          $line_es = wp_insert_post(["post_type"=>"research_line","post_status"=>"publish","post_title"=>"Línea de investigación Workspace","post_name"=>"linea-investigacion-workspace"]);
+          foreach ([[$line_en,"en"],[$line_es,"es"]] as [$id,$language]) {
+              update_post_meta($id,"_research_language",$language);
+              update_post_meta($id,"_research_evidence_status","verified");
+              update_post_meta($id,"_research_status","active");
+          }
+          update_post_meta($line_en,"_research_translation_es",$line_es);
+          update_post_meta($line_es,"_research_translation_en",$line_en);
+          update_post_meta($line_en,"_eduardo_research_translation_evidence","CI workspace pair");
+          update_post_meta($line_es,"_eduardo_research_translation_evidence","CI workspace pair");
+
+          $output = wp_insert_post(["post_type"=>"research_output","post_status"=>"publish","post_title"=>"Workspace output","post_name"=>"workspace-output"]);
+          update_post_meta($output,"_research_language","en");
+
+          update_option("eduardo_research_evidence",[
+              "profile"=>[[
+                  "id"=>"workspace-profile","status"=>"verified","title"=>"Workspace profile evidence",
+                  "summary"=>"CI workspace evidence fixture.","evidence_reference"=>"CI workspace source"
+              ]]
+          ],false);
+          ' --allow-root
+
+      - name: Render unified Research Workspace with live counts and links
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-workspace-wp
+          wp eval '
+          wp_set_current_user(1);
+          ob_start(); (new Eduardo_Research_Manager_Workspace())->render(); $html=(string)ob_get_clean();
+          foreach ([
+              "Research Workspace","GREENFIELD","Authoring workspace","Operating model",
+              "Greenfield Site &amp; Pages","Academic Evidence","Research Lines","Research Objects","Research Insights","EN/ES Translations",
+              "2 EN/ES lines","1 EN/ES objects","1 EN/ES insights","1 evidence records","1 bilateral pairs",
+              "page=eduardo-research-manager","page=eduardo-research-evidence","page=eduardo-research-lines",
+              "page=eduardo-research-objects","page=eduardo-research-insights","page=eduardo-research-translations",
+              "no Gutenberg layout composition is required"
+          ] as $needle) {
+              if (false===strpos($html,$needle)) { fwrite(STDERR,"missing workspace marker: {$needle}\n"); exit(1); }
+          }
+          ' --allow-root
+
+      - name: Register top-level Research admin menu
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-workspace-wp
+          wp eval '
+          wp_set_current_user(1);
+          do_action("admin_menu");
+          global $menu;
+          $found=false;
+          foreach ((array)$menu as $item) {
+              if (isset($item[2]) && "eduardo-research-workspace" === (string)$item[2] && "Research" === (string)$item[0]) { $found=true; break; }
+          }
+          if (! $found) { fwrite(STDERR,"Research workspace menu not registered\n"); exit(1); }
+          ' --allow-root
