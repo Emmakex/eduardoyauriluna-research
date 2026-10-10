@@ -1,5 +1,5 @@
 <?php
-/** Academic connection readiness plus controlled ORCID OAuth/read-preview actions. */
+/** Academic connection readiness plus controlled read/reconciliation actions. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
@@ -7,6 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Connections_Admin {
     private const NOTICE_PREFIX = 'eduardo_research_connections_notice_';
     private const ORCID_PREVIEW_PREFIX = 'eduardo_research_orcid_preview_';
+    private const OPENALEX_PREVIEW_PREFIX = 'eduardo_research_openalex_preview_';
 
     public function register(): void {
         add_action('admin_menu', array($this, 'menu'));
@@ -14,6 +15,7 @@ final class Eduardo_Research_Manager_Connections_Admin {
         add_action('admin_post_eduardo_research_orcid_callback', array($this, 'handle_orcid_callback'));
         add_action('admin_post_eduardo_research_orcid_preview', array($this, 'handle_orcid_preview'));
         add_action('admin_post_eduardo_research_orcid_disconnect', array($this, 'handle_orcid_disconnect'));
+        add_action('admin_post_eduardo_research_openalex_preview', array($this, 'handle_openalex_preview'));
     }
 
     public function menu(): void {
@@ -38,6 +40,9 @@ final class Eduardo_Research_Manager_Connections_Admin {
         $orcid_config = Eduardo_Research_Manager::orcid()->configuration();
         $orcid_preview = get_transient($this->orcid_preview_key());
         $orcid_preview = is_array($orcid_preview) ? $orcid_preview : array();
+        $openalex_preview = get_transient($this->openalex_preview_key());
+        $openalex_preview = is_array($openalex_preview) ? $openalex_preview : array();
+        $verified_orcid = Eduardo_Research_Manager::openalex()->normalize_orcid((string) ($orcid['identifier'] ?? ''));
         $notice = $this->pull_notice();
         ?>
         <div class="wrap">
@@ -151,6 +156,89 @@ final class Eduardo_Research_Manager_Connections_Admin {
             <?php endif; ?>
           <?php endif; ?>
 
+          <h2><?php echo esc_html__('OpenAlex identity and works', 'eduardo-research-manager'); ?></h2>
+          <p><?php echo esc_html__('OpenAlex identity resolution is allowed only from the exact verified/authenticated ORCID iD. Research Manager never searches for or claims an author by name.', 'eduardo-research-manager'); ?></p>
+          <table class="widefat striped" style="max-width:1000px"><tbody>
+            <tr><th><?php echo esc_html__('Identity basis', 'eduardo-research-manager'); ?></th><td><code><?php echo esc_html__('EXACT VERIFIED ORCID', 'eduardo-research-manager'); ?></code></td></tr>
+            <tr><th><?php echo esc_html__('Verified ORCID available', 'eduardo-research-manager'); ?></th><td><strong><?php echo '' !== $verified_orcid ? esc_html__('YES', 'eduardo-research-manager') : esc_html__('NO', 'eduardo-research-manager'); ?></strong><?php if ('' !== $verified_orcid) : ?> — <code><?php echo esc_html($verified_orcid); ?></code><?php endif; ?></td></tr>
+            <tr><th><?php echo esc_html__('Name matching', 'eduardo-research-manager'); ?></th><td><strong><?php echo esc_html__('DISABLED', 'eduardo-research-manager'); ?></strong></td></tr>
+            <tr><th><?php echo esc_html__('Automatic local apply', 'eduardo-research-manager'); ?></th><td><strong><?php echo esc_html__('DISABLED', 'eduardo-research-manager'); ?></strong></td></tr>
+            <tr><th><?php echo esc_html__('External writes', 'eduardo-research-manager'); ?></th><td><strong><?php echo esc_html__('DISABLED', 'eduardo-research-manager'); ?></strong></td></tr>
+          </tbody></table>
+
+          <?php if ('' === $verified_orcid) : ?>
+            <div class="notice notice-warning inline" style="margin-top:12px"><p><?php echo esc_html__('Verify or authenticate an ORCID iD before running an OpenAlex identity preview. OpenAlex name search is intentionally unavailable.', 'eduardo-research-manager'); ?></p></div>
+          <?php else : ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:14px">
+              <input type="hidden" name="action" value="eduardo_research_openalex_preview">
+              <?php wp_nonce_field('erm_openalex_preview'); ?>
+              <?php submit_button(__('Preview OpenAlex identity and works', 'eduardo-research-manager'), 'primary', 'submit', false); ?>
+            </form>
+          <?php endif; ?>
+
+          <?php if ($openalex_preview) : ?>
+            <?php
+            $openalex_author = is_array($openalex_preview['author'] ?? null) ? $openalex_preview['author'] : array();
+            $institutions = is_array($openalex_author['last_known_institutions'] ?? null) ? $openalex_author['last_known_institutions'] : array();
+            $doi_matches = is_array($openalex_preview['local_doi_matches'] ?? null) ? $openalex_preview['local_doi_matches'] : array();
+            $remote_only = is_array($openalex_preview['remote_without_local'] ?? null) ? $openalex_preview['remote_without_local'] : array();
+            ?>
+            <h3><?php echo esc_html__('OpenAlex reconciliation preview', 'eduardo-research-manager'); ?></h3>
+            <div class="notice notice-info inline"><p><strong><?php echo esc_html__('Preview only.', 'eduardo-research-manager'); ?></strong> <?php echo esc_html__('The author was resolved from the exact ORCID iD and local publications were compared only by exact DOI. Nothing was imported or changed.', 'eduardo-research-manager'); ?></p></div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;max-width:1000px;margin:14px 0">
+              <?php foreach (array(
+                  'Works'=>(int) ($openalex_author['works_count'] ?? 0),
+                  'Citations'=>(int) ($openalex_author['cited_by_count'] ?? 0),
+                  'h-index'=>(int) ($openalex_author['h_index'] ?? 0),
+                  'i10-index'=>(int) ($openalex_author['i10_index'] ?? 0),
+                  'Local DOI matches'=>(int) ($openalex_preview['local_doi_match_count'] ?? 0),
+              ) as $label=>$value) : ?>
+                <div class="card" style="margin:0;max-width:none;padding:14px"><strong><?php echo esc_html($label); ?></strong><p style="font-size:22px;margin:6px 0 0"><?php echo esc_html((string) $value); ?></p></div>
+              <?php endforeach; ?>
+            </div>
+
+            <table class="widefat striped" style="max-width:1000px"><tbody>
+              <tr><th><?php echo esc_html__('Identity basis', 'eduardo-research-manager'); ?></th><td><code><?php echo esc_html((string) ($openalex_preview['identity_basis'] ?? '')); ?></code></td></tr>
+              <tr><th><?php echo esc_html__('ORCID', 'eduardo-research-manager'); ?></th><td><code><?php echo esc_html((string) ($openalex_preview['orcid'] ?? '')); ?></code></td></tr>
+              <tr><th><?php echo esc_html__('OpenAlex author', 'eduardo-research-manager'); ?></th><td><?php if ('' !== (string) ($openalex_author['openalex_url'] ?? '')) : ?><a href="<?php echo esc_url((string) $openalex_author['openalex_url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html((string) ($openalex_author['display_name'] ?? $openalex_author['openalex_id'] ?? '')); ?></a><?php else : ?><?php echo esc_html((string) ($openalex_author['display_name'] ?? '')); ?><?php endif; ?></td></tr>
+              <tr><th><?php echo esc_html__('OpenAlex ID', 'eduardo-research-manager'); ?></th><td><code><?php echo esc_html((string) ($openalex_author['openalex_id'] ?? '')); ?></code></td></tr>
+              <tr><th><?php echo esc_html__('Remote works read', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) ((int) ($openalex_preview['remote_work_count'] ?? 0))); ?></td></tr>
+              <tr><th><?php echo esc_html__('Remote works without local exact DOI', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) count($remote_only)); ?></td></tr>
+              <tr><th><?php echo esc_html__('Automatic local apply', 'eduardo-research-manager'); ?></th><td><strong><?php echo esc_html__('DISABLED', 'eduardo-research-manager'); ?></strong></td></tr>
+            </tbody></table>
+
+            <?php if ($institutions) : ?>
+              <h4><?php echo esc_html__('Last known institutions', 'eduardo-research-manager'); ?></h4>
+              <ul style="list-style:disc;padding-left:22px;max-width:950px">
+                <?php foreach ($institutions as $institution) : ?>
+                  <?php if (! is_array($institution)) { continue; } ?>
+                  <li><?php echo esc_html((string) ($institution['name'] ?? '')); ?><?php if ('' !== (string) ($institution['country_code'] ?? '')) : ?> — <?php echo esc_html(strtoupper((string) $institution['country_code'])); ?><?php endif; ?></li>
+                <?php endforeach; ?>
+              </ul>
+            <?php endif; ?>
+
+            <?php if ($doi_matches) : ?>
+              <h4><?php echo esc_html__('Exact DOI matches with local Research Outputs', 'eduardo-research-manager'); ?></h4>
+              <table class="widefat striped" style="max-width:1100px"><thead><tr><th><?php echo esc_html__('DOI', 'eduardo-research-manager'); ?></th><th><?php echo esc_html__('Local title', 'eduardo-research-manager'); ?></th><th><?php echo esc_html__('OpenAlex title', 'eduardo-research-manager'); ?></th><th><?php echo esc_html__('Title match', 'eduardo-research-manager'); ?></th></tr></thead><tbody>
+                <?php foreach (array_slice($doi_matches, 0, 25) as $match) : ?>
+                  <?php if (! is_array($match)) { continue; } $local = is_array($match['local'] ?? null) ? $match['local'] : array(); $remote = is_array($match['remote'] ?? null) ? $match['remote'] : array(); ?>
+                  <tr><td><code><?php echo esc_html((string) ($match['doi'] ?? '')); ?></code></td><td><?php echo esc_html((string) ($local['title'] ?? '')); ?></td><td><?php echo esc_html((string) ($remote['title'] ?? '')); ?></td><td><strong><?php echo ! empty($match['title_matches']) ? esc_html__('YES', 'eduardo-research-manager') : esc_html__('REVIEW', 'eduardo-research-manager'); ?></strong></td></tr>
+                <?php endforeach; ?>
+              </tbody></table>
+            <?php endif; ?>
+
+            <?php if ($remote_only) : ?>
+              <h4><?php echo esc_html__('OpenAlex works without a local exact DOI match', 'eduardo-research-manager'); ?></h4>
+              <ul style="list-style:disc;padding-left:22px;max-width:1000px">
+                <?php foreach (array_slice($remote_only, 0, 15) as $work) : ?>
+                  <?php if (! is_array($work)) { continue; } ?>
+                  <li><strong><?php echo esc_html((string) ($work['title'] ?? 'Untitled work')); ?></strong><?php if ('' !== (string) ($work['doi'] ?? '')) : ?> — <code><?php echo esc_html((string) $work['doi']); ?></code><?php endif; ?><?php if ('' !== (string) ($work['publication_date'] ?? '')) : ?> — <?php echo esc_html((string) $work['publication_date']); ?><?php endif; ?></li>
+                <?php endforeach; ?>
+              </ul>
+            <?php endif; ?>
+          <?php endif; ?>
+
           <h2><?php echo esc_html__('Connection policy', 'eduardo-research-manager'); ?></h2>
           <ul style="list-style:disc;padding-left:22px;max-width:950px">
             <li><?php echo esc_html__('Verified identifiers take precedence over name matching. A matching researcher name never creates a claimed connection.', 'eduardo-research-manager'); ?></li>
@@ -199,6 +287,7 @@ final class Eduardo_Research_Manager_Connections_Admin {
             $this->redirect_back();
         }
         delete_transient($this->orcid_preview_key());
+        delete_transient($this->openalex_preview_key());
         $this->set_notice('success', sprintf('ORCID connected and authenticated as %s. External writes remain disabled.', (string) ($result['identifier'] ?? '')));
         $this->redirect_back();
     }
@@ -223,7 +312,20 @@ final class Eduardo_Research_Manager_Connections_Admin {
             $this->redirect_back();
         }
         delete_transient($this->orcid_preview_key());
+        delete_transient($this->openalex_preview_key());
         $this->set_notice('success', 'ORCID OAuth token removed. Curated Research content and Academic Evidence were not deleted.');
+        $this->redirect_back();
+    }
+
+    public function handle_openalex_preview(): void {
+        $this->authorize_action('erm_openalex_preview');
+        $preview = Eduardo_Research_Manager::openalex()->preview_from_verified_orcid();
+        if (is_wp_error($preview)) {
+            $this->set_notice('error', $preview->get_error_message());
+            $this->redirect_back();
+        }
+        set_transient($this->openalex_preview_key(), $preview, 15 * MINUTE_IN_SECONDS);
+        $this->set_notice('success', 'OpenAlex author and works were read from the exact verified ORCID identity. Review the DOI reconciliation preview; no local data was applied.');
         $this->redirect_back();
     }
 
@@ -237,6 +339,8 @@ final class Eduardo_Research_Manager_Connections_Admin {
     private function next_action(array $provider): string {
         $state = (string) ($provider['status'] ?? 'disconnected');
         $mode = (string) ($provider['mode'] ?? '');
+        $provider_key = (string) ($provider['provider'] ?? '');
+        if ('openalex' === $provider_key && 'available' === $state) { return 'Resolve the author only from a verified ORCID iD, then run a DOI reconciliation Preview.'; }
         if ('connected' === $state) { return 'Connection is established; run a controlled read/reconciliation preview.'; }
         if ('linked' === $state) { return 'Verified identifier is linked; authenticate when secure OAuth configuration is ready.'; }
         if ('configured' === $state) { return 'Secure credentials are ready; authenticate the provider connection.'; }
@@ -259,6 +363,10 @@ final class Eduardo_Research_Manager_Connections_Admin {
 
     private function orcid_preview_key(): string {
         return self::ORCID_PREVIEW_PREFIX . get_current_user_id();
+    }
+
+    private function openalex_preview_key(): string {
+        return self::OPENALEX_PREVIEW_PREFIX . get_current_user_id();
     }
 
     private function redirect_back(): never {
