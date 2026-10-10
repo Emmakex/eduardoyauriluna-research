@@ -29,6 +29,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Crossref_Adapter $crossref = null;
     private static ?Eduardo_Research_Manager_OpenAlex_Adapter $openalex = null;
     private static ?Eduardo_Research_Manager_Zenodo_Adapter $zenodo = null;
+    private static ?Eduardo_Research_Manager_GitHub_Adapter $github = null;
     private static ?Eduardo_Research_Manager_Greenfield $greenfield = null;
     private static ?Eduardo_Research_Manager_Blueprint $blueprint = null;
     private static ?Eduardo_Research_Manager_Blueprint_Store $blueprint_store = null;
@@ -64,6 +65,7 @@ final class Eduardo_Research_Manager {
         self::$crossref = new Eduardo_Research_Manager_Crossref_Adapter();
         self::$openalex = new Eduardo_Research_Manager_OpenAlex_Adapter();
         self::$zenodo = new Eduardo_Research_Manager_Zenodo_Adapter();
+        self::$github = new Eduardo_Research_Manager_GitHub_Adapter();
         self::$greenfield = new Eduardo_Research_Manager_Greenfield(self::$contract);
         self::$blueprint = new Eduardo_Research_Manager_Blueprint();
         self::$blueprint_store = new Eduardo_Research_Manager_Blueprint_Store(self::$blueprint);
@@ -124,4 +126,5 @@ final class Eduardo_Research_Manager {
     public static function crossref(): Eduardo_Research_Manager_Crossref_Adapter { if (! self::$crossref) { self::$crossref = new Eduardo_Research_Manager_Crossref_Adapter(); } return self::$crossref; }
     public static function openalex(): Eduardo_Research_Manager_OpenAlex_Adapter { if (! self::$openalex) { self::$openalex = new Eduardo_Research_Manager_OpenAlex_Adapter(); } return self::$openalex; }
     public static function zenodo(): Eduardo_Research_Manager_Zenodo_Adapter { if (! self::$zenodo) { self::$zenodo = new Eduardo_Research_Manager_Zenodo_Adapter(); } return self::$zenodo; }
+    public static function github(): Eduardo_Research_Manager_GitHub_Adapter { if (! self::$github) { self::$github = new Eduardo_Research_Manager_GitHub_Adapter(); } return self::$github; }
 }
