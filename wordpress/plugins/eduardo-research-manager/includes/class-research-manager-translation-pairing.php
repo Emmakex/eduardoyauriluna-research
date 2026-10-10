@@ -5,8 +5,8 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Translation_Pairing {
-    private const SUPPORTED_TYPES = array('research_output','research_project','research_software','research_dataset','post');
-    private const STRUCTURED_TYPES = array('research_output','research_project','research_software','research_dataset');
+    private const SUPPORTED_TYPES = array('research_line','research_output','research_project','research_software','research_dataset','post');
+    private const STRUCTURED_TYPES = array('research_line','research_output','research_project','research_software','research_dataset');
     private const EVIDENCE_META = '_eduardo_research_translation_evidence';
 
     public function inspect(int $post_id): array|WP_Error {
@@ -161,10 +161,13 @@ final class Eduardo_Research_Manager_Translation_Pairing {
     private function record(int $post_id, bool $require_publish): array|WP_Error {
         $post = get_post($post_id);
         if (! $post instanceof WP_Post || ! in_array((string) $post->post_type, self::SUPPORTED_TYPES, true)) {
-            return new WP_Error('research_manager_translation_resource_unsupported', 'Translation pairing supports Insights, Publications, Projects, Software and Datasets only.');
+            return new WP_Error('research_manager_translation_resource_unsupported', 'Translation pairing supports Research Lines, Insights, Publications, Projects, Software and Datasets only.');
         }
         if ($require_publish && 'publish' !== (string) $post->post_status) {
             return new WP_Error('research_manager_translation_not_public', 'Both translation records must be published before they can be paired.');
+        }
+        if ('research_line' === (string) $post->post_type && 'verified' !== sanitize_key((string) get_post_meta($post_id, '_research_evidence_status', true))) {
+            return new WP_Error('research_manager_translation_line_unverified', 'Research Line translations must be evidence-verified before pairing.');
         }
         $language = function_exists('eduardo_research_post_language')
             ? eduardo_research_post_language($post_id)

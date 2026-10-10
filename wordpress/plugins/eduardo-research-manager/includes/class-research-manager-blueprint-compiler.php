@@ -56,7 +56,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
                 $payload = $record;
                 $context = $this->evidence_context($payload);
                 if (is_wp_error($context)) { return $this->record_error($resource_key, $index, $context->get_error_message()); }
-                unset($payload['evidence']);
+                unset($payload['evidence'], $payload['translation_key']);
 
                 if ('lines' === $resource_key) {
                     $slug = sanitize_title((string) ($payload['slug'] ?? $payload['title'] ?? ''));

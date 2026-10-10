@@ -23,6 +23,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Blueprint_Compiler $compiler = null;
     private static ?Eduardo_Research_Manager_Bootstrap $bootstrap = null;
     private static ?Eduardo_Research_Manager_Blueprint_Hydrator $hydrator = null;
+    private static ?Eduardo_Research_Manager_Blueprint_Pairing $blueprint_pairing = null;
 
     public static function boot(): void {
         self::$contract = new Eduardo_Research_Manager_Contract();
@@ -43,6 +44,7 @@ final class Eduardo_Research_Manager {
         self::$compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::$blueprint, self::$greenfield);
         self::$bootstrap = new Eduardo_Research_Manager_Bootstrap(self::$compiler, self::$executor);
         self::$hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(self::$blueprint, self::$pages, self::$executor);
+        self::$blueprint_pairing = new Eduardo_Research_Manager_Blueprint_Pairing(self::$blueprint, self::$lines, self::$translations, self::$executor);
         if (is_admin()) { (new Eduardo_Research_Manager_Admin())->register(); }
     }
 
@@ -52,6 +54,7 @@ final class Eduardo_Research_Manager {
     public static function compiler(): Eduardo_Research_Manager_Blueprint_Compiler { if (! self::$compiler) { self::$compiler = new Eduardo_Research_Manager_Blueprint_Compiler(self::blueprint(), self::greenfield()); } return self::$compiler; }
     public static function bootstrap(): Eduardo_Research_Manager_Bootstrap { if (! self::$bootstrap) { self::$bootstrap = new Eduardo_Research_Manager_Bootstrap(self::compiler(), self::executor()); } return self::$bootstrap; }
     public static function hydrator(): Eduardo_Research_Manager_Blueprint_Hydrator { if (! self::$hydrator) { self::$hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(self::blueprint(), self::pages(), self::executor()); } return self::$hydrator; }
+    public static function blueprint_pairing(): Eduardo_Research_Manager_Blueprint_Pairing { if (! self::$blueprint_pairing) { self::$blueprint_pairing = new Eduardo_Research_Manager_Blueprint_Pairing(self::blueprint(), self::lines(), self::translations(), self::executor()); } return self::$blueprint_pairing; }
     public static function contract(): Eduardo_Research_Manager_Contract { if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); } return self::$contract; }
     public static function diagnostics(): Eduardo_Research_Manager_Diagnostics { if (! self::$diagnostics) { self::$diagnostics = new Eduardo_Research_Manager_Diagnostics(self::contract()); } return self::$diagnostics; }
     public static function executor(): Eduardo_Research_Manager_Executor { if (! self::$executor) { self::$executor = new Eduardo_Research_Manager_Executor(); } return self::$executor; }
