@@ -6,6 +6,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'docs/11-greenfield-runtime-contract.md'
       - 'docs/12-greenfield-next-microphases.md'
+      - 'docs/13-greenfield-acceptance.md'
       - '.github/workflows/research-manager-greenfield.yml'
   push:
     branches: [main]
@@ -26,6 +27,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-mode.php
           php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-orchestrator.php
+          php -l wordpress/plugins/eduardo-research-manager/tests/test-greenfield-contract-shape.php
       - name: Greenfield is explicit default
         run: |
           grep -F "public const GREENFIELD = 'greenfield';" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php
