@@ -1,5 +1,9 @@
 # WordPress Operating Manager — product scope
 
+## Canonical operating clarification
+
+For the Eduardo Research implementation, **ChatGPT is the primary managed operating surface and the Research Manager is the authenticated execution gateway into WordPress**. WordPress Admin remains a required local/fallback and self-service surface. The canonical contract is `docs/22-chat-governed-manager-contract.md` and overrides earlier wording that treated remote access as only a later optional layer.
+
 ## Product thesis
 
 Many companies already have WordPress. The opportunity is not to force them onto a new CMS, but to give their existing WordPress installation a higher-level operating system for building, publishing and continuously optimising the website.
@@ -14,9 +18,15 @@ The Manager should reproduce the way we work on custom products such as Kairoset
 - verify the rendered result;
 - repeat improvements safely.
 
+For our managed workflow the operating chain is:
+
+```text
+Eduardo → ChatGPT → authenticated Manager connector/API → Manager services → WordPress + Theme → rendered site → verification result back to ChatGPT
+```
+
 ## Core surfaces
 
-The Manager product should converge around these daily surfaces:
+The Manager product should converge around these daily capability groups, all callable through shared services and, where appropriate, from both local Admin and the authenticated remote control path.
 
 ### Site
 
@@ -50,12 +60,18 @@ Run whole-site analysis, prioritise issues and convert deterministic findings in
 
 Manage optional external integrations and credentials through explicit, revocable boundaries.
 
+### Remote governance
+
+Expose bounded, authenticated operations for ChatGPT/managed control without turning the Manager into an unrestricted WordPress proxy. Remote control must provide capabilities, planning, exact-plan Apply, verification, rollback where supported, typed errors, idempotency, stale-state protection and an audit trail.
+
 ## Non-goal
 
-The product should not become another unrestricted visual page builder. The Theme remains responsible for coherent frontend rendering, responsive rules, accessibility and performance. The Manager controls structured intent and bounded design choices.
+The product should not become another unrestricted visual page builder or an arbitrary remote WordPress administrator proxy. The Theme remains responsible for coherent frontend rendering, responsive rules, accessibility and performance. The Manager controls structured intent and bounded design choices. Remote access must not expose arbitrary PHP, SQL, shell, filesystem or generic REST passthrough.
 
 ## Customer outcome
 
-A normal WordPress customer should be able to operate the website from the Manager for routine work without SSH, WP-CLI or a developer touching templates manually.
+A normal WordPress customer should be able to operate the website locally from the Manager without SSH, WP-CLI or a developer touching templates manually.
 
-The long-term managed-service variant may expose the same Manager services through a secure remote API, allowing multi-client operation without storing SSH credentials.
+For managed sites such as `eduardoyauriluna.com`, the intended daily workflow goes further: routine website orders are given from ChatGPT and executed through the site's authenticated Manager gateway, while WordPress Admin remains the local safety/fallback surface.
+
+The first acceptance target is `eduardoyauriluna.com`, not a generic multi-client SaaS control center.
