@@ -42,6 +42,7 @@ final class Eduardo_Research_Manager {
     private static ?Eduardo_Research_Manager_Remote_Credentials $remote_credentials = null;
     private static ?Eduardo_Research_Manager_Remote_Audit $remote_audit = null;
     private static ?Eduardo_Research_Manager_Remote_Request_Guard $remote_guard = null;
+    private static ?Eduardo_Research_Manager_Remote_Operations $remote_operations = null;
     private static ?Eduardo_Research_Manager_Remote_REST $remote_rest = null;
 
     public static function boot(): void {
@@ -82,11 +83,10 @@ final class Eduardo_Research_Manager {
         self::$remote_credentials = new Eduardo_Research_Manager_Remote_Credentials();
         self::$remote_audit = new Eduardo_Research_Manager_Remote_Audit();
         self::$remote_guard = new Eduardo_Research_Manager_Remote_Request_Guard();
-        self::$remote_rest = new Eduardo_Research_Manager_Remote_REST(self::$remote_credentials, self::$remote_guard, self::$remote_audit);
+        self::$remote_operations = new Eduardo_Research_Manager_Remote_Operations(self::$pipeline, self::$remote_audit);
+        self::$remote_rest = new Eduardo_Research_Manager_Remote_REST(self::$remote_credentials, self::$remote_guard, self::$remote_audit, self::$remote_operations);
         self::$remote_rest->register();
 
-        // The workspace only registers an admin_menu callback, so it is safe to register
-        // in every runtime. This also keeps WP-CLI/admin test harnesses deterministic.
         (new Eduardo_Research_Manager_Workspace())->register();
 
         if (is_admin()) {
@@ -140,5 +140,6 @@ final class Eduardo_Research_Manager {
     public static function remote_credentials(): Eduardo_Research_Manager_Remote_Credentials { if (! self::$remote_credentials) { self::$remote_credentials = new Eduardo_Research_Manager_Remote_Credentials(); } return self::$remote_credentials; }
     public static function remote_audit(): Eduardo_Research_Manager_Remote_Audit { if (! self::$remote_audit) { self::$remote_audit = new Eduardo_Research_Manager_Remote_Audit(); } return self::$remote_audit; }
     public static function remote_guard(): Eduardo_Research_Manager_Remote_Request_Guard { if (! self::$remote_guard) { self::$remote_guard = new Eduardo_Research_Manager_Remote_Request_Guard(); } return self::$remote_guard; }
-    public static function remote_rest(): Eduardo_Research_Manager_Remote_REST { if (! self::$remote_rest) { self::$remote_rest = new Eduardo_Research_Manager_Remote_REST(self::remote_credentials(), self::remote_guard(), self::remote_audit()); } return self::$remote_rest; }
+    public static function remote_operations(): Eduardo_Research_Manager_Remote_Operations { if (! self::$remote_operations) { self::$remote_operations = new Eduardo_Research_Manager_Remote_Operations(self::pipeline(), self::remote_audit()); } return self::$remote_operations; }
+    public static function remote_rest(): Eduardo_Research_Manager_Remote_REST { if (! self::$remote_rest) { self::$remote_rest = new Eduardo_Research_Manager_Remote_REST(self::remote_credentials(), self::remote_guard(), self::remote_audit(), self::remote_operations()); } return self::$remote_rest; }
 }
