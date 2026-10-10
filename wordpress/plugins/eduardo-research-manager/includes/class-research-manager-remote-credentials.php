@@ -17,6 +17,8 @@ final class Eduardo_Research_Manager_Remote_Credentials {
             'insights.write',
             'research.read',
             'research.write',
+            'evidence.read',
+            'evidence.write',
             'translations.read',
             'translations.write',
             'seo.read',
