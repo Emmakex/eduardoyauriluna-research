@@ -68,31 +68,35 @@ jobs:
           wp eval '
           wp_set_current_user(1);
           $blueprint = json_decode((string) file_get_contents(getenv("GITHUB_WORKSPACE") . "/config/research-site-blueprint.json"), true);
-          if (! is_array($blueprint)) { exit(1); }
-          if (! Eduardo_Research_Manager::pipeline() instanceof Eduardo_Research_Manager_Greenfield_Pipeline) { exit(1); }
+          if (! is_array($blueprint)) { fwrite(STDERR, "invalid blueprint\n"); exit(1); }
+          if (! Eduardo_Research_Manager::pipeline() instanceof Eduardo_Research_Manager_Greenfield_Pipeline) { fwrite(STDERR, "pipeline service missing\n"); exit(1); }
 
           $preview = Eduardo_Research_Manager::pipeline()->preview($blueprint);
           if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 8 !== (int) $preview["phases"]["bootstrap"]["operation_count"] || "deferred" !== $preview["phases"]["pairing"]["status"] || 24 !== (int) $preview["phases"]["hydration"]["operation_count"] || "deferred" !== $preview["phases"]["relations"]["status"]) {
-              fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1);
+              fwrite(STDERR, "preview=" . (is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)) . "\n"); exit(1);
           }
 
           $applied = Eduardo_Research_Manager::pipeline()->apply($blueprint);
           if (is_wp_error($applied) || empty($applied["verified"]) || 36 !== (int) $applied["snapshot_count"]) {
-              fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() : wp_json_encode($applied)); exit(1);
+              fwrite(STDERR, "applied=" . (is_wp_error($applied) ? $applied->get_error_message() . " data=" . wp_json_encode($applied->get_error_data()) : wp_json_encode($applied)) . "\n"); exit(1);
           }
-          if (8 !== (int) $applied["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $applied["phases"]["pairing"]["operation_count"] || 24 !== (int) $applied["phases"]["hydration"]["operation_count"] || 0 !== (int) $applied["phases"]["relations"]["operation_count"]) { exit(1); }
+          if (8 !== (int) $applied["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $applied["phases"]["pairing"]["operation_count"] || 24 !== (int) $applied["phases"]["hydration"]["operation_count"] || 0 !== (int) $applied["phases"]["relations"]["operation_count"]) {
+              fwrite(STDERR, "phase-counts=" . wp_json_encode($applied["phases"]) . "\n"); exit(1);
+          }
 
           $steady = Eduardo_Research_Manager::pipeline()->preview($blueprint);
-          if (is_wp_error($steady) || empty($steady["apply_allowed"]) || 0 !== (int) $steady["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $steady["phases"]["pairing"]["operation_count"] || 24 !== (int) $steady["phases"]["hydration"]["operation_count"] || 0 !== (int) $steady["phases"]["relations"]["operation_count"]) { exit(1); }
-          foreach ($steady["phases"]["pairing"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { exit(1); } }
-          foreach ($steady["phases"]["hydration"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { exit(1); } }
+          if (is_wp_error($steady) || empty($steady["apply_allowed"]) || 0 !== (int) $steady["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $steady["phases"]["pairing"]["operation_count"] || 24 !== (int) $steady["phases"]["hydration"]["operation_count"] || 0 !== (int) $steady["phases"]["relations"]["operation_count"]) {
+              fwrite(STDERR, "steady=" . (is_wp_error($steady) ? $steady->get_error_message() : wp_json_encode($steady)) . "\n"); exit(1);
+          }
+          foreach ($steady["phases"]["pairing"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { fwrite(STDERR, "pair-row=" . wp_json_encode($row) . "\n"); exit(1); } }
+          foreach ($steady["phases"]["hydration"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { fwrite(STDERR, "hydration-row=" . wp_json_encode($row) . "\n"); exit(1); } }
 
           $rollback = Eduardo_Research_Manager::pipeline()->rollback($applied["snapshots"]);
-          if (is_wp_error($rollback) || 36 !== (int) $rollback["snapshot_count"]) { exit(1); }
+          if (is_wp_error($rollback) || 36 !== (int) $rollback["snapshot_count"]) { fwrite(STDERR, "rollback=" . (is_wp_error($rollback) ? $rollback->get_error_message() : wp_json_encode($rollback)) . "\n"); exit(1); }
           $lines = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
-          if (0 !== count($lines)) { exit(1); }
+          if (0 !== count($lines)) { fwrite(STDERR, "remaining-lines=" . count($lines) . "\n"); exit(1); }
           $home = Eduardo_Research_Manager::pages()->inspect("home", "en");
-          if (is_wp_error($home) || ! empty($home["stored_slots"])) { exit(1); }
+          if (is_wp_error($home) || ! empty($home["stored_slots"])) { fwrite(STDERR, "home-after-rollback=" . (is_wp_error($home) ? $home->get_error_message() : wp_json_encode($home)) . "\n"); exit(1); }
           ' --allow-root
 
       - name: Roll back every completed phase when final relations fail
@@ -115,15 +119,15 @@ jobs:
               "evidence"=>["confirmed"=>true,"reference"=>"CI atomic rollback fixture"]
           ];
           $failed = Eduardo_Research_Manager::pipeline()->apply($blueprint);
-          if (! is_wp_error($failed) || "research_manager_greenfield_pipeline_failed" !== $failed->get_error_code()) { exit(1); }
+          if (! is_wp_error($failed) || "research_manager_greenfield_pipeline_failed" !== $failed->get_error_code()) { fwrite(STDERR, "expected pipeline failure\n"); exit(1); }
           $data = $failed->get_error_data();
-          if (! is_array($data) || "relations" !== ($data["failed_phase"] ?? "")) { fwrite(STDERR, wp_json_encode($data)); exit(1); }
+          if (! is_array($data) || "relations" !== ($data["failed_phase"] ?? "")) { fwrite(STDERR, "failure-data=" . wp_json_encode($data) . "\n"); exit(1); }
           foreach (["bootstrap","pairing","hydration"] as $phase) {
-              if (empty($data["rollback"][$phase]["rolled_back"])) { fwrite(STDERR, wp_json_encode($data["rollback"])); exit(1); }
+              if (empty($data["rollback"][$phase]["rolled_back"])) { fwrite(STDERR, "failure-rollback=" . wp_json_encode($data["rollback"]) . "\n"); exit(1); }
           }
-          if (get_page_by_path("atomic-failure-fixture", OBJECT, "research_project") instanceof WP_Post) { exit(1); }
+          if (get_page_by_path("atomic-failure-fixture", OBJECT, "research_project") instanceof WP_Post) { fwrite(STDERR, "fixture survived rollback\n"); exit(1); }
           $lines = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
-          if (0 !== count($lines)) { exit(1); }
+          if (0 !== count($lines)) { fwrite(STDERR, "failure remaining-lines=" . count($lines) . "\n"); exit(1); }
           $home = Eduardo_Research_Manager::pages()->inspect("home", "en");
-          if (is_wp_error($home) || ! empty($home["stored_slots"])) { exit(1); }
+          if (is_wp_error($home) || ! empty($home["stored_slots"])) { fwrite(STDERR, "failure home=" . (is_wp_error($home) ? $home->get_error_message() : wp_json_encode($home)) . "\n"); exit(1); }
           ' --allow-root
