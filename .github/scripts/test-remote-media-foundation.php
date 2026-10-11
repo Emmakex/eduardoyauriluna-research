@@ -106,10 +106,9 @@ if ('media.read' !== (string) ($cap['read_endpoints']['media'] ?? '')
     || 'media.read' !== (string) ($cap['read_endpoints']['media_item'] ?? '')
     || empty($cap['media_control']['inventory'])
     || empty($cap['media_control']['inspection'])
-    || false !== ($cap['media_control']['write_available'] ?? null)
     || ! empty($cap['media_control']['filesystem_paths_exposed'])
     || ! empty($cap['media_control']['arbitrary_upload_proxy'])) {
-    fail_p3_media('capabilities do not expose the bounded read-only Media contract', $cap['media_control'] ?? $cap);
+    fail_p3_media('capabilities do not expose the bounded Media read contract', $cap['media_control'] ?? $cap);
 }
 
 $inventory_response = p3_media_request('GET', 'media', $token, array(
