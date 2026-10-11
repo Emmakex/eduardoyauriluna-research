@@ -109,6 +109,18 @@ final class Eduardo_Research_Manager_Diagnostics {
             'page:home'
         );
 
+        $indexable = '1' === (string) get_option('blog_public', '1');
+        $checks[] = $this->check(
+            'search-indexability',
+            'Search engine visibility',
+            $indexable ? 'pass' : 'fail',
+            $indexable
+                ? 'WordPress permits public search-engine indexing; Theme robots rules may still noindex bounded exploration/filter states.'
+                : 'WordPress is configured to discourage search engines, which would suppress the public Research site from normal indexing.',
+            $indexable ? '' : 'auto-fix-candidate',
+            'site:indexability'
+        );
+
         $evidence = get_option('eduardo_research_evidence', array());
         $evidence_ok = is_array($evidence);
         $checks[] = $this->check(
