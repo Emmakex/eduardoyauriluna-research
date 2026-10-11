@@ -3,8 +3,12 @@ name: Research Evidence Admin Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - 'wordpress/themes/eduardo-research/inc/research-evidence.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-evidence-admin-quality.yml'
   push:
@@ -14,6 +18,10 @@ on:
       - 'wordpress/themes/eduardo-research/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-evidence-admin-quality.yml'
+
+concurrency:
+  group: research-evidence-admin-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
