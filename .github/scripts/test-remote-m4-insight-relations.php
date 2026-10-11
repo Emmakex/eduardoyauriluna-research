@@ -33,7 +33,7 @@ if (is_wp_error($blueprint)) { m4r_fail('canonical blueprint unavailable', $blue
 $seed = Eduardo_Research_Manager::pipeline()->apply($blueprint);
 if (is_wp_error($seed) || empty($seed['verified'])) { m4r_fail('canonical seed failed', $seed); }
 rest_get_server();
-$issued = Eduardo_Research_Manager::remote_credentials()->issue_token(array('site.read','site.diagnostics','operations.apply','operations.rollback'), 1, 'CI M4 Relations');
+$issued = Eduardo_Research_Manager::remote_credentials()->issue_token(array('site.read','site.diagnostics','insights.write','operations.apply','operations.rollback'), 1, 'CI M4 Relations');
 if (is_wp_error($issued) || empty($issued['token'])) { m4r_fail('credential issuance failed'); }
 $token = (string) $issued['token'];
 
