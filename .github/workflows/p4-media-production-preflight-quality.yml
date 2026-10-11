@@ -1,0 +1,92 @@
+name: Phase 4 Media Production Preflight Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/p4-media-production-preflight.php'
+      - '.github/workflows/p4-media-production-preflight-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/p4-media-production-preflight.php'
+      - '.github/workflows/p4-media-production-preflight-quality.yml'
+
+concurrency:
+  group: p4-media-production-preflight-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl
+          coverage: none
+
+      - name: PHP lint
+        run: php -l scripts/p4-media-production-preflight.php
+
+      - name: Help path requires no credential
+        run: php scripts/p4-media-production-preflight.php --help
+
+      - name: Enforce read-only production preflight boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=scripts/p4-media-production-preflight.php
+
+          if grep -Eq 'CURLOPT_(POST|CUSTOMREQUEST|UPLOAD|PUT)' "$FILE"; then
+            echo 'Mutation-capable cURL option detected in read-only preflight.' >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-production-preflight.php').read_text()
+          calls = re.findall(r"\$requestJson\('([^']+)'\)", text)
+          expected = [
+              '/capabilities',
+              '/media?mime_type=image&per_page=20&page=1',
+              '/media/diagnostics?limit=500',
+              '/insights?language=en',
+          ]
+          if calls != expected:
+              raise SystemExit(f'unexpected authenticated request set/order: {calls!r}')
+          for forbidden in (
+              '/apply', '/rollback', '/plan', '/metadata/', '/assignments/plan',
+          ):
+              if any(forbidden in call for call in calls):
+                  raise SystemExit(f'mutation route detected: {forbidden}')
+          PY
+
+      - name: Enforce exact temporary acceptance scope profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-production-preflight.php').read_text()
+          match = re.search(r'\$expectedScopes\s*=\s*\$normaliseSet\(array\((.*?)\)\);', text, re.S)
+          if not match:
+              raise SystemExit('expected scope profile not found')
+          scopes = re.findall(r"'([a-z.]+)'", match.group(1))
+          expected = sorted([
+              'site.read', 'site.diagnostics', 'media.read', 'media.write',
+              'insights.read', 'insights.write', 'operations.apply', 'operations.rollback',
+          ])
+          if sorted(scopes) != expected:
+              raise SystemExit(f'unexpected scope profile: {scopes!r}')
+          if "'mutation_requests'=>0" not in text:
+              raise SystemExit('evidence mutation counter contract missing')
+          PY
