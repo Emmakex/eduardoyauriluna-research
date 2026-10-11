@@ -3,7 +3,15 @@ name: Research Manager Readiness Remediation
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remediation.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-manager-remediation.yml'
   push:
@@ -12,6 +20,10 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-manager-remediation.yml'
+
+concurrency:
+  group: research-manager-remediation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
