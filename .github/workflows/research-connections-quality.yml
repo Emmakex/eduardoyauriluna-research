@@ -3,7 +3,10 @@ name: Research Connections Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-orcid-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-workspace.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-connections-quality.yml'
   push:
@@ -15,6 +18,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: research-connections-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   connections:
