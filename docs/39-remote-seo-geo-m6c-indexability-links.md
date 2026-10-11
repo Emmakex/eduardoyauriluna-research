@@ -25,15 +25,32 @@ Expected production state:
 
 `blog_public = 1`
 
-If WordPress is configured to discourage search engines, the finding is a failure and is classified as safely auto-remediable. The shared Remediation service produces an exact option plan that changes only:
+If WordPress is configured to discourage search engines, the finding is a failure and is classified as safely auto-remediable.
 
-`blog_public → 1`
+`blog_public` deliberately remains **outside the generic Research Manager option mutation allowlist**. M6c owns a dedicated exact indexability lifecycle that can perform one bounded transition only:
 
-The remote M6 lifecycle therefore applies unchanged:
+`current blog_public baseline → 1`
+
+The same external M6 endpoints are retained, so the ChatGPT operating model stays uniform:
 
 `Plan → confirmation → stale-state protection → Apply → Verify → Rollback`
 
-The Manager does not expose a generic option editor.
+Internally, plan and operation IDs identify the dedicated indexability lifecycle and are routed to the indexability service rather than the generic mutation Plan/Executor.
+
+The dedicated service enforces:
+
+- the target must be exactly `blog_public`;
+- the desired value must be exactly `1`;
+- the baseline must still match at Apply;
+- the full Manager revision must still match at Apply;
+- Verify requires both the expected value and the post-Apply revision;
+- Rollback is blocked if state drifted after Apply;
+- rollback restores the exact baseline;
+- all operations remain connection-bound, confirmed, idempotent and audited.
+
+The generic `Remediation` inspector still classifies the finding as auto-remediable, but `Remediation::build_plan('search-indexability')` explicitly directs callers to the dedicated SEO/GEO indexability service rather than constructing a generic option mutation.
+
+The Manager therefore never exposes a generic WordPress option editor.
 
 ### Theme robots policy
 
@@ -81,7 +98,7 @@ Draft/non-public resources are not treated as public indexable documents.
 reports:
 
 - global search-engine visibility;
-- WordPress core sitemap enabled state;
+- WordPress core sitemap enabled state from the core sitemap server;
 - presence of the Research Theme localized Page sitemap provider;
 - presence of the Theme exploration robots policy.
 
@@ -167,12 +184,14 @@ Read-only, authenticated with `site.diagnostics + seo.read`:
 - `GET /research-manager/v1/seo-geo/indexability/resource`
 - `GET /research-manager/v1/seo-geo/internal-links`
 
-Indexability remediation uses the existing M6 endpoints:
+Indexability remediation retains the existing M6 route family:
 
 - `POST /research-manager/v1/seo-geo/remediation/plan`
 - `POST /research-manager/v1/seo-geo/plans/{plan_id}/apply`
 - `POST /research-manager/v1/seo-geo/operations/{operation_id}/verify`
 - `POST /research-manager/v1/seo-geo/operations/{operation_id}/rollback`
+
+`search-indexability` is transparently routed to the dedicated indexability lifecycle. Other M6 deterministic remediation checks continue to use the existing generic M6 remediation service.
 
 ## Fresh-WordPress acceptance
 
@@ -219,4 +238,4 @@ After M6c, the remaining repository/CI work should be kept narrow:
 - residual/manual/evidence action reporting;
 - final M6 aggregate acceptance proving diagnostics → source action/remediation → rendered verification → residual report in one session.
 
-No generic SEO metadata editor is required to close M6.
+No generic SEO metadata or WordPress option editor is required to close M6.
