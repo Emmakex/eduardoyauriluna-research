@@ -89,7 +89,7 @@ jobs:
               raise SystemExit(f'unexpected scope profile: {scopes!r}')
           PY
 
-      - name: Enforce reversible Apply boundary
+      - name: Enforce guaranteed reversible Apply boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -98,15 +98,18 @@ jobs:
           text = pathlib.Path('scripts/p4-media-metadata-production-acceptance.php').read_text()
           required = [
               "if (! $apply)",
-              "array('confirm'=>true), 'apply'",
-              "array('rendered'=>false), 'verify'",
-              "array('confirm'=>true), 'rollback'",
+              "array('confirm' => true)",
+              "array('rendered' => false)",
+              "finally {",
+              "apply-reconcile-plan",
+              "ambiguous_apply_reconciled",
               "rollback_restored_source_revision",
               "post_rollback_value_restored",
+              "CRITICAL: Media metadata rollback failed after Apply",
           ]
           for token in required:
               if token not in text:
-                  raise SystemExit(f'missing reversible acceptance guard: {token}')
+                  raise SystemExit(f'missing guaranteed reversible acceptance guard: {token}')
           if "CURLOPT_FOLLOWLOCATION => false" not in text:
               raise SystemExit('redirect blocking missing')
           if "CURLOPT_SSL_VERIFYPEER => true" not in text or "CURLOPT_SSL_VERIFYHOST => 2" not in text:
