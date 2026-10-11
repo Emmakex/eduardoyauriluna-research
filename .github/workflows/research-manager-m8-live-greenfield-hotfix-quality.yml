@@ -3,8 +3,18 @@ name: Research Manager M8 Live Greenfield Hotfix Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-store.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield-pipeline.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield.php'
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/themes/eduardo-research/inc/research-router.php'
       - 'config/research-site-blueprint.json'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-manager-m8-live-greenfield-hotfix-quality.yml'
@@ -19,6 +29,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   live-greenfield-regression:

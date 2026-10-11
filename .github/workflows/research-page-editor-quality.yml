@@ -3,8 +3,13 @@ name: Research Page Editor Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-page-editor-quality.yml'
   push:
@@ -17,6 +22,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   page-editor:

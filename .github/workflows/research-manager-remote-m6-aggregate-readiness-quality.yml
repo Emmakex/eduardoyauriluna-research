@@ -3,8 +3,17 @@ name: Research Manager Remote M6 Aggregate Readiness Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-readiness.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-readiness-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-indexability.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-action-planner.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
+      - 'wordpress/themes/eduardo-research/inc/research-seo.php'
+      - 'wordpress/themes/eduardo-research/inc/research-editorial-seo.php'
+      - 'wordpress/themes/eduardo-research/inc/research-discovery.php'
+      - 'wordpress/themes/eduardo-research/inc/research-sitemap.php'
+      - 'wordpress/themes/eduardo-research/inc/research-hardening.php'
       - '.github/scripts/test-remote-m6-aggregate-readiness.php'
       - '.github/workflows/research-manager-remote-m6-aggregate-readiness-quality.yml'
   push:
@@ -17,6 +26,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m6-aggregate-readiness:

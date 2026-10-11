@@ -3,7 +3,11 @@ name: Research Manager Remote M5 Evidence Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-evidence-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-evidence-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php'
       - '.github/scripts/test-remote-m5-evidence.php'
       - '.github/workflows/research-manager-remote-m5-evidence-quality.yml'
   push:
@@ -15,6 +19,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m5-evidence:

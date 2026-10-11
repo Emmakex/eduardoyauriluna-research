@@ -3,8 +3,26 @@ name: Research Manager Remote M5 Aggregate Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/themes/eduardo-research/**'
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-line-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-lines-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-object-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-objects-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-translation-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-translations-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-evidence-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-evidence-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-evidence-editor.php'
+      - 'wordpress/themes/eduardo-research/inc/research-relations.php'
+      - 'wordpress/themes/eduardo-research/inc/research-lines.php'
+      - 'wordpress/themes/eduardo-research/inc/research-objects.php'
+      - 'wordpress/themes/eduardo-research/inc/research-collections.php'
       - '.github/scripts/test-remote-m5-aggregate.php'
       - '.github/workflows/research-manager-remote-m5-aggregate-quality.yml'
   push:
@@ -17,6 +35,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m5-aggregate:

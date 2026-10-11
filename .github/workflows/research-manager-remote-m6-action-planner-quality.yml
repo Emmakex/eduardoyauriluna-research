@@ -3,7 +3,10 @@ name: Research Manager Remote M6 Action Planner Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-action-planner.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php'
       - '.github/scripts/test-remote-m6-structured-action-planner.php'
       - '.github/workflows/research-manager-remote-m6-action-planner-quality.yml'
   push:
@@ -15,6 +18,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m6-action-planner:

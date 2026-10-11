@@ -3,8 +3,11 @@ name: Research Manager Remote M7 Component Variants Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-design-variants.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-design-variants-rest.php'
+      - 'wordpress/themes/eduardo-research/inc/research-design-variants.php'
+      - 'wordpress/themes/eduardo-research/inc/research-design.php'
+      - 'wordpress/themes/eduardo-research/functions.php'
       - '.github/scripts/test-remote-m7-component-variants.php'
       - '.github/workflows/research-manager-remote-m7-component-variants-quality.yml'
   push:
@@ -17,6 +20,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m7-component-variants:
