@@ -19,6 +19,8 @@ get_header(); ?>
    <?php eduardo_research_render_object_meta($post_id); ?>
   </header>
 
+  <?php eduardo_research_render_primary_media($post_id); ?>
+
   <?php if ('research_line' === $type) :
       $question = eduardo_research_meta_value($post_id, '_research_central_question'); ?>
    <section class="research-section research-section-soft"><div class="research-shell research-object-focus">
