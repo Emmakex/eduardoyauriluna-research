@@ -1,0 +1,127 @@
+name: Research Manager M8 Live Greenfield Hotfix Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-manager-m8-live-greenfield-hotfix-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'config/research-site-blueprint.json'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-manager-m8-live-greenfield-hotfix-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-greenfield-regression:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Install clean WordPress, Theme and Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-m8-live-hotfix-wp
+          mkdir -p /tmp/research-m8-live-hotfix-wp
+          cd /tmp/research-m8-live-hotfix-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Research M8 Hotfix' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Reproduce live Privacy draft and prove stable Greenfield result
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-m8-live-hotfix-wp
+          wp eval '
+          wp_set_current_user(1);
+          $path = getenv("GITHUB_WORKSPACE") . "/config/research-site-blueprint.json";
+          $blueprint = json_decode((string) file_get_contents($path), true);
+          if (! is_array($blueprint)) { fwrite(STDERR, "Blueprint JSON invalid\n"); exit(1); }
+
+          $privacy = Eduardo_Research_Manager::pages()->inspect("privacy-policy", "en");
+          if (is_wp_error($privacy) || empty($privacy["page_id"])) {
+              fwrite(STDERR, is_wp_error($privacy) ? $privacy->get_error_message() : "Privacy Page missing\n"); exit(1);
+          }
+          $privacy_id = (int) $privacy["page_id"];
+          $drafted = wp_update_post(["ID"=>$privacy_id,"post_status"=>"draft"], true);
+          if (is_wp_error($drafted)) { fwrite(STDERR, $drafted->get_error_message()); exit(1); }
+          clean_post_cache($privacy_id);
+
+          $before = Eduardo_Research_Manager::diagnostics()->run();
+          $privacy_before = null;
+          foreach ($before["checks"] as $check) {
+              if ("page-privacy-policy" === (string) $check["id"]) { $privacy_before = $check; break; }
+          }
+          if (! is_array($privacy_before) || "warning" !== (string) $privacy_before["status"] || "hydrate" !== (string) $privacy_before["next_action"]) {
+              fwrite(STDERR, wp_json_encode($privacy_before)); exit(1);
+          }
+
+          $first = Eduardo_Research_Manager::pipeline()->preview($blueprint);
+          if (is_wp_error($first) || empty($first["apply_allowed"]) || "change" !== (string) $first["phases"]["hydration"]["status"] || (int) $first["phases"]["hydration"]["change_count"] <= 0) {
+              fwrite(STDERR, is_wp_error($first) ? $first->get_error_message() : wp_json_encode($first)); exit(1);
+          }
+
+          $applied = Eduardo_Research_Manager::pipeline()->apply($blueprint);
+          if (is_wp_error($applied) || empty($applied["verified"])) {
+              fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() : wp_json_encode($applied)); exit(1);
+          }
+
+          $privacy_after = Eduardo_Research_Manager::pages()->inspect("privacy-policy", "en");
+          if (is_wp_error($privacy_after) || empty($privacy_after["published"]) || "publish" !== (string) $privacy_after["status"]) {
+              fwrite(STDERR, is_wp_error($privacy_after) ? $privacy_after->get_error_message() : wp_json_encode($privacy_after)); exit(1);
+          }
+
+          $diagnostics = Eduardo_Research_Manager::diagnostics()->run();
+          foreach ($diagnostics["checks"] as $check) {
+              if ("page-privacy-policy" === (string) $check["id"] && "pass" !== (string) $check["status"]) {
+                  fwrite(STDERR, wp_json_encode($check)); exit(1);
+              }
+          }
+
+          $second = Eduardo_Research_Manager::pipeline()->preview($blueprint);
+          if (is_wp_error($second)) { fwrite(STDERR, $second->get_error_message()); exit(1); }
+          foreach (["pairing","hydration"] as $phase) {
+              if ("steady" !== (string) $second["phases"][$phase]["status"] || 0 !== (int) $second["phases"][$phase]["change_count"]) {
+                  fwrite(STDERR, wp_json_encode($second["phases"][$phase])); exit(1);
+              }
+          }
+          ' --allow-root
