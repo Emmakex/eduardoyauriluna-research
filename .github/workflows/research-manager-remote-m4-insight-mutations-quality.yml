@@ -3,8 +3,14 @@ name: Research Manager Remote M4 Insight Mutations Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insights-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/themes/eduardo-research/inc/research-insights.php'
+      - 'wordpress/themes/eduardo-research/inc/research-relations.php'
+      - 'wordpress/themes/eduardo-research/inc/research-content-language.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m4-insight-mutations.php'
       - '.github/workflows/research-manager-remote-m4-insight-mutations-quality.yml'
@@ -19,6 +25,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m4-insight-mutations:
