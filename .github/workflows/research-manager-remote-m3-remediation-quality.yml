@@ -3,8 +3,15 @@ name: Research Manager Remote M3 Remediation Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remediation.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-pages-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m3-page-remediation.php'
       - '.github/workflows/research-manager-remote-m3-remediation-quality.yml'
@@ -19,6 +26,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m3-remediation:
