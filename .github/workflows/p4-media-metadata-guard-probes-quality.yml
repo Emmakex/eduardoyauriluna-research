@@ -1,0 +1,128 @@
+name: Phase 4 Media Metadata Guard Probes Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/p4-media-metadata-guard-probes.php'
+      - '.github/workflows/p4-media-metadata-guard-probes-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/p4-media-metadata-guard-probes.php'
+      - '.github/workflows/p4-media-metadata-guard-probes-quality.yml'
+
+concurrency:
+  group: p4-media-metadata-guard-probes-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guard-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl
+          coverage: none
+
+      - name: PHP lint
+        run: php -l scripts/p4-media-metadata-guard-probes.php
+
+      - name: Help path requires no credential
+        run: php scripts/p4-media-metadata-guard-probes.php --help
+
+      - name: Enforce exact scope and bounded route contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-metadata-guard-probes.php').read_text()
+          match = re.search(r'\$expectedScopes\s*=\s*\$normaliseSet\(array\((.*?)\)\);', text, re.S)
+          if not match:
+              raise SystemExit('expected scope profile not found')
+          scopes = re.findall(r"'([a-z.]+)'", match.group(1))
+          expected = sorted([
+              'site.read', 'site.diagnostics', 'media.read', 'media.write',
+              'insights.read', 'insights.write', 'operations.apply', 'operations.rollback',
+          ])
+          if sorted(scopes) != expected:
+              raise SystemExit(f'unexpected guard scope profile: {scopes!r}')
+          required = [
+              '#^/capabilities$#', '#^/media/\\d+$#', '#^/media/metadata/plan$#',
+              '#^/media/metadata/plans/[A-Za-z0-9._:-]+/apply$#',
+              '#^/media/metadata/operations/[A-Za-z0-9._:-]+/verify$#',
+              '#^/media/metadata/operations/[A-Za-z0-9._:-]+/rollback$#',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing bounded route: {token}')
+          for token in ('/wp/v2/', '/upload', '/delete', '/filesystem', '/plugins', '/themes'):
+              if token in text:
+                  raise SystemExit(f'forbidden direct surface: {token}')
+          dangerous = re.findall(r'(?<![A-Za-z0-9_])(shell_exec|exec|system|passthru|proc_open|popen)\s*\(', text)
+          if dangerous:
+              raise SystemExit(f'forbidden process call: {dangerous!r}')
+          PY
+
+      - name: Enforce Preview-only idempotency proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-metadata-guard-probes.php').read_text()
+          required = [
+              "idempotency-first", "idempotency-replay", "$fixedRequestId",
+              "idempotent_replay", "idempotency_same_plan", "mutation_performed' => false",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing idempotency guard: {token}')
+          PY
+
+      - name: Enforce stale proof and mandatory rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-metadata-guard-probes.php').read_text()
+          required = [
+              "if (! $apply)", "stale-plan-a", "stale-plan-b", "stale-apply-b", "stale-apply-a",
+              "array(409)", "'stale_revision'", "finally {", "stale-rollback-b",
+              "rollback_restored_source_revision", "exact_source_state_restored",
+              "CRITICAL: Media metadata stale-probe rollback failed after Apply",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing stale/rollback guard: {token}')
+          if "CURLOPT_FOLLOWLOCATION => false" not in text:
+              raise SystemExit('redirect blocking missing')
+          if "CURLOPT_SSL_VERIFYPEER => true" not in text or "CURLOPT_SSL_VERIFYHOST => 2" not in text:
+              raise SystemExit('TLS verification contract missing')
+          PY
+
+      - name: Enforce secret and direct-mutation boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-metadata-guard-probes.php').read_text()
+          for token in ("getenv('ERM_TOKEN')", "'[redacted]'", "const P4_MEDIA_GUARD_FIELDS = array('title', 'alt_text', 'caption', 'description');"):
+              if token not in text:
+                  raise SystemExit(f'missing security contract: {token}')
+          for token in ('wp_update_post(', 'update_post_meta(', 'delete_post_meta(', 'update_option(', 'delete_option('):
+              if token in text:
+                  raise SystemExit(f'forbidden direct WordPress mutation: {token}')
+          PY
