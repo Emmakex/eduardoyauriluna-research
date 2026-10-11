@@ -118,6 +118,9 @@ if ((int) ($summary['missing_alt'] ?? 0) < 1
 if (! empty($report['remediation']['automatic_delete']) || ! empty($report['remediation']['binary_replacement'])) {
     fail_p34_media('destructive or binary remediation was exposed', $report['remediation']);
 }
+foreach (array($missing_id, $weak_id, $good_id) as $id) {
+    if (! get_post($id)) { fail_p34_media('diagnostic report deleted attachment #' . $id); }
+}
 
 $weak_response = p34_request('GET', 'media/diagnostics/' . $weak_id, $read_token);
 $weak_item = $weak_response->get_data()['data'] ?? array();
@@ -137,8 +140,19 @@ if (200 !== $cap_response->get_status()
     || ! empty($diagnostic_cap['destructive_delete'])
     || ! empty($diagnostic_cap['content_hashing'])
     || (array) ($remediation_cap['supported_fields'] ?? array()) !== array('alt_text')
-    || empty($remediation_cap['operator_supplied_alt_required'])) {
+    || empty($remediation_cap['operator_supplied_alt_required'])
+    || ! empty($remediation_cap['automatic_alt_generation'])
+    || ! empty($remediation_cap['auto_apply'])) {
     fail_p34_media('capabilities do not expose safe P3.4 boundaries', array($diagnostic_cap, $remediation_cap));
+}
+
+$no_transport = p34_token(array('media.write'), 'CI P3.4 no operations.apply');
+$transport_denied = p34_request('POST', 'media/diagnostics/remediation/plan', $no_transport, array(
+    'attachment_id'=>$missing_id,
+    'changes'=>array('alt_text'=>'Diagram showing connected AI process stages'),
+));
+if (403 !== $transport_denied->get_status() || 'scope_denied' !== (string) ($transport_denied->get_data()['code'] ?? '')) {
+    fail_p34_media('operations.apply was not enforced independently', $transport_denied->get_data());
 }
 
 $no_media_write = p34_token(array('operations.apply'), 'CI P3.4 no media.write');
@@ -166,30 +180,62 @@ $unsupported = p34_request('POST', 'media/diagnostics/remediation/plan', $full_t
     'attachment_id'=>$missing_id,
     'changes'=>array('title'=>'Unsafe diagnostic shortcut'),
 ));
-if (400 !== $unsupported->get_status()) { fail_p34_media('unsupported remediation field was not rejected', $unsupported->get_data()); }
+if (400 !== $unsupported->get_status() || 'validation_failed' !== (string) ($unsupported->get_data()['code'] ?? '')) {
+    fail_p34_media('unsupported remediation field was not rejected', $unsupported->get_data());
+}
+
+$not_needed = p34_request('POST', 'media/diagnostics/remediation/plan', $full_token, array(
+    'attachment_id'=>$good_id,
+    'changes'=>array('alt_text'=>'Replacement text that should not be needed'),
+));
+if (409 !== $not_needed->get_status() || 'validation_failed' !== (string) ($not_needed->get_data()['code'] ?? '')) {
+    fail_p34_media('ready attachment incorrectly received deterministic remediation', $not_needed->get_data());
+}
 
 $plan_request_id = 'req-p34-remediation-plan-0001';
-$plan = p34_request('POST', 'media/diagnostics/remediation/plan', $full_token, array(
+$replacement_alt = 'Abstract system diagram showing connected AI process stages';
+$plan_body = array(
     'attachment_id'=>$missing_id,
-    'changes'=>array('alt_text'=>'Abstract system diagram showing connected AI process stages'),
-), array(), $plan_request_id);
+    'changes'=>array('alt_text'=>$replacement_alt),
+);
+$plan = p34_request('POST', 'media/diagnostics/remediation/plan', $full_token, $plan_body, array(), $plan_request_id);
 $plan_data = $plan->get_data()['data'] ?? array();
 $plan_id = (string) ($plan_data['plan_id'] ?? '');
 if (200 !== $plan->get_status() || '' === $plan_id || 'media-metadata-update' !== (string) ($plan_data['operation'] ?? '')) {
     fail_p34_media('safe diagnostic remediation did not delegate to P3.2 plan lifecycle', $plan->get_data());
 }
-$plan_replay = p34_request('POST', 'media/diagnostics/remediation/plan', $full_token, array(
-    'attachment_id'=>$missing_id,
-    'changes'=>array('alt_text'=>'Abstract system diagram showing connected AI process stages'),
-), array(), $plan_request_id);
-if (200 !== $plan_replay->get_status() || empty($plan_replay->get_data()['idempotent_replay'])) {
+$plan_replay = p34_request('POST', 'media/diagnostics/remediation/plan', $full_token, $plan_body, array(), $plan_request_id);
+if (200 !== $plan_replay->get_status()
+    || empty($plan_replay->get_data()['idempotent_replay'])
+    || $plan_id !== (string) ($plan_replay->get_data()['data']['plan_id'] ?? '')) {
     fail_p34_media('diagnostic remediation planning is not idempotent', $plan_replay->get_data());
 }
 if ('' !== (string) get_post_meta($missing_id, '_wp_attachment_image_alt', true)) {
     fail_p34_media('diagnostic remediation Preview mutated Media');
 }
 
-$apply = p34_request('POST', 'media/metadata/plans/' . rawurlencode($plan_id) . '/apply', $full_token, array('confirm'=>true));
+$audit_match = false;
+foreach (Eduardo_Research_Manager::remote_audit()->recent(50) as $entry) {
+    if ('remote-media-plan-created' === (string) ($entry['event'] ?? '')
+        && $plan_request_id === (string) ($entry['request_id'] ?? '')
+        && $plan_id === (string) ($entry['plan_id'] ?? '')
+        && 'media.write' === (string) ($entry['scope'] ?? '')) {
+        $audit_match = true;
+        break;
+    }
+}
+if (! $audit_match) {
+    fail_p34_media('diagnostic remediation plan lost audit/request correlation', Eduardo_Research_Manager::remote_audit()->recent(20));
+}
+
+$apply = p34_request(
+    'POST',
+    'media/metadata/plans/' . rawurlencode($plan_id) . '/apply',
+    $full_token,
+    array('confirm'=>true),
+    array(),
+    'req-p34-remediation-apply-0001'
+);
 $operation = $apply->get_data()['data'] ?? array();
 $operation_id = (string) ($operation['operation_id'] ?? '');
 if (200 !== $apply->get_status() || '' === $operation_id || 'applied' !== (string) ($operation['status'] ?? '')) {
@@ -198,22 +244,43 @@ if (200 !== $apply->get_status() || '' === $operation_id || 'applied' !== (strin
 
 $after = p34_request('GET', 'media/diagnostics/' . $missing_id, $full_token);
 $after_item = $after->get_data()['data'] ?? array();
-if (200 !== $after->get_status() || ! empty($after_item['flags']['missing_alt']) || ! empty($after_item['flags']['weak_alt'])) {
+if (200 !== $after->get_status()
+    || ! empty($after_item['flags']['missing_alt'])
+    || ! empty($after_item['flags']['weak_alt'])
+    || $replacement_alt !== (string) ($after_item['alt_text'] ?? '')) {
     fail_p34_media('diagnostic did not clear after bounded metadata Apply', $after_item);
 }
 
-$verify = p34_request('POST', 'media/metadata/operations/' . rawurlencode($operation_id) . '/verify', $full_token);
+$verify = p34_request(
+    'POST',
+    'media/metadata/operations/' . rawurlencode($operation_id) . '/verify',
+    $full_token,
+    array(),
+    array(),
+    'req-p34-remediation-verify-0001'
+);
 if (200 !== $verify->get_status() || 'verified' !== (string) ($verify->get_data()['data']['status'] ?? '')) {
     fail_p34_media('delegated P3.2 Verify failed', $verify->get_data());
 }
 
-$rollback = p34_request('POST', 'media/metadata/operations/' . rawurlencode($operation_id) . '/rollback', $full_token, array('confirm'=>true));
+$rollback = p34_request(
+    'POST',
+    'media/metadata/operations/' . rawurlencode($operation_id) . '/rollback',
+    $full_token,
+    array('confirm'=>true),
+    array(),
+    'req-p34-remediation-rollback-0001'
+);
 if (200 !== $rollback->get_status() || 'rolled-back' !== (string) ($rollback->get_data()['data']['status'] ?? '')) {
     fail_p34_media('delegated P3.2 Rollback failed', $rollback->get_data());
 }
 $restored = p34_request('GET', 'media/diagnostics/' . $missing_id, $full_token);
 if (empty($restored->get_data()['data']['flags']['missing_alt'])) {
     fail_p34_media('Rollback did not restore original diagnostic state', $restored->get_data());
+}
+
+foreach (array($missing_id, $weak_id, $good_id) as $id) {
+    if (! get_post($id)) { fail_p34_media('P3.4 diagnostic/remediation lifecycle deleted attachment #' . $id); }
 }
 
 fwrite(STDOUT, "P3.4 Media diagnostics OK\n");
