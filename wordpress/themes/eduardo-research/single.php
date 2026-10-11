@@ -9,6 +9,9 @@ get_header(); ?>
  $language = eduardo_research_current_language();
  $es = 'es' === $language;
  $type = get_post_type();
+ $media_target = 'research_line' === $type
+     || in_array($type, eduardo_research_relation_object_types(), true)
+     || ('post' === $type && function_exists('eduardo_research_is_managed_insight') && eduardo_research_is_managed_insight($post_id));
 ?>
  <article class="research-object-single research-object-single-<?php echo esc_attr((string) $type); ?>">
   <header class="research-shell research-hero research-surface-hero research-object-hero">
@@ -19,7 +22,7 @@ get_header(); ?>
    <?php eduardo_research_render_object_meta($post_id); ?>
   </header>
 
-  <?php eduardo_research_render_primary_media($post_id); ?>
+  <?php if ($media_target) { eduardo_research_render_primary_media($post_id); } ?>
 
   <?php if ('research_line' === $type) :
       $question = eduardo_research_meta_value($post_id, '_research_central_question'); ?>
