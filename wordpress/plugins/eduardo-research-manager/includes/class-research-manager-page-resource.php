@@ -36,6 +36,8 @@ final class Eduardo_Research_Manager_Page_Resource {
             'language'=>$language,
             'page_id'=>(int) $state['id'],
             'url'=>$this->resource_url($key, $language),
+            'status'=>(string) ($state['status'] ?? ''),
+            'published'=>'publish' === (string) ($state['status'] ?? ''),
             'role'=>(string) ($state['role'] ?? ''),
             'expected_role'=>(string) ($contract['role'] ?? ''),
             'model'=>(string) ($state['model'] ?? ''),
@@ -154,6 +156,14 @@ final class Eduardo_Research_Manager_Page_Resource {
 
         $actions = array();
         $page_id = (int) $resource['page_id'];
+        if (empty($resource['published'])) {
+            $actions[] = array(
+                'type'=>'post_field',
+                'post_id'=>$page_id,
+                'field'=>'post_status',
+                'value'=>'publish',
+            );
+        }
         if ((string) $resource['role'] !== (string) $resource['expected_role']) {
             $actions[] = array(
                 'type'=>'post_meta',
@@ -200,7 +210,7 @@ final class Eduardo_Research_Manager_Page_Resource {
         if (is_wp_error($clean)) { return $clean; }
 
         $results = array();
-        $verified = ! empty($resource['contract_aligned']);
+        $verified = ! empty($resource['contract_aligned']) && ! empty($resource['published']);
         foreach ($clean as $slot => $expected) {
             $actual = $resource['effective_slots'][$slot] ?? null;
             $matches = maybe_serialize($actual) === maybe_serialize($expected);
@@ -214,6 +224,7 @@ final class Eduardo_Research_Manager_Page_Resource {
             'language'=>$language,
             'page_id'=>$resource['page_id'],
             'url'=>$resource['url'],
+            'published'=>! empty($resource['published']),
             'contract_aligned'=>$resource['contract_aligned'],
             'slots'=>$results,
             'verified_at'=>gmdate(DATE_W3C),

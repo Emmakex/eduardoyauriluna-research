@@ -31,6 +31,7 @@ final class Eduardo_Research_Manager_Greenfield_Pipeline {
         if (is_wp_error($bootstrap)) { return $bootstrap; }
         $hydration = $this->hydrator->preview($blueprint);
         if (is_wp_error($hydration)) { return $hydration; }
+        $hydration = $this->aggregate_preview_state($hydration);
 
         $has_bootstrap_changes = (int) ($bootstrap['operation_count'] ?? 0) > 0;
         if ($has_bootstrap_changes) {
@@ -39,6 +40,7 @@ final class Eduardo_Research_Manager_Greenfield_Pipeline {
         } else {
             $pairing = $this->pairing->preview($blueprint);
             if (is_wp_error($pairing)) { return $pairing; }
+            $pairing = $this->aggregate_preview_state($pairing);
             $relations = $this->relations->preview($blueprint);
             if (is_wp_error($relations)) { return $relations; }
         }
@@ -171,6 +173,21 @@ final class Eduardo_Research_Manager_Greenfield_Pipeline {
             'relations'=>$this->relations,
             default=>throw new LogicException('Unsupported Greenfield pipeline phase.'),
         };
+    }
+
+    private function aggregate_preview_state(array $phase): array {
+        $operations = is_array($phase['operations'] ?? null) ? $phase['operations'] : array();
+        $change_count = 0;
+        foreach ($operations as $operation) {
+            if (is_array($operation) && 'change' === (string) ($operation['status'] ?? '')) {
+                $change_count++;
+            }
+        }
+        $phase['change_count'] = $change_count;
+        if (! isset($phase['status'])) {
+            $phase['status'] = $change_count > 0 ? 'change' : 'steady';
+        }
+        return $phase;
     }
 
     private function deferred(string $reason, string $message): array {
