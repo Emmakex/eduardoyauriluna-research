@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import pathlib
+          import pathlib, re
           text = pathlib.Path('scripts/p4-media-metadata-production-acceptance.php').read_text()
           required = [
               '#^/capabilities$#',
@@ -58,13 +58,16 @@ jobs:
           for token in required:
               if token not in text:
                   raise SystemExit(f'missing required bounded route: {token}')
-          forbidden = [
-              '/wp/v2/', '/upload', '/delete', '/filesystem', '/plugins', '/themes',
-              'wp_update_post(', 'update_post_meta(', 'shell_exec(', 'exec(', 'system(',
-          ]
-          for token in forbidden:
+          forbidden_surfaces = ['/wp/v2/', '/upload', '/delete', '/filesystem', '/plugins', '/themes']
+          for token in forbidden_surfaces:
               if token in text:
                   raise SystemExit(f'forbidden direct mutation surface detected: {token}')
+          dangerous_calls = re.findall(r'(?<![A-Za-z0-9_])(shell_exec|exec|system|passthru|proc_open|popen)\s*\(', text)
+          if dangerous_calls:
+              raise SystemExit(f'forbidden shell/process call detected: {dangerous_calls!r}')
+          for token in ('wp_update_post(', 'update_post_meta('):
+              if token in text:
+                  raise SystemExit(f'forbidden direct WordPress mutation detected: {token}')
           PY
 
       - name: Enforce exact temporary acceptance scope profile
