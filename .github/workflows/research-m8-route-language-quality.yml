@@ -1,0 +1,125 @@
+name: Research M8 Route Language Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/header.php'
+      - 'wordpress/themes/eduardo-research/inc/research-language.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-rendered-verifier.php'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-m8-route-language-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/header.php'
+      - 'wordpress/themes/eduardo-research/inc/research-language.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-rendered-verifier.php'
+      - '.github/scripts/ensure-wp-cli.sh'
+      - '.github/workflows/research-m8-route-language-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  route-language-rendered-verification:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring,curl
+          coverage: none
+          tools: wp-cli
+
+      - name: Ensure WP-CLI
+        shell: bash
+        run: bash .github/scripts/ensure-wp-cli.sh
+
+      - name: Install clean WordPress with Spanish site locale
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-m8-language-wp
+          mkdir -p /tmp/research-m8-language-wp
+          cd /tmp/research-m8-language-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Eduardo Research M8 Language' --admin_user=admin --admin_password='research-manager-password' --admin_email=research@example.test --skip-email --allow-root
+          wp option update WPLANG es_ES --allow-root
+          mkdir -p wp-content/themes/eduardo-research wp-content/plugins/eduardo-research-manager
+          cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+          cp -R "$GITHUB_WORKSPACE/wordpress/plugins/eduardo-research-manager/." wp-content/plugins/eduardo-research-manager/
+          wp theme activate eduardo-research --allow-root
+          wp plugin activate eduardo-research-manager --allow-root
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+          wp research-manager greenfield apply --user=admin --yes --allow-root
+          wp rewrite flush --hard --allow-root
+
+      - name: Start public WordPress server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-m8-language-wp
+          nohup wp server --host=127.0.0.1 --port=8080 --allow-root >/tmp/research-m8-language-server.log 2>&1 &
+          echo $! >/tmp/research-m8-language-server.pid
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/research-m8-language-server.log
+          exit 1
+
+      - name: Prove route-authoritative html lang
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS http://127.0.0.1:8080/ >/tmp/research-en.html
+          curl -fsS http://127.0.0.1:8080/es/ >/tmp/research-es.html
+          grep -Eqi "<html[[:space:]][^>]*lang=['\"]en['\"]" /tmp/research-en.html
+          grep -Eqi "<html[[:space:]][^>]*lang=['\"]es['\"]" /tmp/research-es.html
+          if grep -Eqi "<html[[:space:]][^>]*lang=['\"]es([-_][^'\"]+)?['\"]" /tmp/research-en.html; then
+            echo 'English root leaked the global Spanish WordPress locale.' >&2
+            exit 1
+          fi
+
+      - name: Prove Manager rendered verification for EN and ES Home
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-m8-language-wp
+          wp eval '
+          $verifier = new Eduardo_Research_Manager_Rendered_Verifier();
+          foreach (["en", "es"] as $language) {
+              $result = $verifier->verify_page("home", $language);
+              if (is_wp_error($result) || empty($result["verified"])) {
+                  fwrite(STDERR, is_wp_error($result) ? $result->get_error_message() : wp_json_encode($result));
+                  exit(1);
+              }
+              if (empty($result["checks"]["html_language"])) {
+                  fwrite(STDERR, wp_json_encode($result["checks"]));
+                  exit(1);
+              }
+          }
+          ' --allow-root
+
+      - name: Stop public WordPress server
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f /tmp/research-m8-language-server.pid ]]; then
+            kill "$(cat /tmp/research-m8-language-server.pid)" 2>/dev/null || true
+          fi
