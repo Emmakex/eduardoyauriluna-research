@@ -17,6 +17,8 @@ $title = eduardo_research_page_label($key);
   <p class="research-lead"><?php echo esc_html((string) ($model['lead'] ?? '')); ?></p>
  </header>
 
+ <?php eduardo_research_render_primary_media(0, $key, $language); ?>
+
  <?php if (in_array($key, array('about','contact'), true)) : ?>
   <section class="research-interior" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell research-interior-stack">
