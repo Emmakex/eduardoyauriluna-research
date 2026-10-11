@@ -3,8 +3,9 @@ name: Research Insight Editor Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - '.github/workflows/research-insight-editor-quality.yml'
   push:
     branches: [main]
@@ -12,6 +13,10 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/**'
       - '.github/workflows/research-insight-editor-quality.yml'
+
+concurrency:
+  group: research-insight-editor-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
