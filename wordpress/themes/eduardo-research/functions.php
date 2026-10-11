@@ -25,6 +25,7 @@ require_once get_template_directory() . '/inc/research-sitemap.php';
 require_once get_template_directory() . '/inc/research-install.php';
 require_once get_template_directory() . '/inc/research-hardening.php';
 require_once get_template_directory() . '/inc/research-design.php';
+require_once get_template_directory() . '/inc/research-design-variants.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
