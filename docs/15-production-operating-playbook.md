@@ -160,6 +160,15 @@ The Manager source currently exposes this supported scope registry:
 - `identity.write`, `credentials.manage`
 - `external_publish.execute`, `software_update.execute`, `destructive_delete.execute`
 
+After semantic-scope hardening, generic mutation lifecycle permission is necessary but not sufficient. The Manager must also enforce the resource-specific write scope at Plan, Apply and Rollback without authenticating a second time or consuming a second nonce:
+
+- `greenfield-canonical` → `operations.apply`
+- `page-slots-update`, `page-create`, `page-remediate` → `operations.apply` + `pages.write`
+- `insight-create`, `insight-update` → `operations.apply` + `insights.write`
+- `insight-pair`, `insight-unpair` → `operations.apply` + `insights.write` + `translations.write`
+
+The dedicated Insight pairing gateway independently requires both `insights.write` and `translations.write` in addition to the lifecycle route permissions.
+
 Validate production against the live authenticated `/capabilities` response with:
 
 ```bash
@@ -173,9 +182,13 @@ The audit must pass before considering the operating-hardening scope contract ac
 
 - the live supported-scope registry matches the source contract;
 - all scopes required by the selected operating profile are granted;
+- the Phase 2 profile has exactly the accepted 17 scopes, with no extra grants;
 - dangerous-by-default scopes are not granted;
 - `/capabilities`, `/readiness` and `/diagnostics` expose their expected base scope contract;
-- mutation transport still declares exact Plan → Apply → Status → Verify → Rollback, stale-revision protection and idempotency.
+- mutation transport still declares exact Plan → Apply → Status → Verify → Rollback, stale-revision protection and idempotency;
+- `semantic_scope_enforcement=true` and `scope_check_order=authenticate-once-then-semantic-scopes`;
+- the complete operation→scope contract matches the source contract;
+- Insight pairing advertises the exact required write scopes `insights.write` + `translations.write`.
 
 The script reads `ERM_TOKEN` only from the local environment and never writes the bearer credential to evidence.
 
@@ -212,4 +225,5 @@ The audit trail should allow an operator to correlate:
 - Per-Insight rendered SEO/GEO verification is green, including canonical, hreflang, JSON-LD and `Article` schema.
 - Aggregate SEO/GEO readiness is green with zero blocking and zero advisory findings.
 - `robots.txt` is crawlable, `wp-sitemap.xml` is active, and both first Insight URLs are present in the public sitemap.
-- `scripts/p2-capabilities-audit.php` provides the live least-privilege capability drift check required to finish P2.6 acceptance.
+- PR #130 semantic write-scope hardening is merged into `main`; production deployment/post-deploy capability acceptance is the remaining live hardening step.
+- `scripts/p2-capabilities-audit.php` now treats the semantic operation→scope contract as a required production invariant.
