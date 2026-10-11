@@ -32,6 +32,7 @@ final class Eduardo_Research_Manager_Remediation {
                 'resource'=>(string) ($check['resource'] ?? ''),
                 'next_action'=>(string) ($check['next_action'] ?? ''),
                 'auto_remediable'=>$this->is_auto_remediable($check_id, (string) ($check['resource'] ?? '')),
+                'remediation_service'=>'search-indexability' === $check_id ? 'seo-geo-indexability' : 'generic-remediation',
             );
         }
         return array(
@@ -59,6 +60,12 @@ final class Eduardo_Research_Manager_Remediation {
         }
         if ('language-contract' === $check_id) {
             return $this->build_language_plan($intent);
+        }
+        if ('search-indexability' === $check_id) {
+            return new WP_Error(
+                'research_manager_remediation_dedicated_service',
+                'Search indexability is remediated through the dedicated bounded SEO/GEO indexability lifecycle, not the generic mutation Plan.'
+            );
         }
 
         return new WP_Error(
@@ -160,7 +167,7 @@ final class Eduardo_Research_Manager_Remediation {
     }
 
     private function is_auto_remediable(string $check_id, string $resource): bool {
-        if ('front-page' === $check_id || 'language-contract' === $check_id) { return true; }
+        if (in_array($check_id, array('front-page','language-contract','search-indexability'), true)) { return true; }
         return str_starts_with($check_id, 'page-') && str_starts_with($resource, 'page:');
     }
 }
