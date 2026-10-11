@@ -6,6 +6,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-media-metadata.php'
+      - '.github/scripts/test-remote-media-rollback-stale.php'
       - '.github/workflows/research-manager-remote-media-metadata-quality.yml'
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-media-metadata.php'
+      - '.github/scripts/test-remote-media-rollback-stale.php'
       - '.github/workflows/research-manager-remote-media-metadata-quality.yml'
 
 permissions:
@@ -59,6 +61,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-metadata-rest.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-media-metadata.php
+          php -l .github/scripts/test-remote-media-rollback-stale.php
 
       - name: Install clean Research WordPress
         shell: bash
@@ -85,3 +88,10 @@ jobs:
           set -euo pipefail
           cd /tmp/research-manager-remote-media-metadata
           wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-media-metadata.php" --allow-root
+
+      - name: Verify rollback refuses newer Media changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remote-media-metadata
+          wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-media-rollback-stale.php" --allow-root
