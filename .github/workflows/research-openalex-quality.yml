@@ -3,8 +3,12 @@ name: Research OpenAlex Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-openalex-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-crossref-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-openalex-quality.yml'
   push:
@@ -17,6 +21,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: research-openalex-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   openalex:
