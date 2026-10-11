@@ -3,8 +3,15 @@ name: Research Zenodo Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-zenodo-adapter.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-connections.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-zenodo-quality.yml'
   push:
@@ -14,6 +21,10 @@ on:
       - 'wordpress/themes/eduardo-research/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-zenodo-quality.yml'
+
+concurrency:
+  group: research-zenodo-quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
