@@ -5,8 +5,10 @@
  * Reads the authenticated Research Manager /capabilities endpoint and checks:
  * - server scope registry drift;
  * - minimum scopes for a named operating profile;
+ * - exact 17-scope grant for the Phase 2 profile;
  * - dangerous scope exposure;
- * - core read/mutation lifecycle declarations.
+ * - core read/mutation lifecycle declarations;
+ * - semantic operation→scope enforcement introduced by the Phase 2 hardening.
  *
  * The bearer token is read only from ERM_TOKEN and is never printed or written.
  *
@@ -47,6 +49,17 @@ $expectedSupportedScopes = array(
     'external_publish.execute',
     'software_update.execute',
     'destructive_delete.execute',
+);
+
+$expectedOperationScopeContract = array(
+    'greenfield-canonical' => array('operations.apply'),
+    'page-slots-update' => array('operations.apply', 'pages.write'),
+    'page-create' => array('operations.apply', 'pages.write'),
+    'page-remediate' => array('operations.apply', 'pages.write'),
+    'insight-create' => array('operations.apply', 'insights.write'),
+    'insight-update' => array('operations.apply', 'insights.write'),
+    'insight-pair' => array('operations.apply', 'insights.write', 'translations.write'),
+    'insight-unpair' => array('operations.apply', 'insights.write', 'translations.write'),
 );
 
 $profiles = array(
@@ -96,6 +109,12 @@ $dangerousByDefault = array(
     'media.write',
     'design.write',
 );
+
+$normaliseScopeSet = static function (array $scopes): array {
+    $clean = array_values(array_unique(array_map('strval', $scopes)));
+    sort($clean);
+    return $clean;
+};
 
 $options = getopt('', array('profile::', 'evidence::', 'help'));
 if (isset($options['help'])) {
@@ -169,23 +188,47 @@ if ($status < 200 || $status >= 300 || empty($decoded['ok']) || ! is_array($deco
 }
 
 $data = $decoded['data'];
-$granted = array_values(array_unique(array_map('strval', (array) ($data['granted_scopes'] ?? array()))));
-$supported = array_values(array_unique(array_map('strval', (array) ($data['supported_scopes'] ?? array()))));
-sort($granted);
-sort($supported);
+$granted = $normaliseScopeSet((array) ($data['granted_scopes'] ?? array()));
+$supported = $normaliseScopeSet((array) ($data['supported_scopes'] ?? array()));
+$expectedSorted = $normaliseScopeSet($expectedSupportedScopes);
+$required = $normaliseScopeSet($profiles[$profile]);
 
-$expectedSorted = $expectedSupportedScopes;
-sort($expectedSorted);
-$required = $profiles[$profile];
 $missingRequired = array_values(array_diff($required, $granted));
 $extraGranted = array_values(array_diff($granted, $required));
 $unexpectedDangerous = array_values(array_intersect($granted, $dangerousByDefault));
 $scopeRegistryMissing = array_values(array_diff($expectedSorted, $supported));
 $scopeRegistryUnexpected = array_values(array_diff($supported, $expectedSorted));
+$phase2ExactGrant = 'phase2' !== $profile || empty($missingRequired) && empty($extraGranted);
 
 $readEndpoints = is_array($data['read_endpoints'] ?? null) ? $data['read_endpoints'] : array();
 $transport = is_array($data['mutation_transport'] ?? null) ? $data['mutation_transport'] : array();
 $lifecycle = array_values(array_map('strval', (array) ($transport['lifecycle'] ?? array())));
+$actualScopeContract = is_array($transport['operation_scope_contract'] ?? null)
+    ? $transport['operation_scope_contract']
+    : array();
+
+$expectedContractKeys = array_keys($expectedOperationScopeContract);
+$actualContractKeys = array_keys($actualScopeContract);
+sort($expectedContractKeys);
+sort($actualContractKeys);
+$contractMissingOperations = array_values(array_diff($expectedContractKeys, $actualContractKeys));
+$contractUnexpectedOperations = array_values(array_diff($actualContractKeys, $expectedContractKeys));
+$contractChecks = array();
+foreach ($expectedOperationScopeContract as $operation => $expectedScopes) {
+    $actualScopes = is_array($actualScopeContract[$operation] ?? null)
+        ? $normaliseScopeSet($actualScopeContract[$operation])
+        : array();
+    $contractChecks[$operation] = $normaliseScopeSet($expectedScopes) === $actualScopes;
+}
+$semanticContractMatches = empty($contractMissingOperations)
+    && empty($contractUnexpectedOperations)
+    && ! in_array(false, $contractChecks, true);
+
+$translationPairing = is_array($data['insight_control']['translation_pairing'] ?? null)
+    ? $data['insight_control']['translation_pairing']
+    : array();
+$pairingWriteScopes = $normaliseScopeSet((array) ($translationPairing['required_write_scopes'] ?? array()));
+$expectedPairingWriteScopes = $normaliseScopeSet(array('insights.write', 'translations.write'));
 
 $coreChecks = array(
     'namespace_v1' => 'research-manager/v1' === (string) ($data['namespace'] ?? ''),
@@ -201,6 +244,11 @@ $coreChecks = array(
     'lifecycle_status' => in_array('status', $lifecycle, true),
     'lifecycle_verify' => in_array('verify', $lifecycle, true),
     'lifecycle_rollback' => in_array('rollback', $lifecycle, true),
+    'semantic_scope_enforcement' => ! empty($transport['semantic_scope_enforcement']),
+    'semantic_scope_check_order' => 'authenticate-once-then-semantic-scopes' === (string) ($transport['scope_check_order'] ?? ''),
+    'semantic_operation_scope_contract' => $semanticContractMatches,
+    'pairing_required_write_scopes' => $expectedPairingWriteScopes === $pairingWriteScopes,
+    'phase2_exact_scope_profile' => $phase2ExactGrant,
 );
 
 $pass = empty($missingRequired)
@@ -233,6 +281,19 @@ $result = array(
         'milestone' => (string) ($transport['milestone'] ?? ''),
         'supported_operations' => array_values(array_map('strval', (array) ($transport['supported_operations'] ?? array()))),
         'lifecycle' => $lifecycle,
+        'semantic_scope_enforcement' => ! empty($transport['semantic_scope_enforcement']),
+        'scope_check_order' => (string) ($transport['scope_check_order'] ?? ''),
+        'operation_scope_contract' => $actualScopeContract,
+        'operation_scope_contract_audit' => array(
+            'matches_expected' => $semanticContractMatches,
+            'checks' => $contractChecks,
+            'missing_operations' => $contractMissingOperations,
+            'unexpected_operations' => $contractUnexpectedOperations,
+        ),
+    ),
+    'insight_pairing' => array(
+        'required_write_scopes' => $pairingWriteScopes,
+        'matches_expected' => $expectedPairingWriteScopes === $pairingWriteScopes,
     ),
 );
 
@@ -255,8 +316,12 @@ fwrite(STDOUT, 'P2 capabilities audit: ' . ($pass ? 'PASS' : 'FAIL') . PHP_EOL);
 fwrite(STDOUT, 'Profile: ' . $profile . PHP_EOL);
 fwrite(STDOUT, 'Granted scopes: ' . count($granted) . PHP_EOL);
 fwrite(STDOUT, 'Missing required: ' . (empty($missingRequired) ? 'none' : implode(', ', $missingRequired)) . PHP_EOL);
+fwrite(STDOUT, 'Extra granted: ' . (empty($extraGranted) ? 'none' : implode(', ', $extraGranted)) . PHP_EOL);
 fwrite(STDOUT, 'Dangerous granted: ' . (empty($unexpectedDangerous) ? 'none' : implode(', ', $unexpectedDangerous)) . PHP_EOL);
 fwrite(STDOUT, 'Scope registry drift: ' . ((empty($scopeRegistryMissing) && empty($scopeRegistryUnexpected)) ? 'none' : 'detected') . PHP_EOL);
+fwrite(STDOUT, 'Semantic scope enforcement: ' . (! empty($transport['semantic_scope_enforcement']) ? 'enabled' : 'missing') . PHP_EOL);
+fwrite(STDOUT, 'Operation scope contract: ' . ($semanticContractMatches ? 'match' : 'drift') . PHP_EOL);
+fwrite(STDOUT, 'Insight pairing write scopes: ' . (($expectedPairingWriteScopes === $pairingWriteScopes) ? 'match' : 'drift') . PHP_EOL);
 if ('' !== $evidencePath) {
     fwrite(STDOUT, 'Evidence: ' . $evidencePath . PHP_EOL);
 }
