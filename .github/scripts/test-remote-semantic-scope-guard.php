@@ -102,12 +102,13 @@ if (403 !== $pair_block->get_status() || 'scope_denied' !== (string) ($pair_bloc
     fail_semantic_scope('operations.apply alone was not blocked for Insight pairing', $pair_block->get_data());
 }
 
+$full_scopes = array(
+    'site.read','site.diagnostics',
+    'pages.write','insights.write','translations.write',
+    'operations.apply','operations.rollback',
+);
 $full = Eduardo_Research_Manager::remote_credentials()->issue_token(
-    array(
-        'site.read','site.diagnostics',
-        'pages.write','insights.write','translations.write',
-        'operations.apply','operations.rollback',
-    ),
+    $full_scopes,
     1,
     'CI semantic scope positive probes'
 );
@@ -124,12 +125,61 @@ $page_plan = semantic_scope_request('POST', 'operations/plan', $full_token, arra
         'reason'=>'CI semantic Page positive probe',
     ),
 ));
-if (200 !== $page_plan->get_status() || empty($page_plan->get_data()['data']['plan_id'])) {
+$page_plan_id = (string) ($page_plan->get_data()['data']['plan_id'] ?? '');
+if (200 !== $page_plan->get_status() || '' === $page_plan_id) {
     fail_semantic_scope('Page mutation with pages.write did not reach Preview', $page_plan->get_data());
 }
 $page_after_positive_preview = Eduardo_Research_Manager::page_editor()->inspect('contact', 'en');
 if (is_wp_error($page_after_positive_preview) || $original_lead !== (string) ($page_after_positive_preview['effective_slots']['lead'] ?? '')) {
     fail_semantic_scope('authorised Page Preview mutated stored state', $page_after_positive_preview);
+}
+
+// Scope revocation after Preview must stop Apply without consuming or changing the plan.
+$without_pages = array_values(array_filter($full_scopes, static fn(string $scope): bool => 'pages.write' !== $scope));
+$scopes_changed = Eduardo_Research_Manager::remote_credentials()->set_scopes($without_pages);
+if (is_wp_error($scopes_changed)) { fail_semantic_scope('could not revoke pages.write for Apply probe', $scopes_changed); }
+$blocked_page_apply = semantic_scope_request('POST', 'plans/' . rawurlencode($page_plan_id) . '/apply', $full_token, array('confirm'=>true));
+if (403 !== $blocked_page_apply->get_status() || 'scope_denied' !== (string) ($blocked_page_apply->get_data()['code'] ?? '')) {
+    fail_semantic_scope('revoked pages.write did not block an already-planned Apply', $blocked_page_apply->get_data());
+}
+$after_blocked_apply = Eduardo_Research_Manager::page_editor()->inspect('contact', 'en');
+if (is_wp_error($after_blocked_apply) || $original_lead !== (string) ($after_blocked_apply['effective_slots']['lead'] ?? '')) {
+    fail_semantic_scope('blocked Apply mutated Page state', $after_blocked_apply);
+}
+
+$scopes_restored = Eduardo_Research_Manager::remote_credentials()->set_scopes($full_scopes);
+if (is_wp_error($scopes_restored)) { fail_semantic_scope('could not restore pages.write for Apply probe', $scopes_restored); }
+$page_apply = semantic_scope_request('POST', 'plans/' . rawurlencode($page_plan_id) . '/apply', $full_token, array('confirm'=>true));
+$page_operation_id = (string) ($page_apply->get_data()['data']['operation_id'] ?? '');
+if (200 !== $page_apply->get_status() || '' === $page_operation_id) {
+    fail_semantic_scope('restored pages.write did not permit the original plan Apply', $page_apply->get_data());
+}
+$after_page_apply = Eduardo_Research_Manager::page_editor()->inspect('contact', 'en');
+if (is_wp_error($after_page_apply) || $new_lead !== (string) ($after_page_apply['effective_slots']['lead'] ?? '')) {
+    fail_semantic_scope('authorised Page Apply did not persist expected state', $after_page_apply);
+}
+
+// Scope revocation after Apply must likewise stop Rollback and leave the operation reversible.
+$scopes_changed = Eduardo_Research_Manager::remote_credentials()->set_scopes($without_pages);
+if (is_wp_error($scopes_changed)) { fail_semantic_scope('could not revoke pages.write for Rollback probe', $scopes_changed); }
+$blocked_page_rollback = semantic_scope_request('POST', 'operations/' . rawurlencode($page_operation_id) . '/rollback', $full_token, array('confirm'=>true));
+if (403 !== $blocked_page_rollback->get_status() || 'scope_denied' !== (string) ($blocked_page_rollback->get_data()['code'] ?? '')) {
+    fail_semantic_scope('revoked pages.write did not block Rollback', $blocked_page_rollback->get_data());
+}
+$after_blocked_rollback = Eduardo_Research_Manager::page_editor()->inspect('contact', 'en');
+if (is_wp_error($after_blocked_rollback) || $new_lead !== (string) ($after_blocked_rollback['effective_slots']['lead'] ?? '')) {
+    fail_semantic_scope('blocked Rollback changed Page state', $after_blocked_rollback);
+}
+
+$scopes_restored = Eduardo_Research_Manager::remote_credentials()->set_scopes($full_scopes);
+if (is_wp_error($scopes_restored)) { fail_semantic_scope('could not restore pages.write for Rollback probe', $scopes_restored); }
+$page_rollback = semantic_scope_request('POST', 'operations/' . rawurlencode($page_operation_id) . '/rollback', $full_token, array('confirm'=>true));
+if (200 !== $page_rollback->get_status() || 'rolled-back' !== (string) ($page_rollback->get_data()['data']['status'] ?? '')) {
+    fail_semantic_scope('restored pages.write did not permit Rollback', $page_rollback->get_data());
+}
+$page_restored = Eduardo_Research_Manager::page_editor()->inspect('contact', 'en');
+if (is_wp_error($page_restored) || $original_lead !== (string) ($page_restored['effective_slots']['lead'] ?? '')) {
+    fail_semantic_scope('Page Rollback did not restore the original state', $page_restored);
 }
 
 $allowed_slug = 'semantic-scope-allowed-' . substr(str_replace('-', '', wp_generate_uuid4()), 0, 10);
