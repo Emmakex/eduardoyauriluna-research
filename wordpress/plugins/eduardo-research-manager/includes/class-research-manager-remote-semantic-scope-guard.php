@@ -5,6 +5,9 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
+    private const PLANS_OPTION = 'eduardo_research_manager_remote_plans';
+    private const OPERATIONS_OPTION = 'eduardo_research_manager_remote_operations';
+
     public function register(): void {
         add_filter('rest_request_before_callbacks', array($this, 'enforce'), 10, 3);
         add_filter('rest_request_after_callbacks', array($this, 'augment_capabilities'), 20, 3);
@@ -107,15 +110,13 @@ final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
         }
 
         if (preg_match('#^' . preg_quote($prefix, '#') . '/plans/([^/]+)/apply$#', $route, $matches)) {
-            $plan = Eduardo_Research_Manager::remote_operations()->get_plan(rawurldecode((string) $matches[1]));
-            if (is_wp_error($plan)) { return array(); }
-            return $this->semantic_scopes_for_operation((string) ($plan['operation'] ?? ''));
+            $operation = $this->stored_plan_operation(rawurldecode((string) $matches[1]));
+            return '' === $operation ? array() : $this->semantic_scopes_for_operation($operation);
         }
 
         if (preg_match('#^' . preg_quote($prefix, '#') . '/operations/([^/]+)/rollback$#', $route, $matches)) {
-            $operation = Eduardo_Research_Manager::remote_operations()->get_operation(rawurldecode((string) $matches[1]));
-            if (is_wp_error($operation)) { return array(); }
-            return $this->semantic_scopes_for_operation((string) ($operation['operation'] ?? ''));
+            $operation = $this->stored_operation_type(rawurldecode((string) $matches[1]));
+            return '' === $operation ? array() : $this->semantic_scopes_for_operation($operation);
         }
 
         if ($prefix . '/insights/pairing/plan' === $route
@@ -125,6 +126,23 @@ final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
         }
 
         return array();
+    }
+
+    /**
+     * Read the stored operation type without using lifecycle getters that may expire
+     * or otherwise transition plan state. Scope checks must be observational only.
+     */
+    private function stored_plan_operation(string $plan_id): string {
+        $plans = get_option(self::PLANS_OPTION, array());
+        if (! is_array($plans) || ! is_array($plans[$plan_id] ?? null)) { return ''; }
+        return $this->normalise_operation((string) ($plans[$plan_id]['operation'] ?? ''));
+    }
+
+    /** Scope checks must not mutate operation lifecycle state. */
+    private function stored_operation_type(string $operation_id): string {
+        $operations = get_option(self::OPERATIONS_OPTION, array());
+        if (! is_array($operations) || ! is_array($operations[$operation_id] ?? null)) { return ''; }
+        return $this->normalise_operation((string) ($operations[$operation_id]['operation'] ?? ''));
     }
 
     private function semantic_scopes_for_operation(string $operation): array {
