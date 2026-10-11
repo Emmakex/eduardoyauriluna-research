@@ -3,8 +3,14 @@ name: Research Manager Remote M4 Insight Pairing Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insight-pairing-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insight-pairing-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insights-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
+      - 'wordpress/themes/eduardo-research/inc/research-language.php'
+      - 'wordpress/themes/eduardo-research/inc/research-content-language.php'
+      - 'wordpress/themes/eduardo-research/inc/research-insights.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m4-insight-pairing.php'
       - '.github/workflows/research-manager-remote-m4-insight-pairing-quality.yml'
@@ -19,6 +25,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m4-insight-pairing:
