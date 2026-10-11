@@ -53,7 +53,7 @@ if (is_wp_error($seed) || empty($seed['verified'])) { fail_m3('canonical seed fa
 
 rest_get_server();
 $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(
-    array('site.read','site.diagnostics','operations.apply','operations.rollback'),
+    array('site.read','site.diagnostics','pages.write','operations.apply','operations.rollback'),
     1,
     'CI M3 Pages'
 );

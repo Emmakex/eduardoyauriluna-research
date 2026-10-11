@@ -127,7 +127,7 @@ if (is_wp_error($seed) || empty($seed['verified'])) { m4a_fail('canonical seed f
 
 rest_get_server();
 $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(
-    array('site.read','site.diagnostics','operations.apply','operations.rollback'), 1, 'CI M4 Aggregate'
+    array('site.read','site.diagnostics','insights.write','translations.write','operations.apply','operations.rollback'), 1, 'CI M4 Aggregate'
 );
 if (is_wp_error($issued) || empty($issued['token'])) { m4a_fail('credential issuance failed'); }
 $token = (string) $issued['token'];

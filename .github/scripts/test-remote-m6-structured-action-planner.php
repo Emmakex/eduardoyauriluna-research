@@ -106,7 +106,7 @@ if (403 !== $denied->get_status() || 'scope_denied' !== (string) ($denied->get_d
 }
 
 $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(
-    array('site.read','site.diagnostics','seo.read','research.read','research.write','operations.apply','operations.rollback'),
+    array('site.read','site.diagnostics','seo.read','pages.write','research.read','research.write','operations.apply','operations.rollback'),
     1,
     'CI M6b structured action planner'
 );
