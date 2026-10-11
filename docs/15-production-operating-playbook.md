@@ -91,10 +91,10 @@ Add `seo.read` / `seo.write` only when an SEO mutation is required.
 - `site.diagnostics`
 - `insights.read`
 - `insights.write`
+- `translations.read`
+- `translations.write`
 - `operations.apply`
 - `operations.rollback`
-
-Add translation scopes where the active gateway requires them for the intended bilingual operation.
 
 ### Research-object session
 
@@ -140,7 +140,44 @@ The accepted Phase 2 production scope set is:
 - `operations.apply`
 - `operations.rollback`
 
-Keep `identity.write`, `credentials.manage`, destructive-delete, external-publish and software-update capabilities disabled by default. `design.write` remains disabled unless a bounded design session explicitly needs it.
+Keep `identity.write`, `credentials.manage`, `connections.write`, `media.write`, `design.write`, `destructive_delete.execute`, `external_publish.execute` and `software_update.execute` disabled by default. `design.write` is enabled only for a deliberate bounded design session.
+
+## Capability contract and drift audit
+
+The Manager source currently exposes this supported scope registry:
+
+- `site.read`, `site.diagnostics`
+- `pages.read`, `pages.write`
+- `insights.read`, `insights.write`
+- `research.read`, `research.write`
+- `evidence.read`, `evidence.write`
+- `translations.read`, `translations.write`
+- `seo.read`, `seo.write`
+- `media.read`, `media.write`
+- `connections.read`, `connections.write`
+- `design.read`, `design.write`
+- `operations.apply`, `operations.rollback`
+- `identity.write`, `credentials.manage`
+- `external_publish.execute`, `software_update.execute`, `destructive_delete.execute`
+
+Validate production against the live authenticated `/capabilities` response with:
+
+```bash
+export ERM_BASE_URL='https://eduardoyauriluna.com'
+php scripts/p2-capabilities-audit.php \
+  --profile=phase2 \
+  --evidence=tmp/p2-capabilities-audit.json
+```
+
+The audit must pass before considering the operating-hardening scope contract accepted. It checks:
+
+- the live supported-scope registry matches the source contract;
+- all scopes required by the selected operating profile are granted;
+- dangerous-by-default scopes are not granted;
+- `/capabilities`, `/readiness` and `/diagnostics` expose their expected base scope contract;
+- mutation transport still declares exact Plan → Apply → Status → Verify → Rollback, stale-revision protection and idempotency.
+
+The script reads `ERM_TOKEN` only from the local environment and never writes the bearer credential to evidence.
 
 ## Credential handling
 
@@ -175,3 +212,4 @@ The audit trail should allow an operator to correlate:
 - Per-Insight rendered SEO/GEO verification is green, including canonical, hreflang, JSON-LD and `Article` schema.
 - Aggregate SEO/GEO readiness is green with zero blocking and zero advisory findings.
 - `robots.txt` is crawlable, `wp-sitemap.xml` is active, and both first Insight URLs are present in the public sitemap.
+- `scripts/p2-capabilities-audit.php` provides the live least-privilege capability drift check required to finish P2.6 acceptance.
