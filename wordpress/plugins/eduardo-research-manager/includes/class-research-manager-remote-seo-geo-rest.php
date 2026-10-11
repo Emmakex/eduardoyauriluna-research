@@ -8,18 +8,21 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
     private Eduardo_Research_Manager_Remote_REST $auth;
     private Eduardo_Research_Manager_SEO_GEO $seo_geo;
     private Eduardo_Research_Manager_SEO_GEO_Action_Planner $action_planner;
+    private Eduardo_Research_Manager_SEO_GEO_Indexability $indexability;
     private Eduardo_Research_Manager_Remote_SEO_GEO_Operations $operations;
 
     public function __construct(
         ?Eduardo_Research_Manager_Remote_REST $auth = null,
         ?Eduardo_Research_Manager_SEO_GEO $seo_geo = null,
         ?Eduardo_Research_Manager_Remote_SEO_GEO_Operations $operations = null,
-        ?Eduardo_Research_Manager_SEO_GEO_Action_Planner $action_planner = null
+        ?Eduardo_Research_Manager_SEO_GEO_Action_Planner $action_planner = null,
+        ?Eduardo_Research_Manager_SEO_GEO_Indexability $indexability = null
     ) {
         $this->auth = $auth ?: Eduardo_Research_Manager::remote_rest();
         $this->seo_geo = $seo_geo ?: new Eduardo_Research_Manager_SEO_GEO();
         $this->operations = $operations ?: new Eduardo_Research_Manager_Remote_SEO_GEO_Operations();
         $this->action_planner = $action_planner ?: new Eduardo_Research_Manager_SEO_GEO_Action_Planner($this->seo_geo);
+        $this->indexability = $indexability ?: new Eduardo_Research_Manager_SEO_GEO_Indexability($this->seo_geo);
     }
 
     public function register(): void {
@@ -42,6 +45,21 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
         register_rest_route($ns, '/seo-geo/resource/actions', array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'resource_actions'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'seo.read'),
+        ));
+        register_rest_route($ns, '/seo-geo/indexability', array(
+            'methods'=>WP_REST_Server::READABLE,
+            'callback'=>array($this, 'indexability'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'seo.read'),
+        ));
+        register_rest_route($ns, '/seo-geo/indexability/resource', array(
+            'methods'=>WP_REST_Server::READABLE,
+            'callback'=>array($this, 'indexability_resource'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'seo.read'),
+        ));
+        register_rest_route($ns, '/seo-geo/internal-links', array(
+            'methods'=>WP_REST_Server::READABLE,
+            'callback'=>array($this, 'internal_links'),
             'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'seo.read'),
         ));
         register_rest_route($ns, '/seo-geo/remediation/plan', array(
@@ -94,6 +112,22 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
         return is_wp_error($result) ? $result : $this->response($request, $result);
     }
 
+    public function indexability(WP_REST_Request $request): WP_REST_Response {
+        return $this->response($request, $this->indexability->site());
+    }
+
+    public function indexability_resource(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $target = $this->resource_target($request);
+        if (is_wp_error($target)) { return $target; }
+        $result = $this->indexability->resource($target['type'], $target['identifier'], $target['language']);
+        return is_wp_error($result) ? $result : $this->response($request, $result);
+    }
+
+    public function internal_links(WP_REST_Request $request): WP_REST_Response {
+        $limit = absint($request->get_param('limit') ?: 200);
+        return $this->response($request, $this->indexability->internal_links($limit));
+    }
+
     public function create_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params = $this->params($request);
         return $this->idempotent($request, function () use ($params, $request) {
@@ -140,10 +174,13 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
         $read['seo_geo_site'] = 'site.diagnostics + seo.read';
         $read['seo_geo_resource'] = 'site.diagnostics + seo.read';
         $read['seo_geo_resource_actions'] = 'site.diagnostics + seo.read';
+        $read['seo_geo_indexability'] = 'site.diagnostics + seo.read';
+        $read['seo_geo_indexability_resource'] = 'site.diagnostics + seo.read';
+        $read['seo_geo_internal_links'] = 'site.diagnostics + seo.read';
         $data['read_endpoints'] = $read;
         $data['seo_geo_control'] = array(
             'milestone'=>'M6',
-            'slice'=>'diagnostics-remediation-and-structured-action-planning',
+            'slice'=>'diagnostics-remediation-action-planning-indexability-and-links',
             'available'=>true,
             'site_diagnostics'=>true,
             'resource_rendered_inspection'=>array('page','insight','line','output','project','software','dataset'),
@@ -151,6 +188,20 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
             'structured_action_planner'=>true,
             'planner_dimensions'=>array('seo','geo','provenance','seo+geo','geo+provenance','seo+geo+provenance'),
             'planner_delegates_to'=>array('pages','insights','insight-translations','research-lines','research-objects','research-translations','research-evidence','seo-geo'),
+            'indexability'=>array(
+                'global_search_visibility'=>true,
+                'robots_rendered_inspection'=>true,
+                'core_sitemap_state'=>true,
+                'localized_page_sitemap_provider'=>true,
+                'exploration_noindex_follow_policy'=>true,
+                'search_indexability_remediation'=>true,
+            ),
+            'internal_links'=>array(
+                'research_graph_diagnostics'=>true,
+                'verified_line_relationships'=>true,
+                'remediation_via_existing_gateways'=>true,
+                'direct_html_mutation'=>false,
+            ),
             'operations'=>array('seo-remediate'),
             'lifecycle'=>array('plan','apply','status','verify','rollback'),
             'read_scope'=>'seo.read',
@@ -158,9 +209,9 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
             'exact_plan_required'=>true,
             'stale_target_protection'=>true,
             'idempotency'=>true,
-            'current_remediation_boundary'=>'Diagnostics findings already classified auto-remediable by the shared Remediation service.',
-            'structured_optimization_boundary'=>'SEO/GEO source findings are routed to existing bounded Manager gateways instead of direct metadata writes.',
-            'advanced_indexability_and_link_remediation'=>'later-m6-slice',
+            'current_remediation_boundary'=>'Diagnostics findings classified auto-remediable by the shared Remediation service, including global search indexability.',
+            'structured_optimization_boundary'=>'SEO/GEO source findings and internal-link gaps are routed to existing bounded Manager gateways instead of direct metadata/HTML writes.',
+            'aggregate_geo_readiness'=>'later-m6-slice',
             'arbitrary_meta_editor'=>false,
             'arbitrary_wordpress_proxy'=>false,
         );
