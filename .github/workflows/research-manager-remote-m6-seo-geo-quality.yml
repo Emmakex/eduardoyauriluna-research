@@ -3,7 +3,14 @@ name: Research Manager Remote M6 SEO GEO Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-action-planner.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-indexability.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-rest.php'
+      - 'wordpress/themes/eduardo-research/inc/research-seo.php'
+      - 'wordpress/themes/eduardo-research/inc/research-editorial-seo.php'
+      - 'wordpress/themes/eduardo-research/inc/research-discovery.php'
       - '.github/scripts/test-remote-m6-seo-geo.php'
       - '.github/workflows/research-manager-remote-m6-seo-geo-quality.yml'
   push:
@@ -15,6 +22,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m6-seo-geo:

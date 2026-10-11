@@ -3,8 +3,11 @@ name: Research Manager Remote M7 Design Tokens Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-design.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-design-rest.php'
+      - 'wordpress/themes/eduardo-research/inc/research-design.php'
+      - 'wordpress/themes/eduardo-research/functions.php'
+      - 'wordpress/themes/eduardo-research/style.css'
       - '.github/scripts/test-remote-m7-design-tokens.php'
       - '.github/workflows/research-manager-remote-m7-design-tokens-quality.yml'
   push:
@@ -17,6 +20,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m7-design-tokens:

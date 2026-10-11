@@ -3,8 +3,20 @@ name: Research Manager Remote M5 Relationships Schema Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/themes/eduardo-research/**'
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/inc/research-relations.php'
+      - 'wordpress/themes/eduardo-research/inc/research-lines.php'
+      - 'wordpress/themes/eduardo-research/inc/research-objects.php'
+      - 'wordpress/themes/eduardo-research/inc/research-editorial-seo.php'
+      - 'wordpress/themes/eduardo-research/inc/research-seo.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-lines-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insights-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-objects-rest.php'
       - '.github/scripts/test-remote-m5-relationships-schema.php'
       - '.github/workflows/research-manager-remote-m5-relationships-schema-quality.yml'
   push:
@@ -17,6 +29,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m5-relationships-schema:
