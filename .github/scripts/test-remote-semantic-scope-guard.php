@@ -1,6 +1,5 @@
 <?php
 /** Fresh-WordPress acceptance for semantic least-privilege write scopes. */
-declare(strict_types=1);
 
 wp_set_current_user(1);
 
