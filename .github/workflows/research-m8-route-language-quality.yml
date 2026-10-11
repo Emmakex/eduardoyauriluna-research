@@ -89,9 +89,9 @@ jobs:
           set -euo pipefail
           curl -fsS http://127.0.0.1:8080/ >/tmp/research-en.html
           curl -fsS http://127.0.0.1:8080/es/ >/tmp/research-es.html
-          grep -Eqi '<html[[:space:]][^>]*lang=["'"']en["'"']' /tmp/research-en.html
-          grep -Eqi '<html[[:space:]][^>]*lang=["'"']es["'"']' /tmp/research-es.html
-          if grep -Eqi '<html[[:space:]][^>]*lang=["'"']es([-_][^"'"']+)?["'"']' /tmp/research-en.html; then
+          grep -Eqi "<html[[:space:]][^>]*lang=['\"]en['\"]" /tmp/research-en.html
+          grep -Eqi "<html[[:space:]][^>]*lang=['\"]es['\"]" /tmp/research-es.html
+          if grep -Eqi "<html[[:space:]][^>]*lang=['\"]es([-_][^'\"]+)?['\"]" /tmp/research-en.html; then
             echo 'English root leaked the global Spanish WordPress locale.' >&2
             exit 1
           fi
