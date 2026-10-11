@@ -50,6 +50,7 @@ function eduardo_research_assets(): void {
         'eduardo-research-collections'=>'assets/research-collections.css',
         'eduardo-research-editorial-cv'=>'assets/research-editorial-cv.css',
         'eduardo-research-navigation'=>'assets/research-navigation.css',
+        'eduardo-research-media'=>'assets/research-media.css',
     );
     foreach ($styles as $handle => $relative) {
         $asset_path = get_stylesheet_directory() . '/' . $relative;
