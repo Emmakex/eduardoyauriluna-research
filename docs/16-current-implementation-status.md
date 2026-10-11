@@ -1,173 +1,157 @@
-# Current implementation status — 2026-10-10
+# Current implementation status — 2026-10-11
 
-This document separates **what is already implemented in the repository**, **what is verified by CI**, **what is deployed/verified on the real site**, and **what is still missing for ChatGPT-governed operation**.
+This document separates **implemented in the repository**, **verified by CI**, **deployed/verified on the real site**, and **current next development**.
 
-## Scope and canonical operating model
+## Canonical operating model
 
-`eduardoyauriluna.com` is the **Greenfield Research** scenario.
-
-There is no legacy site to interpret, audit or migrate. The operating architecture is:
+`eduardoyauriluna.com` is the **Greenfield Research** scenario. There is no legacy site to interpret or migrate before normal operation.
 
 ```text
-Eduardo → ChatGPT → authenticated Research Manager → shared Manager services → WordPress resources → Research Theme → rendered eduardoyauriluna.com → verification back to ChatGPT
+Eduardo → ChatGPT/operator → authenticated Research Manager → shared Manager services → WordPress resources → Research Theme → rendered eduardoyauriluna.com → verification
 ```
 
-The Research Theme owns deterministic frontend rendering. The Research Manager owns structured website control. ChatGPT is the intended primary managed instruction surface. WordPress Admin is the required local/fallback surface. WP-CLI and SSH are optional bootstrap/automation/support transports.
+The Research Theme owns deterministic frontend rendering. The Research Manager owns structured website control. WordPress Admin remains the local bootstrap/security/fallback surface. WP-CLI and SSH are support transports, not the normal managed workflow.
 
-Canonical reference: `docs/22-chat-governed-manager-contract.md`.
+Canonical contracts: `docs/22-chat-governed-manager-contract.md` and `docs/15-production-operating-playbook.md`.
 
 ## Implemented in the repository
 
 ### Research Theme
 
-The Research Theme is implemented as a Theme-owned frontend. Controlled surfaces do not rely on Gutenberg as the layout authority. The Theme includes the Research preset, page/single/archive rendering, responsive/semantic frontend, multilingual behavior, Research entities, SEO/academic discovery rendering and the selected visual direction.
+The Theme owns the Greenfield Research frontend, including:
 
-### Manager service/control-plane foundation
+- Theme-controlled Page, single and archive rendering;
+- EN/ES routes and language-aware rendering;
+- Research Lines, Insights and structured Research objects;
+- responsive/semantic frontend behavior;
+- academic/SEO/GEO discovery rendering;
+- bounded design tokens and component variants.
 
-The Manager currently includes reusable services and bounded mutation patterns for:
+Controlled frontend layout does not depend on Gutenberg as the layout authority.
 
-- canonical Research blueprint and blueprint store;
-- Greenfield pipeline with Preview → Apply → Verify → Rollback semantics;
-- direct canonical blueprint JSON download;
-- structured Theme Page inspection/editing;
-- Insights;
+### Research Manager service layer
+
+The Manager includes bounded services for:
+
+- canonical Research blueprint and Greenfield bootstrap/hydration;
+- Preview → Apply → Verify → Rollback execution and snapshots;
+- structured Theme Page control;
+- Insights/editorial control;
 - Research Lines;
-- Publications / research outputs;
+- Publications / Research Outputs;
 - Projects;
 - Research Software;
 - Datasets;
-- evidence/provenance controls;
-- EN/ES translation pairing/editing;
-- readiness/diagnostics;
-- deterministic remediation services;
-- stored-state execution/snapshots/rollback infrastructure;
+- evidence/provenance;
+- EN/ES translation pairing;
+- SEO/GEO diagnostics, action planning, indexability/internal-link control and readiness;
+- bounded Research Theme design controls/readiness;
 - rendered HTTP verification;
-- academic connections/adapters for ORCID, Crossref, OpenAlex, Zenodo and bounded GitHub research-software preview;
-- Google Scholar-compatible citation/indexing metadata contract.
+- academic adapters for ORCID, Crossref, OpenAlex, Zenodo and GitHub;
+- Google Scholar-compatible citation/indexing metadata.
 
-### WordPress Admin surfaces
+### Authenticated Remote Manager bridge
 
-The repository already contains Manager Admin surfaces for major service groups, including:
+M1–M8 are implemented. The remote surface includes:
 
-- Greenfield/status/readiness control;
-- structured Page editing;
-- Insights;
-- Research Lines;
-- Research Objects;
-- translations;
-- evidence;
-- connections;
-- selected academic connector workflows.
+- versioned `research-manager/v1` namespace;
+- site-specific bearer credential lifecycle;
+- supported read/write scope registry;
+- request IDs, nonce/timestamp guard and idempotency;
+- typed remote errors and audit correlation;
+- status, versions, capabilities, readiness and diagnostics;
+- exact Plan → Apply → Status → Verify → Rollback lifecycle;
+- stale-revision protection;
+- bounded Page, Insight, Research Object, translation, evidence, SEO/GEO and design control;
+- semantic write-scope enforcement on generic Page/Insight mutations.
 
-The local Admin surface is therefore more than a diagnostics mockup; it already exercises real Manager services.
+The production semantic contract requires resource-specific write scopes in addition to lifecycle permission. Generic `operations.apply` alone is not sufficient for Page or Insight mutation.
 
-### WP-CLI operator lifecycle
+### Local/Admin and WP-CLI surfaces
 
-The repository also implements:
+WordPress Admin remains available for local security/bootstrap/fallback operations and existing Manager service workflows. WP-CLI includes the Greenfield status/preview/apply/rollback lifecycle. Neither is the target day-to-day remote mutation path.
 
-- `wp research-manager greenfield status`;
-- `wp research-manager greenfield preview`;
-- `wp research-manager greenfield apply --user=<administrator> --yes`;
-- `wp research-manager greenfield rollback --user=<administrator> --yes`.
+### Standalone Greenfield bundle
 
-WP-CLI is an adapter/automation path, not the target day-to-day operating surface.
+The repository builds an auditable standalone bundle containing:
 
-### Standalone Greenfield installation bundle
-
-A standalone deployment bundle is implemented and verified by CI. It contains:
-
-- versioned Research Theme ZIP;
+- versioned Theme ZIP;
 - versioned Research Manager ZIP;
 - canonical Research blueprint;
-- `manifest.json` with component identity, versions and SHA-256 metadata;
-- `SHA256SUMS` integrity boundary;
-- standalone installer;
-- installation README.
+- manifest and SHA-256 integrity metadata;
+- installer and installation documentation.
 
 ## Verified by CI
 
-The repository currently has automated evidence for, among other areas:
+Automated fresh-WordPress acceptance covers the major Manager/Theme capability groups, including:
 
-- clean WordPress Theme activation and Research bootstrap;
-- EN/ES routes, relationships and translations;
-- Theme-owned structured pages and interior Research surfaces;
-- Research Lines and structured Research objects;
-- Insights/editorial paths;
-- evidence gates, controlled mutations and rollback;
-- Research Manager runtime/readiness;
-- page/editor Admin behavior;
-- academic connection previews/reconciliation contracts;
-- Theme and Manager installable packages;
-- standalone Greenfield bundle construction/integrity;
-- clean WordPress installation from that bundle;
-- Greenfield Apply readiness and idempotent re-Apply;
-- repository-wide WP-CLI availability/fallback protection.
+- Greenfield bootstrap, hydration, pairing and idempotency;
+- Page control and remediation;
+- Insight create/update/status/scheduling/relations/pairing;
+- Research Lines, Objects, translations and evidence;
+- SEO/GEO remediation, action planning, indexability, internal links and aggregate readiness;
+- bounded design tokens, variants and readiness;
+- remote authentication, plans/operations, rollback and semantic scope guards;
+- academic adapter/Admin contracts;
+- installable packages and Greenfield bundle integrity;
+- repository-wide WP-CLI fallback protection.
 
-The standalone bundle produced from `main` at merge commit `148e7f6fb4476f98ce632333ef02f766b6ab125d` passed `Research Greenfield Bundle Quality` on 2026-10-10.
+PR #130 additionally hardened semantic write scopes and passed the affected historical regression matrix before merge. PR #131 added a dedicated production capability-contract audit and CI for that audit.
 
-## Not yet implemented — ChatGPT ↔ Manager bridge
+## Deployed and verified on `eduardoyauriluna.com`
 
-The central missing layer for the intended operating model is the authenticated remote Manager interface and ChatGPT connector.
+Phase 2 production acceptance is complete.
 
-The following must **not** be reported as complete yet:
+Verified production state includes:
 
-- versioned remote Manager REST/control API;
-- site-specific remote connection identity;
-- local enable/revoke/rotate UI;
-- read/write scope model;
-- request identity/idempotency layer for remote operations;
-- stale-revision/concurrency enforcement for remote plans;
-- remote audit record/correlation model;
-- typed remote error contract;
-- remote `status` / `versions` / `capabilities` / `readiness` endpoints;
-- remote Plan/Preview lifecycle;
-- exact-plan Apply over the remote boundary;
-- operation status/verification retrieval;
-- remote rollback invocation for supported operations;
-- ChatGPT connector exposing high-level Manager actions;
-- a real end-to-end Page mutation originating from this ChatGPT workflow and verified on `eduardoyauriluna.com`.
+- supported Research Theme + Research Manager deployed;
+- Greenfield Research site operating through the authenticated Manager;
+- exact accepted 17-scope Phase 2 credential profile;
+- no dangerous-by-default grants in that production profile;
+- semantic write-scope hardening deployed;
+- post-deploy capability audit PASS with no registry drift;
+- operation→scope contract matched;
+- Insight pairing write-scope contract matched;
+- final authenticated production preflight PASS;
+- EN/ES researcher profile/content baseline;
+- four bilingual Research Line pairs;
+- first bilingual Research Note published and paired;
+- per-Insight and aggregate SEO/GEO/discovery verification green at Phase 2 acceptance.
 
-The current Manager core makes this bridge feasible, but the bridge itself is still pending implementation.
+The Phase 2 tracker is #128 and is closed as completed. Credential lifecycle maintenance continues separately in #132 under the 90-day maximum routine rotation policy in `docs/44-production-credential-rotation-policy.md`.
 
-## Still pending on the real WordPress target
+## Evidence boundary
 
-The following require the actual `eduardoyauriluna.com` WordPress environment and must not be marked complete solely from repository/CI evidence:
+Research Outputs, Projects, Software and Datasets are published only when real evidence supports them. Phase 2 deliberately did not create filler records where evidence was absent.
 
-- install/confirm the supported Theme + Manager build on the real target;
-- real Greenfield hydration and Manager readiness verification;
-- real rendered EN/ES verification against the public domain;
-- real ChatGPT ↔ Manager authenticated connection;
-- real remote Page Preview → Apply → Verify → Rollback acceptance;
-- real remote Insight creation/update/publish acceptance;
-- real remote SEO/GEO remediation acceptance;
-- mobile/accessibility/Core Web Vitals production validation;
-- final real EN/ES content population/review;
-- verified ORCID and other academic identifiers supplied/confirmed by the researcher;
-- production external credentials/tokens where optional authenticated reads are required;
-- real publications/projects/datasets/software portfolio content.
+Likewise, academic identifiers/affiliations/publications must not be inferred merely because connector code exists. A connector being implemented and CI-verified is distinct from a researcher identifier or external record being personally verified and approved for publication.
 
-## Immediate engineering priority — M1 to M8
+## Current next development — Phase 3
 
-The canonical implementation order is defined in `docs/22-chat-governed-manager-contract.md`:
+The next product gap is bounded **Remote Media control**, tracked by #134.
 
-1. **M1 — Remote Manager foundation:** authenticated versioned API, capabilities/scopes, credential lifecycle, idempotency primitives, audit model, read-only status/version/readiness endpoints.
-2. **M2 — Plan/operation lifecycle:** Preview/plan IDs, exact-plan Apply, revision protection, verification, typed errors, rollback hooks.
-3. **M3 — Page control from ChatGPT:** first real end-to-end Page operation.
-4. **M4 — Insight/blog control from ChatGPT.**
-5. **M5 — Research object control from ChatGPT.**
-6. **M6 — SEO/GEO optimisation from ChatGPT.**
-7. **M7 — bounded Research Theme design controls from ChatGPT.**
-8. **M8 — real-site operating acceptance:** operate routine site work through ChatGPT → Manager and convert any normal bypass into backlog.
+The product backlog already identifies Media inventory, assignment, alt/descriptive metadata, performance checks and duplicate/unused detection as supporting capabilities. The scope registry already contains `media.read` / `media.write`, but Phase 2 intentionally did not grant those scopes or expose a dedicated remote Media gateway.
 
-Do not replace this sequence with speculative multi-client SaaS/Control Center work before the Eduardo single-site control path is proven.
+Phase 3 sequence:
+
+1. **P3.1 — read-only Media foundation (#135):** authenticated inventory and inspection through `media.read`, safe public attachment metadata only, no filesystem leakage or upload proxy.
+2. **P3.2 — bounded Media metadata lifecycle (#137):** title/alt/caption/description through exact Plan → Apply → Verify → Rollback and `media.write`.
+3. **P3.3 — bounded Media assignment:** relate attachments to supported Page/Insight/Research resources without giving Media authority over layout.
+4. **P3.4 — Media diagnostics:** missing alt, orphan/unused assets, duplicate candidates and image-performance advisories without destructive auto-delete.
+
+The accepted Phase 2 17-scope credential remains unchanged. Media scopes are for deliberate Media sessions only.
+
+## Repository hygiene
+
+Several historical Phase/roadmap issues still use pre-M1–M8 wording. Issue #136 tracks reconciliation of those historical trackers so they remain useful records without contradicting the accepted production state.
 
 ## Rule for status reporting
 
-When reporting progress, explicitly distinguish:
+Always distinguish:
 
 - **implemented in repository** — code/contract/admin/remote surface exists;
-- **verified by CI** — automated tests have exercised it;
+- **verified by CI** — automated tests exercised it;
 - **deployed on real site** — supported code is installed on `eduardoyauriluna.com`;
-- **verified from ChatGPT through Manager** — the operation originated through the authenticated Manager bridge and the rendered public result was verified.
+- **verified through the authenticated Manager** — the production operation/readiness contract was exercised through the intended managed boundary.
 
-The final state is the acceptance target for routine managed website operations.
+Do not present future Media capabilities, unverified external academic identity data, or evidence-sensitive Research Objects as complete before their own acceptance conditions are met.
