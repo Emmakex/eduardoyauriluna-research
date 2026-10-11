@@ -3,7 +3,12 @@ name: Research Manager Remote M5 Lines Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-line-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-lines-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
       - '.github/scripts/test-remote-m5-lines.php'
       - '.github/workflows/research-manager-remote-m5-lines-quality.yml'
   push:
@@ -15,6 +20,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m5-lines:
