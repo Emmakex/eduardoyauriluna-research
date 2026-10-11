@@ -1,0 +1,36 @@
+{
+  "site": "https://eduardoyauriluna.com",
+  "page": {
+    "key": "home",
+    "language": "en",
+    "reason": "M8 real-site Page acceptance",
+    "slots": {
+      "headline": "REPLACE_WITH_APPROVED_TEMPORARY_OR_FINAL_HEADLINE"
+    },
+    "rollback_after_verify": true
+  },
+  "insight": {
+    "reason": "M8 real-site Insight acceptance",
+    "data": {
+      "title": "REPLACE_WITH_APPROVED_M8_INSIGHT_TITLE",
+      "excerpt": "REPLACE_WITH_APPROVED_M8_INSIGHT_EXCERPT",
+      "content": "REPLACE_WITH_APPROVED_M8_INSIGHT_CONTENT",
+      "language": "en",
+      "insight_type": "note",
+      "status": "publish",
+      "line_ids": []
+    },
+    "rollback_after_verify": true
+  },
+  "seo": {
+    "check_id": "REPLACE_AFTER_PREFLIGHT",
+    "intent": "M8 real-site SEO/GEO remediation acceptance",
+    "rollback_after_verify": true
+  },
+  "design": {
+    "enabled": true,
+    "intent": "M8 real-site bounded design acceptance",
+    "changes": {},
+    "rollback_after_verify": true
+  }
+}
