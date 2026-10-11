@@ -15,6 +15,7 @@ on:
       - 'wordpress/themes/eduardo-research/research-templates/page-research-surface.php'
       - '.github/scripts/test-remote-media-assignment.php'
       - '.github/scripts/test-remote-media-assignment-inspection.php'
+      - '.github/scripts/test-remote-media-assignment-scope-order.php'
       - '.github/workflows/research-manager-remote-media-assignment-quality.yml'
   push:
     branches: [main]
@@ -31,6 +32,7 @@ on:
       - 'wordpress/themes/eduardo-research/research-templates/page-research-surface.php'
       - '.github/scripts/test-remote-media-assignment.php'
       - '.github/scripts/test-remote-media-assignment-inspection.php'
+      - '.github/scripts/test-remote-media-assignment-scope-order.php'
       - '.github/workflows/research-manager-remote-media-assignment-quality.yml'
 
 permissions:
@@ -86,6 +88,7 @@ jobs:
           php -l wordpress/themes/eduardo-research/research-templates/page-research-surface.php
           php -l .github/scripts/test-remote-media-assignment.php
           php -l .github/scripts/test-remote-media-assignment-inspection.php
+          php -l .github/scripts/test-remote-media-assignment-scope-order.php
 
       - name: Install clean Research WordPress
         shell: bash
@@ -105,6 +108,13 @@ jobs:
           wp plugin activate eduardo-research-manager --allow-root
           wp rewrite structure '/%postname%/' --hard --allow-root
           wp rewrite flush --hard --allow-root
+
+      - name: Verify scope ordering before target resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-manager-remote-media-assignment
+          wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-media-assignment-scope-order.php" --allow-root
 
       - name: Verify read-only assignment inspection
         shell: bash
