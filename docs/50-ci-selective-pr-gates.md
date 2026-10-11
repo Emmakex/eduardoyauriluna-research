@@ -20,11 +20,11 @@ For `push` to `main`:
 - existing broad plugin/theme path coverage is intentionally retained;
 - historical suites therefore continue to produce comprehensive post-merge regression evidence before release/deployment decisions.
 
-## Phase 1
+## Phase 1 — M3/M4
 
-Issue #143 starts by narrowing the noisiest historical M3/M4 pull-request workflows and adding `cancel-in-progress` concurrency. This is deliberately incremental: each workflow keeps its existing job body and clean-WordPress acceptance test; only PR path ownership and superseded-run behaviour change.
+Issue #143 started by narrowing the noisiest historical M3/M4 pull-request workflows and adding `cancel-in-progress` concurrency. Each workflow kept its existing job body and clean-WordPress acceptance test; only PR path ownership and superseded-run behaviour changed.
 
-The initial set covers:
+Phase 1 covers:
 
 - M3 Pages;
 - M3 Page remediation;
@@ -35,6 +35,29 @@ The initial set covers:
 - M4 Insight scheduling;
 - M4 aggregate acceptance.
 
+## Phase 2 — M5/M6/M7/M8
+
+The second migration applies the same boundary to the remaining high-cost historical Manager gates that were still activated by unrelated Media work.
+
+Phase 2 covers:
+
+- M5 Research Lines;
+- M5 Research Objects;
+- M5 Translations;
+- M5 Evidence;
+- M5 relationship/public-schema acceptance;
+- M5 aggregate acceptance;
+- M6 structured action planner;
+- M6 indexability/internal-link control;
+- M6 SEO/GEO lifecycle;
+- M6 aggregate readiness;
+- M7 Theme design tokens;
+- M7 component variants;
+- M7 aggregate design readiness;
+- M8 live Greenfield regression.
+
+These PR gates now follow their actual implementation dependencies rather than the full plugin/theme trees. Their `push` rules remain intentionally broad on `main`, so a merged Research Manager or Theme change still receives comprehensive historical regression evidence before any release/deployment decision.
+
 ## Safety invariants
 
 This optimisation does **not**:
@@ -44,6 +67,7 @@ This optimisation does **not**:
 - relax mutation scopes;
 - alter request idempotency or stale-revision protection;
 - disable full regression on `main`;
-- make current-feature acceptance optional.
+- make current-feature acceptance optional;
+- let a feature-specific green check substitute for relevant security regression coverage.
 
-Further M5–M8 path ownership should be migrated in the same pattern only after confirming each workflow's owned implementation surface.
+New historical suites should use the same ownership rule from the start: narrow PR paths, workflow-scoped cancellation of superseded runs, and broad post-merge evidence where full-regression coverage is required.
