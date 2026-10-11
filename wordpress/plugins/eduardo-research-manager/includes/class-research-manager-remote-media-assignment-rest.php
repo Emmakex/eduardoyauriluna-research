@@ -190,9 +190,9 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
     private function permission_inspection(WP_REST_Request $request): bool|WP_Error {
         $base = $this->auth->permission($request, 'media.read');
         if (is_wp_error($base) || true !== $base) { return $base; }
-        $required = $this->editor->required_scopes($this->target_from_request($request));
-        if (is_wp_error($required)) { return $required; }
-        return $this->check_after_auth(array((string) $required['read']));
+        $contract = $this->scope_contract_for_target($this->target_from_request($request));
+        if (is_wp_error($contract)) { return $contract; }
+        return $this->check_after_auth(array((string) $contract['read']));
     }
 
     private function permission_plan(WP_REST_Request $request): bool|WP_Error {
@@ -201,9 +201,9 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
         $params = $this->json($request);
         $payload = is_array($params['payload'] ?? null) ? $params['payload'] : $params;
         $target = is_array($payload['target'] ?? null) ? $payload['target'] : array();
-        $required = $this->editor->required_scopes($target);
-        if (is_wp_error($required)) { return $required; }
-        return $this->check_after_auth(array('media.write', (string) $required['write']));
+        $contract = $this->scope_contract_for_target($target);
+        if (is_wp_error($contract)) { return $contract; }
+        return $this->check_after_auth(array('media.write', (string) $contract['write']));
     }
 
     private function permission_stored_plan(WP_REST_Request $request, string $primary, bool $write): bool|WP_Error {
@@ -234,6 +234,24 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
             return $this->check_after_auth(array('media.write', (string) ($operation['semantic_scope'] ?? '')));
         }
         return $this->check_after_auth(array('media.read', (string) ($operation['read_scope'] ?? '')));
+    }
+
+    private function scope_contract_for_target(array $target): array|WP_Error {
+        $type = sanitize_key((string) ($target['type'] ?? ''));
+        if ('page' === $type) {
+            return array('read'=>'pages.read', 'write'=>'pages.write');
+        }
+        if ('insight' === $type) {
+            return array('read'=>'insights.read', 'write'=>'insights.write');
+        }
+        if ('research' === $type) {
+            return array('read'=>'research.read', 'write'=>'research.write');
+        }
+        return new WP_Error(
+            'validation_failed',
+            'Media assignment target type must be page, insight or research.',
+            array('status'=>400)
+        );
     }
 
     private function enforce_connection_owner(string $stored_connection_id): bool|WP_Error {
