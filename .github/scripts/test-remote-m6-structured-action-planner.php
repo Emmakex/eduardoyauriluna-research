@@ -114,10 +114,13 @@ if (is_wp_error($issued) || empty($issued['token'])) { m6b_fail('M6b credential 
 $token = (string) $issued['token'];
 
 $cap = m6b_request('GET', 'capabilities', $token);
-$control = (array) ($cap->get_data()['data']['seo_geo_control'] ?? array());
+$cap_data = (array) ($cap->get_data()['data'] ?? array());
+$control = (array) ($cap_data['seo_geo_control'] ?? array());
+$read_endpoints = (array) ($cap_data['read_endpoints'] ?? array());
 if (200 !== $cap->get_status()
+    || 'M6' !== (string) ($control['milestone'] ?? '')
     || empty($control['structured_action_planner'])
-    || 'diagnostics-remediation-and-structured-action-planning' !== (string) ($control['slice'] ?? '')
+    || 'site.diagnostics + seo.read' !== (string) ($read_endpoints['seo_geo_resource_actions'] ?? '')
     || ! in_array('research-objects', (array) ($control['planner_delegates_to'] ?? array()), true)
     || ! in_array('pages', (array) ($control['planner_delegates_to'] ?? array()), true)
     || ! empty($control['arbitrary_meta_editor'])) {
