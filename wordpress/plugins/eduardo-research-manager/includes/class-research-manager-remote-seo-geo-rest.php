@@ -130,38 +130,63 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
 
     public function create_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params = $this->params($request);
-        return $this->idempotent($request, function () use ($params, $request) {
-            return $this->operations->create_plan(
-                sanitize_key((string) ($params['check_id'] ?? '')),
-                sanitize_text_field((string) ($params['intent'] ?? '')),
-                $this->actor($request)
-            );
+        $check_id = sanitize_key((string) ($params['check_id'] ?? ''));
+        $intent = sanitize_text_field((string) ($params['intent'] ?? ''));
+        return $this->idempotent($request, function () use ($check_id, $intent, $request) {
+            if ('search-indexability' === $check_id) {
+                return $this->indexability->create_plan($intent, $this->actor($request));
+            }
+            return $this->operations->create_plan($check_id, $intent, $this->actor($request));
         });
     }
 
     public function get_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
-        $result = $this->operations->get_plan((string) $request['plan_id']);
+        $plan_id = (string) $request['plan_id'];
+        $result = $this->is_indexability_plan($plan_id)
+            ? $this->indexability->get_plan($plan_id)
+            : $this->operations->get_plan($plan_id);
         return is_wp_error($result) ? $result : $this->response($request, $result);
     }
 
     public function apply_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params = $this->params($request);
-        return $this->idempotent($request, fn() => $this->operations->apply((string) $request['plan_id'], ! empty($params['confirm']), $this->actor($request)));
+        $plan_id = (string) $request['plan_id'];
+        return $this->idempotent($request, function () use ($plan_id, $params, $request) {
+            if ($this->is_indexability_plan($plan_id)) {
+                return $this->indexability->apply($plan_id, ! empty($params['confirm']), $this->actor($request));
+            }
+            return $this->operations->apply($plan_id, ! empty($params['confirm']), $this->actor($request));
+        });
     }
 
     public function get_operation(WP_REST_Request $request): WP_REST_Response|WP_Error {
-        $result = $this->operations->get_operation((string) $request['operation_id']);
+        $operation_id = (string) $request['operation_id'];
+        $result = $this->is_indexability_operation($operation_id)
+            ? $this->indexability->get_operation($operation_id)
+            : $this->operations->get_operation($operation_id);
         return is_wp_error($result) ? $result : $this->response($request, $result);
     }
 
     public function verify_operation(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params = $this->params($request);
-        return $this->idempotent($request, fn() => $this->operations->verify((string) $request['operation_id'], ! empty($params['rendered']), $this->actor($request)));
+        $operation_id = (string) $request['operation_id'];
+        return $this->idempotent($request, function () use ($operation_id, $params, $request) {
+            if ($this->is_indexability_operation($operation_id)) {
+                return $this->indexability->verify($operation_id, ! empty($params['rendered']), $this->actor($request));
+            }
+            return $this->operations->verify($operation_id, ! empty($params['rendered']), $this->actor($request));
+        });
     }
 
     public function rollback_operation(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params = $this->params($request);
-        return $this->idempotent($request, fn() => $this->operations->rollback((string) $request['operation_id'], ! empty($params['confirm']), $this->actor($request)));
+        $operation_id = (string) $request['operation_id'];
+        return $this->idempotent($request, function () use ($operation_id, $params, $request) {
+            if ($this->is_indexability_operation($operation_id)) {
+                return $this->indexability->rollback($operation_id, ! empty($params['confirm']), $this->actor($request));
+            }
+            return $this->operations->rollback($operation_id, ! empty($params['confirm']), $this->actor($request));
+        });
     }
 
     public function augment_capabilities(mixed $response, mixed $handler, WP_REST_Request $request): mixed {
@@ -195,6 +220,8 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
                 'localized_page_sitemap_provider'=>true,
                 'exploration_noindex_follow_policy'=>true,
                 'search_indexability_remediation'=>true,
+                'specialized_bounded_lifecycle'=>true,
+                'generic_option_editor'=>false,
             ),
             'internal_links'=>array(
                 'research_graph_diagnostics'=>true,
@@ -202,14 +229,14 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
                 'remediation_via_existing_gateways'=>true,
                 'direct_html_mutation'=>false,
             ),
-            'operations'=>array('seo-remediate'),
+            'operations'=>array('seo-remediate','search-indexability'),
             'lifecycle'=>array('plan','apply','status','verify','rollback'),
             'read_scope'=>'seo.read',
             'write_scope'=>'seo.write',
             'exact_plan_required'=>true,
             'stale_target_protection'=>true,
             'idempotency'=>true,
-            'current_remediation_boundary'=>'Diagnostics findings classified auto-remediable by the shared Remediation service, including global search indexability.',
+            'current_remediation_boundary'=>'Diagnostics findings classified auto-remediable by the shared Remediation service plus the specialized bounded global search-indexability lifecycle.',
             'structured_optimization_boundary'=>'SEO/GEO source findings and internal-link gaps are routed to existing bounded Manager gateways instead of direct metadata/HTML writes.',
             'aggregate_geo_readiness'=>'later-m6-slice',
             'arbitrary_meta_editor'=>false,
@@ -233,6 +260,14 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
             'identifier'=>is_numeric($identifier) ? (int) $identifier : (string) $identifier,
             'language'=>$language,
         );
+    }
+
+    private function is_indexability_plan(string $plan_id): bool {
+        return str_starts_with($plan_id, 'erm-indexability-plan-');
+    }
+
+    private function is_indexability_operation(string $operation_id): bool {
+        return str_starts_with($operation_id, 'erm-indexability-op-');
     }
 
     private function permission(WP_REST_Request $request, string $primary, string $secondary = ''): bool|WP_Error {
@@ -265,14 +300,24 @@ final class Eduardo_Research_Manager_Remote_SEO_GEO_REST {
 
     private function actor(WP_REST_Request $request): array {
         $connection = Eduardo_Research_Manager::remote_credentials()->state();
-        return array('connection_id'=>(string)($connection['connection_id']??''),'wordpress_user_id'=>get_current_user_id(),'request_id'=>(string)$request->get_header('x-research-manager-request-id'));
+        return array(
+            'connection_id'=>(string) ($connection['connection_id'] ?? ''),
+            'wordpress_user_id'=>get_current_user_id(),
+            'request_id'=>(string) $request->get_header('x-research-manager-request-id'),
+        );
     }
 
     private function params(WP_REST_Request $request): array {
-        $params = $request->get_json_params(); if (! is_array($params)) { $params = $request->get_body_params(); } return is_array($params) ? $params : array();
+        $params = $request->get_json_params();
+        if (! is_array($params)) { $params = $request->get_body_params(); }
+        return is_array($params) ? $params : array();
     }
 
     private function response(WP_REST_Request $request, array $data): WP_REST_Response {
-        return new WP_REST_Response(array('ok'=>true,'request_id'=>(string)$request->get_header('x-research-manager-request-id'),'data'=>$data),200);
+        return new WP_REST_Response(array(
+            'ok'=>true,
+            'request_id'=>(string) $request->get_header('x-research-manager-request-id'),
+            'data'=>$data,
+        ), 200);
     }
 }
