@@ -60,6 +60,9 @@ final class Eduardo_Research_Manager_Remediation {
         if ('language-contract' === $check_id) {
             return $this->build_language_plan($intent);
         }
+        if ('search-indexability' === $check_id) {
+            return $this->build_search_indexability_plan($intent);
+        }
 
         return new WP_Error(
             'research_manager_remediation_manual_only',
@@ -152,6 +155,16 @@ final class Eduardo_Research_Manager_Remediation {
         );
     }
 
+    private function build_search_indexability_plan(string $intent): array|WP_Error {
+        if ('1' === (string) get_option('blog_public', '1')) {
+            return new WP_Error('research_manager_remediation_not_needed', 'Search engine visibility is already enabled.');
+        }
+        return Eduardo_Research_Manager_Plan::create(
+            '' !== trim($intent) ? $intent : 'Enable public search-engine indexing for the Research site',
+            array(array('type'=>'option','key'=>'blog_public','value'=>'1'))
+        );
+    }
+
     private function find_check(string $check_id): array|WP_Error {
         foreach ((array) ($this->diagnostics->run()['checks'] ?? array()) as $check) {
             if (is_array($check) && $check_id === (string) ($check['id'] ?? '')) { return $check; }
@@ -160,7 +173,7 @@ final class Eduardo_Research_Manager_Remediation {
     }
 
     private function is_auto_remediable(string $check_id, string $resource): bool {
-        if ('front-page' === $check_id || 'language-contract' === $check_id) { return true; }
+        if (in_array($check_id, array('front-page','language-contract','search-indexability'), true)) { return true; }
         return str_starts_with($check_id, 'page-') && str_starts_with($resource, 'page:');
     }
 }
