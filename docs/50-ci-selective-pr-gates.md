@@ -17,7 +17,7 @@ For pull requests:
 
 For `push` to `main`:
 
-- existing broad plugin/theme path coverage is intentionally retained;
+- existing broad plugin/theme path coverage is intentionally retained where it is already part of a workflow's regression role;
 - historical suites therefore continue to produce comprehensive post-merge regression evidence before release/deployment decisions.
 
 ## Phase 1 — M3/M4
@@ -57,6 +57,28 @@ Phase 2 covers:
 - M8 live Greenfield regression.
 
 These PR gates now follow their actual implementation dependencies rather than the full plugin/theme trees. Their `push` rules remain intentionally broad on `main`, so a merged Research Manager or Theme change still receives comprehensive historical regression evidence before any release/deployment decision.
+
+## Phase 3 — Page authoring
+
+Page Editor and Page Editor Admin now watch the Page/contract surfaces they own and cancel superseded pull-request runs. The validation PR instantiated only those two workflows plus the global WP-CLI fallback.
+
+## Phase 4 — Local editorial authoring
+
+The same routing rule now applies to:
+
+- Insight Editor and Insight Admin;
+- Research Line Editor and Research Line Admin;
+- Research Object Editor and Research Object Admin;
+- Translation Editor and Translation Admin;
+- Evidence Editor and Evidence Admin.
+
+These migrations changed workflow routing only. Test bodies, evidence gates, rollback semantics and runtime code remain unchanged.
+
+## Phase 5 — Academic Connections
+
+Academic Connections is being separated from whole-plugin pull-request routing. Its PR gate owns only the Connections service/Admin, ORCID adapter and Workspace integration surfaces, while its existing broad `push`-to-`main` rule remains available for post-merge regression evidence. Superseded PR runs are cancelled with workflow-scoped concurrency.
+
+The provider-specific Crossref, OpenAlex, Zenodo, GitHub and Scholar suites should follow the same ownership model instead of being activated by unrelated Media/editorial changes.
 
 ## Safety invariants
 
