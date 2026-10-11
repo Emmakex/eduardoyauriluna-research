@@ -62,6 +62,28 @@ final class Eduardo_Research_Manager_Rendered_Verifier {
         return $result;
     }
 
+    public function verify_media_assignment(
+        string $url,
+        string $language,
+        int $attachment_id,
+        string $slot = 'primary'
+    ): array|WP_Error {
+        if ($attachment_id <= 0 || 'primary' !== sanitize_key($slot)) {
+            return new WP_Error('research_manager_invalid_media_assignment', 'Rendered Media verification requires the primary slot and a valid attachment ID.');
+        }
+        $result = $this->verify_url($url, $language, array(), array(), false);
+        if (is_wp_error($result)) { return $result; }
+        $body = (string) ($result['body'] ?? '');
+        $checks = (array) ($result['checks'] ?? array());
+        $checks['media_assignment'] = $this->body_has_media_assignment($body, $attachment_id, $slot);
+        $result['checks'] = $checks;
+        $result['verified'] = ! in_array(false, $checks, true);
+        $result['attachment_id'] = $attachment_id;
+        $result['slot'] = sanitize_key($slot);
+        unset($result['body']);
+        return $result;
+    }
+
     public function verify_url(
         string $url,
         string $language,
@@ -154,6 +176,11 @@ final class Eduardo_Research_Manager_Rendered_Verifier {
 
     private function body_has_schema_type(string $body, string $type): bool {
         return 1 === preg_match('/"@type"\s*:\s*"' . preg_quote($type, '/') . '"/i', $body);
+    }
+
+    private function body_has_media_assignment(string $body, int $attachment_id, string $slot): bool {
+        $pattern = '~<figure\b(?=[^>]*\bdata-research-media-slot=["\']' . preg_quote(sanitize_key($slot), '~') . '["\'])(?=[^>]*\bdata-attachment-id=["\']' . preg_quote((string) $attachment_id, '~') . '["\'])[^>]*>.*?<img\b~is';
+        return 1 === preg_match($pattern, $body);
     }
 
     private function extract_link_href(string $body, string $rel): string {

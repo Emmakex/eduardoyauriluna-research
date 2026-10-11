@@ -50,6 +50,8 @@ $identity_lead = 'es' === $language
   </div>
  </section>
 
+ <?php eduardo_research_render_primary_media(0, 'home', $language); ?>
+
  <section class="research-section research-section-bordered research-section-soft" aria-labelledby="research-agenda">
   <div class="research-shell">
    <div class="research-section-heading"><div><span class="research-section-number">01</span><div class="research-eyebrow"><?php echo esc_html(eduardo_research_t('research')); ?></div><h2 id="research-agenda"><?php echo esc_html($model['research-lines-heading']); ?></h2></div><p class="research-lead"><?php echo esc_html($model['research-lines-intro']); ?></p></div>

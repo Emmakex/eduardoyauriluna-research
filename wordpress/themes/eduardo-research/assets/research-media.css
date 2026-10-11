@@ -1,0 +1,5 @@
+.research-primary-media-section{padding:0 0 clamp(2rem,5vw,4rem)}
+.research-primary-media{margin:0;overflow:hidden;border:1px solid var(--research-border,rgba(15,23,42,.12));border-radius:clamp(1rem,2vw,1.5rem);background:var(--research-surface,#fff);box-shadow:0 20px 60px rgba(15,23,42,.08)}
+.research-primary-media-image{display:block;width:100%;height:auto;max-height:min(68vh,760px);object-fit:cover}
+.research-primary-media figcaption{padding:.8rem 1rem;font-size:.875rem;line-height:1.5;color:var(--research-muted,#5f6b76);border-top:1px solid var(--research-border,rgba(15,23,42,.12))}
+@media(max-width:720px){.research-primary-media-section{padding-bottom:2rem}.research-primary-media{border-radius:.9rem}.research-primary-media-image{max-height:58vh}}
