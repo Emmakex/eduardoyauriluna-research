@@ -89,7 +89,7 @@ final class Eduardo_Research_Manager_Remote_Media_REST {
         $prepared = $this->diagnostics->prepare_metadata_remediation($attachment_id, $changes);
         if (is_wp_error($prepared)) { return $prepared; }
 
-        return $this->idem($request, function () use ($prepared) {
+        return $this->idem($request, function () use ($prepared, $request) {
             $operations = new Eduardo_Research_Manager_Remote_Media_Metadata_Operations();
             return $operations->create_plan(
                 'media-metadata-update',
@@ -97,7 +97,7 @@ final class Eduardo_Research_Manager_Remote_Media_REST {
                     'attachment_id'=>(int) $prepared['attachment_id'],
                     'changes'=>(array) $prepared['changes'],
                 ),
-                $this->actor()
+                $this->actor($request)
             );
         });
     }
@@ -204,12 +204,12 @@ final class Eduardo_Research_Manager_Remote_Media_REST {
         ), 200);
     }
 
-    private function actor(): array {
+    private function actor(WP_REST_Request $request): array {
         $connection = Eduardo_Research_Manager::remote_credentials()->state();
         return array(
             'connection_id'=>(string) ($connection['connection_id'] ?? ''),
             'wordpress_user_id'=>get_current_user_id(),
-            'request_id'=>'diagnostic-remediation',
+            'request_id'=>(string) $request->get_header('x-research-manager-request-id'),
         );
     }
 
