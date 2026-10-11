@@ -4,7 +4,7 @@
 
 P3.2 adds the first bounded write capability for WordPress Media attachments. It builds on the read-only Media contract from P3.1 and deliberately limits mutation to editorial metadata that can be reviewed, verified and rolled back without exposing filesystem or upload primitives.
 
-This slice does **not** upload files, replace binaries, edit attachment paths, delete Media, expose arbitrary attachment meta, or create a generic WordPress REST proxy.
+This slice does **not** upload files, replace binaries, edit attachment paths, delete Media, expose arbitrary attachment meta, accept arbitrary HTML/CSS, or create a generic WordPress REST proxy.
 
 ## Supported operation
 
@@ -23,7 +23,7 @@ Additional boundaries:
 
 - `title` cannot be empty;
 - `alt_text` is accepted only for image attachments;
-- text values are sanitized and length-bounded;
+- all values are text-only, sanitized and length-bounded;
 - the target must resolve to a WordPress attachment with inherited attachment status;
 - no file path, upload, replacement, deletion or arbitrary meta field is accepted.
 
@@ -109,7 +109,7 @@ Required scopes:
 - `operations.rollback`;
 - `media.write`.
 
-Rollback requires explicit confirmation and restores the exact pre-Apply values for title, alt text, caption and description. The restored state is verified and compared with the original source revision.
+Rollback requires explicit confirmation and restores the exact pre-Apply values for title, alt text, caption and description. Before restoration, the current managed attachment revision must still match the operation's exact post-Apply revision. If somebody or another process changed the attachment after Apply, Rollback returns `409 stale_revision` instead of overwriting the newer state. Once the post-Apply boundary is intact, the restored state is verified and compared with the original source revision.
 
 ## Idempotency
 
@@ -159,5 +159,6 @@ Fresh-WordPress CI must prove:
 - explicit confirmation is required;
 - all four supported metadata fields Apply and Verify correctly;
 - Rollback restores the exact source revision;
+- Rollback refuses to overwrite attachment state changed after Apply;
 - unsupported fields and non-attachment targets are rejected;
 - P3.1 Media read/safety acceptance remains green.
