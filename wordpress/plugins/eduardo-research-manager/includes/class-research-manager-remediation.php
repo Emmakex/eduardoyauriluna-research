@@ -32,6 +32,7 @@ final class Eduardo_Research_Manager_Remediation {
                 'resource'=>(string) ($check['resource'] ?? ''),
                 'next_action'=>(string) ($check['next_action'] ?? ''),
                 'auto_remediable'=>$this->is_auto_remediable($check_id, (string) ($check['resource'] ?? '')),
+                'remediation_service'=>'search-indexability' === $check_id ? 'seo-geo-indexability' : 'generic-remediation',
             );
         }
         return array(
@@ -61,7 +62,10 @@ final class Eduardo_Research_Manager_Remediation {
             return $this->build_language_plan($intent);
         }
         if ('search-indexability' === $check_id) {
-            return $this->build_search_indexability_plan($intent);
+            return new WP_Error(
+                'research_manager_remediation_dedicated_service',
+                'Search indexability is remediated through the dedicated bounded SEO/GEO indexability lifecycle, not the generic mutation Plan.'
+            );
         }
 
         return new WP_Error(
@@ -152,16 +156,6 @@ final class Eduardo_Research_Manager_Remediation {
         return Eduardo_Research_Manager_Plan::create(
             '' !== trim($intent) ? $intent : 'Repair native Research language configuration',
             array(array('type'=>'option','key'=>'eduardo_research_native_languages','value'=>$expected))
-        );
-    }
-
-    private function build_search_indexability_plan(string $intent): array|WP_Error {
-        if ('1' === (string) get_option('blog_public', '1')) {
-            return new WP_Error('research_manager_remediation_not_needed', 'Search engine visibility is already enabled.');
-        }
-        return Eduardo_Research_Manager_Plan::create(
-            '' !== trim($intent) ? $intent : 'Enable public search-engine indexing for the Research site',
-            array(array('type'=>'option','key'=>'blog_public','value'=>'1'))
         );
     }
 
