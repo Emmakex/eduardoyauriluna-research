@@ -3,9 +3,24 @@ name: Research Greenfield Pipeline Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
       - 'config/research-site-blueprint.json'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-greenfield-pipeline.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-bootstrap.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-mode.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - 'wordpress/themes/eduardo-research/functions.php'
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/inc/research-install.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-greenfield-pipeline-quality.yml'
   push:
@@ -16,6 +31,10 @@ on:
       - 'config/research-site-blueprint.json'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-greenfield-pipeline-quality.yml'
+
+concurrency:
+  group: research-greenfield-pipeline-quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
