@@ -35,6 +35,25 @@ The remote caller cannot choose either storage mechanism or key.
 
 Authenticated namespace: `research-manager/v1`.
 
+### Inspect current relationship
+
+`GET /media/assignments`
+
+The target is supplied through bounded query parameters, for example:
+
+```text
+/media/assignments?type=insight&post_id=41&slot=primary
+/media/assignments?type=page&key=contact&language=en&slot=primary
+/media/assignments?type=research&kind=project&post_id=77&slot=primary
+```
+
+Required scopes:
+
+- `media.read`;
+- the target-specific read scope.
+
+Inspection is read-only and returns only the public assignment contract: target identity, resource URL/language, slot, current attachment ID, a safe attachment summary when assigned, and the target revision used by Preview/Apply protection. Internal storage mechanism, private storage key, target service record and semantic scope implementation are not exposed.
+
 ### Plan
 
 `POST /media/assignments/plan`
@@ -109,6 +128,8 @@ Rollback requires explicit confirmation and restores the exact previous relation
 
 Rollback is blocked with `409 stale_revision` if either the target or assigned Media changed after Apply. This prevents a historical operation from overwriting newer editorial or Media state.
 
+Stored plan/operation routes also preserve connection ownership: a different Research Manager connection cannot read or mutate another connection's assignment lifecycle state.
+
 ## Theme rendering
 
 The Theme renders the same bounded relationship on:
@@ -128,7 +149,8 @@ Authenticated `/capabilities` exposes `media_control.assignment`, including:
 - target-specific read/write scope mapping;
 - `primary` as the only slot;
 - image-only attachment boundary;
-- exact lifecycle base path;
+- exact lifecycle base path including `inspect`;
+- inspect scopes (`media.read` + target read);
 - dual-resource stale protection;
 - rendered verification;
 - idempotency;
@@ -145,7 +167,9 @@ P3.3 is exercised with a deliberate Media-scoped session containing only the Med
 
 Fresh-WordPress CI must prove:
 
-- all assignment lifecycle routes exist;
+- the read-only assignment inspection route and all mutation lifecycle routes exist;
+- assignment inspection requires both `media.read` and the target-specific read scope;
+- inspection does not leak private storage implementation details;
 - `media.write` and target-specific semantic write scopes are independently enforced;
 - Page, Insight and Research target families resolve through their bounded Manager resources;
 - Preview does not mutate relationships;
