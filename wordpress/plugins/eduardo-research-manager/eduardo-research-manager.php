@@ -95,6 +95,8 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-des
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-design-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-design-variants.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-design-variants-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-design-readiness.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-design-readiness-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
@@ -118,6 +120,7 @@ add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_SEO_GEO_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_Variants_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Design_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
 }, 11);
 
 if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
