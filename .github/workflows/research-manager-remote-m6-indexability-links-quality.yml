@@ -3,10 +3,14 @@ name: Research Manager Remote M6 Indexability Links Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remediation.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-seo-geo-indexability.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-seo-geo-rest.php'
       - 'wordpress/themes/eduardo-research/inc/research-hardening.php'
       - 'wordpress/themes/eduardo-research/inc/research-sitemap.php'
       - 'wordpress/themes/eduardo-research/inc/research-relations.php'
+      - 'wordpress/themes/eduardo-research/inc/research-discovery.php'
       - '.github/scripts/test-remote-m6-indexability-links.php'
       - '.github/workflows/research-manager-remote-m6-indexability-links-quality.yml'
   push:
@@ -21,6 +25,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: historical-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   remote-m6-indexability-links:
