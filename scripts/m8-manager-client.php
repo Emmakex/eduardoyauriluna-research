@@ -229,11 +229,19 @@ final class M8ManagerClient
             'data' => $data,
             'reason' => (string) ($cfg['reason'] ?? 'M8 real-site Insight acceptance'),
         ];
-        $cycle = $this->genericOperationCycle('insight-create', $payload, !empty($cfg['rollback_after_verify'] ?? true), true);
+        $rollback = !empty($cfg['rollback_after_verify'] ?? true);
+        $cycle = $this->genericOperationCycle('insight-create', $payload, false, true);
         $postId = (int) ($cycle['apply']['data']['target']['post_id'] ?? $cycle['apply']['data']['result']['post_id'] ?? 0);
         if ($this->apply && $postId > 0) {
             $cycle['inspection'] = $this->request('GET', "/insights/{$postId}", null, [200], 'insight-inspect');
             $cycle['seo_geo'] = $this->request('GET', "/insights/{$postId}/seo-geo", null, [200], 'insight-seo-geo');
+            if ($rollback) {
+                $operationId = (string) ($cycle['apply']['data']['operation_id'] ?? '');
+                if ('' === $operationId) {
+                    throw new RuntimeException('Insight Apply response did not contain operation_id for rollback.');
+                }
+                $cycle['rollback'] = $this->request('POST', "/operations/{$operationId}/rollback", ['confirm' => true], [200], 'insight-create-rollback');
+            }
         }
         $this->evidence['insight_cycle'] = $this->sanitizeForEvidence($cycle);
     }
@@ -264,6 +272,7 @@ final class M8ManagerClient
             throw new RuntimeException('SEO/GEO Apply response did not contain operation_id.');
         }
         $verify = $this->request('POST', "/seo-geo/operations/{$operationId}/verify", ['rendered' => true], [200], 'seo-verify');
+        $this->assertOperationVerified('seo', $verify, true);
         $cycle += ['apply' => $apply, 'verify' => $verify, 'readiness_after' => $this->request('GET', '/seo-geo/readiness?per_type_limit=1', null, [200], 'seo-readiness-after')];
         if (!empty($cfg['rollback_after_verify'] ?? true)) {
             $cycle['rollback'] = $this->request('POST', "/seo-geo/operations/{$operationId}/rollback", ['confirm' => true], [200], 'seo-rollback');
@@ -301,6 +310,7 @@ final class M8ManagerClient
             throw new RuntimeException('Design Apply response did not contain operation_id.');
         }
         $verify = $this->request('POST', "/design/operations/{$operationId}/verify", [], [200], 'design-verify');
+        $this->assertOperationVerified('design', $verify, false);
         $cycle += [
             'apply' => $apply,
             'verify' => $verify,
@@ -337,6 +347,7 @@ final class M8ManagerClient
             throw new RuntimeException("{$operation} Apply response did not contain operation_id.");
         }
         $verify = $this->request('POST', "/operations/{$operationId}/verify", ['rendered' => $rendered], [200], $operation . '-verify');
+        $this->assertOperationVerified($operation, $verify, $rendered);
         $cycle += [
             'apply' => $apply,
             'verify' => $verify,
@@ -346,6 +357,31 @@ final class M8ManagerClient
             $cycle['rollback'] = $this->request('POST', "/operations/{$operationId}/rollback", ['confirm' => true], [200], $operation . '-rollback');
         }
         return $cycle;
+    }
+
+    private function assertOperationVerified(string $label, array $response, bool $rendered): void
+    {
+        $data = $this->data($response);
+        $this->assertCheck($label . '-operation-status-verified', 'verified' === (string) ($data['status'] ?? ''), [
+            'status' => $data['status'] ?? null,
+        ]);
+        if (isset($data['stored_verification'])) {
+            $this->assertCheck($label . '-stored-verified', !empty($data['stored_verification']['verified']), [
+                'stored_verification' => $data['stored_verification'],
+            ]);
+        }
+        if ($rendered && isset($data['rendered_verification'])) {
+            $renderedState = is_array($data['rendered_verification']) ? $data['rendered_verification'] : [];
+            $passes = !empty($renderedState['verified']) || !empty($renderedState['not_applicable']);
+            $this->assertCheck($label . '-rendered-verified', $passes, [
+                'rendered_verification' => $renderedState,
+            ]);
+        }
+        if ('design' === $label && isset($data['verification'])) {
+            $this->assertCheck('design-semantic-verification', !empty($data['verification']['verified']), [
+                'verification' => $data['verification'],
+            ]);
+        }
     }
 
     private function readOnlyProbe(): void
