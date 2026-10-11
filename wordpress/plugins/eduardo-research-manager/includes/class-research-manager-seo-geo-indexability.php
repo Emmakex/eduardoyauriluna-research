@@ -13,7 +13,10 @@ final class Eduardo_Research_Manager_SEO_GEO_Indexability {
 
     public function site(): array {
         $blog_public = '1' === (string) get_option('blog_public', '1');
-        $sitemaps_enabled = function_exists('wp_sitemaps_enabled') ? (bool) wp_sitemaps_enabled() : false;
+        $sitemaps = function_exists('wp_sitemaps_get_server') ? wp_sitemaps_get_server() : null;
+        $sitemaps_enabled = is_object($sitemaps) && method_exists($sitemaps, 'sitemaps_enabled')
+            ? (bool) $sitemaps->sitemaps_enabled()
+            : false;
         $exploration_filter = false !== has_filter('wp_robots', 'eduardo_research_exploration_robots');
 
         return array(
