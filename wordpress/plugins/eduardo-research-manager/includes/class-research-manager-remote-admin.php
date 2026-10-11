@@ -78,7 +78,7 @@ final class Eduardo_Research_Manager_Remote_Admin {
               <tr><th><?php echo esc_html__('Label', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) ($state['label'] ?? '')); ?></td></tr>
               <tr><th><?php echo esc_html__('Remote access', 'eduardo-research-manager'); ?></th><td><strong><?php echo ! empty($state['enabled']) ? esc_html__('ENABLED', 'eduardo-research-manager') : esc_html__('DISABLED', 'eduardo-research-manager'); ?></strong></td></tr>
               <tr><th><?php echo esc_html__('Credential', 'eduardo-research-manager'); ?></th><td><?php echo ! empty($state['credential_present']) ? esc_html__('Present', 'eduardo-research-manager') : esc_html__('Not generated', 'eduardo-research-manager'); ?><?php if (! empty($state['token_prefix'])) : ?> — <code><?php echo esc_html((string) $state['token_prefix']); ?>…</code><?php endif; ?></td></tr>
-              <tr><th><?php echo esc_html__('Writes granted by scopes', 'eduardo-research-manager'); ?></th><td><?php echo ! empty($state['writes_enabled']) ? esc_html__('Yes (M2 transport still not exposed)', 'eduardo-research-manager') : esc_html__('No', 'eduardo-research-manager'); ?></td></tr>
+              <tr><th><?php echo esc_html__('Writes granted by scopes', 'eduardo-research-manager'); ?></th><td><?php echo ! empty($state['writes_enabled']) ? esc_html__('Yes', 'eduardo-research-manager') : esc_html__('No', 'eduardo-research-manager'); ?></td></tr>
               <tr><th><?php echo esc_html__('Bound WordPress administrator', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) ((int) ($state['wordpress_user_id'] ?? 0))); ?></td></tr>
               <tr><th><?php echo esc_html__('Generation', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) ((int) ($state['generation'] ?? 0))); ?></td></tr>
               <tr><th><?php echo esc_html__('Last rotated', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) ($state['rotated_at'] ?? '')); ?></td></tr>
@@ -102,7 +102,7 @@ final class Eduardo_Research_Manager_Remote_Admin {
           </form>
 
           <h2><?php echo esc_html__('Scopes', 'eduardo-research-manager'); ?></h2>
-          <p><?php echo esc_html__('M1 exposes read-only endpoints. Write scopes can be prepared now but no remote write endpoint exists until M2.', 'eduardo-research-manager'); ?></p>
+          <p><?php echo esc_html__('Scopes gate the current remote read and write surfaces. Write operations still require their exact Research Manager Preview → Apply → Verify lifecycle, with rollback where supported.', 'eduardo-research-manager'); ?></p>
           <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="max-width:1000px">
             <input type="hidden" name="action" value="eduardo_research_manager_remote">
             <input type="hidden" name="remote_action" value="save_scopes">
@@ -115,12 +115,17 @@ final class Eduardo_Research_Manager_Remote_Admin {
             <?php submit_button(__('Save scopes', 'eduardo-research-manager'), 'secondary', 'submit', false); ?>
           </form>
 
-          <h2><?php echo esc_html__('M1 REST endpoints', 'eduardo-research-manager'); ?></h2>
+          <h2><?php echo esc_html__('Remote operating surface', 'eduardo-research-manager'); ?></h2>
+          <p><?php echo esc_html__('Core discovery and readiness endpoints:', 'eduardo-research-manager'); ?></p>
           <p><code>/wp-json/<?php echo esc_html(Eduardo_Research_Manager_Remote_REST::NAMESPACE); ?>/status</code></p>
           <p><code>/wp-json/<?php echo esc_html(Eduardo_Research_Manager_Remote_REST::NAMESPACE); ?>/versions</code></p>
           <p><code>/wp-json/<?php echo esc_html(Eduardo_Research_Manager_Remote_REST::NAMESPACE); ?>/capabilities</code></p>
           <p><code>/wp-json/<?php echo esc_html(Eduardo_Research_Manager_Remote_REST::NAMESPACE); ?>/readiness</code></p>
           <p><code>/wp-json/<?php echo esc_html(Eduardo_Research_Manager_Remote_REST::NAMESPACE); ?>/diagnostics</code></p>
+          <p><?php echo esc_html__('Bounded Page, Insight, SEO/GEO, design, plan, operation, verification and rollback routes are exposed according to the granted scopes and Manager capabilities.', 'eduardo-research-manager'); ?></p>
+
+          <h2><?php echo esc_html__('M8 live acceptance', 'eduardo-research-manager'); ?></h2>
+          <p><?php echo esc_html__('For production acceptance, generate the credential here, grant only the required scopes, keep the one-time bearer token outside WordPress and Git, then correlate the client request IDs with the audit table below. Use Disable or Revoke here to stop remote access immediately.', 'eduardo-research-manager'); ?></p>
 
           <h2><?php echo esc_html__('Recent remote audit', 'eduardo-research-manager'); ?></h2>
           <?php if (! $audit) : ?>
