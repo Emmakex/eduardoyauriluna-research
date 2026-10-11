@@ -1,0 +1,45 @@
+name: Research Manager M8 Guard Probes Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-manager-guard-probes.php'
+      - 'docs/45-m8-live-guard-probes.md'
+      - '.github/workflows/research-manager-m8-guard-probes-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/m8-manager-guard-probes.php'
+      - 'docs/45-m8-live-guard-probes.md'
+      - '.github/workflows/research-manager-m8-guard-probes-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  m8-guard-probe-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl
+          coverage: none
+      - name: Lint guard probe client
+        run: php -l scripts/m8-manager-guard-probes.php
+      - name: Validate static guard contract
+        run: php scripts/m8-manager-guard-probes.php contract --config=config/m8-live-acceptance.example.json
+      - name: Assert no credential material is embedded
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Eqi 'erm1_[0-9a-f]{16,}|Authorization:[[:space:]]*Bearer[[:space:]]+erm1_' scripts/m8-manager-guard-probes.php docs/45-m8-live-guard-probes.md; then
+            echo 'Credential-like material found in M8 guard sources.' >&2
+            exit 1
+          fi
+      - name: Assert evidence path remains ignored
+        shell: bash
+        run: |
+          set -euo pipefail
+          git check-ignore -q tmp/m8-guards-example.json
