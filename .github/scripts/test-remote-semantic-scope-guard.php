@@ -102,6 +102,25 @@ if (403 !== $pair_block->get_status() || 'scope_denied' !== (string) ($pair_bloc
     fail_semantic_scope('operations.apply alone was not blocked for Insight pairing', $pair_block->get_data());
 }
 
+// Pairing must require translations.write independently, not only insights.write.
+$pair_without_translations = Eduardo_Research_Manager::remote_credentials()->issue_token(
+    array('site.read','site.diagnostics','insights.write','operations.apply','operations.rollback'),
+    1,
+    'CI semantic pairing translation-scope probe'
+);
+if (is_wp_error($pair_without_translations) || empty($pair_without_translations['token'])) {
+    fail_semantic_scope('pairing translation-scope credential issuance failed', $pair_without_translations);
+}
+$pair_translation_block = semantic_scope_request('POST', 'insights/pairing/plan', (string) $pair_without_translations['token'], array(
+    'operation'=>'insight-pair',
+    'payload'=>array('first_id'=>1,'second_id'=>2),
+));
+if (403 !== $pair_translation_block->get_status()
+    || 'scope_denied' !== (string) ($pair_translation_block->get_data()['code'] ?? '')
+    || ! str_contains((string) ($pair_translation_block->get_data()['message'] ?? ''), 'translations.write')) {
+    fail_semantic_scope('translations.write was not independently enforced for Insight pairing', $pair_translation_block->get_data());
+}
+
 $full_scopes = array(
     'site.read','site.diagnostics',
     'pages.write','insights.write','translations.write',
