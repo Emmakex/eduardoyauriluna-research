@@ -26,6 +26,11 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
 
     public function register_routes(): void {
         $namespace = Eduardo_Research_Manager_Remote_REST::NAMESPACE;
+        register_rest_route($namespace, '/media/assignments', array(
+            'methods'=>WP_REST_Server::READABLE,
+            'callback'=>array($this, 'inspect_assignment'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission_inspection($request),
+        ));
         register_rest_route($namespace, '/media/assignments/plan', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'create_plan'),
@@ -49,12 +54,47 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
         register_rest_route($namespace, '/media/assignments/operations/(?P<operation_id>[A-Za-z0-9._:-]+)/verify', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'verify_operation'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission_stored_operation($request, 'site.diagnostics', false, true),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission_stored_operation($request, 'site.diagnostics', false),
         ));
         register_rest_route($namespace, '/media/assignments/operations/(?P<operation_id>[A-Za-z0-9._:-]+)/rollback', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'rollback_operation'),
             'permission_callback'=>fn(WP_REST_Request $request) => $this->permission_stored_operation($request, 'operations.rollback', true),
+        ));
+    }
+
+    public function inspect_assignment(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $target = $this->target_from_request($request);
+        $slot = sanitize_key((string) ($request->get_param('slot') ?: Eduardo_Research_Manager_Media_Assignment_Editor::SLOT));
+        $state = $this->editor->inspect_assignment($target, $slot);
+        if (is_wp_error($state)) { return $state; }
+        $attachment_id = (int) ($state['attachment_id'] ?? 0);
+        $attachment = null;
+        if ($attachment_id > 0) {
+            $inspected = (new Eduardo_Research_Manager_Media_Resource())->inspect($attachment_id);
+            if (is_wp_error($inspected)) { return $inspected; }
+            $attachment = array(
+                'id'=>(int) ($inspected['id'] ?? 0),
+                'title'=>(string) ($inspected['title'] ?? ''),
+                'alt_text'=>(string) ($inspected['alt_text'] ?? ''),
+                'mime_type'=>(string) ($inspected['mime_type'] ?? ''),
+                'media_type'=>(string) ($inspected['media_type'] ?? ''),
+                'source_url'=>(string) ($inspected['source_url'] ?? ''),
+                'width'=>$inspected['width'] ?? null,
+                'height'=>$inspected['height'] ?? null,
+                'readiness'=>(array) ($inspected['readiness'] ?? array()),
+            );
+        }
+        return $this->response($request, array(
+            'target'=>(array) $state['target'],
+            'resource_id'=>(string) $state['resource_id'],
+            'url'=>(string) $state['url'],
+            'language'=>(string) $state['language'],
+            'slot'=>(string) $state['slot'],
+            'attachment_id'=>$attachment_id,
+            'attachment'=>$attachment,
+            'target_revision'=>(string) $state['target_revision'],
+            'read_only'=>true,
         ));
     }
 
@@ -129,7 +169,8 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
             ),
             'transport'=>array(
                 'base'=>'/research-manager/v1/media/assignments',
-                'lifecycle'=>array('plan','apply','status','verify','rollback'),
+                'lifecycle'=>array('inspect','plan','apply','status','verify','rollback'),
+                'inspect_scopes'=>array('media.read','target.read'),
                 'write_scopes'=>array('operations.apply','media.write','target.write'),
                 'rollback_scopes'=>array('operations.rollback','media.write','target.write'),
                 'verify_scopes'=>array('site.diagnostics','media.read','target.read'),
@@ -144,6 +185,14 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
         $payload['data'] = $data;
         $response->set_data($payload);
         return $response;
+    }
+
+    private function permission_inspection(WP_REST_Request $request): bool|WP_Error {
+        $base = $this->auth->permission($request, 'media.read');
+        if (is_wp_error($base) || true !== $base) { return $base; }
+        $required = $this->editor->required_scopes($this->target_from_request($request));
+        if (is_wp_error($required)) { return $required; }
+        return $this->check_after_auth(array((string) $required['read']));
     }
 
     private function permission_plan(WP_REST_Request $request): bool|WP_Error {
@@ -162,6 +211,8 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
         if (is_wp_error($base) || true !== $base) { return $base; }
         $plan = $this->operations->get_plan((string) $request['plan_id']);
         if (is_wp_error($plan)) { return true; }
+        $owner = $this->enforce_connection_owner((string) ($plan['connection_id'] ?? ''));
+        if (is_wp_error($owner)) { return $owner; }
         $extra = $write
             ? array('media.write', (string) ($plan['semantic_scope'] ?? ''))
             : array((string) ($plan['read_scope'] ?? ''));
@@ -171,19 +222,27 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
     private function permission_stored_operation(
         WP_REST_Request $request,
         string $primary,
-        bool $write,
-        bool $verify = false
+        bool $write
     ): bool|WP_Error {
         $base = $this->auth->permission($request, $primary);
         if (is_wp_error($base) || true !== $base) { return $base; }
         $operation = $this->operations->get_operation((string) $request['operation_id']);
         if (is_wp_error($operation)) { return true; }
+        $owner = $this->enforce_connection_owner((string) ($operation['connection_id'] ?? ''));
+        if (is_wp_error($owner)) { return $owner; }
         if ($write) {
             return $this->check_after_auth(array('media.write', (string) ($operation['semantic_scope'] ?? '')));
         }
-        $extra = array('media.read', (string) ($operation['read_scope'] ?? ''));
-        if ($verify && 'media.read' === $primary) { array_shift($extra); }
-        return $this->check_after_auth($extra);
+        return $this->check_after_auth(array('media.read', (string) ($operation['read_scope'] ?? '')));
+    }
+
+    private function enforce_connection_owner(string $stored_connection_id): bool|WP_Error {
+        $state = Eduardo_Research_Manager::remote_credentials()->state();
+        $current = (string) ($state['connection_id'] ?? '');
+        if ('' !== $stored_connection_id && '' !== $current && hash_equals($stored_connection_id, $current)) {
+            return true;
+        }
+        return new WP_Error('scope_denied', 'This Media assignment resource belongs to another connection.', array('status'=>403));
     }
 
     private function check_after_auth(array $scopes): bool|WP_Error {
@@ -194,6 +253,21 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
             return new WP_Error('scope_denied', sprintf('Remote Manager connection does not grant %s.', $scope), array('status'=>403));
         }
         return true;
+    }
+
+    private function target_from_request(WP_REST_Request $request): array {
+        $type = sanitize_key((string) $request->get_param('type'));
+        $target = array('type'=>$type);
+        if ('page' === $type) {
+            $target['key'] = sanitize_key((string) $request->get_param('key'));
+            $target['language'] = sanitize_key((string) ($request->get_param('language') ?: 'en'));
+        } elseif ('insight' === $type) {
+            $target['post_id'] = absint($request->get_param('post_id'));
+        } elseif ('research' === $type) {
+            $target['kind'] = sanitize_key((string) $request->get_param('kind'));
+            $target['post_id'] = absint($request->get_param('post_id'));
+        }
+        return $target;
     }
 
     private function idem(WP_REST_Request $request, callable $callback): WP_REST_Response|WP_Error {
