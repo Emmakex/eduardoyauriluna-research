@@ -1,0 +1,118 @@
+name: Phase 4 Media Production Closeout Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/p4-media-production-closeout.php'
+      - '.github/workflows/p4-media-production-closeout-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/p4-media-production-closeout.php'
+      - '.github/workflows/p4-media-production-closeout-quality.yml'
+
+concurrency:
+  group: p4-media-production-closeout-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  closeout-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl
+          coverage: none
+
+      - name: PHP lint
+        run: php -l scripts/p4-media-production-closeout.php
+
+      - name: Help path requires no credential or evidence files
+        run: php scripts/p4-media-production-closeout.php --help
+
+      - name: Enforce read-only route contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-production-closeout.php').read_text()
+          required = [
+              "array('/capabilities', '/media/diagnostics')",
+              "CURLOPT_HTTPGET => true",
+              "final_media_diagnostics_succeeded",
+              "no_unsafe_response_fields",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing read-only closeout guard: {token}')
+          forbidden = [
+              'CURLOPT_POST', 'CURLOPT_POSTFIELDS', 'CURLOPT_CUSTOMREQUEST',
+              '/apply', '/rollback', '/plan', '/wp/v2/', '/upload', '/delete',
+              'wp_update_post(', 'update_post_meta(', 'update_option(',
+          ]
+          for token in forbidden:
+              if token in text:
+                  raise SystemExit(f'forbidden closeout mutation surface detected: {token}')
+          dangerous = re.findall(r'(?<![A-Za-z0-9_])(shell_exec|exec|system|passthru|proc_open|popen)\s*\(', text)
+          if dangerous:
+              raise SystemExit(f'forbidden process call detected: {dangerous!r}')
+          PY
+
+      - name: Enforce exact temporary acceptance scopes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-production-closeout.php').read_text()
+          match = re.search(r'\$expectedScopes\s*=\s*\$normaliseSet\(array\((.*?)\)\);', text, re.S)
+          if not match:
+              raise SystemExit('expected scope profile not found')
+          scopes = re.findall(r"'([a-z.]+)'", match.group(1))
+          expected = sorted([
+              'site.read', 'site.diagnostics', 'media.read', 'media.write',
+              'insights.read', 'insights.write', 'operations.apply', 'operations.rollback',
+          ])
+          if sorted(scopes) != expected:
+              raise SystemExit(f'unexpected closeout scope profile: {scopes!r}')
+          PY
+
+      - name: Enforce evidence and revocation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-production-closeout.php').read_text()
+          required = [
+              "p4-media-metadata-production-acceptance-",
+              "p4-media-assignment-production-acceptance-",
+              "'pass' !== (string) ($decoded['result'] ?? '')",
+              "str_contains($raw, 'erm1_')",
+              "Authorization\\s*:\\s*Bearer",
+              "revoke-temporary-media-credential-locally-and-prove-old-token-denied",
+              "pass-awaiting-local-revocation",
+              "getenv('ERM_TOKEN')",
+              "'[redacted]'",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing closeout evidence/revocation guard: {token}')
+          if 'revoke(' in text or '/revoke' in text:
+              raise SystemExit('closeout script must not remotely revoke credentials')
+          if "CURLOPT_FOLLOWLOCATION => false" not in text:
+              raise SystemExit('redirect blocking missing')
+          if "CURLOPT_SSL_VERIFYPEER => true" not in text or "CURLOPT_SSL_VERIFYHOST => 2" not in text:
+              raise SystemExit('TLS verification contract missing')
+          PY
