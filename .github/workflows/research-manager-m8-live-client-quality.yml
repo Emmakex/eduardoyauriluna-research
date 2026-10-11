@@ -4,12 +4,14 @@ on:
   push:
     paths:
       - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
       - 'config/m8-live-acceptance.example.json'
       - 'docs/44-m8-live-site-acceptance.md'
       - '.github/workflows/research-manager-m8-live-client-quality.yml'
   pull_request:
     paths:
       - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
       - 'config/m8-live-acceptance.example.json'
       - 'docs/44-m8-live-site-acceptance.md'
       - '.github/workflows/research-manager-m8-live-client-quality.yml'
@@ -23,10 +25,23 @@ jobs:
         with:
           php-version: '8.2'
           extensions: curl
-      - name: Lint M8 client
-        run: php -l scripts/m8-manager-client.php
+      - name: Lint M8 clients
+        run: |
+          php -l scripts/m8-manager-client.php
+          php -l scripts/m8-manager-safe.php
       - name: Validate M8 client contract
         run: php scripts/m8-manager-client.php contract --config=config/m8-live-acceptance.example.json
+      - name: Prove fail-safe rollback candidate detection
+        run: php scripts/m8-manager-safe.php self-test
+      - name: Assert fail-safe launcher retains hardened transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'CURLOPT_SSL_VERIFYPEER => true' scripts/m8-manager-safe.php
+          grep -Fq 'CURLOPT_SSL_VERIFYHOST => 2' scripts/m8-manager-safe.php
+          grep -Fq 'CURLOPT_FOLLOWLOCATION => false' scripts/m8-manager-safe.php
+          grep -Fq "'Authorization: Bearer ' . \$token" scripts/m8-manager-safe.php
+          grep -Fq "Emergency rollback: PASS" scripts/m8-manager-safe.php
       - name: Assert example config contains no credential
         shell: bash
         run: |
