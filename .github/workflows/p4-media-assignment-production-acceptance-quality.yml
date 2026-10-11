@@ -1,0 +1,139 @@
+name: Phase 4 Media Assignment Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/p4-media-assignment-production-acceptance.php'
+      - '.github/workflows/p4-media-assignment-production-acceptance-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/p4-media-assignment-production-acceptance.php'
+      - '.github/workflows/p4-media-assignment-production-acceptance-quality.yml'
+
+concurrency:
+  group: p4-media-assignment-production-acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl
+          coverage: none
+
+      - name: PHP lint
+        run: php -l scripts/p4-media-assignment-production-acceptance.php
+
+      - name: Help path requires no credential
+        run: php scripts/p4-media-assignment-production-acceptance.php --help
+
+      - name: Enforce bounded REST surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-assignment-production-acceptance.php').read_text()
+          required = [
+              '#^/capabilities$#',
+              '#^/media/\\d+$#',
+              '#^/insights/\\d+$#',
+              '#^/media/assignments$#',
+              '#^/media/assignments/plan$#',
+              '#^/media/assignments/plans/[A-Za-z0-9._:-]+/apply$#',
+              '#^/media/assignments/operations/[A-Za-z0-9._:-]+/verify$#',
+              '#^/media/assignments/operations/[A-Za-z0-9._:-]+/rollback$#',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing required bounded route: {token}')
+          for token in ('/wp/v2/', '/upload', '/delete', '/filesystem', '/plugins', '/themes'):
+              if token in text:
+                  raise SystemExit(f'forbidden direct surface detected: {token}')
+          dangerous = re.findall(r'(?<![A-Za-z0-9_])(shell_exec|exec|system|passthru|proc_open|popen)\s*\(', text)
+          if dangerous:
+              raise SystemExit(f'forbidden process call detected: {dangerous!r}')
+          for token in ('wp_update_post(', 'update_post_meta(', 'update_option(', 'delete_post_meta(', 'delete_option('):
+              if token in text:
+                  raise SystemExit(f'forbidden direct WordPress mutation detected: {token}')
+          PY
+
+      - name: Enforce exact temporary Insight Media scopes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-assignment-production-acceptance.php').read_text()
+          match = re.search(r'\$expectedScopes\s*=\s*\$normaliseSet\(array\((.*?)\)\);', text, re.S)
+          if not match:
+              raise SystemExit('expected scope profile not found')
+          scopes = re.findall(r"'([a-z.]+)'", match.group(1))
+          expected = sorted([
+              'site.read', 'site.diagnostics', 'media.read', 'media.write',
+              'insights.read', 'insights.write', 'operations.apply', 'operations.rollback',
+          ])
+          if sorted(scopes) != expected:
+              raise SystemExit(f'unexpected scope profile: {scopes!r}')
+          PY
+
+      - name: Enforce rendered reversible lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-assignment-production-acceptance.php').read_text()
+          required = [
+              "if (! $apply)",
+              "array('confirm' => true)",
+              "array('rendered' => true)",
+              "finally {",
+              "apply-reconcile-plan",
+              "rollback_restored_relationship",
+              "post_rollback_rendered_state_restored",
+              "CRITICAL: Media assignment rollback failed after Apply",
+              "data-research-media-slot",
+              "data-attachment-id",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing reversible/rendered guard: {token}')
+          if "CURLOPT_FOLLOWLOCATION => false" not in text:
+              raise SystemExit('redirect blocking missing')
+          if "CURLOPT_SSL_VERIFYPEER => true" not in text or "CURLOPT_SSL_VERIFYHOST => 2" not in text:
+              raise SystemExit('TLS verification contract missing')
+          PY
+
+      - name: Enforce target and secret boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-assignment-production-acceptance.php').read_text()
+          required = [
+              "array('type' => 'insight', 'post_id' => $insightId)",
+              "'publish' !== (string) ($insight['status'] ?? '')",
+              "'image' !== (string) ($media['media_type'] ?? '')",
+              "'slot' => 'primary'",
+              "getenv('ERM_TOKEN')",
+              "'[redacted]'",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing target/secret guard: {token}')
+          PY
