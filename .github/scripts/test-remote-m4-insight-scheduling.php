@@ -52,7 +52,7 @@ if (is_wp_error($seed) || empty($seed['verified'])) { m4s_fail('canonical seed f
 
 rest_get_server();
 $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(
-    array('site.read','site.diagnostics','operations.apply','operations.rollback'),
+    array('site.read','site.diagnostics','insights.write','operations.apply','operations.rollback'),
     1,
     'CI M4 Insight Scheduling'
 );
