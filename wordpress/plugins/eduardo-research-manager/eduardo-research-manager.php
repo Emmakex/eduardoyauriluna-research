@@ -38,6 +38,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-obj
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rendered-verifier.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remediation.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-seo-geo.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-seo-geo-action-planner.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-pairing.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-evidence-editor.php';
