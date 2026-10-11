@@ -3,8 +3,12 @@ name: Research Translation Admin Quality
 on:
   pull_request:
     paths:
-      - 'wordpress/plugins/eduardo-research-manager/**'
-      - 'wordpress/themes/eduardo-research/**'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-admin.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-translation-admin-quality.yml'
   push:
@@ -14,6 +18,10 @@ on:
       - 'wordpress/themes/eduardo-research/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-translation-admin-quality.yml'
+
+concurrency:
+  group: research-translation-admin-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
