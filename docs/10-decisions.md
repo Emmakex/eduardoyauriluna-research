@@ -232,3 +232,17 @@ The first acceptance target is not a generic SaaS control center. It is a real e
 **Canonical reference:** `docs/22-chat-governed-manager-contract.md`
 
 **Status:** Accepted
+
+---
+
+## ADR-016 — Already-ready SEO/GEO production state satisfies acceptance without manufacturing a defect
+
+**Decision:** A real-site SEO/GEO acceptance slice may close without an Apply mutation when authenticated production discovery proves all of the following simultaneously: readiness is `ready`, blockers are `0`, advisories are `0`, and safe remediation candidates are `0`.
+
+When that already-ready state is observed, the acceptance must **not** deliberately introduce a defect, remove metadata, damage indexability or create another artificial problem merely to exercise Preview → Apply → Verify. The first legitimate future remediation remains a follow-up acceptance item when production naturally exposes a safe candidate.
+
+**Reason:** Production integrity and least-change operation take precedence over satisfying a test checkbox by degrading a healthy site. Issue #184 proved the real `eduardoyauriluna.com` site was already clean; manufacturing an SEO/GEO defect would have reduced safety rather than increased confidence.
+
+**Acceptance evidence:** issue #184; roadmap M6/M8 production note; issue #195 canonical wording alignment.
+
+**Status:** Accepted

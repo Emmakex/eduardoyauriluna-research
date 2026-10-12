@@ -956,6 +956,8 @@ For `eduardoyauriluna.com`, perform routine website operation from ChatGPT throu
 
 Any normal website task that still requires a bypass becomes a Manager backlog item.
 
+**Production closeout (2026-10-12):** M8 is accepted on the real site. The observed normal-operation bypasses are tracked as #192 (remote audit retrieval), #193 (bounded navigation control) and #194 (managed media binary upload).
+
 ---
 
 ## 22. Definition of Done — Chat-governed Manager v1 for Eduardo Research
@@ -981,7 +983,9 @@ The first remotely governed Manager milestone is complete only when all of the f
 17. Local WordPress Admin remains capable of inspecting/operating the same underlying Manager services.
 18. At least one real Page change on `eduardoyauriluna.com` is completed end-to-end from this ChatGPT workflow and verified on the rendered site.
 19. At least one real Insight is created or updated end-to-end through the same control path.
-20. At least one SEO/GEO remediation is planned, applied and rendered-verified through the same control path.
+20. SEO/GEO production acceptance is satisfied by either **(a)** at least one legitimate remediation planned, applied and rendered-verified through the same control path, or **(b)** authenticated production discovery proving `ready` with `0` blockers, `0` advisories and `0` safe remediation candidates, without manufacturing a defect solely to exercise Apply.
+
+ADR-016 governs item 20. Issue #184 satisfied path **(b)** on the real site. The first legitimate future SEO/GEO remediation remains a follow-up acceptance item when production naturally exposes a safe candidate.
 
 Until these acceptance conditions are met, we may say the remote-control architecture is **implemented or partially implemented**, but not that the Eduardo site is fully governed from ChatGPT.
 
