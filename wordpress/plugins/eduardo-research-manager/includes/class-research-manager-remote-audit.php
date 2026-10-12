@@ -9,6 +9,10 @@ final class Eduardo_Research_Manager_Remote_Audit {
     private const MAX_RECORDS = 200;
     private const MAX_PAGE_SIZE = 100;
 
+    public function __construct() {
+        (new Eduardo_Research_Manager_Remote_Audit_REST($this))->register();
+    }
+
     public function record(array $record): array {
         $entry = array(
             'event_id' => 'rma_' . str_replace('-', '', wp_generate_uuid4()),
@@ -95,3 +99,5 @@ final class Eduardo_Research_Manager_Remote_Audit {
         return sanitize_text_field((string) $value);
     }
 }
+
+require_once __DIR__ . '/class-research-manager-remote-audit-rest.php';
