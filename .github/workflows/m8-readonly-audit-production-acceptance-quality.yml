@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/m8-readonly-audit-production-acceptance.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php'
       - '.github/workflows/m8-readonly-audit-production-acceptance-quality.yml'
 
 permissions:
@@ -31,12 +32,22 @@ jobs:
           grep -F "[403]" scripts/m8-readonly-audit-production-acceptance.php
           grep -F "scope_denied" scripts/m8-readonly-audit-production-acceptance.php
           grep -F "mutation_performed" scripts/m8-readonly-audit-production-acceptance.php
+      - name: Enforce remote audit correlation without Admin
+        run: |
+          grep -F "'/audit?request_id='" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "remote-request-rejected" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "operations.apply" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "verified_remotely" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "no WordPress Admin required" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "'/audit'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          grep -F "'site.diagnostics'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
       - name: Enforce audit whitelist and no secret fields
         run: |
           grep -F "Bounded non-secret audit trail" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
           grep -F "'request_id' =>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
           grep -F "'connection_id' =>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
           ! grep -E "['\"](token|token_hash|authorization|password|secret|cookie)['\"]\s*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "assertNoSecretKeys" scripts/m8-readonly-audit-production-acceptance.php
       - name: Enforce evidence secret guard and revocation proof
         run: |
           grep -F "Evidence unexpectedly contains bearer-like material" scripts/m8-readonly-audit-production-acceptance.php
