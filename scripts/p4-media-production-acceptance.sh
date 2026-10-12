@@ -5,7 +5,8 @@ set -euo pipefail
 #
 # This wrapper deliberately delegates every authenticated request to the already
 # bounded Phase 4 PHP clients. It never reads or prints the bearer token itself,
-# never calls curl/wp/wp-cli, and never performs credential revocation.
+# never opens a network transport or invokes WordPress CLI, and never performs
+# credential revocation.
 #
 # Modes:
 #   --preflight-only      read-only production preflight; no resource IDs needed
