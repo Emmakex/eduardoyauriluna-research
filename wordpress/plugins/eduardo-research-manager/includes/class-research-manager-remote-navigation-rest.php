@@ -26,37 +26,37 @@ final class Eduardo_Research_Manager_Remote_Navigation_REST {
         register_rest_route($ns, '/navigation', array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'inspect'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'navigation.read'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'pages.read'),
         ));
         register_rest_route($ns, '/navigation/plan', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'create_plan'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'operations.apply', 'navigation.write'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'operations.apply', 'pages.write'),
         ));
         register_rest_route($ns, '/navigation/plans/(?P<plan_id>[A-Za-z0-9._:-]+)', array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'get_plan'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'navigation.read'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'pages.read'),
         ));
         register_rest_route($ns, '/navigation/plans/(?P<plan_id>[A-Za-z0-9._:-]+)/apply', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'apply_plan'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'operations.apply', 'navigation.write'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'operations.apply', 'pages.write'),
         ));
         register_rest_route($ns, '/navigation/operations/(?P<operation_id>[A-Za-z0-9._:-]+)', array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'get_operation'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'navigation.read'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'pages.read'),
         ));
         register_rest_route($ns, '/navigation/operations/(?P<operation_id>[A-Za-z0-9._:-]+)/verify', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'verify_operation'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'navigation.read'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'site.diagnostics', 'pages.read'),
         ));
         register_rest_route($ns, '/navigation/operations/(?P<operation_id>[A-Za-z0-9._:-]+)/rollback', array(
             'methods'=>WP_REST_Server::CREATABLE,
             'callback'=>array($this, 'rollback_operation'),
-            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'operations.rollback', 'navigation.write'),
+            'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'operations.rollback', 'pages.write'),
         ));
     }
 
@@ -113,15 +113,15 @@ final class Eduardo_Research_Manager_Remote_Navigation_REST {
         if (! is_array($payload) || ! is_array($payload['data'] ?? null)) { return $response; }
         $data = $payload['data'];
         $read = is_array($data['read_endpoints'] ?? null) ? $data['read_endpoints'] : array();
-        $read['navigation'] = 'navigation.read';
+        $read['navigation'] = 'pages.read';
         $data['read_endpoints'] = $read;
         $data['navigation_control'] = array(
             'available'=>true,
             'transport_base'=>'/research-manager/v1/navigation',
             'locations'=>array('primary','footer'),
-            'read_scope'=>'navigation.read',
-            'write_scopes'=>array('navigation.write','operations.apply'),
-            'rollback_scopes'=>array('navigation.write','operations.rollback'),
+            'read_scope'=>'pages.read',
+            'write_scopes'=>array('pages.write','operations.apply'),
+            'rollback_scopes'=>array('pages.write','operations.rollback'),
             'lifecycle'=>array('inspect','plan','apply','status','verify','rollback'),
             'registered_theme_targets_only'=>true,
             'language_aware_urls'=>true,
