@@ -1,0 +1,44 @@
+name: M8 Page Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-page-production-acceptance.sh'
+      - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
+      - '.github/workflows/m8-page-production-acceptance-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/m8-page-production-acceptance.sh'
+      - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
+      - '.github/workflows/m8-page-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell syntax
+        run: bash -n scripts/m8-page-production-acceptance.sh
+      - name: Validate bounded production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          S=scripts/m8-page-production-acceptance.sh
+          grep -F '"key": "contact"' "$S"
+          grep -F '"language": "en"' "$S"
+          grep -F '"eyebrow": "Research contact — M8 Page acceptance"' "$S"
+          grep -F 'rollback_after_verify' "$S"
+          grep -F 'scripts/m8-manager-safe.php' "$S"
+          grep -F 'page-slots-update-verify' "$S"
+          grep -F 'page-slots-update-rollback' "$S"
+          grep -F 'Rollback did not restore the exact Page slot baseline.' "$S"
+          grep -F 'ERM_TOKEN' "$S"
+          ! grep -E 'erm1_[A-Fa-f0-9]{16,}' "$S"
+      - name: Validate local M8 safe launcher
+        run: php scripts/m8-manager-safe.php self-test
