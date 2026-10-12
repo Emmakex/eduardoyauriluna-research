@@ -1,0 +1,44 @@
+name: M8 SEO GEO Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-seo-production-acceptance.sh'
+      - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
+      - '.github/workflows/m8-seo-production-acceptance-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/m8-seo-production-acceptance.sh'
+      - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
+      - '.github/workflows/m8-seo-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell syntax
+        run: bash -n scripts/m8-seo-production-acceptance.sh
+      - name: Validate bounded production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          S=scripts/m8-seo-production-acceptance.sh
+          grep -F 'safe_remediation' "$S"
+          grep -F 'site-diagnostics' "$S"
+          grep -F 'seo-geo' "$S"
+          grep -F 'search-indexability' "$S"
+          grep -F 'rendered Verify' "$S"
+          grep -F 'seo-readiness-final' "$S"
+          grep -F 'Rollback did not restore the semantic SEO/GEO readiness baseline.' "$S"
+          grep -F 'scripts/m8-manager-safe.php' "$S"
+          grep -F 'ERM_TOKEN' "$S"
+          ! grep -E 'erm1_[A-Za-z0-9._:-]{12,}|ermt1_[A-Za-z0-9._:-]{12,}' "$S"
+      - name: Validate local M8 safe launcher
+        run: php scripts/m8-manager-safe.php self-test
