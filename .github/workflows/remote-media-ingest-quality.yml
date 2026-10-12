@@ -1,0 +1,55 @@
+name: Remote Media Ingest Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php'
+      - 'scripts/remote-media-ingest-lifecycle-test.php'
+      - '.github/workflows/remote-media-ingest-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: PHP syntax
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          php -l scripts/remote-media-ingest-lifecycle-test.php
+      - name: Run managed ingest lifecycle test
+        run: php scripts/remote-media-ingest-lifecycle-test.php
+      - name: Enforce bounded binary contract
+        run: |
+          grep -F "MAX_BYTES = 10485760" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "image/jpeg" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "image/png" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "image/webp" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "application/pdf" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "hash_file('sha256'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "Image ingest requires operator-reviewed alt_text" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+      - name: Enforce safe provenance rollback
+        run: |
+          grep -F "_eduardo_research_manager_ingest_operation" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "rollback_requires_unused_owned_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "Media is now in use" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "wp_delete_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+      - name: Enforce no arbitrary file proxy
+        run: |
+          grep -F "'arbitrary_url_ingest'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "'arbitrary_filesystem_path'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          ! grep -E "wp_remote_(get|post)|download_url|file_get_contents\([^)]*https?" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+      - name: Enforce bootstrap registration
+        run: |
+          grep -F "class-research-manager-remote-media-ingest-operations.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          grep -F "class-research-manager-remote-media-ingest-rest.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          grep -F "Eduardo_Research_Manager_Remote_Media_Ingest_REST" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
