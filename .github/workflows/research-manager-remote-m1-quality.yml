@@ -79,7 +79,7 @@ jobs:
           wp rewrite structure '/%postname%/' --hard --allow-root
           wp rewrite flush --hard --allow-root
 
-      - name: Verify M1 security and read API
+      - name: Verify M1 security, independent credentials and read API
         shell: bash
         run: |
           set -euo pipefail
@@ -104,6 +104,12 @@ jobs:
               return rest_do_request($request);
           }
 
+          function normalise_scopes(array $scopes): array {
+              $scopes = array_values(array_unique(array_map('strval', $scopes)));
+              sort($scopes);
+              return $scopes;
+          }
+
           rest_get_server();
           $routes = rest_get_server()->get_routes();
           foreach (array('status','versions','capabilities','readiness','diagnostics') as $endpoint) {
@@ -116,13 +122,14 @@ jobs:
               fail_m1('unauthenticated request was not rejected', $unauth->get_data());
           }
 
-          $issued = $credentials->issue_token(array('site.read','site.diagnostics'), 1, 'CI ChatGPT Bridge');
-          if (is_wp_error($issued) || empty($issued['token'])) { fail_m1('token issuance failed', is_wp_error($issued) ? $issued->get_error_message() : $issued); }
+          $primaryScopes = array('site.read','site.diagnostics');
+          $issued = $credentials->issue_token($primaryScopes, 1, 'CI Primary Bridge');
+          if (is_wp_error($issued) || empty($issued['token'])) { fail_m1('primary token issuance failed', is_wp_error($issued) ? $issued->get_error_message() : $issued); }
           $token1 = (string) $issued['token'];
           $stored = get_option('eduardo_research_manager_remote_connection', array());
           $stored_json = wp_json_encode($stored);
-          if (false !== strpos($stored_json, $token1) || isset($stored['token'])) { fail_m1('raw token persisted in connection state', $stored); }
-          if (empty($stored['token_hash'])) { fail_m1('hashed credential missing'); }
+          if (false !== strpos($stored_json, $token1) || isset($stored['token'])) { fail_m1('raw primary token persisted in connection state', $stored); }
+          if (empty($stored['token_hash'])) { fail_m1('hashed primary credential missing'); }
 
           foreach (array('status','versions','capabilities','readiness','diagnostics') as $endpoint) {
               $response = remote_request($endpoint, $token1);
@@ -134,8 +141,11 @@ jobs:
 
           $capabilities = remote_request('capabilities', $token1)->get_data();
           $cap_data = $capabilities['data'] ?? array();
-          if (! in_array('site.read', $cap_data['granted_scopes'] ?? array(), true) || ! in_array('site.diagnostics', $cap_data['granted_scopes'] ?? array(), true)) {
-              fail_m1('capabilities omitted granted scopes', $cap_data);
+          if (normalise_scopes($primaryScopes) !== normalise_scopes((array) ($cap_data['granted_scopes'] ?? array()))) {
+              fail_m1('primary capabilities omitted or broadened granted scopes', $cap_data);
+          }
+          if ('primary' !== (string) ($credentials->state()['kind'] ?? '')) {
+              fail_m1('authenticated primary state did not report primary kind', $credentials->state());
           }
           if (empty($cap_data['mutation_transport']) || ! array_key_exists('available', $cap_data['mutation_transport'])) {
               fail_m1('capabilities omitted mutation transport declaration', $cap_data);
@@ -146,7 +156,7 @@ jobs:
           if (403 !== $denied->get_status() || 'scope_denied' !== (string) ($denied->get_data()['code'] ?? '')) {
               fail_m1('scope denial failed', $denied->get_data());
           }
-          $credentials->set_scopes(array('site.read','site.diagnostics'));
+          $credentials->set_scopes($primaryScopes);
 
           $replay_nonce = 'nonce-replay-1234567890';
           $first = remote_request('status', $token1, $replay_nonce, 'req-replay-first');
@@ -165,45 +175,125 @@ jobs:
           if (is_wp_error($disabled_state)) { fail_m1('disable failed', $disabled_state->get_error_message()); }
           $disabled = remote_request('status', $token1);
           if (401 !== $disabled->get_status() || 'authentication_failed' !== (string) ($disabled->get_data()['code'] ?? '')) {
-              fail_m1('disabled connection still authenticated', $disabled->get_data());
+              fail_m1('disabled primary connection still authenticated', $disabled->get_data());
           }
           $enabled_state = $credentials->set_enabled(true);
           if (is_wp_error($enabled_state)) { fail_m1('re-enable failed', $enabled_state->get_error_message()); }
-          if (200 !== remote_request('status', $token1)->get_status()) { fail_m1('re-enabled connection did not authenticate'); }
+          if (200 !== remote_request('status', $token1)->get_status()) { fail_m1('re-enabled primary connection did not authenticate'); }
 
           $rotated = $credentials->rotate(1);
-          if (is_wp_error($rotated) || empty($rotated['token'])) { fail_m1('rotation failed'); }
+          if (is_wp_error($rotated) || empty($rotated['token'])) { fail_m1('primary rotation failed'); }
           $token2 = (string) $rotated['token'];
-          if ($token1 === $token2) { fail_m1('rotation reused the previous token'); }
+          if ($token1 === $token2) { fail_m1('primary rotation reused the previous token'); }
           $old = remote_request('status', $token1);
           if (401 !== $old->get_status() || 'authentication_failed' !== (string) ($old->get_data()['code'] ?? '')) {
-              fail_m1('old token remained valid after rotation', $old->get_data());
+              fail_m1('old primary token remained valid after rotation', $old->get_data());
           }
-          if (200 !== remote_request('status', $token2)->get_status()) { fail_m1('rotated token is not valid'); }
+          if (200 !== remote_request('status', $token2)->get_status()) { fail_m1('rotated primary token is not valid'); }
 
+          // Independent temporary credential: this must never replace or broaden primary state.
+          $primaryBeforeTemporary = get_option('eduardo_research_manager_remote_connection', array());
+          $temporaryScopes = array(
+              'site.read',
+              'site.diagnostics',
+              'media.read',
+              'media.write',
+              'insights.read',
+              'insights.write',
+              'operations.apply',
+              'operations.rollback',
+          );
+          $temporaryIssued = $credentials->issue_temporary_token($temporaryScopes, 1, 'CI Phase 4 Media');
+          if (is_wp_error($temporaryIssued) || empty($temporaryIssued['token']) || empty($temporaryIssued['connection']['connection_id'])) {
+              fail_m1('temporary credential issuance failed', is_wp_error($temporaryIssued) ? $temporaryIssued->get_error_message() : $temporaryIssued);
+          }
+          $temporaryToken = (string) $temporaryIssued['token'];
+          $temporaryConnectionId = (string) $temporaryIssued['connection']['connection_id'];
+          if (! str_starts_with($temporaryConnectionId, 'rmt_')) { fail_m1('temporary connection id is not namespaced', $temporaryIssued['connection']); }
+          if ('temporary' !== (string) ($temporaryIssued['connection']['kind'] ?? '')) { fail_m1('temporary connection kind missing', $temporaryIssued['connection']); }
+
+          $primaryAfterTemporary = get_option('eduardo_research_manager_remote_connection', array());
+          foreach (array('connection_id','token_hash','token_prefix','scopes','generation','enabled') as $field) {
+              if (($primaryBeforeTemporary[$field] ?? null) !== ($primaryAfterTemporary[$field] ?? null)) {
+                  fail_m1('temporary issuance mutated primary field: ' . $field, array('before'=>$primaryBeforeTemporary[$field] ?? null, 'after'=>$primaryAfterTemporary[$field] ?? null));
+              }
+          }
+
+          $temporaryStored = get_option('eduardo_research_manager_remote_temporary_connections', array());
+          $temporaryStoredJson = wp_json_encode($temporaryStored);
+          if (false !== strpos($temporaryStoredJson, $temporaryToken) || isset($temporaryStored[$temporaryConnectionId]['token'])) {
+              fail_m1('raw temporary token persisted', $temporaryStored[$temporaryConnectionId] ?? array());
+          }
+          if (empty($temporaryStored[$temporaryConnectionId]['token_hash'])) { fail_m1('temporary token hash missing'); }
+
+          $temporaryCapabilities = remote_request('capabilities', $temporaryToken);
+          if (200 !== $temporaryCapabilities->get_status()) { fail_m1('temporary credential could not authenticate', $temporaryCapabilities->get_data()); }
+          $temporaryData = (array) ($temporaryCapabilities->get_data()['data'] ?? array());
+          if ($temporaryConnectionId !== (string) ($temporaryData['connection_id'] ?? '')) {
+              fail_m1('temporary capabilities returned wrong connection id', $temporaryData);
+          }
+          if (normalise_scopes($temporaryScopes) !== normalise_scopes((array) ($temporaryData['granted_scopes'] ?? array()))) {
+              fail_m1('temporary capabilities scope profile drifted', $temporaryData);
+          }
+          if ('temporary' !== (string) ($credentials->state()['kind'] ?? '')) {
+              fail_m1('authenticated temporary state did not report temporary kind', $credentials->state());
+          }
+
+          // The stable token must continue to authenticate with its original narrow scope set.
+          $primaryCapabilitiesAfterTemporary = remote_request('capabilities', $token2);
+          if (200 !== $primaryCapabilitiesAfterTemporary->get_status()) { fail_m1('primary token stopped working after temporary issuance'); }
+          $primaryDataAfterTemporary = (array) ($primaryCapabilitiesAfterTemporary->get_data()['data'] ?? array());
+          if (normalise_scopes($primaryScopes) !== normalise_scopes((array) ($primaryDataAfterTemporary['granted_scopes'] ?? array()))) {
+              fail_m1('temporary issuance broadened primary capabilities', $primaryDataAfterTemporary);
+          }
+
+          $temporaryConnections = $credentials->temporary_connections();
+          $temporaryIds = array_map(static fn(array $connection): string => (string) ($connection['connection_id'] ?? ''), $temporaryConnections);
+          if (! in_array($temporaryConnectionId, $temporaryIds, true)) { fail_m1('temporary connection not listed'); }
+
+          $revokedTemporary = $credentials->revoke_temporary($temporaryConnectionId);
+          if (is_wp_error($revokedTemporary) || ! empty($revokedTemporary['enabled']) || ! empty($revokedTemporary['credential_present'])) {
+              fail_m1('temporary revocation did not clear only the temporary credential', $revokedTemporary);
+          }
+          $temporaryDenied = remote_request('status', $temporaryToken);
+          if (401 !== $temporaryDenied->get_status() || 'authentication_failed' !== (string) ($temporaryDenied->get_data()['code'] ?? '')) {
+              fail_m1('revoked temporary credential still authenticated', $temporaryDenied->get_data());
+          }
+          if (200 !== remote_request('status', $token2)->get_status()) {
+              fail_m1('temporary revocation affected the primary credential');
+          }
+          $primaryAfterTemporaryRevoke = get_option('eduardo_research_manager_remote_connection', array());
+          foreach (array('connection_id','token_hash','token_prefix','scopes','generation','enabled') as $field) {
+              if (($primaryBeforeTemporary[$field] ?? null) !== ($primaryAfterTemporaryRevoke[$field] ?? null)) {
+                  fail_m1('temporary lifecycle mutated primary field: ' . $field);
+              }
+          }
+
+          // Primary revocation remains independent and backward-compatible.
           $credentials->revoke();
           $revoked = remote_request('status', $token2);
           if (401 !== $revoked->get_status() || 'authentication_failed' !== (string) ($revoked->get_data()['code'] ?? '')) {
-              fail_m1('revoked token remained valid', $revoked->get_data());
+              fail_m1('revoked primary token remained valid', $revoked->get_data());
           }
 
           $audit_json = wp_json_encode(get_option('eduardo_research_manager_remote_audit', array()));
-          if (false !== strpos($audit_json, $token1) || false !== strpos($audit_json, $token2) || false !== strpos($audit_json, 'token_hash')) {
-              fail_m1('audit log leaked credential material');
+          foreach (array($token1, $token2, $temporaryToken) as $secret) {
+              if (false !== strpos($audit_json, $secret)) { fail_m1('audit log leaked credential material'); }
           }
-          if (count($audit->recent(200)) < 10) { fail_m1('expected audit events were not recorded'); }
+          if (false !== strpos($audit_json, 'token_hash')) { fail_m1('audit log leaked token hash'); }
+          if (count($audit->recent(200)) < 12) { fail_m1('expected audit events were not recorded'); }
 
           ob_start();
           (new Eduardo_Research_Manager_Remote_Admin($credentials, $audit))->render();
           $admin_html = (string) ob_get_clean();
-          foreach (array('Research Manager Remote','Connection state','Connection controls','Scopes','Recent remote audit') as $needle) {
+          foreach (array('Research Manager Remote','Primary production connection','Primary connection controls','Primary scopes','Temporary scoped sessions','Recent remote audit') as $needle) {
               if (false === strpos($admin_html, $needle)) { fail_m1('remote admin marker missing: ' . $needle); }
           }
-          if (false !== strpos($admin_html, 'token_hash') || false !== strpos($admin_html, $token1) || false !== strpos($admin_html, $token2)) {
+          if (false !== strpos($admin_html, 'token_hash') || false !== strpos($admin_html, $token1) || false !== strpos($admin_html, $token2) || false !== strpos($admin_html, $temporaryToken)) {
               fail_m1('remote admin leaked credential material');
           }
 
-          echo "M1 remote Manager security/read API acceptance OK\n";
+          echo "M1 remote Manager primary + temporary credential acceptance OK\n";
           PHP
 
           cd /tmp/research-manager-remote-m1
