@@ -34,6 +34,49 @@ function eduardo_research_preset(): array {
     );
 }
 
+function eduardo_research_navigation_contract(): array {
+    $preset = eduardo_research_preset();
+    return array(
+        'version'=>1,
+        'locations'=>array(
+            'primary'=>array('default'=>array_values((array) ($preset['primary_navigation'] ?? array())), 'min_items'=>1),
+            'footer'=>array('default'=>array_values((array) ($preset['footer_navigation'] ?? array())), 'min_items'=>1),
+        ),
+        'allowed_targets'=>array_values(array_keys((array) ($preset['pages'] ?? array()))),
+        'arbitrary_urls'=>false,
+        'language_aware_urls'=>true,
+    );
+}
+
+function eduardo_research_navigation_sanitize_state(array $candidate): array {
+    $contract = eduardo_research_navigation_contract();
+    $allowed = array_fill_keys((array) ($contract['allowed_targets'] ?? array()), true);
+    $state = array();
+    foreach ((array) ($contract['locations'] ?? array()) as $location => $spec) {
+        $default = array_values((array) ($spec['default'] ?? array()));
+        $items = isset($candidate[$location]) && is_array($candidate[$location]) ? $candidate[$location] : $default;
+        $clean = array();
+        foreach ($items as $key) {
+            $key = sanitize_key((string) $key);
+            if ('' === $key || ! isset($allowed[$key]) || in_array($key, $clean, true)) { continue; }
+            $clean[] = $key;
+        }
+        if (count($clean) < max(1, (int) ($spec['min_items'] ?? 1))) { $clean = $default; }
+        $state[(string) $location] = $clean;
+    }
+    return $state;
+}
+
+function eduardo_research_navigation_state(): array {
+    $stored = get_option('eduardo_research_navigation', array());
+    return eduardo_research_navigation_sanitize_state(is_array($stored) ? $stored : array());
+}
+
+function eduardo_research_navigation_keys(string $location): array {
+    $state = eduardo_research_navigation_state();
+    return array_values((array) ($state[sanitize_key($location)] ?? array()));
+}
+
 function eduardo_research_page_url(string $key, ?string $language = null): string {
     $language = $language ?: (function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en');
     $preset = eduardo_research_preset();
