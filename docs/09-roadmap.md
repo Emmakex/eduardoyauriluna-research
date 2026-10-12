@@ -14,7 +14,7 @@ The Research Theme owns deterministic frontend rendering. The Research Manager o
 
 Canonical contract: `docs/22-chat-governed-manager-contract.md`.
 Accepted decision: ADR-015 in `docs/10-decisions.md`.
-Primary execution tracker: issue #97.
+Manager v1 completion tracker: issue #201.
 
 ---
 
@@ -52,14 +52,14 @@ Completed foundation includes:
 
 Implemented/CI-backed work already includes the Research Theme, Research preset contracts, Theme-owned pages/surfaces, multilingual behavior, SEO/academic rendering and installable packaging.
 
-### Real-site acceptance still required
+### Real-site acceptance
 
-- [ ] supported clean WordPress target confirmed for `eduardoyauriluna.com`;
-- [ ] Research Theme installed/activated on the real target;
-- [ ] Manager installed/activated on the real target;
-- [ ] expected permalink/language/domain state confirmed;
-- [ ] production mobile/accessibility/performance validation;
-- [ ] final visual/palette review on the real rendered site.
+- [x] supported clean WordPress target confirmed for `eduardoyauriluna.com`;
+- [x] Research Theme installed/activated on the real target;
+- [x] Manager installed/activated on the real target;
+- [x] expected permalink/language/domain state confirmed through M8 operating acceptance;
+- [ ] production mobile/accessibility/performance validation across the final v1 surface set;
+- [x] bounded palette/design baseline reviewed through the real rendered site;
 
 ---
 
@@ -71,9 +71,9 @@ The Theme remains independently renderable and must never become dependent on a 
 
 ### Remaining acceptance
 
-- [ ] verify all intended Theme surfaces on real `eduardoyauriluna.com`;
-- [ ] verify EN/ES public routes/hreflang on real domain;
-- [ ] verify production Core Web Vitals/accessibility;
+- [ ] verify all intended Theme surfaces on real `eduardoyauriluna.com` after final Manager v1 deployment;
+- [x] verify representative EN/ES public routes/hreflang on real domain;
+- [ ] verify production Core Web Vitals/accessibility across the final surface set;
 - [ ] close any frontend gaps discovered only on real hosting.
 
 ---
@@ -97,34 +97,37 @@ Remaining work is primarily real content/evidence population and real-site accep
 
 ---
 
-## Phase 4 — Research Manager core ✅ substantial repository implementation
+## Phase 4 — Research Manager core ✅ repository implementation
 
-The Manager already contains shared services and Admin surfaces for major domain areas, including:
+The Manager contains shared services and Admin/remote surfaces for the accepted v1 domain, including:
 
 - blueprint/Greenfield lifecycle;
 - diagnostics/readiness;
-- structured Pages;
+- structured Pages and bounded Theme navigation;
 - Insights;
 - Research Lines;
 - Research Objects;
 - translations;
 - evidence;
-- remediation;
+- SEO/GEO inspection, action planning and deterministic remediation;
+- bounded Theme design controls;
+- Media inspection, metadata, assignment and managed binary ingest;
+- remote non-secret audit correlation;
 - rendered verification;
 - academic connector adapters;
 - snapshot/executor/rollback infrastructure;
 - WP-CLI Greenfield adapter;
 - standalone install bundle.
 
-This phase is not equivalent to remote ChatGPT governance; it is the engine that the bridge will expose.
+This phase is the shared engine behind the authenticated ChatGPT governance path. Normal operations remain typed and bounded; it is not an unrestricted WordPress administrator proxy.
 
 ---
 
-# Phase 5 — ChatGPT-governed Manager bridge — M8 PRODUCTION ACCEPTANCE COMPLETE
+# Phase 5 — ChatGPT-governed Manager bridge — M8 OPERATING ACCEPTANCE COMPLETE / v1 CLOSEOUT IN PROGRESS
 
 **Goal:** make the Research Manager the authenticated bridge through which we govern the real WordPress site from this ChatGPT workflow.
 
-Primary tracker: #97.
+Historical M1–M8 tracker: #97. Current Manager v1 completion tracker: #201.
 
 ### Production acceptance milestone — Remote Media ✅ (2026-10-12)
 
@@ -142,14 +145,14 @@ Research Manager 0.9.2 introduced independent temporary credential storage so bo
 
 ### Production acceptance milestone — Page, Insight, SEO/GEO readiness and Design ✅ (2026-10-12)
 
-The real `eduardoyauriluna.com` site has now also passed these ChatGPT-through-Manager acceptance slices:
+The real `eduardoyauriluna.com` site has also passed these ChatGPT-through-Manager acceptance slices:
 
 - issue #180: reversible Page slot mutation with Preview → Apply → stored/rendered Verify → Rollback and exact Page baseline restoration;
 - issue #182: temporary Insight creation with stored/rendered Verify, authenticated inspection, Rollback and proof that the created Insight is absent from the final managed inventory;
 - issue #184: SEO/GEO production discovery returned `ready`, `blocking=0`, `advisories=0` and zero safe remediation candidates, so the acceptance closed as an already-ready state without manufacturing an artificial SEO mutation;
 - issue #186: bounded Theme Design Preview selected `palette -> ocean-lab`, then Apply → Verify → rendered design readiness → Rollback restored the exact Theme design baseline; the independent temporary 5-scope Design credential was then revoked and rejected with HTTP 401 `authentication_failed`.
 
-The stable Phase 2 credential remained least-privilege throughout. In particular, its missing `design.write` scope correctly produced a 403 on the first Design Preview attempt; Design acceptance therefore used a separate temporary scoped session instead of widening the primary credential.
+The stable Phase 2 credential remained least-privilege throughout. Its missing `design.write` scope correctly produced a 403 on the first Design Preview attempt; Design acceptance therefore used a separate temporary scoped session instead of widening the primary credential.
 
 ### Production acceptance milestone — Read-only security and audit ✅ (2026-10-12)
 
@@ -159,66 +162,72 @@ Issue #190 is production-accepted and closed. We proved:
 - `/capabilities` reported exactly those two scopes and `writes_enabled=false`;
 - authenticated read endpoints remained available;
 - a write-plan request was rejected before mutation with HTTP 403 `scope_denied`;
-- the denied request was correlated in `Recent remote audit` by request ID `m8-readonly-denied-1791802623-b17949c819` as `remote-request-rejected`, `blocked`, scope `operations.apply`, error `scope_denied`;
+- the denied request was correlated by request ID as `remote-request-rejected`, `blocked`, scope `operations.apply`, error `scope_denied`;
 - the audit implementation remains whitelist-only and the acceptance evidence contains no bearer/token/Authorization material;
 - revoking the temporary credential immediately caused HTTP 401 `authentication_failed`.
 
-### M8 bypass inventory and backlog ✅ (2026-10-12)
+The original proof used the local Admin audit view. PR #202 subsequently added typed authenticated `GET /audit` correlation so the final v1 re-acceptance no longer requires Admin inspection.
 
-The remaining normal-operation bypasses observed during M8 are recorded as explicit Manager backlog instead of being hidden as manual procedure:
+### Normal-operation bypass closure — implementation ✅ / final live acceptance pending
 
-- #192 — remote non-secret audit retrieval/correlation, so ChatGPT does not need WordPress Admin to inspect audit rows;
-- #193 — bounded remote navigation/menu control;
-- #194 — managed media binary upload without exposing an arbitrary file proxy.
+The three normal-operation bypasses found during M8 are no longer open implementation gaps:
 
-Installation/bootstrap, emergency recovery, local credential administration and optional WP-CLI/SSH support are not classified as normal-operation bypasses because the accepted architecture explicitly permits them as bootstrap/fallback/support surfaces.
+- [x] #192 / PR #197 — remote non-secret audit retrieval/correlation;
+- [x] #193 / PR #198 — bounded Theme-owned primary/footer navigation control;
+- [x] #194 / PR #200 — managed Media binary ingest without arbitrary URL/path proxying;
+- [x] PR #202 — production acceptance harnesses for remote audit, navigation and Media ingest;
+- [x] PR #202 — Media ingest Preview staging hardened with explicit cancel plus 15-minute scheduled cleanup;
+- [ ] deploy the Manager RC containing these capabilities to the real site;
+- [ ] execute the three new live production acceptances and preserve evidence.
 
-## M1 — Remote Manager foundation
+Installation/bootstrap, emergency recovery, local credential administration and optional WP-CLI/SSH support are not classified as normal-operation bypasses because the architecture explicitly permits them as bootstrap/fallback/support surfaces.
 
-- [ ] versioned REST namespace, e.g. `/wp-json/research-manager/v1/`;
-- [ ] site-specific remote connection identity;
-- [ ] local WordPress enable/disable/revoke controls;
-- [ ] credential rotation;
-- [ ] read/write scope model;
-- [ ] `/capabilities` discovery;
-- [ ] request IDs/idempotency primitives;
-- [ ] replay/expiry protection;
-- [ ] audit record model;
-- [ ] typed remote error contract;
-- [ ] authenticated `/status`;
-- [ ] `/versions`;
-- [ ] `/readiness` / diagnostics reads;
-- [ ] CI for authentication/scopes/revocation/no-secret exposure.
+## M1 — Remote Manager foundation ✅ implementation complete
 
-**M1 done when:** ChatGPT-compatible tooling can securely read live Manager/site state with a revocable site-specific credential, but cannot mutate anything without write scopes.
+- [x] versioned REST namespace `/wp-json/research-manager/v1/`;
+- [x] site-specific remote connection identity;
+- [x] local WordPress enable/disable/revoke controls;
+- [x] credential rotation;
+- [x] read/write scope model;
+- [x] `/capabilities` discovery;
+- [x] request IDs/idempotency primitives;
+- [x] replay/expiry protection;
+- [x] whitelist-only audit record model plus authenticated remote audit read surface;
+- [x] typed remote error contract;
+- [x] authenticated `/status`;
+- [x] `/versions`;
+- [x] `/readiness` / diagnostics reads;
+- [x] CI for authentication/scopes/revocation/no-secret exposure.
 
-## M2 — Plan / operation lifecycle
+**M1 implementation is complete.** Final v1 closeout only re-smokes least privilege, revocation and remote audit against the deployed RC.
 
-- [ ] generic operation/request IDs;
-- [ ] source revision/fingerprint;
-- [ ] plan ID and plan expiry;
-- [ ] typed Preview response;
-- [ ] risk/confirmation class;
-- [ ] exact-plan Apply;
-- [ ] stale plan/revision rejection;
-- [ ] operation status retrieval;
-- [ ] stored-state verification;
-- [ ] rendered verification;
-- [ ] rollback invocation where supported;
-- [ ] retry/idempotency acceptance;
-- [ ] audit correlation.
+## M2 — Plan / operation lifecycle ✅ implementation complete
 
-**M2 done when:** a remote caller can safely plan, apply and verify a bounded mutation without duplicate writes or silent stale overwrites.
+- [x] generic operation/request IDs;
+- [x] source revision/fingerprint;
+- [x] plan ID and plan expiry;
+- [x] typed Preview response;
+- [x] risk/confirmation class;
+- [x] exact-plan Apply;
+- [x] stale plan/revision rejection;
+- [x] operation status retrieval;
+- [x] stored-state verification;
+- [x] rendered verification;
+- [x] rollback invocation where supported;
+- [x] retry/idempotency acceptance;
+- [x] audit correlation.
 
-## M3 — Pages from ChatGPT
+**M2 implementation is complete.** Page, Insight, Media and Design production slices already prove the lifecycle; the final RC battery extends that proof to navigation and managed Media ingest.
+
+## M3 — Pages from ChatGPT ✅ implementation complete
 
 - [x] inspect Theme-controlled Pages remotely;
 - [x] inspect structured slots/current revision;
-- [ ] create supported missing Theme Page;
+- [x] create supported missing Theme Page with provenance and rollback;
 - [x] update structured Page slots;
-- [ ] manage permitted Theme variant(s);
-- [ ] pair EN/ES Page resources;
-- [ ] Page-level SEO/GEO inspect/remediate;
+- [x] manage permitted Theme presentation through bounded M7 design capabilities;
+- [x] EN/ES Page behavior defined by one Theme-owned Page resource with language-specific structured models/routes; separate WP Page pairing is N/A by architecture;
+- [x] Page-level SEO/GEO inspect/remediate capability;
 - [x] Preview exact change;
 - [x] Apply exact plan;
 - [x] stored verify;
@@ -226,65 +235,72 @@ Installation/bootstrap, emergency recovery, local credential administration and 
 - [x] rollback supported change;
 - [x] complete first real Page mutation on `eduardoyauriluna.com` originating from ChatGPT.
 
-**M3 is the first end-to-end proof of the product model.**
+A missing production contract Page must never be manufactured solely to exercise Page-create acceptance. Creation remains available if a legitimate missing supported resource occurs.
 
-## M4 — Insights/blog from ChatGPT
+## M4 — Insights/blog from ChatGPT ✅ implementation complete
 
-- [ ] create draft Insight;
-- [ ] update title/excerpt/body;
-- [ ] taxonomy/author;
-- [ ] internal/research relationships;
-- [ ] translation pair;
-- [x] media metadata/assignment where supported;
-- [ ] SEO/GEO preparation;
-- [ ] schedule;
-- [ ] publish/update/archive;
+- [x] create draft/published Insight;
+- [x] update title/excerpt/body;
+- [x] bounded authorship/type policy: author is the bound execution identity; `insight_type` replaces arbitrary taxonomy proxying;
+- [x] internal/research relationships to verified Research Lines;
+- [x] EN/ES translation pairing;
+- [x] Media metadata/assignment where supported;
+- [x] SEO/GEO inspection/preparation;
+- [x] reversible scheduling control;
+- [x] bounded draft/publish status lifecycle;
 - [x] rendered verification;
+- [x] rollback where supported;
 - [x] first real Insight operation from ChatGPT.
 
-## M5 — Research objects from ChatGPT
+Remaining v1 work is representative production breadth acceptance, not missing base implementation.
 
-Expose existing service-layer capabilities through the authenticated bridge for:
+## M5 — Research objects from ChatGPT ✅ implementation complete
 
-- [ ] Research Lines;
-- [ ] Publications;
-- [ ] Projects;
-- [ ] Research Software;
-- [ ] Datasets;
-- [ ] evidence/provenance;
-- [ ] relations;
-- [ ] translations.
+Authenticated typed gateways exist for:
 
-Identity/evidence-sensitive changes remain more strongly gated.
+- [x] Research Lines;
+- [x] Publications / outputs;
+- [x] Projects;
+- [x] Research Software;
+- [x] Datasets;
+- [x] evidence/provenance;
+- [x] verified Research Line relations;
+- [x] structured EN/ES translations;
+- [x] stored/rendered verification and safe rollback contracts.
 
-## M6 — SEO/GEO optimisation from ChatGPT
+Identity/evidence-sensitive changes remain more strongly gated. Final v1 acceptance must use clearly temporary fixtures or real evidence; it must not fabricate academic claims.
+
+## M6 — SEO/GEO optimisation from ChatGPT ✅ implementation complete
 
 - [x] live site/readiness diagnostics retrieval;
-- [ ] deterministic remediation grouping/planning;
-- [ ] title/meta remediation;
-- [ ] canonical/hreflang/indexability checks/remediation;
-- [ ] Schema checks/remediation;
-- [ ] sitemap/crawlability checks;
-- [ ] internal-link optimisation;
-- [ ] entity/authorship/direct-answer/GEO checks;
-- [ ] evidence/provenance checks;
-- [ ] Preview → Apply → Verify;
+- [x] deterministic remediation grouping/planning;
+- [x] title/description structured-source remediation routing;
+- [x] canonical/hreflang/indexability checks plus bounded indexability lifecycle;
+- [x] Schema checks/rendered verification;
+- [x] sitemap/crawlability checks;
+- [x] internal-link/entity-graph guidance through bounded relations/navigation;
+- [x] entity/authorship/direct-answer/GEO checks;
+- [x] evidence/provenance checks and gated actions;
+- [x] Preview → Apply → Verify/rollback infrastructure for deterministic supported remediation;
 - [x] rerun readiness and report residual manual/editorial/evidence actions;
-- [ ] first real SEO/GEO remediation from ChatGPT on the rendered site.
+- [ ] first legitimate real SEO/GEO remediation from ChatGPT when production naturally exposes a safe candidate.
 
-**Production acceptance note:** issue #184 proved the real site was already `ready` with zero blockers, zero advisories and zero safe remediation candidates. No remediation was fabricated solely to exercise Apply; the first real remediation remains pending until production exposes a legitimate candidate. Issue #195 tracks alignment of the older canonical DoD wording with this already-ready production rule.
+**Production acceptance rule (ADR-016):** issue #184 proved the real site was already `ready` with zero blockers, zero advisories and zero safe remediation candidates. A defect must never be manufactured merely to exercise Apply.
 
-## M7 — Bounded Theme design control from ChatGPT
+## M7 — Bounded Theme design control from ChatGPT ✅ implementation complete
 
 - [x] palette/design token selection;
-- [ ] typography tokens;
-- [ ] spacing/density tokens;
-- [ ] Theme-supported section/component variants;
+- [x] typography tokens;
+- [x] spacing/density tokens;
+- [x] Theme-supported section/component variants (`hero`, `sections`, `cards`, `collections`);
 - [x] preserve responsive/accessibility rules;
 - [x] rendered visual/state verification where practical;
-- [x] no arbitrary CSS/PHP execution as normal control path.
-
-**Production acceptance note:** issue #186 proved one bounded Theme-native palette operation end-to-end using a temporary exact 5-scope Design credential, including exact baseline restoration, credential revocation and post-revocation 401 rejection. Typography, density and section/component variant breadth remain separate acceptance work.
+- [x] no arbitrary CSS/PHP execution as normal control path;
+- [x] palette production acceptance;
+- [ ] typography production acceptance;
+- [ ] density production acceptance;
+- [ ] representative component-variant production acceptance;
+- [ ] final responsive/accessibility/readiness confirmation after those reversible checks.
 
 ## M8 — Real-site operating acceptance ✅ COMPLETE (2026-10-12)
 
@@ -299,12 +315,32 @@ Identity/evidence-sensitive changes remain more strongly gated.
 - [x] audit records proven without secrets;
 - [x] read-only scope mode proven;
 - [x] revocation proven to immediately block remote use;
-- [x] normal bypasses to Admin/SSH/manual code recorded;
-- [x] every normal bypass converted into Manager backlog.
+- [x] normal bypasses to Admin/SSH/manual code identified;
+- [x] each normal-operation bypass converted into a typed Manager implementation gap and subsequently implemented (#192–#194).
 
-**M8 closeout:** the real Eduardo site has completed the defined production operating acceptance. Remaining Manager breadth items in M1–M7 and backlog issues #192–#194 are product-expansion work, not hidden M8 blockers. The older SEO/GEO DoD wording is being aligned under #195 so production integrity remains more important than manufacturing a defect merely to exercise remediation.
+**M8 closeout remains valid.** Manager v1 closeout under #201 now proves broader routine-operation coverage and removes the three recorded normal-operation bypasses from the actual product path.
 
 **Phase 5 done when:** routine management of the Eduardo site can genuinely be driven from ChatGPT through the Manager, with real rendered verification.
+
+---
+
+## Manager v1 closeout — issue #201
+
+Repository implementation for the accepted v1 contract is substantially complete. Remaining closure work is deliberately separated from implementation status:
+
+- [x] remote audit, bounded navigation and managed Media ingest implemented;
+- [x] private Media ingest staging has explicit cancel + scheduled TTL cleanup;
+- [x] Preview-first production harnesses exist for the three new normal-operation closures;
+- [x] M1–M7 roadmap reconciled against the real implementation;
+- [ ] Manager 0.10.0 RC package passes full CI and is merged;
+- [ ] deploy the RC to `eduardoyauriluna.com`;
+- [ ] production-accept remote audit without Admin;
+- [ ] production-accept bounded navigation with exact rollback restoration;
+- [ ] production-accept managed Media ingest with final inventory cleanup;
+- [ ] production-accept representative remaining M4/M5/M7 breadth using reversible/non-fabricated fixtures;
+- [ ] final `/capabilities`, read-only, revocation and audit smoke checks;
+- [ ] final no-normal-bypass review;
+- [ ] promote the validated Manager release from RC to v1 and build final installable artifacts.
 
 ---
 
