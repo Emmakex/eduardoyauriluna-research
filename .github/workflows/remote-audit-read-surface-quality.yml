@@ -1,0 +1,42 @@
+name: Remote Audit Read Surface Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php'
+      - 'scripts/remote-audit-read-surface-test.php'
+      - '.github/workflows/remote-audit-read-surface-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: PHP syntax
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          php -l scripts/remote-audit-read-surface-test.php
+      - name: Run isolated audit contract test
+        run: php scripts/remote-audit-read-surface-test.php
+      - name: Enforce read-only authenticated transport
+        run: |
+          grep -F "'/audit'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          grep -F "'site.diagnostics'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          grep -F "'remote_clear_delete' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          ! grep -E "WP_REST_Server::(CREATABLE|DELETABLE|EDITABLE)" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+      - name: Enforce bounded filters and no secret fields
+        run: |
+          grep -F "'request_id'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "'operation_id'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "'connection_id'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "'outcome'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "MAX_PAGE_SIZE = 100" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          ! grep -E "['\"](token|token_hash|authorization|password|secret|cookie)['\"]\s*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
