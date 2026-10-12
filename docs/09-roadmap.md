@@ -120,7 +120,7 @@ This phase is not equivalent to remote ChatGPT governance; it is the engine that
 
 ---
 
-# Phase 5 — ChatGPT-governed Manager bridge — CURRENT PRIMARY WORK
+# Phase 5 — ChatGPT-governed Manager bridge — M8 PRODUCTION ACCEPTANCE COMPLETE
 
 **Goal:** make the Research Manager the authenticated bridge through which we govern the real WordPress site from this ChatGPT workflow.
 
@@ -150,6 +150,28 @@ The real `eduardoyauriluna.com` site has now also passed these ChatGPT-through-M
 - issue #186: bounded Theme Design Preview selected `palette -> ocean-lab`, then Apply → Verify → rendered design readiness → Rollback restored the exact Theme design baseline; the independent temporary 5-scope Design credential was then revoked and rejected with HTTP 401 `authentication_failed`.
 
 The stable Phase 2 credential remained least-privilege throughout. In particular, its missing `design.write` scope correctly produced a 403 on the first Design Preview attempt; Design acceptance therefore used a separate temporary scoped session instead of widening the primary credential.
+
+### Production acceptance milestone — Read-only security and audit ✅ (2026-10-12)
+
+Issue #190 is production-accepted and closed. We proved:
+
+- an independent temporary credential with exactly `site.read` + `site.diagnostics`;
+- `/capabilities` reported exactly those two scopes and `writes_enabled=false`;
+- authenticated read endpoints remained available;
+- a write-plan request was rejected before mutation with HTTP 403 `scope_denied`;
+- the denied request was correlated in `Recent remote audit` by request ID `m8-readonly-denied-1791802623-b17949c819` as `remote-request-rejected`, `blocked`, scope `operations.apply`, error `scope_denied`;
+- the audit implementation remains whitelist-only and the acceptance evidence contains no bearer/token/Authorization material;
+- revoking the temporary credential immediately caused HTTP 401 `authentication_failed`.
+
+### M8 bypass inventory and backlog ✅ (2026-10-12)
+
+The remaining normal-operation bypasses observed during M8 are recorded as explicit Manager backlog instead of being hidden as manual procedure:
+
+- #192 — remote non-secret audit retrieval/correlation, so ChatGPT does not need WordPress Admin to inspect audit rows;
+- #193 — bounded remote navigation/menu control;
+- #194 — managed media binary upload without exposing an arbitrary file proxy.
+
+Installation/bootstrap, emergency recovery, local credential administration and optional WP-CLI/SSH support are not classified as normal-operation bypasses because the accepted architecture explicitly permits them as bootstrap/fallback/support surfaces.
 
 ## M1 — Remote Manager foundation
 
@@ -250,7 +272,7 @@ Identity/evidence-sensitive changes remain more strongly gated.
 - [x] rerun readiness and report residual manual/editorial/evidence actions;
 - [ ] first real SEO/GEO remediation from ChatGPT on the rendered site.
 
-**Production acceptance note:** issue #184 proved the real site was already `ready` with zero blockers, zero advisories and zero safe remediation candidates. No remediation was fabricated solely to exercise Apply; the first real remediation remains pending until production exposes a legitimate candidate.
+**Production acceptance note:** issue #184 proved the real site was already `ready` with zero blockers, zero advisories and zero safe remediation candidates. No remediation was fabricated solely to exercise Apply; the first real remediation remains pending until production exposes a legitimate candidate. Issue #195 tracks alignment of the older canonical DoD wording with this already-ready production rule.
 
 ## M7 — Bounded Theme design control from ChatGPT
 
@@ -264,7 +286,7 @@ Identity/evidence-sensitive changes remain more strongly gated.
 
 **Production acceptance note:** issue #186 proved one bounded Theme-native palette operation end-to-end using a temporary exact 5-scope Design credential, including exact baseline restoration, credential revocation and post-revocation 401 rejection. Typography, density and section/component variant breadth remain separate acceptance work.
 
-## M8 — Real-site operating acceptance
+## M8 — Real-site operating acceptance ✅ COMPLETE (2026-10-12)
 
 - [x] supported Theme + Manager installed on real site;
 - [x] remote connection enabled locally;
@@ -274,11 +296,13 @@ Identity/evidence-sensitive changes remain more strongly gated.
 - [x] real SEO/GEO readiness acceptance completed end-to-end (`ready`, 0 blockers, 0 advisories, no remediation required);
 - [x] real bounded Theme Design task completed end-to-end with exact rollback restoration;
 - [x] rollback proven for supported Page, Insight, Media and Design operations;
-- [ ] audit records proven without secrets;
-- [ ] read-only scope mode proven;
+- [x] audit records proven without secrets;
+- [x] read-only scope mode proven;
 - [x] revocation proven to immediately block remote use;
-- [ ] normal bypasses to Admin/SSH/manual code recorded;
-- [ ] every normal bypass converted into Manager backlog.
+- [x] normal bypasses to Admin/SSH/manual code recorded;
+- [x] every normal bypass converted into Manager backlog.
+
+**M8 closeout:** the real Eduardo site has completed the defined production operating acceptance. Remaining Manager breadth items in M1–M7 and backlog issues #192–#194 are product-expansion work, not hidden M8 blockers. The older SEO/GEO DoD wording is being aligned under #195 so production integrity remains more important than manufacturing a defect merely to exercise remediation.
 
 **Phase 5 done when:** routine management of the Eduardo site can genuinely be driven from ChatGPT through the Manager, with real rendered verification.
 
@@ -339,7 +363,9 @@ No fabricated academic identifiers or publication status.
 
 ---
 
-## Work explicitly deferred until Eduardo M1–M8 is proven
+## Work explicitly deferred during Eduardo M1–M8
+
+The following items were intentionally deferred while proving the single-site Eduardo operating model. M8 is now complete, so they may be reconsidered only when they do not displace the remaining academic/site priorities:
 
 - generic multi-client SaaS Control Center;
 - fleet management across many customer sites;
@@ -349,7 +375,7 @@ No fabricated academic identifiers or publication status.
 - `emmake.com` as active implementation priority;
 - unrestricted remote WordPress administrator proxying.
 
-`emmake.com` remains the second real validation scenario for existing-site adoption, but this repository/workstream stays focused on `eduardoyauriluna.com` until the ChatGPT-governed Greenfield path is proven.
+`emmake.com` remains the second real validation scenario for existing-site adoption; it is not automatically promoted ahead of the Eduardo academic-content and visibility phases merely because M8 is now proven.
 
 ---
 
