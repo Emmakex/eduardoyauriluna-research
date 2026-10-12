@@ -7,6 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_Audit {
     private const OPTION = 'eduardo_research_manager_remote_audit';
     private const MAX_RECORDS = 200;
+    private const MAX_PAGE_SIZE = 100;
 
     public function record(array $record): array {
         $entry = array(
@@ -41,10 +42,48 @@ final class Eduardo_Research_Manager_Remote_Audit {
     }
 
     public function recent(int $limit = 50): array {
+        $result = $this->query(array('page'=>1, 'per_page'=>$limit));
+        return (array) ($result['items'] ?? array());
+    }
+
+    /**
+     * Return a bounded, exact-match filtered page of non-secret audit records.
+     *
+     * Supported filters intentionally mirror safe correlation identifiers only.
+     */
+    public function query(array $args = array()): array {
         $records = get_option(self::OPTION, array());
-        if (! is_array($records)) { return array(); }
-        $limit = max(1, min(self::MAX_RECORDS, $limit));
-        return array_slice(array_values($records), 0, $limit);
+        $records = is_array($records) ? array_values($records) : array();
+
+        $page = max(1, (int) ($args['page'] ?? 1));
+        $per_page = max(1, min(self::MAX_PAGE_SIZE, (int) ($args['per_page'] ?? 50)));
+        $filters = array(
+            'request_id' => substr($this->text($args['request_id'] ?? ''), 0, 120),
+            'operation_id' => substr($this->text($args['operation_id'] ?? ''), 0, 100),
+            'connection_id' => substr($this->text($args['connection_id'] ?? ''), 0, 120),
+            'outcome' => substr($this->text($args['outcome'] ?? ''), 0, 40),
+        );
+
+        $filtered = array_values(array_filter($records, static function ($record) use ($filters): bool {
+            if (! is_array($record)) { return false; }
+            foreach ($filters as $field => $value) {
+                if ('' !== $value && (string) ($record[$field] ?? '') !== $value) { return false; }
+            }
+            return true;
+        }));
+
+        $total = count($filtered);
+        $offset = ($page - 1) * $per_page;
+        $items = $offset < $total ? array_slice($filtered, $offset, $per_page) : array();
+
+        return array(
+            'page' => $page,
+            'per_page' => $per_page,
+            'total' => $total,
+            'total_pages' => 0 === $total ? 0 : (int) ceil($total / $per_page),
+            'filters' => array_filter($filters, static fn(string $value): bool => '' !== $value),
+            'items' => $items,
+        );
     }
 
     public function clear(): void {
