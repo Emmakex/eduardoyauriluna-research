@@ -21,7 +21,7 @@
   </button>
   <div class="research-header-actions" id="research-header-actions">
    <nav class="research-nav" id="research-primary-nav" aria-label="<?php echo esc_attr(eduardo_research_t('primary_nav')); ?>">
-    <?php $preset = eduardo_research_preset(); $current_key = eduardo_research_current_page_key(); foreach ($preset['primary_navigation'] as $key) : ?>
+    <?php $current_key = eduardo_research_current_page_key(); foreach (eduardo_research_navigation_keys('primary') as $key) : ?>
      <a href="<?php echo esc_url(eduardo_research_page_url((string) $key)); ?>"<?php echo $current_key === $key ? ' aria-current="page"' : ''; ?>><?php echo esc_html(eduardo_research_page_label((string) $key)); ?></a>
     <?php endforeach; ?>
    </nav>

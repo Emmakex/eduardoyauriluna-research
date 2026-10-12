@@ -26,6 +26,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-sna
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-executor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-editor.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-navigation.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-assignment-editor.php';
@@ -81,6 +82,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rem
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-semantic-scope-guard.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-pages-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-navigation-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-media-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-media-metadata-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-media-metadata-rest.php';
@@ -120,6 +122,7 @@ add_action('plugins_loaded', array('Eduardo_Research_Manager', 'boot'));
 add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_Semantic_Scope_Guard())->register();
     (new Eduardo_Research_Manager_Remote_Pages_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Navigation_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Media_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Media_Metadata_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Media_Assignment_REST(Eduardo_Research_Manager::remote_rest()))->register();
