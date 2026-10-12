@@ -37,6 +37,16 @@ jobs:
           grep -F "application/pdf" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           grep -F "hash_file('sha256'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           grep -F "Image ingest requires operator-reviewed alt_text" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+      - name: Enforce private staging cleanup
+        run: |
+          grep -F "PLAN_TTL = 15 * MINUTE_IN_SECONDS" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "CLEANUP_HOOK" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "wp_schedule_single_event" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "cleanup_expired_plan" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "public function cancel" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "'/cancel'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "preview_cancel'=>true" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "private-temporary-ttl-15m" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
       - name: Enforce safe provenance rollback
         run: |
           grep -F "_eduardo_research_manager_ingest_operation" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
