@@ -5,15 +5,10 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Remote_Audit_REST {
-    private Eduardo_Research_Manager_Remote_REST $auth;
     private Eduardo_Research_Manager_Remote_Audit $audit;
 
-    public function __construct(
-        ?Eduardo_Research_Manager_Remote_REST $auth = null,
-        ?Eduardo_Research_Manager_Remote_Audit $audit = null
-    ) {
-        $this->auth = $auth ?: Eduardo_Research_Manager::remote_rest();
-        $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
+    public function __construct(Eduardo_Research_Manager_Remote_Audit $audit) {
+        $this->audit = $audit;
     }
 
     public function register(): void {
@@ -25,7 +20,7 @@ final class Eduardo_Research_Manager_Remote_Audit_REST {
         register_rest_route(Eduardo_Research_Manager_Remote_REST::NAMESPACE, '/audit', array(
             'methods' => WP_REST_Server::READABLE,
             'callback' => array($this, 'index'),
-            'permission_callback' => fn(WP_REST_Request $request) => $this->auth->permission($request, 'site.diagnostics'),
+            'permission_callback' => fn(WP_REST_Request $request) => Eduardo_Research_Manager::remote_rest()->permission($request, 'site.diagnostics'),
             'args' => array(
                 'page' => array('type'=>'integer', 'minimum'=>1, 'default'=>1),
                 'per_page' => array('type'=>'integer', 'minimum'=>1, 'maximum'=>100, 'default'=>50),
