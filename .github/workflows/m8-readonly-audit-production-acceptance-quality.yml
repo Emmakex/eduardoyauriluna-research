@@ -1,0 +1,44 @@
+name: M8 Read-only Audit Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-readonly-audit-production-acceptance.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php'
+      - '.github/workflows/m8-readonly-audit-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: PHP syntax
+        run: php -l scripts/m8-readonly-audit-production-acceptance.php
+      - name: Enforce exact read-only temporary scope profile
+        run: |
+          grep -F "'site.read', 'site.diagnostics'" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "str_starts_with(\$this->token, 'ermt1_')" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "writes-disabled" scripts/m8-readonly-audit-production-acceptance.php
+      - name: Enforce denied write proof
+        run: |
+          grep -F "'/operations/plan'" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "[403]" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "scope_denied" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "mutation_performed" scripts/m8-readonly-audit-production-acceptance.php
+      - name: Enforce audit whitelist and no secret fields
+        run: |
+          grep -F "Bounded non-secret audit trail" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "'request_id' =>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F "'connection_id' =>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          ! grep -E "['\"](token|token_hash|authorization|password|secret|cookie)['\"]\s*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+      - name: Enforce evidence secret guard and revocation proof
+        run: |
+          grep -F "Evidence unexpectedly contains bearer-like material" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F -- "--revocation-proof" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F "authentication_failed" scripts/m8-readonly-audit-production-acceptance.php
