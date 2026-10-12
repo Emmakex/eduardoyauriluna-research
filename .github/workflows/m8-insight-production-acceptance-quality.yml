@@ -1,0 +1,46 @@
+name: M8 Insight Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-insight-production-acceptance.sh'
+      - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
+      - '.github/workflows/m8-insight-production-acceptance-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/m8-insight-production-acceptance.sh'
+      - 'scripts/m8-manager-client.php'
+      - 'scripts/m8-manager-safe.php'
+      - '.github/workflows/m8-insight-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell syntax
+        run: bash -n scripts/m8-insight-production-acceptance.sh
+      - name: Validate bounded production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          S=scripts/m8-insight-production-acceptance.sh
+          grep -F '"slug": "m8-insight-production-acceptance-20261012"' "$S"
+          grep -F '"language": "en"' "$S"
+          grep -F '"insight_type": "research_note"' "$S"
+          grep -F '"status": "publish"' "$S"
+          grep -F 'rollback_after_verify' "$S"
+          grep -F 'scripts/m8-manager-safe.php' "$S"
+          grep -F 'insight-create-verify' "$S"
+          grep -F 'insight-create-rollback' "$S"
+          grep -F 'insight-seo-geo' "$S"
+          grep -F 'created Insight is absent from final managed inventory' "$S"
+          grep -F 'ERM_TOKEN' "$S"
+          ! grep -E 'erm1_[A-Fa-f0-9]{16,}' "$S"
+      - name: Validate local M8 safe launcher
+        run: php scripts/m8-manager-safe.php self-test
