@@ -248,13 +248,60 @@ try {
     if ($normaliseSet((array) ($capabilities['granted_scopes'] ?? array())) !== $expectedScopes) {
         throw new RuntimeException('Closeout credential does not match the exact temporary Phase 4 8-scope profile.');
     }
-    $mediaControl = (array) ($capabilities['media_control'] ?? array());
-    foreach (array('inventory', 'metadata', 'assignment', 'diagnostics') as $capability) {
-        if (empty($mediaControl[$capability]['available'])) {
-            throw new RuntimeException('Media capability unavailable during closeout: ' . $capability);
-        }
+
+    $mediaControl = is_array($capabilities['media_control'] ?? null) ? $capabilities['media_control'] : array();
+    $diagnosticsContract = is_array($mediaControl['diagnostics'] ?? null) ? $mediaControl['diagnostics'] : array();
+    $metadataTransport = is_array($mediaControl['metadata_transport'] ?? null) ? $mediaControl['metadata_transport'] : array();
+    $assignmentContract = is_array($mediaControl['assignment'] ?? null) ? $mediaControl['assignment'] : array();
+    $assignmentTransport = is_array($assignmentContract['transport'] ?? null) ? $assignmentContract['transport'] : array();
+
+    if (true !== ($mediaControl['inventory'] ?? null)) {
+        throw new RuntimeException('Media capability unavailable during closeout: inventory');
     }
+    if (true !== ($mediaControl['inspection'] ?? null)) {
+        throw new RuntimeException('Media capability unavailable during closeout: inspection');
+    }
+    if ('media.read' !== (string) ($mediaControl['read_scope'] ?? '')) {
+        throw new RuntimeException('Media capability contract mismatch during closeout: read_scope');
+    }
+    if (empty($mediaControl['write_available']) || 'media.write' !== (string) ($mediaControl['write_scope'] ?? '')) {
+        throw new RuntimeException('Media capability unavailable during closeout: metadata write transport');
+    }
+    if (! in_array('media-metadata-update', (array) ($mediaControl['operations'] ?? array()), true)) {
+        throw new RuntimeException('Media capability contract mismatch during closeout: metadata operation');
+    }
+    if ('/research-manager/v1/media/metadata' !== (string) ($metadataTransport['base'] ?? '')
+        || $normaliseSet((array) ($metadataTransport['lifecycle'] ?? array())) !== $normaliseSet(array('plan','apply','status','verify','rollback'))
+        || empty($metadataTransport['stale_attachment_revision_protection'])
+        || empty($metadataTransport['idempotency'])) {
+        throw new RuntimeException('Media capability unavailable during closeout: metadata');
+    }
+    if (empty($assignmentContract['available'])
+        || 'media-assignment' !== (string) ($assignmentContract['operation'] ?? '')
+        || 'theme' !== (string) ($assignmentContract['layout_authority'] ?? '')
+        || empty($assignmentTransport['rendered_verification'])
+        || empty($assignmentTransport['dual_resource_stale_protection'])
+        || empty($assignmentTransport['idempotency'])) {
+        throw new RuntimeException('Media capability unavailable during closeout: assignment');
+    }
+    if (empty($diagnosticsContract['available'])
+        || 'media.read' !== (string) ($diagnosticsContract['read_scope'] ?? '')
+        || empty($diagnosticsContract['aggregate_readiness'])) {
+        throw new RuntimeException('Media capability unavailable during closeout: diagnostics');
+    }
+    if (! empty($mediaControl['filesystem_paths_exposed'])
+        || ! empty($mediaControl['arbitrary_upload_proxy'])
+        || ! empty($mediaControl['destructive_delete'])
+        || ! empty($mediaControl['arbitrary_wordpress_proxy'])
+        || ! empty($assignmentContract['arbitrary_post_meta'])) {
+        throw new RuntimeException('Media capability contract exposes a forbidden production control surface.');
+    }
+
     $evidence['checks']['exact_8_scope_profile'] = true;
+    $evidence['checks']['media_inventory_available'] = true;
+    $evidence['checks']['media_metadata_transport_available'] = true;
+    $evidence['checks']['media_assignment_available'] = true;
+    $evidence['checks']['media_diagnostics_available'] = true;
     $evidence['checks']['media_contracts_available'] = true;
 
     $diagnostics = $request('/media/diagnostics', 'media-diagnostics-final');

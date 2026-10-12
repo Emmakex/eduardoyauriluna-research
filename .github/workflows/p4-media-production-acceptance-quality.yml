@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'scripts/p4-media-production-acceptance.sh'
+      - 'scripts/p4-media-production-closeout.php'
       - '.github/workflows/p4-media-production-acceptance-quality.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/p4-media-production-acceptance.sh'
+      - 'scripts/p4-media-production-closeout.php'
       - '.github/workflows/p4-media-production-acceptance-quality.yml'
 
 concurrency:
@@ -24,11 +26,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Bash syntax
-        run: bash -n scripts/p4-media-production-acceptance.sh
+      - name: Syntax
+        run: |
+          bash -n scripts/p4-media-production-acceptance.sh
+          php -l scripts/p4-media-production-closeout.php
 
-      - name: Help path requires no credential
-        run: bash scripts/p4-media-production-acceptance.sh --help
+      - name: Help paths require no credential
+        run: |
+          bash scripts/p4-media-production-acceptance.sh --help
+          php scripts/p4-media-production-closeout.php --help
 
       - name: Enforce bounded child-client orchestration
         shell: bash
@@ -84,18 +90,55 @@ jobs:
               raise SystemExit('local revocation boundary missing')
           PY
 
+      - name: Enforce closeout against declared Media capability shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-production-closeout.php').read_text()
+          required = [
+              "true !== ($mediaControl['inventory'] ?? null)",
+              "true !== ($mediaControl['inspection'] ?? null)",
+              "$mediaControl['write_available']",
+              "$mediaControl['write_scope']",
+              "$mediaControl['operations']",
+              "$mediaControl['metadata_transport']",
+              "$mediaControl['assignment']",
+              "$mediaControl['diagnostics']",
+              "stale_attachment_revision_protection",
+              "dual_resource_stale_protection",
+              "rendered_verification",
+              "filesystem_paths_exposed",
+              "arbitrary_upload_proxy",
+              "destructive_delete",
+              "arbitrary_wordpress_proxy",
+              "arbitrary_post_meta",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing closeout Media contract guard: {token}')
+          if "['inventory']['available']" in text or "['metadata']['available']" in text:
+              raise SystemExit('closeout must not assume obsolete nested available flags')
+          PY
+
       - name: Enforce token non-disclosure boundary
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import pathlib, re
-          text = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
-          for number, line in enumerate(text.splitlines(), start=1):
-              if re.search(r'\b(?:echo|printf|cat)\b.*\$\{?ERM_TOKEN', line):
-                  raise SystemExit(f'possible token value disclosure on line {number}')
-              if re.search(r'\bexport\s+ERM_TOKEN=', line):
-                  raise SystemExit(f'possible token rebinding on line {number}')
-          if 'The wrapper never stores or prints ERM_TOKEN.' not in text:
+          for path in [
+              'scripts/p4-media-production-acceptance.sh',
+              'scripts/p4-media-production-closeout.php',
+          ]:
+              text = pathlib.Path(path).read_text()
+              for number, line in enumerate(text.splitlines(), start=1):
+                  if re.search(r'\b(?:echo|printf|cat)\b.*\$\{?ERM_TOKEN', line):
+                      raise SystemExit(f'possible token value disclosure in {path} on line {number}')
+                  if re.search(r'\bexport\s+ERM_TOKEN=', line):
+                      raise SystemExit(f'possible token rebinding in {path} on line {number}')
+          wrapper = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
+          if 'The wrapper never stores or prints ERM_TOKEN.' not in wrapper:
               raise SystemExit('operator secrecy statement missing')
           PY
