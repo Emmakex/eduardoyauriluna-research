@@ -74,7 +74,7 @@ php scripts/m8-manager-safe.php preflight \
   "--config=$DISCOVERY_CONFIG" \
   "--evidence=$DISCOVERY_EVIDENCE"
 
-DISCOVERY_RESULT="$(php -r '
+php -r '
 $path = $argv[1];
 $requested = $argv[2];
 $j = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
@@ -119,10 +119,9 @@ if ($requested !== "" && !isset($candidates[$requested])) {
     fwrite(STDERR, "Requested check_id is not an eligible live safe SEO/GEO remediation: {$requested}\n");
     exit(3);
 }
-echo $requested === "" ? "DISCOVERY_ONLY" : "ELIGIBLE";
-' "$DISCOVERY_EVIDENCE" "$CHECK_ID")"
+' "$DISCOVERY_EVIDENCE" "$CHECK_ID"
 
-if grep -q 'erm1_' "$DISCOVERY_EVIDENCE"; then
+if grep -Eq 'erm1_|ermt1_' "$DISCOVERY_EVIDENCE"; then
   echo "Discovery evidence unexpectedly contains bearer-like material." >&2
   exit 1
 fi
@@ -231,7 +230,7 @@ if ($normalise($baseline) !== $normalise($final)) {
 fwrite(STDOUT, "M8 SEO/GEO reversible production acceptance: PASS\nPlan → Apply → rendered Verify → readiness rerun → Rollback completed; semantic readiness baseline restored.\nEvidence: {$acceptancePath}\n");
 ' "$DISCOVERY_EVIDENCE" "$ACCEPTANCE_EVIDENCE" "$APPLY" "$CHECK_ID"
 
-if grep -q 'erm1_' "$ACCEPTANCE_EVIDENCE"; then
+if grep -Eq 'erm1_|ermt1_' "$ACCEPTANCE_EVIDENCE"; then
   echo "Acceptance evidence unexpectedly contains bearer-like material." >&2
   exit 1
 fi
