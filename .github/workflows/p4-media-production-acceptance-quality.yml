@@ -92,8 +92,8 @@ jobs:
           import pathlib, re
           text = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
           for number, line in enumerate(text.splitlines(), start=1):
-              if re.search(r'\b(?:echo|printf|cat)\b.*\bERM_TOKEN\b', line):
-                  raise SystemExit(f'possible token disclosure on line {number}')
+              if re.search(r'\b(?:echo|printf|cat)\b.*\$\{?ERM_TOKEN', line):
+                  raise SystemExit(f'possible token value disclosure on line {number}')
               if re.search(r'\bexport\s+ERM_TOKEN=', line):
                   raise SystemExit(f'possible token rebinding on line {number}')
           if 'The wrapper never stores or prints ERM_TOKEN.' not in text:
