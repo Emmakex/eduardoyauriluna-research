@@ -1,0 +1,105 @@
+name: Phase 4 Media Production Acceptance Orchestrator Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/p4-media-production-acceptance.sh'
+      - '.github/workflows/p4-media-production-acceptance-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/p4-media-production-acceptance.sh'
+      - '.github/workflows/p4-media-production-acceptance-quality.yml'
+
+concurrency:
+  group: p4-media-production-acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  orchestrator-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax
+        run: bash -n scripts/p4-media-production-acceptance.sh
+
+      - name: Help path requires no credential
+        run: bash scripts/p4-media-production-acceptance.sh --help
+
+      - name: Enforce bounded child-client orchestration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
+          required = [
+              'p4-media-production-preflight.php',
+              'p4-media-metadata-production-acceptance.php',
+              'p4-media-assignment-production-acceptance.php',
+              'p4-media-production-closeout.php',
+              'p4-media-revocation-probe.php',
+              '--preflight-only',
+              '--apply',
+              '--confirm-production',
+              '--revocation-proof',
+              'REVOCATION_REQUIRED.txt',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing orchestrator contract token: {token}')
+
+          forbidden = [
+              'curl ', 'wget ', 'Authorization: Bearer', 'printenv',
+              'set -x', 'wp credential', 'wp-cli', '/wp-json/',
+              'git add', 'git commit', 'git push',
+          ]
+          for token in forbidden:
+              if token in text:
+                  raise SystemExit(f'orchestrator must delegate network/local mutation work: {token}')
+          PY
+
+      - name: Enforce Preview first and explicit Apply confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          text = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
+          preflight = text.index('run_php "P4.2 read-only production preflight"')
+          metadata = text.index('run_php "P4.3 metadata lifecycle ${MODE}"')
+          assignment = text.index('run_php "P4.4 assignment lifecycle ${MODE}"')
+          closeout = text.index('run_php "P4.5 read-only production closeout"')
+          if not preflight < metadata < assignment < closeout:
+              raise SystemExit('production acceptance order changed')
+          if '"$MODE" == "apply" && "$CONFIRM_PRODUCTION" -ne 1' not in text:
+              raise SystemExit('explicit production confirmation guard missing')
+          if 'No production mutation was executed.' not in text:
+              raise SystemExit('Preview non-mutation operator signal missing')
+          if 'revoke the temporary Media credential locally' not in text:
+              raise SystemExit('local revocation boundary missing')
+          PY
+
+      - name: Enforce token non-disclosure boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
+          dangerous = [
+              r'echo[^\n]*\$\{?ERM_TOKEN',
+              r'printf[^\n]*\$\{?ERM_TOKEN',
+              r'cat[^\n]*ERM_TOKEN',
+              r'export\s+ERM_TOKEN=',
+          ]
+          for pattern in dangerous:
+              if re.search(pattern, text):
+                  raise SystemExit(f'possible token disclosure/rebinding pattern: {pattern}')
+          if 'The wrapper never stores or prints ERM_TOKEN.' not in text:
+              raise SystemExit('operator secrecy statement missing')
+          PY
