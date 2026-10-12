@@ -116,6 +116,7 @@ final class Eduardo_Research_Manager_Remote_Credentials {
         $state['generation'] = max(0, (int) ($state['generation'] ?? 0)) + 1;
         $state['kind'] = 'primary';
         $this->persist($state);
+        $this->authenticated_state = $state;
 
         return array(
             'token' => $token,
@@ -233,6 +234,9 @@ final class Eduardo_Research_Manager_Remote_Credentials {
         $state['enabled'] = $enabled;
         $state['kind'] = 'primary';
         $this->persist($state);
+        if (! is_array($this->authenticated_state) || 'temporary' !== (string) ($this->authenticated_state['kind'] ?? '')) {
+            $this->authenticated_state = $state;
+        }
         return $this->public_state($state, 'primary');
     }
 
@@ -245,6 +249,9 @@ final class Eduardo_Research_Manager_Remote_Credentials {
         $state['scopes'] = $scopes;
         $state['kind'] = 'primary';
         $this->persist($state);
+        if (! is_array($this->authenticated_state) || 'temporary' !== (string) ($this->authenticated_state['kind'] ?? '')) {
+            $this->authenticated_state = $state;
+        }
         return $this->public_state($state, 'primary');
     }
 
@@ -272,7 +279,8 @@ final class Eduardo_Research_Manager_Remote_Credentials {
         $primary = $this->raw_state();
         $authenticated = $this->authenticate_state($token, $primary, 'primary');
         if (is_array($authenticated)) {
-            $this->authenticated_state = $primary + array('kind'=>'primary');
+            $primary['kind'] = 'primary';
+            $this->authenticated_state = $primary;
             return $authenticated;
         }
         if (is_wp_error($authenticated) && 'capability_unavailable' === $authenticated->get_error_code()) {
