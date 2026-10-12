@@ -1,0 +1,58 @@
+name: M8 Navigation Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-navigation-production-acceptance.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-navigation.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php'
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/workflows/m8-navigation-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: PHP syntax
+        run: php -l scripts/m8-navigation-production-acceptance.php
+      - name: Enforce Preview by default and explicit Apply
+        run: |
+          grep -F "in_array('--apply'" scripts/m8-navigation-production-acceptance.php
+          grep -F "apply_skipped" scripts/m8-navigation-production-acceptance.php
+          grep -F "no production mutation was executed" scripts/m8-navigation-production-acceptance.php
+      - name: Enforce reorder-only acceptance
+        run: |
+          grep -F "reorder-first-two-existing-targets-only" scripts/m8-navigation-production-acceptance.php
+          grep -F "preview-is-reorder-only" scripts/m8-navigation-production-acceptance.php
+          grep -F "membership_changed' => false" scripts/m8-navigation-production-acceptance.php
+          grep -F "arbitrary_urls" scripts/m8-navigation-production-acceptance.php
+      - name: Enforce safe lifecycle
+        run: |
+          grep -F "'/navigation/plan'" scripts/m8-navigation-production-acceptance.php
+          grep -F "'/apply'" scripts/m8-navigation-production-acceptance.php
+          grep -F "'/verify'" scripts/m8-navigation-production-acceptance.php
+          grep -F "'/rollback'" scripts/m8-navigation-production-acceptance.php
+          grep -F "rendered' => true" scripts/m8-navigation-production-acceptance.php
+          grep -F "emergencyRollback" scripts/m8-navigation-production-acceptance.php
+      - name: Enforce exact baseline restoration
+        run: |
+          grep -F "exact-baseline-restored" scripts/m8-navigation-production-acceptance.php
+          grep -F "baseline-revision-restored" scripts/m8-navigation-production-acceptance.php
+          grep -F "rollback_completed" scripts/m8-navigation-production-acceptance.php
+      - name: Enforce Manager boundaries
+        run: |
+          grep -F "registered_theme_targets_only" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "'arbitrary_urls'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "stale_preview_protection" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "idempotency" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+      - name: Enforce evidence secret guard
+        run: |
+          grep -F "Evidence unexpectedly contains bearer-like material" scripts/m8-navigation-production-acceptance.php
+          ! grep -E "erm(t)?1_[A-Za-z0-9._:-]{8,}" scripts/m8-navigation-production-acceptance.php
