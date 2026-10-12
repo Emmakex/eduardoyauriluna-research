@@ -353,7 +353,7 @@ final class Eduardo_Research_Manager_Remote_Credentials {
         return in_array($scope, $scopes, true);
     }
 
-    private function validate_admin_user(int $wordpress_user_id): true|WP_Error {
+    private function validate_admin_user(int $wordpress_user_id): bool|WP_Error {
         $user = get_user_by('id', $wordpress_user_id);
         if (! $user instanceof WP_User || ! user_can($user, 'manage_options')) {
             return new WP_Error('capability_unavailable', 'Remote Manager credentials must be bound to a WordPress administrator.', array('status'=>403));
