@@ -4,6 +4,12 @@
 
 First standalone release-candidate of the Eduardo Research Theme.
 
+### Hotfix — Phase 4 production Media acceptance
+
+- Render the Theme-owned primary Media slot from `single-post.php`, the template WordPress actually resolves for managed Insight posts.
+- Preserve the public verification markers `data-research-media-slot="primary"` and `data-attachment-id` so authenticated Manager assignment operations can complete stored + rendered verification.
+- Add a dedicated CI guard that fails if the Insight template stops invoking the primary Media renderer.
+
 ### Added
 
 - Theme-owned researcher website surfaces for Home, About, Research, Publications, Projects, Software, Datasets, CV, Insights, Contact and legal pages.

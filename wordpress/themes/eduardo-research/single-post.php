@@ -18,6 +18,7 @@ $es = 'es' === eduardo_research_current_language();
     <?php if (get_the_modified_time('U') > get_the_time('U')) : ?><span><?php echo esc_html(($es ? 'Actualizado ' : 'Updated ') . get_the_modified_date()); ?></span><?php endif; ?>
    </div>
   </header>
+  <?php eduardo_research_render_primary_media($post_id); ?>
   <section class="research-section research-object-body">
    <div class="research-shell research-object-body-grid">
     <div><span class="research-section-number">01</span><div class="research-eyebrow"><?php echo esc_html($es ? 'Nota' : 'Note'); ?></div><h2><?php echo esc_html($es ? 'Texto completo' : 'Full text'); ?></h2></div>
