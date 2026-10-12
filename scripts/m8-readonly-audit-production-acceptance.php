@@ -19,7 +19,7 @@ final class M8ReadonlyAuditProductionAcceptance
         $this->baseUrl = rtrim((string) getenv('ERM_BASE_URL'), '/');
         $this->token = trim((string) getenv('ERM_TOKEN'));
         $this->evidencePath = $this->argument($argv, '--evidence=')
-            ?: 'tmp/m8-readonly-audit-production-acceptance-' . gmdate('Ymd\THis\Z') . '-' . getmypid() . '.json';
+            ?: 'tmp/m8-readonly-audit-production-acceptance-' . gmdate('Ymd\\THis\\Z') . '-' . getmypid() . '.json';
         $this->revocationProof = in_array('--revocation-proof', $argv, true);
     }
 
@@ -28,7 +28,7 @@ final class M8ReadonlyAuditProductionAcceptance
         try {
             $this->validateRuntime();
             $this->evidence = [
-                'schema_version' => 1,
+                'schema_version' => 2,
                 'milestone' => 'M8',
                 'slice' => 'readonly-audit-production-acceptance',
                 'site' => $this->baseUrl,
@@ -82,6 +82,15 @@ final class M8ReadonlyAuditProductionAcceptance
         $this->check('writes-disabled', empty($capabilityData['writes_enabled']), [
             'writes_enabled' => $capabilityData['writes_enabled'] ?? null,
         ]);
+        $auditControl = is_array($capabilityData['audit_control'] ?? null) ? $capabilityData['audit_control'] : [];
+        $this->check('remote-audit-capability-advertised',
+            !empty($auditControl['available'])
+            && !empty($auditControl['read_only'])
+            && '/research-manager/v1/audit' === (string) ($auditControl['transport'] ?? '')
+            && 'site.diagnostics' === (string) ($auditControl['scope'] ?? '')
+            && empty($auditControl['remote_clear_delete']),
+            ['audit_control' => $auditControl]
+        );
 
         $status = $this->request('GET', '/status', null, [200], 'status');
         $this->check('status-readable', !empty($status['ok']), ['ok' => $status['ok'] ?? null]);
@@ -109,6 +118,36 @@ final class M8ReadonlyAuditProductionAcceptance
             'request_id' => $deniedRequestId,
         ]);
 
+        $audit = $this->request(
+            'GET',
+            '/audit?request_id=' . rawurlencode($deniedRequestId) . '&per_page=10',
+            null,
+            [200],
+            'remote-audit-correlation'
+        );
+        $auditData = $this->data($audit);
+        $this->assertNoSecretKeys($auditData);
+        $items = is_array($auditData['items'] ?? null) ? array_values($auditData['items']) : [];
+        $this->check('remote-audit-filter-echo',
+            $deniedRequestId === (string) ($auditData['filters']['request_id'] ?? ''),
+            ['filters' => $auditData['filters'] ?? []]
+        );
+        $this->check('remote-audit-match-count', 1 === count($items), [
+            'count' => count($items),
+            'total' => $auditData['total'] ?? null,
+        ]);
+        $auditRow = is_array($items[0] ?? null) ? $items[0] : [];
+        $this->check('remote-audit-correlates-denied-write',
+            $deniedRequestId === (string) ($auditRow['request_id'] ?? '')
+            && 'remote-request-rejected' === (string) ($auditRow['event'] ?? '')
+            && 'blocked' === (string) ($auditRow['outcome'] ?? '')
+            && 'operations.apply' === (string) ($auditRow['scope'] ?? '')
+            && 'scope_denied' === (string) ($auditRow['error_code'] ?? '')
+            && 'POST' === (string) ($auditRow['method'] ?? '')
+            && '/research-manager/v1/operations/plan' === (string) ($auditRow['route'] ?? ''),
+            ['audit_row' => $auditRow]
+        );
+
         $statusAfter = $this->request('GET', '/status', null, [200], 'status-after-denied-write');
         $this->check('reads-still-available-after-denied-write', !empty($statusAfter['ok']), [
             'ok' => $statusAfter['ok'] ?? null,
@@ -116,10 +155,12 @@ final class M8ReadonlyAuditProductionAcceptance
 
         $this->evidence['audit_correlation'] = [
             'request_id' => $deniedRequestId,
-            'expected_event' => 'permission_denied',
+            'expected_event' => 'remote-request-rejected',
+            'expected_outcome' => 'blocked',
             'expected_scope' => 'operations.apply',
             'expected_error_code' => 'scope_denied',
-            'local_surface' => 'Tools > Research Manager Remote > Recent remote audit',
+            'remote_surface' => 'GET /wp-json/research-manager/v1/audit?request_id=…',
+            'verified_remotely' => true,
         ];
         $this->evidence['mutation_performed'] = false;
 
@@ -127,7 +168,8 @@ final class M8ReadonlyAuditProductionAcceptance
         fwrite(STDOUT, "M8 read-only/audit production acceptance: PASS\n");
         fwrite(STDOUT, "Exact temporary scopes: 2; writes_enabled=false.\n");
         fwrite(STDOUT, "Read endpoints: PASS; denied mutation: HTTP 403 scope_denied; no mutation executed.\n");
-        fwrite(STDOUT, "Audit source whitelist/no-secret contract: PASS.\n");
+        fwrite(STDOUT, "Remote audit correlation: PASS through GET /audit; no WordPress Admin required.\n");
+        fwrite(STDOUT, "Audit whitelist/no-secret contract: PASS.\n");
         fwrite(STDOUT, 'Audit correlation request ID: ' . $deniedRequestId . PHP_EOL);
         fwrite(STDOUT, 'Evidence: ' . $this->evidencePath . PHP_EOL);
     }
@@ -168,7 +210,7 @@ final class M8ReadonlyAuditProductionAcceptance
 
         $forbiddenKeys = ['token', 'token_hash', 'authorization', 'password', 'secret', 'cookie'];
         foreach ($forbiddenKeys as $key) {
-            $pattern = '/[\'\"]' . preg_quote($key, '/') . '[\'\"]\s*=>/i';
+            $pattern = '/[\\'\\"]' . preg_quote($key, '/') . '[\\'\\"]\\s*=>/i';
             $this->check('audit-forbids-' . str_replace('_', '-', $key),
                 1 !== preg_match($pattern, $source),
                 ['forbidden_key' => $key]
@@ -181,6 +223,22 @@ final class M8ReadonlyAuditProductionAcceptance
             'whitelist_field_count' => count($fields),
             'forbidden_keys_checked' => $forbiddenKeys,
         ];
+    }
+
+    private function assertNoSecretKeys(mixed $value, string $path = 'data'): void
+    {
+        if (!is_array($value)) {
+            return;
+        }
+        $forbidden = ['token', 'token_hash', 'authorization', 'password', 'secret', 'cookie'];
+        foreach ($value as $key => $item) {
+            $name = strtolower((string) $key);
+            $this->check('remote-audit-no-secret-key-' . substr(hash('sha256', $path . '.' . $name), 0, 12),
+                !in_array($name, $forbidden, true),
+                ['path' => $path, 'key' => $name]
+            );
+            $this->assertNoSecretKeys($item, $path . '.' . $name);
+        }
     }
 
     private function validateRuntime(): void
@@ -228,7 +286,7 @@ final class M8ReadonlyAuditProductionAcceptance
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_USERAGENT => 'Eduardo-Research-M8-Readonly-Audit-Acceptance/1.0',
+            CURLOPT_USERAGENT => 'Eduardo-Research-M8-Readonly-Audit-Acceptance/2.0',
         ]);
         if (null !== $body) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
