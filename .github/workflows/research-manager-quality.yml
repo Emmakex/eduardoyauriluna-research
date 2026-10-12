@@ -53,7 +53,7 @@ jobs:
             includes/class-research-manager.php; do
             test -s "$P/$f"
           done
-          grep -F 'Version: 0.9.1' "$P/eduardo-research-manager.php"
+          grep -F 'Version: 0.9.2' "$P/eduardo-research-manager.php"
       - name: Lint Manager PHP
         shell: bash
         run: |
@@ -258,11 +258,11 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cd wordpress/plugins
-          zip -r ../../dist/eduardo-research-manager-0.9.1.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
-          test -s ../../dist/eduardo-research-manager-0.9.1.zip
-          unzip -t ../../dist/eduardo-research-manager-0.9.1.zip
+          zip -r ../../dist/eduardo-research-manager-0.9.2.zip eduardo-research-manager -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-manager-0.9.2.zip
+          unzip -t ../../dist/eduardo-research-manager-0.9.2.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: eduardo-research-manager-0.9.1
-          path: dist/eduardo-research-manager-0.9.1.zip
+          name: eduardo-research-manager-0.9.2
+          path: dist/eduardo-research-manager-0.9.2.zip
           if-no-files-found: error
