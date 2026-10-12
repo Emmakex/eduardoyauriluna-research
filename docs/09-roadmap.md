@@ -126,6 +126,20 @@ This phase is not equivalent to remote ChatGPT governance; it is the engine that
 
 Primary tracker: #97.
 
+### Production acceptance milestone — Remote Media ✅ (2026-10-12)
+
+Issue #170 is production-accepted and closed. On the real `eduardoyauriluna.com` site we proved:
+
+- a separate temporary 8-scope Media credential/session, independent from the accepted Phase 2 credential;
+- read-only Media preflight and capability discovery;
+- real Media metadata Apply → Verify → Rollback with original metadata restoration;
+- real Insight primary-Media assignment Apply → rendered Verify → Rollback with stored/public state restoration;
+- read-only closeout diagnostics;
+- local revocation of the temporary credential followed by HTTP 401 `authentication_failed`;
+- final Phase 2 audit still passing with exactly 17 scopes, no extras, no dangerous grants and no registry drift.
+
+Research Manager 0.9.2 introduced independent temporary credential storage so bounded acceptance sessions no longer modify the primary production connection.
+
 ## M1 — Remote Manager foundation
 
 - [ ] versioned REST namespace, e.g. `/wp-json/research-manager/v1/`;
@@ -188,7 +202,7 @@ Primary tracker: #97.
 - [ ] taxonomy/author;
 - [ ] internal/research relationships;
 - [ ] translation pair;
-- [ ] media metadata/assignment where supported;
+- [x] media metadata/assignment where supported;
 - [ ] SEO/GEO preparation;
 - [ ] schedule;
 - [ ] publish/update/archive;
@@ -237,16 +251,16 @@ Identity/evidence-sensitive changes remain more strongly gated.
 
 ## M8 — Real-site operating acceptance
 
-- [ ] supported Theme + Manager installed on real site;
-- [ ] remote connection enabled locally;
-- [ ] ChatGPT can read live status/capabilities;
+- [x] supported Theme + Manager installed on real site;
+- [x] remote connection enabled locally;
+- [x] ChatGPT can read live status/capabilities;
 - [ ] real Page task completed end-to-end;
 - [ ] real Insight task completed end-to-end;
 - [ ] real SEO/GEO task completed end-to-end;
-- [ ] rollback proven for one supported operation;
+- [x] rollback proven for one supported operation;
 - [ ] audit records proven without secrets;
 - [ ] read-only scope mode proven;
-- [ ] revocation proven to immediately block remote use;
+- [x] revocation proven to immediately block remote use;
 - [ ] normal bypasses to Admin/SSH/manual code recorded;
 - [ ] every normal bypass converted into Manager backlog.
 
