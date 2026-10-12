@@ -30,6 +30,13 @@ function wp_check_filetype_and_ext(string $file, string $filename, array $mimes)
     return array('ext'=>false,'type'=>false,'proper_filename'=>false);
 }
 
+$GLOBALS['erm_actions'] = array();
+$GLOBALS['erm_scheduled'] = array();
+function add_action(string $hook, callable $callback, int $priority=10, int $accepted_args=1): bool { $GLOBALS['erm_actions'][$hook][]=$callback; return true; }
+function wp_next_scheduled(string $hook, array $args=array()): int|false { $key=$hook.'|'.json_encode($args); return $GLOBALS['erm_scheduled'][$key] ?? false; }
+function wp_schedule_single_event(int $timestamp, string $hook, array $args=array()): bool { $key=$hook.'|'.json_encode($args); $GLOBALS['erm_scheduled'][$key]=$timestamp; return true; }
+function wp_clear_scheduled_hook(string $hook, array $args=array()): int|false { $key=$hook.'|'.json_encode($args); if (!array_key_exists($key,$GLOBALS['erm_scheduled'])) return 0; unset($GLOBALS['erm_scheduled'][$key]); return 1; }
+
 $GLOBALS['erm_options'] = array();
 $GLOBALS['erm_meta'] = array();
 $GLOBALS['erm_posts'] = array();
@@ -69,6 +76,7 @@ final class Eduardo_Research_Manager_Media_Diagnostics {
 require_once __DIR__ . '/../wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php';
 function check(bool $condition,string $message): void { if(!$condition){fwrite(STDERR,"FAIL: {$message}\n");exit(1);} }
 function upload_file(string $suffix,string $content): array { $path=tempnam(sys_get_temp_dir(),'erm-upload-'); file_put_contents($path,$content); return array('name'=>'research-'.$suffix,'tmp_name'=>$path,'size'=>filesize($path),'error'=>UPLOAD_ERR_OK,'type'=>''); }
+function raw_plan(string $id): array { return (array) (($GLOBALS['erm_options']['eduardo_research_manager_remote_media_ingest_plans'][$id] ?? array())); }
 
 $audit=new Eduardo_Research_Manager_Remote_Audit();
 $ops=new Eduardo_Research_Manager_Remote_Media_Ingest_Operations($audit);
@@ -82,18 +90,48 @@ $noAlt=upload_file('image.jpg','JPEG-BINARY-ALT');
 $noAltPlan=$ops->create_plan($noAlt,array('title'=>'Research image'),$actor);
 check(is_wp_error($noAltPlan)&&'validation_failed'===$noAltPlan->get_error_code(),'image ingest must require alt_text'); @unlink($noAlt['tmp_name']);
 
+$cancelFile=upload_file('cancel.jpg','JPEG-CANCEL-PREVIEW');
+$cancelActor=array('connection_id'=>'rmt_media_ingest','wordpress_user_id'=>1,'request_id'=>'req-ingest-cancel');
+$cancelPlan=$ops->create_plan($cancelFile,array('title'=>'Cancel preview','alt_text'=>'Temporary preview image'),$cancelActor);
+check(is_array($cancelPlan)&&'planned'===$cancelPlan['status'],'cancel fixture Preview must succeed');
+$cancelRaw=raw_plan((string)$cancelPlan['plan_id']); $cancelStage=(string)($cancelRaw['staged_path']??'');
+check(''!==$cancelStage&&is_file($cancelStage),'Preview must create private staged file');
+check(false!==wp_next_scheduled('eduardo_research_manager_cleanup_media_ingest_plan',array($cancelPlan['plan_id'])),'Preview must schedule TTL cleanup');
+$cancelled=$ops->cancel((string)$cancelPlan['plan_id'],$cancelActor);
+check(is_array($cancelled)&&'cancelled'===$cancelled['status'],'planned Preview cancel must succeed');
+check(!is_file($cancelStage),'cancel must remove staged binary');
+check(false===wp_next_scheduled('eduardo_research_manager_cleanup_media_ingest_plan',array($cancelPlan['plan_id'])),'cancel must clear scheduled cleanup');
+check(''===(string)(raw_plan((string)$cancelPlan['plan_id'])['staged_path']??''),'cancelled plan must not retain staged path');
+@unlink($cancelFile['tmp_name']);
+
+$expiryFile=upload_file('expiry.jpg','JPEG-EXPIRY-PREVIEW');
+$expiryActor=array('connection_id'=>'rmt_media_ingest','wordpress_user_id'=>1,'request_id'=>'req-ingest-expiry');
+$expiryPlan=$ops->create_plan($expiryFile,array('title'=>'Expiry preview','alt_text'=>'Temporary expiring image'),$expiryActor);
+$expiryRaw=raw_plan((string)$expiryPlan['plan_id']); $expiryStage=(string)($expiryRaw['staged_path']??'');
+check(is_file($expiryStage),'expiry fixture must stage binary');
+$GLOBALS['erm_options']['eduardo_research_manager_remote_media_ingest_plans'][$expiryPlan['plan_id']]['expires_unix']=time()-1;
+$ops->cleanup_expired_plan((string)$expiryPlan['plan_id']);
+$expired=$ops->get_plan((string)$expiryPlan['plan_id']);
+check(is_array($expired)&&'expired'===$expired['status'],'scheduled cleanup must expire stale Preview');
+check(!is_file($expiryStage),'expired Preview cleanup must remove staged binary');
+check(false===wp_next_scheduled('eduardo_research_manager_cleanup_media_ingest_plan',array($expiryPlan['plan_id'])),'expiry cleanup must clear scheduled hook');
+@unlink($expiryFile['tmp_name']);
+
 $file=upload_file('image.jpg','JPEG-BINARY-CONTENT');
 $plan=$ops->create_plan($file,array('title'=>'Research image','alt_text'=>'Research diagram showing bounded Manager workflow','caption'=>'Acceptance image','description'=>'Managed ingest acceptance asset.'),$actor);
 check(is_array($plan),'valid ingest Preview must succeed');
 check(!array_key_exists('staged_path',$plan),'public plan must not expose staged filesystem path');
 check('image/jpeg'===$plan['file']['mime_type'],'MIME contract mismatch');
 check(64===strlen($plan['file']['sha256']),'SHA-256 missing from Preview');
+check('scheduled-or-explicit-cancel'===($plan['cleanup']['policy']??''),'Preview cleanup policy missing');
+check(false!==wp_next_scheduled('eduardo_research_manager_cleanup_media_ingest_plan',array($plan['plan_id'])),'valid Preview must schedule cleanup');
 
 $replay=$ops->create_plan($file,array('title'=>'Research image','alt_text'=>'Research diagram showing bounded Manager workflow'),$actor);
 check(is_array($replay)&&$replay['plan_id']===$plan['plan_id'],'same request/checksum must return existing plan');
 
 $operation=$ops->apply($plan['plan_id'],true,$actor);
 check(is_array($operation)&&'applied'===$operation['status'],'ingest Apply must succeed');
+check(false===wp_next_scheduled('eduardo_research_manager_cleanup_media_ingest_plan',array($plan['plan_id'])),'Apply must clear Preview cleanup hook');
 $id=(int)$operation['target']['attachment_id'];
 check($id>0&&get_post($id) instanceof WP_Post,'Apply must create attachment');
 check($operation['operation_id']===(string)get_post_meta($id,'_eduardo_research_manager_ingest_operation',true),'provenance operation id missing');
@@ -110,7 +148,7 @@ $GLOBALS['erm_used'][$id]=false;
 $rolled=$ops->rollback($operation['operation_id'],true,$actor);
 check(is_array($rolled)&&'rolled-back'===$rolled['status'],'owned unused ingest rollback must succeed');
 check(null===get_post($id),'rollback must delete only owned unused attachment');
-check(count($audit->events)>=4,'ingest lifecycle must be audited');
+check(count($audit->events)>=7,'ingest lifecycle including Preview cleanup must be audited');
 
 @unlink($file['tmp_name']);
-fwrite(STDOUT,"Managed Media ingest lifecycle: PASS\n");
+fwrite(STDOUT,"Managed Media ingest lifecycle + staging cleanup: PASS\n");
