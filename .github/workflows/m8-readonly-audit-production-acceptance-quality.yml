@@ -40,5 +40,5 @@ jobs:
       - name: Enforce evidence secret guard and revocation proof
         run: |
           grep -F "Evidence unexpectedly contains bearer-like material" scripts/m8-readonly-audit-production-acceptance.php
-          grep -F "--revocation-proof" scripts/m8-readonly-audit-production-acceptance.php
+          grep -F -- "--revocation-proof" scripts/m8-readonly-audit-production-acceptance.php
           grep -F "authentication_failed" scripts/m8-readonly-audit-production-acceptance.php
