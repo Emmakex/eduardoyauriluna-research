@@ -140,6 +140,17 @@ Issue #170 is production-accepted and closed. On the real `eduardoyauriluna.com`
 
 Research Manager 0.9.2 introduced independent temporary credential storage so bounded acceptance sessions no longer modify the primary production connection.
 
+### Production acceptance milestone — Page, Insight, SEO/GEO readiness and Design ✅ (2026-10-12)
+
+The real `eduardoyauriluna.com` site has now also passed these ChatGPT-through-Manager acceptance slices:
+
+- issue #180: reversible Page slot mutation with Preview → Apply → stored/rendered Verify → Rollback and exact Page baseline restoration;
+- issue #182: temporary Insight creation with stored/rendered Verify, authenticated inspection, Rollback and proof that the created Insight is absent from the final managed inventory;
+- issue #184: SEO/GEO production discovery returned `ready`, `blocking=0`, `advisories=0` and zero safe remediation candidates, so the acceptance closed as an already-ready state without manufacturing an artificial SEO mutation;
+- issue #186: bounded Theme Design Preview selected `palette -> ocean-lab`, then Apply → Verify → rendered design readiness → Rollback restored the exact Theme design baseline; the independent temporary 5-scope Design credential was then revoked and rejected with HTTP 401 `authentication_failed`.
+
+The stable Phase 2 credential remained least-privilege throughout. In particular, its missing `design.write` scope correctly produced a 403 on the first Design Preview attempt; Design acceptance therefore used a separate temporary scoped session instead of widening the primary credential.
+
 ## M1 — Remote Manager foundation
 
 - [ ] versioned REST namespace, e.g. `/wp-json/research-manager/v1/`;
@@ -179,19 +190,19 @@ Research Manager 0.9.2 introduced independent temporary credential storage so bo
 
 ## M3 — Pages from ChatGPT
 
-- [ ] inspect Theme-controlled Pages remotely;
-- [ ] inspect structured slots/current revision;
+- [x] inspect Theme-controlled Pages remotely;
+- [x] inspect structured slots/current revision;
 - [ ] create supported missing Theme Page;
-- [ ] update structured Page slots;
+- [x] update structured Page slots;
 - [ ] manage permitted Theme variant(s);
 - [ ] pair EN/ES Page resources;
 - [ ] Page-level SEO/GEO inspect/remediate;
-- [ ] Preview exact change;
-- [ ] Apply exact plan;
-- [ ] stored verify;
-- [ ] rendered verify;
-- [ ] rollback supported change;
-- [ ] complete first real Page mutation on `eduardoyauriluna.com` originating from ChatGPT.
+- [x] Preview exact change;
+- [x] Apply exact plan;
+- [x] stored verify;
+- [x] rendered verify;
+- [x] rollback supported change;
+- [x] complete first real Page mutation on `eduardoyauriluna.com` originating from ChatGPT.
 
 **M3 is the first end-to-end proof of the product model.**
 
@@ -206,8 +217,8 @@ Research Manager 0.9.2 introduced independent temporary credential storage so bo
 - [ ] SEO/GEO preparation;
 - [ ] schedule;
 - [ ] publish/update/archive;
-- [ ] rendered verification;
-- [ ] first real Insight operation from ChatGPT.
+- [x] rendered verification;
+- [x] first real Insight operation from ChatGPT.
 
 ## M5 — Research objects from ChatGPT
 
@@ -226,7 +237,7 @@ Identity/evidence-sensitive changes remain more strongly gated.
 
 ## M6 — SEO/GEO optimisation from ChatGPT
 
-- [ ] live site/readiness diagnostics retrieval;
+- [x] live site/readiness diagnostics retrieval;
 - [ ] deterministic remediation grouping/planning;
 - [ ] title/meta remediation;
 - [ ] canonical/hreflang/indexability checks/remediation;
@@ -236,28 +247,33 @@ Identity/evidence-sensitive changes remain more strongly gated.
 - [ ] entity/authorship/direct-answer/GEO checks;
 - [ ] evidence/provenance checks;
 - [ ] Preview → Apply → Verify;
-- [ ] rerun readiness and report residual manual/editorial/evidence actions;
+- [x] rerun readiness and report residual manual/editorial/evidence actions;
 - [ ] first real SEO/GEO remediation from ChatGPT on the rendered site.
+
+**Production acceptance note:** issue #184 proved the real site was already `ready` with zero blockers, zero advisories and zero safe remediation candidates. No remediation was fabricated solely to exercise Apply; the first real remediation remains pending until production exposes a legitimate candidate.
 
 ## M7 — Bounded Theme design control from ChatGPT
 
-- [ ] palette/design token selection;
+- [x] palette/design token selection;
 - [ ] typography tokens;
 - [ ] spacing/density tokens;
 - [ ] Theme-supported section/component variants;
-- [ ] preserve responsive/accessibility rules;
-- [ ] rendered visual/state verification where practical;
-- [ ] no arbitrary CSS/PHP execution as normal control path.
+- [x] preserve responsive/accessibility rules;
+- [x] rendered visual/state verification where practical;
+- [x] no arbitrary CSS/PHP execution as normal control path.
+
+**Production acceptance note:** issue #186 proved one bounded Theme-native palette operation end-to-end using a temporary exact 5-scope Design credential, including exact baseline restoration, credential revocation and post-revocation 401 rejection. Typography, density and section/component variant breadth remain separate acceptance work.
 
 ## M8 — Real-site operating acceptance
 
 - [x] supported Theme + Manager installed on real site;
 - [x] remote connection enabled locally;
 - [x] ChatGPT can read live status/capabilities;
-- [ ] real Page task completed end-to-end;
-- [ ] real Insight task completed end-to-end;
-- [ ] real SEO/GEO task completed end-to-end;
-- [x] rollback proven for one supported operation;
+- [x] real Page task completed end-to-end;
+- [x] real Insight task completed end-to-end;
+- [x] real SEO/GEO readiness acceptance completed end-to-end (`ready`, 0 blockers, 0 advisories, no remediation required);
+- [x] real bounded Theme Design task completed end-to-end with exact rollback restoration;
+- [x] rollback proven for supported Page, Insight, Media and Design operations;
 - [ ] audit records proven without secrets;
 - [ ] read-only scope mode proven;
 - [x] revocation proven to immediately block remote use;
