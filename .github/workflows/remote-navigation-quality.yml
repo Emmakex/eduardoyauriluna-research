@@ -1,0 +1,56 @@
+name: Remote Navigation Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/header.php'
+      - 'wordpress/themes/eduardo-research/footer.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-navigation.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php'
+      - 'scripts/remote-navigation-lifecycle-test.php'
+      - '.github/workflows/remote-navigation-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: PHP syntax
+        run: |
+          php -l wordpress/themes/eduardo-research/inc/research-preset.php
+          php -l wordpress/themes/eduardo-research/header.php
+          php -l wordpress/themes/eduardo-research/footer.php
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-navigation.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          php -l scripts/remote-navigation-lifecycle-test.php
+      - name: Run bounded navigation lifecycle test
+        run: php scripts/remote-navigation-lifecycle-test.php
+      - name: Enforce Theme-owned navigation contract
+        run: |
+          grep -F "eduardo_research_navigation_keys('primary')" wordpress/themes/eduardo-research/header.php
+          grep -F "eduardo_research_navigation_keys('footer')" wordpress/themes/eduardo-research/footer.php
+          grep -F "'arbitrary_urls'=>false" wordpress/themes/eduardo-research/inc/research-preset.php
+          grep -F "'allowed_targets'=>" wordpress/themes/eduardo-research/inc/research-preset.php
+      - name: Enforce bounded Manager lifecycle
+        run: |
+          grep -F "'pages.read'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "'pages.write'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "'operations.apply'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "'operations.rollback'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "'arbitrary_wordpress_menu_proxy'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-navigation-rest.php
+          grep -F "stale_revision" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-navigation.php
+          grep -F "rolled-back" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-navigation.php
+      - name: Enforce bootstrap registration
+        run: |
+          grep -F "class-research-manager-navigation.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          grep -F "class-research-manager-remote-navigation-rest.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          grep -F "Eduardo_Research_Manager_Remote_Navigation_REST" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
