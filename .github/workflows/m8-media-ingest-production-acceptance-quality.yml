@@ -1,0 +1,68 @@
+name: M8 Media Ingest Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-media-ingest-production-acceptance.php'
+      - 'scripts/remote-media-ingest-lifecycle-test.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-rest.php'
+      - '.github/workflows/m8-media-ingest-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: curl,zlib
+      - name: PHP syntax
+        run: |
+          php -l scripts/m8-media-ingest-production-acceptance.php
+          php -l scripts/remote-media-ingest-lifecycle-test.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+      - name: Run isolated ingest lifecycle including staging cleanup
+        run: php scripts/remote-media-ingest-lifecycle-test.php
+      - name: Enforce generated local fixture and multipart upload
+        run: |
+          grep -F "generated-1x1-png" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "new CURLFile" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "createUniquePng" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "hash_file('sha256'" scripts/m8-media-ingest-production-acceptance.php
+      - name: Enforce Preview cleanup and no attachment creation
+        run: |
+          grep -F "preview-created-no-attachment" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media-ingest-preview-cancel" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "preview_staging_cancelled" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "private-temporary-ttl-15m" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "scheduled-or-explicit-cancel" scripts/m8-media-ingest-production-acceptance.php
+      - name: Enforce reversible Apply lifecycle
+        run: |
+          grep -F "media-ingest-apply" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media-inspect-after-apply" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media-ingest-verify" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "checksum_matches" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "provenance_matches" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media-ingest-rollback" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media_not_found" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "final-inventory-clean" scripts/m8-media-ingest-production-acceptance.php
+      - name: Enforce emergency cleanup and safe Manager boundaries
+        run: |
+          grep -F "cleanupRemoteAfterFailure" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media-ingest-emergency-rollback" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "media-ingest-emergency-preview-cancel" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "rollback_requires_unused_owned_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "'arbitrary_url_ingest'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "'arbitrary_filesystem_path'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+      - name: Enforce evidence secret guard
+        run: |
+          grep -F "Evidence unexpectedly contains bearer-like material" scripts/m8-media-ingest-production-acceptance.php
+          grep -F "staged_path" scripts/m8-media-ingest-production-acceptance.php
+          ! grep -E "erm(t)?1_[A-Za-z0-9._:-]{8,}" scripts/m8-media-ingest-production-acceptance.php

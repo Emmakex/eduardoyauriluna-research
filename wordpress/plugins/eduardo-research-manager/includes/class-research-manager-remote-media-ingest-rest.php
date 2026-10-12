@@ -27,6 +27,10 @@ final class Eduardo_Research_Manager_Remote_Media_Ingest_REST {
             'methods'=>WP_REST_Server::READABLE,'callback'=>array($this, 'get_plan'),
             'permission_callback'=>fn(WP_REST_Request $r) => $this->permission($r, 'media.read'),
         ));
+        register_rest_route($ns, '/media/ingest/plans/(?P<plan_id>[A-Za-z0-9._:-]+)/cancel', array(
+            'methods'=>WP_REST_Server::CREATABLE,'callback'=>array($this, 'cancel_plan'),
+            'permission_callback'=>fn(WP_REST_Request $r) => $this->permission($r, 'media.write'),
+        ));
         register_rest_route($ns, '/media/ingest/plans/(?P<plan_id>[A-Za-z0-9._:-]+)/apply', array(
             'methods'=>WP_REST_Server::CREATABLE,'callback'=>array($this, 'apply_plan'),
             'permission_callback'=>fn(WP_REST_Request $r) => $this->permission($r, 'operations.apply', 'media.write'),
@@ -59,6 +63,10 @@ final class Eduardo_Research_Manager_Remote_Media_Ingest_REST {
         return is_wp_error($result) ? $result : $this->response($request, $result);
     }
 
+    public function cancel_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        return $this->idem($request, fn() => $this->operations->cancel((string) $request['plan_id'], $this->actor($request)));
+    }
+
     public function apply_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params = $this->json($request);
         return $this->idem($request, fn() => $this->operations->apply((string) $request['plan_id'], ! empty($params['confirm']), $this->actor($request)));
@@ -86,9 +94,10 @@ final class Eduardo_Research_Manager_Remote_Media_Ingest_REST {
             'available'=>true,'transport_base'=>'/research-manager/v1/media/ingest','multipart_field'=>'file',
             'allowed_mime_types'=>array('image/jpeg','image/png','image/webp','application/pdf'),'max_bytes'=>10485760,
             'image_alt_required'=>true,'checksum'=>'sha256','duplicate_detection'=>'manager-ingest-checksum',
-            'staging'=>'private-temporary','provenance_required'=>true,'rollback_requires_unused_owned_attachment'=>true,
-            'read_scope'=>'media.read','write_scopes'=>array('media.write','operations.apply'),'rollback_scopes'=>array('media.write','operations.rollback'),
-            'lifecycle'=>array('plan','apply','status','verify','rollback'),'arbitrary_url_ingest'=>false,'arbitrary_filesystem_path'=>false,
+            'staging'=>'private-temporary-ttl-15m','staging_ttl_seconds'=>900,'preview_cancel'=>true,
+            'provenance_required'=>true,'rollback_requires_unused_owned_attachment'=>true,
+            'read_scope'=>'media.read','write_scopes'=>array('media.write','operations.apply'),'cancel_scope'=>'media.write','rollback_scopes'=>array('media.write','operations.rollback'),
+            'lifecycle'=>array('plan','cancel','apply','status','verify','rollback'),'arbitrary_url_ingest'=>false,'arbitrary_filesystem_path'=>false,
             'stale_staging_protection'=>true,'idempotency'=>true,
         );
         $payload['data'] = $data; $response->set_data($payload); return $response;
