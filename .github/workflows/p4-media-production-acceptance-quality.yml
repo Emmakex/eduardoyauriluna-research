@@ -91,15 +91,11 @@ jobs:
           python3 - <<'PY'
           import pathlib, re
           text = pathlib.Path('scripts/p4-media-production-acceptance.sh').read_text()
-          dangerous = [
-              r'echo[^\n]*\$\{?ERM_TOKEN',
-              r'printf[^\n]*\$\{?ERM_TOKEN',
-              r'cat[^\n]*ERM_TOKEN',
-              r'export\s+ERM_TOKEN=',
-          ]
-          for pattern in dangerous:
-              if re.search(pattern, text):
-                  raise SystemExit(f'possible token disclosure/rebinding pattern: {pattern}')
+          for number, line in enumerate(text.splitlines(), start=1):
+              if re.search(r'\b(?:echo|printf|cat)\b.*\bERM_TOKEN\b', line):
+                  raise SystemExit(f'possible token disclosure on line {number}')
+              if re.search(r'\bexport\s+ERM_TOKEN=', line):
+                  raise SystemExit(f'possible token rebinding on line {number}')
           if 'The wrapper never stores or prints ERM_TOKEN.' not in text:
               raise SystemExit('operator secrecy statement missing')
           PY
