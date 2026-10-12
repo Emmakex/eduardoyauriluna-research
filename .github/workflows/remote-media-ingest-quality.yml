@@ -44,7 +44,7 @@ jobs:
           grep -F "wp_schedule_single_event" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           grep -F "cleanup_expired_plan" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           grep -F "public function cancel" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "'/cancel'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+          grep -F "/cancel'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
           grep -F "preview_cancel'=>true" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
           grep -F "private-temporary-ttl-15m" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
       - name: Enforce safe provenance rollback
