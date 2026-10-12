@@ -1,0 +1,40 @@
+name: M8 Design Production Acceptance Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m8-design-production-acceptance.php'
+      - '.github/workflows/m8-design-production-acceptance-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: PHP syntax
+        run: php -l scripts/m8-design-production-acceptance.php
+      - name: Enforce temporary credential and exact bounded scopes
+        run: |
+          grep -F "str_starts_with(\$this->token, 'ermt1_')" scripts/m8-design-production-acceptance.php
+          grep -F "'site.read'" scripts/m8-design-production-acceptance.php
+          grep -F "'design.read'" scripts/m8-design-production-acceptance.php
+          grep -F "'design.write'" scripts/m8-design-production-acceptance.php
+          grep -F "'operations.apply'" scripts/m8-design-production-acceptance.php
+          grep -F "'operations.rollback'" scripts/m8-design-production-acceptance.php
+      - name: Enforce reversible design lifecycle
+        run: |
+          grep -F "'/design/plan'" scripts/m8-design-production-acceptance.php
+          grep -F "'/verify'" scripts/m8-design-production-acceptance.php
+          grep -F "'/rollback'" scripts/m8-design-production-acceptance.php
+          grep -F "exact-design-baseline-restored" scripts/m8-design-production-acceptance.php
+          grep -F "design/readiness?rendered=1" scripts/m8-design-production-acceptance.php
+      - name: Enforce secret non-disclosure guard
+        run: |
+          grep -F "Evidence unexpectedly contains bearer-like material" scripts/m8-design-production-acceptance.php
+          grep -F "'authorization'" scripts/m8-design-production-acceptance.php
