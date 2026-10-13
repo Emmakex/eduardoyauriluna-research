@@ -13,14 +13,28 @@ function eduardo_research_canonical_identity_name(): string {
     return '' !== $fallback ? $fallback : 'Eduardo Jose Yauri Luna';
 }
 
+function eduardo_research_canonical_identity_headline(?string $language = null): string {
+    $language = $language ?: eduardo_research_current_language();
+    $stored = get_option('eduardo_research_identity', array());
+    $key = 'es' === $language ? 'headline_es' : 'headline';
+    if (is_array($stored) && isset($stored[$key]) && is_scalar($stored[$key])) {
+        $headline = trim((string) $stored[$key]);
+        if ('' !== $headline) { return $headline; }
+    }
+    if ('es' === $language) { return 'Investigación, software y sistemas digitales basados en evidencia'; }
+    $fallback = trim((string) get_bloginfo('description'));
+    return '' !== $fallback ? $fallback : 'Research, software and evidence-driven digital systems';
+}
+
 function eduardo_research_default_model(?string $language = null): array {
     $language = $language ?: eduardo_research_current_language();
     $name = eduardo_research_canonical_identity_name();
+    $headline = eduardo_research_canonical_identity_headline($language);
     if ('es' === $language) {
         return array(
             'hero-eyebrow'=>'Perfil de investigación',
             'researcher-name'=>$name,
-            'researcher-headline'=>'Investigación, software y sistemas digitales basados en evidencia',
+            'researcher-headline'=>$headline,
             'hero-lead'=>'Un perfil de investigación estructurado para el descubrimiento académico, la reproducibilidad y el contexto académico legible por máquinas.',
             'hero-primary-target'=>'research',
             'hero-secondary-target'=>'cv',
@@ -39,7 +53,7 @@ function eduardo_research_default_model(?string $language = null): array {
     return array(
         'hero-eyebrow'=>'Research profile',
         'researcher-name'=>$name,
-        'researcher-headline'=>get_bloginfo('description') ?: 'Research, software and evidence-driven digital systems',
+        'researcher-headline'=>$headline,
         'hero-lead'=>'A structured research profile designed for scholarly discovery, reproducibility and machine-readable academic context.',
         'hero-primary-target'=>'research',
         'hero-secondary-target'=>'cv',
@@ -97,6 +111,7 @@ function eduardo_research_model(): array {
     $model = array_replace($defaults, array_intersect_key($stored, $defaults));
     // Researcher identity is canonical Manager evidence, never a free editorial slot.
     $model['researcher-name'] = eduardo_research_canonical_identity_name();
+    $model['researcher-headline'] = eduardo_research_canonical_identity_headline($language);
     return $model;
 }
 
