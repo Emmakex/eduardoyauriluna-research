@@ -102,6 +102,8 @@ $v1caps=source('wordpress/plugins/eduardo-research-manager/includes/class-resear
 check(str_contains($v1caps,"'slug_updates'=>array('available'=>true,'operation'=>'insight-update'"),'Capabilities must advertise Insight slug updates');
 check(str_contains($v1caps,"'publication_state'=>array('available'=>true,'allowed'=>array('draft','publish'),'operation'=>'line-update'"),'Capabilities must advertise Research Line publication state');
 check(str_contains($v1caps,"['local_admin_parity']=true"),'Capabilities must advertise Page State local Admin parity');
+check(str_contains($v1caps,"'registered_theme_targets_only'=>true"),'Capabilities must advertise bounded Theme Page targets');
+check(str_contains($v1caps,"'arbitrary_urls'=>false"),'Capabilities must reject arbitrary CTA URLs');
 check(str_contains($v1caps,"'production_acceptance_frozen'=>true"),'Capabilities must keep production acceptance frozen until development closeout');
 
 $bootstrap=source('wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php');
