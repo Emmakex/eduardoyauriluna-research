@@ -1,0 +1,76 @@
+name: Manager v1 Development Completion Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'scripts/manager-v1-identity-policy-contract-test.php'
+      - 'scripts/manager-v1-development-completion-contract-test.php'
+      - 'scripts/manager-v1-operation-observability-test.php'
+      - '.github/workflows/manager-v1-development-completion-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'scripts/manager-v1-identity-policy-contract-test.php'
+      - 'scripts/manager-v1-development-completion-contract-test.php'
+      - 'scripts/manager-v1-operation-observability-test.php'
+      - '.github/workflows/manager-v1-development-completion-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Lint v1 completion PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          php -l wordpress/themes/eduardo-research/inc/research-model.php
+          php -l scripts/manager-v1-identity-policy-contract-test.php
+          php -l scripts/manager-v1-development-completion-contract-test.php
+          php -l scripts/manager-v1-operation-observability-test.php
+      - name: Run canonical identity policy contract
+        run: php scripts/manager-v1-identity-policy-contract-test.php
+      - name: Run development completion source contract
+        run: php scripts/manager-v1-development-completion-contract-test.php
+      - name: Run unified operation observability test
+        run: php scripts/manager-v1-operation-observability-test.php
+      - name: Enforce no generic bypasses in new remote surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -E "wp/v2|register_rest_route\([^,]+,[[:space:]]*'/(?P<path>|eval\(|shell_exec|exec\(" \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php
+      - name: Enforce remote connection secret boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "'secrets_exposed'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+          grep -F "'oauth_completion_remote'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+          grep -F "'external_publish_remote'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
