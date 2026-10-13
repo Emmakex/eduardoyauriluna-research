@@ -50,7 +50,8 @@ final class Eduardo_Research_Manager_V1_Controls_Admin {
             <input type="hidden" name="action" value="eduardo_research_manager_v1_preview_identity"><?php wp_nonce_field('erm_v1_identity_preview'); ?>
             <table class="form-table" role="presentation"><tbody>
               <tr><th><label for="erm-v1-name">Researcher name</label></th><td><input id="erm-v1-name" class="regular-text" style="width:100%;max-width:680px" name="name" required value="<?php echo esc_attr((string)$identity['name']); ?>"></td></tr>
-              <tr><th><label for="erm-v1-headline">Researcher headline</label></th><td><input id="erm-v1-headline" class="regular-text" style="width:100%;max-width:680px" name="headline" required value="<?php echo esc_attr((string)$identity['headline']); ?>"></td></tr>
+              <tr><th><label for="erm-v1-headline">Headline EN</label></th><td><input id="erm-v1-headline" class="regular-text" style="width:100%;max-width:680px" name="headline" required value="<?php echo esc_attr((string)$identity['headline']); ?>"></td></tr>
+              <tr><th><label for="erm-v1-headline-es">Headline ES</label></th><td><input id="erm-v1-headline-es" class="regular-text" style="width:100%;max-width:680px" name="headline_es" required value="<?php echo esc_attr((string)$identity['headline_es']); ?>"></td></tr>
               <tr><th>Canonical URL</th><td><code><?php echo esc_html((string)$identity['url']); ?></code></td></tr>
               <tr><th><label for="erm-v1-evidence">Evidence reference</label></th><td><input id="erm-v1-evidence" class="regular-text" style="width:100%;max-width:680px" name="evidence_reference" value="<?php echo esc_attr((string)$identity['evidence_reference']); ?>"><p><label><input type="checkbox" name="evidence_confirmed" value="1"> <?php echo esc_html__('I confirm this identity evidence before Apply.','eduardo-research-manager'); ?></label></p></td></tr>
             </tbody></table>
@@ -83,6 +84,7 @@ final class Eduardo_Research_Manager_V1_Controls_Admin {
         $prepared=(new Eduardo_Research_Manager_Identity_Profile())->preview_update(array(
             'name'=>sanitize_text_field((string)wp_unslash($_POST['name']??'')),
             'headline'=>sanitize_text_field((string)wp_unslash($_POST['headline']??'')),
+            'headline_es'=>sanitize_text_field((string)wp_unslash($_POST['headline_es']??'')),
         ),!empty($_POST['evidence_confirmed']),sanitize_text_field((string)wp_unslash($_POST['evidence_reference']??'')));
         $this->store_preview(self::ID_PREVIEW,$prepared,'Identity Preview prepared.');$this->redirect();
     }
