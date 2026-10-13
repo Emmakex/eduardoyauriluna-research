@@ -10,7 +10,7 @@ $start=strpos($page,'public function build_hydration_plan');$end=strpos($page,'p
 check(false!==$start&&false!==$end&&$end>$start,'Page hydration method boundaries missing');
 $hydration=substr($page,$start,$end-$start);
 check(false===strpos($hydration,"'post_status'"),'Page slot hydration must not change publication status');
-check(str_contains($page,"unset(\$schema['researcher-name'])"),'Page slot schema must exclude canonical identity');
+check(str_contains($page,"unset(\$schema['researcher-name'])"),'Page slot schema must exclude canonical identity name');
 check(str_contains($page,"'slug_editable'=>false"),'Page resource must advertise immutable contract slug');
 
 $pageState=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php');
@@ -22,6 +22,44 @@ $pageStateRest=source('wordpress/plugins/eduardo-research-manager/includes/class
 check(str_contains($pageStateRest,'validate_idempotency'),'Page state writes must use request idempotency guard');
 check(str_contains($pageStateRest,'remember_request'),'Page state writes must remember successful request results');
 check(str_contains($pageStateRest,"'idempotency'=>true"),'Page state capabilities must advertise idempotency');
+
+$theme=source('wordpress/themes/eduardo-research/inc/research-model.php');
+check(str_contains($theme,'function eduardo_research_canonical_identity_name'),'Theme must expose canonical identity name');
+check(str_contains($theme,'function eduardo_research_canonical_identity_headline'),'Theme must expose canonical identity headline');
+check(str_contains($theme,"'headline_es'"),'Theme canonical identity must support Spanish headline');
+check(str_contains($theme,"\$model['researcher-name'] = eduardo_research_canonical_identity_name()"),'Theme model must force canonical identity name');
+check(str_contains($theme,"\$model['researcher-headline'] = eduardo_research_canonical_identity_headline(\$language)"),'Theme model must force canonical identity headline');
+
+$identity=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php');
+foreach(array("'name'","'headline'","'headline_es'") as $field){check(str_contains($identity,$field),'Identity profile field missing: '.$field);}
+check(str_contains($identity,'preview_update'),'Identity profile must expose Preview');
+check(str_contains($identity,'apply_preview'),'Identity profile must expose Apply');
+check(str_contains($identity,'public function verify'),'Identity profile must expose Verify');
+check(str_contains($identity,'public function rollback'),'Identity profile must expose Rollback');
+check(str_contains($identity,"'arbitrary_wordpress_profile_proxy'=>false"),'Identity profile must not proxy WordPress users/profiles');
+
+$identityRest=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php');
+check(str_contains($identityRest,"'/identity-profile'"),'Remote canonical identity read surface missing');
+foreach(array("'identity.write'","'evidence.write'","'operations.apply'","'operations.rollback'") as $scope){check(str_contains($identityRest,$scope),'Remote identity scope missing: '.$scope);}
+check(str_contains($identityRest,"'fields'=>array('name','headline','headline_es')"),'Remote identity capabilities must advertise EN/ES canonical fields');
+check(str_contains($identityRest,"'arbitrary_wordpress_profile_proxy'=>false"),'Remote identity must keep WordPress profile proxy disabled');
+
+$admin=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php');
+check(str_contains($admin,'Eduardo_Research_Manager_Identity_Profile'),'Local Admin must reuse canonical Identity service');
+check(str_contains($admin,'Eduardo_Research_Manager_Page_State_Editor'),'Local Admin must reuse Page State service');
+check(str_contains($admin,"name=\"headline_es\""),'Local Admin must expose Spanish canonical headline');
+check(str_contains($admin,'Contract Page slugs are intentionally immutable'),'Local Admin must explain immutable Page slugs');
+
+$insight=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php');
+check(str_contains($insight,"array('slug','title','excerpt','content','language','insight_type','line_ids')"),'Insight updates must include bounded slug mutation');
+check(str_contains($insight,"'slug'=>'post_name'"),'Insight slug update must write post_name through bounded post_field action');
+check(str_contains($insight,'research_manager_insight_slug_required'),'Insight slug must reject empty values');
+
+$line=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php');
+check(str_contains($line,"array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods')"),'Research Line update contract must include status and slug');
+check(str_contains($line,"'status'=>'post_status'"),'Research Line publication-state update must use bounded post_status action');
+check(str_contains($line,"'slug'=>'post_name'"),'Research Line slug update must use bounded post_name action');
+check(str_contains($line,'research_manager_line_slug_required'),'Research Line slug must reject empty values');
 
 $resource=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php');
 foreach(array("'pages'=>array('scope'=>'pages.read'","'insights'=>array('scope'=>'insights.read'","'outputs'=>array('scope'=>'research.read'","'projects'=>array('scope'=>'research.read'","'software'=>array('scope'=>'research.read'","'datasets'=>array('scope'=>'research.read'") as $needle){check(str_contains($resource,$needle),'Resource inventory scope contract missing: '.$needle);}
@@ -39,16 +77,22 @@ check(str_contains($connections,"'arbitrary_http_proxy'=>false"),'Arbitrary HTTP
 $audit=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php');
 foreach(array('source_revision','resulting_revision','stored_verification_status','rendered_verification_status','rollback_available','rollback_status','lifecycle_status') as $field){check(str_contains($audit,"'{$field}'"),'Audit lifecycle field missing: '.$field);}
 check(str_contains($audit,'operation_option_stores'),'Audit must use a canonical operation store registry');
-foreach(array('eduardo_research_manager_navigation_operations','eduardo_research_manager_remote_media_operations','eduardo_research_manager_remote_object_operations','eduardo_research_manager_remote_evidence_operations','eduardo_research_manager_remote_page_state_operations') as $store){check(str_contains($audit,$store),'Operation store missing from audit registry: '.$store);}
+foreach(array('eduardo_research_manager_navigation_operations','eduardo_research_manager_remote_media_operations','eduardo_research_manager_remote_object_operations','eduardo_research_manager_remote_evidence_operations','eduardo_research_manager_remote_identity_profile_operations','eduardo_research_manager_remote_page_state_operations') as $store){check(str_contains($audit,$store),'Operation store missing from audit registry: '.$store);}
 
 $operations=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory.php');
 check(str_contains($operations,"'pending-verification'"),'Operation inventory must expose pending verification');
 check(str_contains($operations,"'verification-failed'"),'Operation inventory must expose verification failure');
 check(str_contains($operations,"'rolled-back'"),'Operation inventory must expose rolled back state');
-$publicLines=implode("\n",array_filter(explode("\n",$operations),static fn(string $line):bool=>str_contains($line,"'=>")&& !str_contains($line,'store_family')));
+$publicLines=implode("\n",array_filter(explode("\n",$operations),static fn(string $line):bool=>str_contains($line,"'=>")&&!str_contains($line,'store_family')));
 check(0===preg_match('/access_token|refresh_token|client_secret|authorization|password/i',$publicLines),'Operation inventory public fields must not expose secret material');
 
+$v1caps=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php');
+check(str_contains($v1caps,"'slug_updates'=>array('available'=>true,'operation'=>'insight-update'"),'Capabilities must advertise Insight slug updates');
+check(str_contains($v1caps,"'publication_state'=>array('available'=>true,'allowed'=>array('draft','publish'),'operation'=>'line-update'"),'Capabilities must advertise Research Line publication state');
+check(str_contains($v1caps,"'local_admin_parity'=true")||str_contains($v1caps,"['local_admin_parity']=true"),'Capabilities must advertise Page State local Admin parity');
+check(str_contains($v1caps,"'production_acceptance_frozen'=>true"),'Capabilities must keep production acceptance frozen until development closeout');
+
 $bootstrap=source('wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php');
-foreach(array('Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
+foreach(array('Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST','Remote_Identity_Profile_REST','V1_Controls_Admin','V1_Capabilities') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
 
 fwrite(STDOUT,"Manager v1 development completion source contract: PASS\n");
