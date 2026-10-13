@@ -5,6 +5,8 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Page_State_Editor {
+    private const ALLOWED_STATUSES = array('draft','publish');
+
     private Eduardo_Research_Manager_Page_Resource $pages;
     private Eduardo_Research_Manager_Executor $executor;
 
@@ -17,6 +19,7 @@ final class Eduardo_Research_Manager_Page_State_Editor {
         $page = $this->pages->inspect(sanitize_key($key), 'en');
         if (is_wp_error($page)) { return $page; }
         $policy = (array) $page['state_policy'];
+        $policy['allowed_statuses'] = array_values(array_intersect(self::ALLOWED_STATUSES, (array) ($policy['allowed_statuses'] ?? self::ALLOWED_STATUSES)));
         if ('front-page' === (string) ($page['role'] ?? '')) {
             $policy['status_editable'] = false;
             $policy['allowed_statuses'] = array('publish');
