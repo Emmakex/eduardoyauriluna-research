@@ -64,12 +64,12 @@ final class Eduardo_Research_Manager_V1_Controls_Admin {
           <hr style="margin:32px 0">
           <h2><?php echo esc_html__('Theme Page title and publication state','eduardo-research-manager'); ?></h2>
           <form method="get" action="<?php echo esc_url(admin_url('tools.php')); ?>" style="margin:12px 0 18px"><input type="hidden" name="page" value="eduardo-research-manager-v1-controls"><label for="erm-v1-page"><strong>Theme Page</strong></label><br><select id="erm-v1-page" name="erm_page_key"><?php foreach($pages as $key=>$definition): ?><option value="<?php echo esc_attr((string)$key); ?>" <?php selected($pageKey,(string)$key); ?>><?php echo esc_html((string)($definition['label']??$definition['labels']['en']??ucfirst((string)$key))); ?></option><?php endforeach; ?></select><?php submit_button(__('Open Page state','eduardo-research-manager'),'secondary','submit',false); ?></form>
-          <?php if(is_wp_error($pageState)): ?><div class="notice notice-error inline"><p><?php echo esc_html($pageState->get_error_message()); ?></p></div><?php else: $policy=is_array($pageState['policy']??null)?$pageState['policy']:array();$locked=!empty($policy['status_locked']); ?>
+          <?php if(is_wp_error($pageState)): ?><div class="notice notice-error inline"><p><?php echo esc_html($pageState->get_error_message()); ?></p></div><?php else: $policy=is_array($pageState['policy']??null)?$pageState['policy']:array();$locked=empty($policy['status_editable']); ?>
           <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="max-width:900px"><input type="hidden" name="action" value="eduardo_research_manager_v1_preview_page_state"><input type="hidden" name="page_key" value="<?php echo esc_attr($pageKey); ?>"><?php wp_nonce_field('erm_v1_page_state_preview'); ?>
             <table class="form-table" role="presentation"><tbody>
               <tr><th>Contract slug</th><td><code><?php echo esc_html((string)$pageState['slug']); ?></code><p class="description"><?php echo esc_html__('Contract Page slugs are intentionally immutable.','eduardo-research-manager'); ?></p></td></tr>
               <tr><th><label for="erm-v1-title">Title</label></th><td><input id="erm-v1-title" class="regular-text" style="width:100%;max-width:680px" name="title" required value="<?php echo esc_attr((string)$pageState['title']); ?>"></td></tr>
-              <tr><th><label for="erm-v1-status">Publication state</label></th><td><select id="erm-v1-status" name="status" <?php disabled($locked); ?>><option value="draft" <?php selected((string)$pageState['status'],'draft'); ?>>Draft</option><option value="publish" <?php selected((string)$pageState['status'],'publish'); ?>>Publish</option></select><?php if($locked): ?><input type="hidden" name="status" value="<?php echo esc_attr((string)$pageState['status']); ?>"><p class="description"><?php echo esc_html__('This Theme Page has a contract-locked publication state.','eduardo-research-manager'); ?></p><?php endif; ?></td></tr>
+              <tr><th><label for="erm-v1-status">Publication state</label></th><td><select id="erm-v1-status" name="status" <?php disabled($locked); ?>><option value="draft" <?php selected((string)$pageState['status'],'draft'); ?>>Draft</option><option value="publish" <?php selected((string)$pageState['status'],'publish'); ?>>Publish</option></select><?php if($locked): ?><p class="description"><?php echo esc_html__('This Theme Page has a contract-locked publication state.','eduardo-research-manager'); ?></p><?php endif; ?></td></tr>
             </tbody></table>
             <?php submit_button(__('Preview Page state change','eduardo-research-manager'),'secondary','submit',false); ?>
           </form>
@@ -98,8 +98,11 @@ final class Eduardo_Research_Manager_V1_Controls_Admin {
         $this->require_admin('erm_v1_identity_rollback');$edit=get_transient($this->key(self::ID_EDIT));$snapshot=is_array($edit)?(string)($edit['snapshot_id']??''):'';$result=(new Eduardo_Research_Manager_Identity_Profile())->rollback($snapshot);if(is_wp_error($result)){$this->notice('error',$result->get_error_message());}else{delete_transient($this->key(self::ID_EDIT));$this->notice('success','Canonical Identity rollback completed.');}$this->redirect();
     }
     public function preview_page_state(): void {
-        $this->require_admin('erm_v1_page_state_preview');$key=sanitize_key((string)wp_unslash($_POST['page_key']??''));
-        $prepared=(new Eduardo_Research_Manager_Page_State_Editor())->preview_update($key,array('title'=>sanitize_text_field((string)wp_unslash($_POST['title']??'')),'status'=>sanitize_key((string)wp_unslash($_POST['status']??''))));
+        $this->require_admin('erm_v1_page_state_preview');$key=sanitize_key((string)wp_unslash($_POST['page_key']??''));$service=new Eduardo_Research_Manager_Page_State_Editor();$current=$service->inspect($key);
+        if(is_wp_error($current)){$this->notice('error',$current->get_error_message());$this->redirect(array('erm_page_key'=>$key));}
+        $changes=array('title'=>sanitize_text_field((string)wp_unslash($_POST['title']??'')));
+        if(!empty($current['policy']['status_editable'])){$changes['status']=sanitize_key((string)wp_unslash($_POST['status']??''));}
+        $prepared=$service->preview_update($key,$changes);
         $this->store_preview(self::PAGE_PREVIEW,$prepared,'Page State Preview prepared.');$this->redirect(array('erm_page_key'=>$key));
     }
     public function apply_page_state(): void {
