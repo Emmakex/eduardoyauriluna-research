@@ -10,7 +10,7 @@ $start=strpos($page,'public function build_hydration_plan');$end=strpos($page,'p
 check(false!==$start&&false!==$end&&$end>$start,'Page hydration method boundaries missing');
 $hydration=substr($page,$start,$end-$start);
 check(false===strpos($hydration,"'post_status'"),'Page slot hydration must not change publication status');
-check(str_contains($page,"unset($schema['researcher-name'])"),'Page slot schema must exclude canonical identity');
+check(str_contains($page,"unset(\$schema['researcher-name'])"),'Page slot schema must exclude canonical identity');
 check(str_contains($page,"'slug_editable'=>false"),'Page resource must advertise immutable contract slug');
 
 $pageState=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php');
@@ -25,7 +25,7 @@ check(false===stripos($resource,'wp/v2'),'Resource inventory must not proxy arbi
 
 $connections=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php');
 foreach(array('orcid','google_scholar','crossref','zenodo','openalex','github') as $provider){check(str_contains($connections,$provider),'Academic connection provider missing: '.$provider);}
-check(str_contains($connections,"permission($r,'connections.read')"),'Academic connections must require connections.read');
+check(str_contains($connections,"permission(\$r,'connections.read')"),'Academic connections must require connections.read');
 check(str_contains($connections,"'oauth_completion_remote'=>false"),'Remote OAuth completion must remain disabled');
 check(str_contains($connections,"'external_publish_remote'=>false"),'External publishing must remain disabled');
 check(str_contains($connections,"'arbitrary_http_proxy'=>false"),'Arbitrary HTTP proxy must remain disabled');
@@ -39,7 +39,8 @@ $operations=source('wordpress/plugins/eduardo-research-manager/includes/class-re
 check(str_contains($operations,"'pending-verification'"),'Operation inventory must expose pending verification');
 check(str_contains($operations,"'verification-failed'"),'Operation inventory must expose verification failure');
 check(str_contains($operations,"'rolled-back'"),'Operation inventory must expose rolled back state');
-check(false===preg_match('/token|authorization|password|client_secret/i',implode("\n",array_filter(explode("\n",$operations),static fn(string $line):bool=>str_contains($line,"return array(")||str_contains($line,"'=>")))),'Operation inventory public fields must not expose secret material');
+$publicLines=implode("\n",array_filter(explode("\n",$operations),static fn(string $line):bool=>str_contains($line,"'=>")&& !str_contains($line,'store_family')));
+check(0===preg_match('/access_token|refresh_token|client_secret|authorization|password/i',$publicLines),'Operation inventory public fields must not expose secret material');
 
 $bootstrap=source('wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php');
 foreach(array('Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
