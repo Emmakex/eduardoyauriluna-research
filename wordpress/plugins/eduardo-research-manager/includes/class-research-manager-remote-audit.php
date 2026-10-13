@@ -53,6 +53,7 @@ final class Eduardo_Research_Manager_Remote_Audit {
             'eduardo_research_manager_remote_line_operations',
             'eduardo_research_manager_remote_translation_operations',
             'eduardo_research_manager_remote_evidence_operations',
+            'eduardo_research_manager_remote_identity_profile_operations',
             'eduardo_research_manager_remote_seo_geo_operations',
             'eduardo_research_manager_remote_design_operations',
             'eduardo_research_manager_remote_design_variant_operations',
