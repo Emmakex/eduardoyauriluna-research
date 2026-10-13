@@ -99,8 +99,8 @@ $publicLines=implode("\n",array_filter(explode("\n",$operations),static fn(strin
 check(0===preg_match('/access_token|refresh_token|client_secret|authorization|password/i',$publicLines),'Operation inventory public fields must not expose secret material');
 
 $v1caps=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php');
-check(str_contains($v1caps,"'slug_updates'=>array('available'=>true,'operation'=>'insight-update'"),'Capabilities must advertise Insight slug updates');
-check(str_contains($v1caps,"'publication_state'=>array('available'=>true,'allowed'=>array('draft','publish'),'operation'=>'line-update'"),'Capabilities must advertise Research Line publication state');
+check(str_contains($v1caps,"['slug_updates']=array('available'=>true,'operation'=>'insight-update'") || str_contains($v1caps,"'slug_updates'=>array('available'=>true,'operation'=>'insight-update'"),'Capabilities must advertise Insight slug updates');
+check(str_contains($v1caps,"['publication_state']=array('available'=>true,'allowed'=>array('draft','publish'),'operation'=>'line-update'") || str_contains($v1caps,"'publication_state'=>array('available'=>true,'allowed'=>array('draft','publish'),'operation'=>'line-update'"),'Capabilities must advertise Research Line publication state');
 check(str_contains($v1caps,"['local_admin_parity']=true"),'Capabilities must advertise Page State local Admin parity');
 check(str_contains($v1caps,"'registered_theme_targets_only'=>true"),'Capabilities must advertise bounded Theme Page targets');
 check(str_contains($v1caps,"'arbitrary_urls'=>false"),'Capabilities must reject arbitrary CTA URLs');
