@@ -26,6 +26,14 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             $data['research_line_control']['publication_state']=array('available'=>true,'allowed'=>array('draft','publish'),'operation'=>'line-update','reversible'=>true);
         }
         if(is_array($data['page_state_control']??null)){$data['page_state_control']['local_admin_parity']=true;}
+        $data['page_target_control']=array(
+            'available'=>true,
+            'slots'=>array('hero-primary-target','hero-secondary-target','final-cta-target'),
+            'target_source'=>'active-theme-page-contract',
+            'registered_theme_targets_only'=>true,
+            'arbitrary_urls'=>false,
+            'language_aware_resolution'=>true,
+        );
 
         $data['manager_v1_development']=array(
             'status'=>'implementation-complete-pending-ci-contract-closeout',
