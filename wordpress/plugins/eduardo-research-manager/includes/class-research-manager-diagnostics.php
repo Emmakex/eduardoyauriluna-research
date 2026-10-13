@@ -57,17 +57,26 @@ final class Eduardo_Research_Manager_Diagnostics {
                 );
                 continue;
             }
-            $valid = 'publish' === (string) ($state['status'] ?? '')
-                && $expected_role === (string) ($state['role'] ?? '')
+            $publication_ok = 'publish' === (string) ($state['status'] ?? '');
+            $structure_ok = $expected_role === (string) ($state['role'] ?? '')
                 && $expected_model === (string) ($state['model'] ?? '');
+            $valid = $publication_ok && $structure_ok;
+            if ($valid) {
+                $message = 'Theme-controlled page exists with the expected publication state, role and model.';
+                $next_action = '';
+            } elseif (! $structure_ok) {
+                $message = 'Page exists but its Theme role or model does not match the Research preset contract.';
+                $next_action = 'hydrate';
+            } else {
+                $message = 'Page exists with the expected Theme role and model, but its publication state does not match the Research preset contract.';
+                $next_action = 'page-state';
+            }
             $checks[] = $this->check(
                 'page-' . sanitize_key((string) $key),
                 (string) ($page_contract['label'] ?? ucfirst((string) $key)),
                 $valid ? 'pass' : 'warning',
-                $valid
-                    ? 'Theme-controlled page exists with the expected role and model.'
-                    : 'Page exists but its publication state, role or model does not match the Research preset contract.',
-                $valid ? '' : 'hydrate',
+                $message,
+                $next_action,
                 'page:' . (string) $key
             );
         }

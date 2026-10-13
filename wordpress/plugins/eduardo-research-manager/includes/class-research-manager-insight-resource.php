@@ -80,7 +80,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
             return new WP_Error('research_manager_empty_update', 'At least one Insight field must be supplied.');
         }
 
-        $allowed = array('title','excerpt','content','language','insight_type','line_ids');
+        $allowed = array('slug','title','excerpt','content','language','insight_type','line_ids');
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error(
@@ -129,8 +129,11 @@ final class Eduardo_Research_Manager_Insight_Resource {
                 continue;
             }
 
-            $wp_field = array('title'=>'post_title','excerpt'=>'post_excerpt','content'=>'post_content')[$field];
             $clean = $this->sanitize_editorial_field($field, (string) $value);
+            if ('slug' === $field && '' === $clean) {
+                return new WP_Error('research_manager_insight_slug_required', 'Insight slug cannot be empty.');
+            }
+            $wp_field = array('slug'=>'post_name','title'=>'post_title','excerpt'=>'post_excerpt','content'=>'post_content')[$field];
             if ($clean !== (string) $current[$field]) {
                 $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>$wp_field,'value'=>$clean);
             }

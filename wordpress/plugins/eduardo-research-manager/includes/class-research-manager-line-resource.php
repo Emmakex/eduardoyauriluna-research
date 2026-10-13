@@ -72,7 +72,7 @@ final class Eduardo_Research_Manager_Line_Resource {
         $current = $this->inspect($post_id);
         if (is_wp_error($current)) { return $current; }
         if (! $changes) { return new WP_Error('research_manager_empty_update', 'At least one Research Line field must be supplied.'); }
-        $allowed = array('title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods');
+        $allowed = array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods');
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_line_field_not_allowed', 'Research Line update contains fields outside the bounded contract: ' . implode(', ', array_map('sanitize_key', $unknown)));
@@ -95,8 +95,12 @@ final class Eduardo_Research_Manager_Line_Resource {
         $next = $normalization['actions'][0];
         $actions = array();
 
-        foreach (array('title'=>'post_title','excerpt'=>'post_excerpt','content'=>'post_content') as $field => $wp_field) {
-            if (array_key_exists($field, $changes) && (string) $current[$field] !== (string) $next[$field]) {
+        foreach (array('status'=>'post_status','slug'=>'post_name','title'=>'post_title','excerpt'=>'post_excerpt','content'=>'post_content') as $field => $wp_field) {
+            if (! array_key_exists($field, $changes)) { continue; }
+            if ('slug' === $field && '' === sanitize_title((string) ($next[$field] ?? ''))) {
+                return new WP_Error('research_manager_line_slug_required', 'Research Line slug cannot be empty.');
+            }
+            if ((string) $current[$field] !== (string) $next[$field]) {
                 $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>$wp_field,'value'=>$next[$field]);
             }
         }

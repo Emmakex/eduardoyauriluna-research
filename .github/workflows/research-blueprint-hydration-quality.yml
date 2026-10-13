@@ -8,6 +8,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-snapshots.php'
@@ -115,34 +116,42 @@ jobs:
               fwrite(STDERR, is_wp_error($repeat_boot) ? $repeat_boot->get_error_message() : wp_json_encode($repeat_boot)); exit(1);
           }
 
+          // Initial hydration contains one canonical Identity operation plus 24 bilingual Page hydration operations.
           $preview = Eduardo_Research_Manager::hydrator()->preview($blueprint);
-          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 24 !== (int) $preview["operation_count"] || ! empty($preview["requires_legacy_discovery"]) || ! empty($preview["requires_legacy_mapping"]) || ! empty($preview["requires_gutenberg_layout"])) {
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 25 !== (int) $preview["operation_count"] || ! empty($preview["requires_legacy_discovery"]) || ! empty($preview["requires_legacy_mapping"]) || ! empty($preview["requires_gutenberg_layout"])) {
               fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1);
           }
+          if ("identity-profile" !== (string) ($preview["operations"][0]["resource"] ?? "")) { fwrite(STDERR, "Canonical Identity seed missing from hydration Preview\n"); exit(1); }
 
           $hydrated = Eduardo_Research_Manager::hydrator()->apply($blueprint);
-          if (is_wp_error($hydrated) || empty($hydrated["verified"]) || 24 !== (int) $hydrated["operation_count"]) {
+          if (is_wp_error($hydrated) || empty($hydrated["verified"]) || 25 !== (int) $hydrated["operation_count"]) {
               fwrite(STDERR, is_wp_error($hydrated) ? $hydrated->get_error_message() : wp_json_encode($hydrated)); exit(1);
           }
 
-          $home_en = Eduardo_Research_Manager::pages()->verify_hydration("home", "en", [
-              "researcher-name"=>"Eduardo Jose Yauri Luna",
-              "researcher-headline"=>"Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes"
-          ]);
-          $home_es = Eduardo_Research_Manager::pages()->verify_hydration("home", "es", [
-              "researcher-name"=>"Eduardo Jose Yauri Luna",
-              "researcher-headline"=>"Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales"
-          ]);
-          if (is_wp_error($home_en) || empty($home_en["verified"]) || is_wp_error($home_es) || empty($home_es["verified"])) { exit(1); }
+          // Identity is now a first-class canonical resource, not a free Page slot.
+          $identity = (new Eduardo_Research_Manager_Identity_Profile())->inspect();
+          if (is_wp_error($identity)
+              || "Eduardo Jose Yauri Luna" !== (string) ($identity["name"] ?? "")
+              || "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes" !== (string) ($identity["headline"] ?? "")
+              || "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales" !== (string) ($identity["headline_es"] ?? "")
+              || "Greenfield canonical blueprint v1" !== (string) ($identity["evidence_reference"] ?? "")
+              || "" === (string) ($identity["verified_at"] ?? "")) {
+              fwrite(STDERR, is_wp_error($identity) ? $identity->get_error_message() : wp_json_encode($identity)); exit(1);
+          }
+          $legacy_identity_slot = Eduardo_Research_Manager::pages()->verify_hydration("home", "en", ["researcher-name"=>"Eduardo Jose Yauri Luna"]);
+          if (! is_wp_error($legacy_identity_slot)) { fwrite(STDERR, "Canonical identity unexpectedly remained writable as a Page slot\n"); exit(1); }
 
+          // Once Identity exists, only the 24 Page hydration operations remain and all must already match.
           $second_preview = Eduardo_Research_Manager::hydrator()->preview($blueprint);
-          if (is_wp_error($second_preview) || 24 !== (int) $second_preview["operation_count"]) { exit(1); }
+          if (is_wp_error($second_preview) || 24 !== (int) $second_preview["operation_count"]) { fwrite(STDERR, is_wp_error($second_preview) ? $second_preview->get_error_message() : wp_json_encode($second_preview)); exit(1); }
           foreach ($second_preview["operations"] as $operation) {
               if ("already-matching" !== (string) $operation["status"] || empty($operation["apply_allowed"])) { fwrite(STDERR, wp_json_encode($operation)); exit(1); }
           }
 
           $rollback = Eduardo_Research_Manager::hydrator()->rollback($hydrated["snapshot_ids"]);
-          if (is_wp_error($rollback) || count($hydrated["snapshot_ids"]) !== (int) $rollback["snapshot_count"]) { exit(1); }
+          if (is_wp_error($rollback) || 25 !== count($hydrated["snapshot_ids"]) || count($hydrated["snapshot_ids"]) !== (int) $rollback["snapshot_count"]) { exit(1); }
           $home_state = Eduardo_Research_Manager::pages()->inspect("home", "en");
           if (is_wp_error($home_state) || ! empty($home_state["stored_slots"])) { fwrite(STDERR, wp_json_encode($home_state)); exit(1); }
+          $identity_after = get_option("eduardo_research_identity", null);
+          if (null !== $identity_after && false !== $identity_after) { fwrite(STDERR, "Canonical Identity seed survived hydration rollback\n"); exit(1); }
           ' --allow-root

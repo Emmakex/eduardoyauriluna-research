@@ -126,7 +126,7 @@ $issued = Eduardo_Research_Manager::remote_credentials()->issue_token(array(
     'site.read','site.diagnostics',
     'research.read','research.write',
     'translations.read','translations.write',
-    'evidence.read','evidence.write',
+    'evidence.read','evidence.write','identity.write',
     'operations.apply','operations.rollback',
 ), 1, 'CI M5 Aggregate');
 if (is_wp_error($issued) || empty($issued['token'])) { m5a_fail('aggregate credential issuance failed'); }

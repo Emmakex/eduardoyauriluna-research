@@ -1,0 +1,128 @@
+name: Manager v1 Development Completion Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/themes/eduardo-research/front-page.php'
+      - 'scripts/manager-v1-identity-policy-contract-test.php'
+      - 'scripts/manager-v1-development-completion-contract-test.php'
+      - 'scripts/manager-v1-operation-observability-test.php'
+      - 'scripts/manager-v1-page-state-lifecycle-test.php'
+      - '.github/workflows/manager-v1-development-completion-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/themes/eduardo-research/front-page.php'
+      - 'scripts/manager-v1-identity-policy-contract-test.php'
+      - 'scripts/manager-v1-development-completion-contract-test.php'
+      - 'scripts/manager-v1-operation-observability-test.php'
+      - 'scripts/manager-v1-page-state-lifecycle-test.php'
+      - '.github/workflows/manager-v1-development-completion-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Lint v1 completion PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          php -l wordpress/themes/eduardo-research/inc/research-model.php
+          php -l wordpress/themes/eduardo-research/front-page.php
+          php -l scripts/manager-v1-identity-policy-contract-test.php
+          php -l scripts/manager-v1-development-completion-contract-test.php
+          php -l scripts/manager-v1-operation-observability-test.php
+          php -l scripts/manager-v1-page-state-lifecycle-test.php
+      - name: Run canonical identity policy contract
+        run: php scripts/manager-v1-identity-policy-contract-test.php
+      - name: Run development completion source contract
+        run: php scripts/manager-v1-development-completion-contract-test.php
+      - name: Run unified operation observability test
+        run: php scripts/manager-v1-operation-observability-test.php
+      - name: Run bounded Page state lifecycle test
+        run: php scripts/manager-v1-page-state-lifecycle-test.php
+      - name: Enforce final editorial amplitude
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "array('slug','title','excerpt','content','language','insight_type','line_ids')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          grep -F "array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          grep -F "'status'=>'post_status'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+      - name: Enforce bounded Page CTA targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "str_ends_with((string) \$slot, '-target')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
+          grep -F "research_manager_invalid_page_target" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
+          grep -F "eduardo_research_page_url(\$hero_primary_target)" wordpress/themes/eduardo-research/front-page.php
+          grep -F "eduardo_research_page_url(\$final_cta_target)" wordpress/themes/eduardo-research/front-page.php
+      - name: Enforce canonical bilingual Identity and local parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "function eduardo_research_canonical_identity_headline" wordpress/themes/eduardo-research/inc/research-model.php
+          grep -F "'headline_es'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
+          grep -F "Eduardo_Research_Manager_Identity_Profile" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
+          grep -F "Eduardo_Research_Manager_Page_State_Editor" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
+          grep -F "'identity.write'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
+      - name: Enforce shared Media domain boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'final class Eduardo_Research_Manager_Media_Ingest' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F 'private Eduardo_Research_Manager_Media_Ingest $ingest' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -F 'media_handle_sideload' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -F 'wp_delete_attachment' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+      - name: Enforce no generic bypasses in new remote surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -E "wp/v2|register_rest_route\([^,]+,[[:space:]]*'/(?P<path>|eval\(|shell_exec|exec\(" \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
+      - name: Enforce remote connection secret boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "'secrets_exposed'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+          grep -F "'oauth_completion_remote'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+          grep -F "'external_publish_remote'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php

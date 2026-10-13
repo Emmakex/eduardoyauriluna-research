@@ -97,15 +97,15 @@ jobs:
           if (! Eduardo_Research_Manager::pipeline() instanceof Eduardo_Research_Manager_Greenfield_Pipeline) { fwrite(STDERR, "pipeline service missing\n"); exit(1); }
 
           $preview = Eduardo_Research_Manager::pipeline()->preview($blueprint);
-          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 8 !== (int) $preview["phases"]["bootstrap"]["operation_count"] || "deferred" !== $preview["phases"]["pairing"]["status"] || 24 !== (int) $preview["phases"]["hydration"]["operation_count"] || "deferred" !== $preview["phases"]["relations"]["status"]) {
+          if (is_wp_error($preview) || empty($preview["apply_allowed"]) || 8 !== (int) $preview["phases"]["bootstrap"]["operation_count"] || "deferred" !== $preview["phases"]["pairing"]["status"] || 25 !== (int) $preview["phases"]["hydration"]["operation_count"] || "deferred" !== $preview["phases"]["relations"]["status"]) {
               fwrite(STDERR, "preview=" . (is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)) . "\n"); exit(1);
           }
 
           $applied = Eduardo_Research_Manager::pipeline()->apply($blueprint);
-          if (is_wp_error($applied) || empty($applied["verified"]) || 36 !== (int) $applied["snapshot_count"]) {
+          if (is_wp_error($applied) || empty($applied["verified"]) || 37 !== (int) $applied["snapshot_count"]) {
               fwrite(STDERR, "applied=" . (is_wp_error($applied) ? $applied->get_error_message() . " data=" . wp_json_encode($applied->get_error_data()) : wp_json_encode($applied)) . "\n"); exit(1);
           }
-          if (8 !== (int) $applied["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $applied["phases"]["pairing"]["operation_count"] || 24 !== (int) $applied["phases"]["hydration"]["operation_count"] || 0 !== (int) $applied["phases"]["relations"]["operation_count"]) {
+          if (8 !== (int) $applied["phases"]["bootstrap"]["operation_count"] || 4 !== (int) $applied["phases"]["pairing"]["operation_count"] || 25 !== (int) $applied["phases"]["hydration"]["operation_count"] || 0 !== (int) $applied["phases"]["relations"]["operation_count"]) {
               fwrite(STDERR, "phase-counts=" . wp_json_encode($applied["phases"]) . "\n"); exit(1);
           }
 
@@ -117,7 +117,7 @@ jobs:
           foreach ($steady["phases"]["hydration"]["operations"] as $row) { if ("already-matching" !== $row["status"]) { fwrite(STDERR, "hydration-row=" . wp_json_encode($row) . "\n"); exit(1); } }
 
           $rollback = Eduardo_Research_Manager::pipeline()->rollback($applied["snapshots"]);
-          if (is_wp_error($rollback) || 36 !== (int) $rollback["snapshot_count"]) { fwrite(STDERR, "rollback=" . (is_wp_error($rollback) ? $rollback->get_error_message() : wp_json_encode($rollback)) . "\n"); exit(1); }
+          if (is_wp_error($rollback) || 37 !== (int) $rollback["snapshot_count"]) { fwrite(STDERR, "rollback=" . (is_wp_error($rollback) ? $rollback->get_error_message() : wp_json_encode($rollback)) . "\n"); exit(1); }
           $lines = get_posts(["post_type"=>"research_line","post_status"=>"any","posts_per_page"=>20,"suppress_filters"=>true]);
           if (0 !== count($lines)) { fwrite(STDERR, "remaining-lines=" . count($lines) . "\n"); exit(1); }
           $home = Eduardo_Research_Manager::pages()->inspect("home", "en");

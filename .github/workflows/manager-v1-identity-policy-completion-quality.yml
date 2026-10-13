@@ -1,0 +1,51 @@
+name: Manager v1 Identity Policy Completion Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php'
+      - 'scripts/manager-v1-identity-policy-contract-test.php'
+      - '.github/workflows/manager-v1-identity-policy-completion-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php'
+      - 'scripts/manager-v1-identity-policy-contract-test.php'
+      - '.github/workflows/manager-v1-identity-policy-completion-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: PHP syntax
+        run: |
+          php -l wordpress/themes/eduardo-research/inc/research-model.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          php -l scripts/manager-v1-identity-policy-contract-test.php
+      - name: Run canonical identity and elevated identifier contract
+        run: php scripts/manager-v1-identity-policy-contract-test.php
+      - name: Enforce Theme canonical identity authority
+        run: |
+          grep -F "function eduardo_research_canonical_identity_name" wordpress/themes/eduardo-research/inc/research-model.php
+          grep -F "get_option('eduardo_research_identity'" wordpress/themes/eduardo-research/inc/research-model.php
+          grep -F "Researcher identity is canonical Manager evidence" wordpress/themes/eduardo-research/inc/research-model.php
+      - name: Enforce elevated identifier scope
+        run: |
+          grep -F "critical_identifier_group'=>'identifiers'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          grep -F "critical_write_scope'=>'identity.write'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          grep -F "EVIDENCE_PLANS_OPTION" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          grep -F "EVIDENCE_OPERATIONS_OPTION" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+      - name: Preserve bounded identity boundary
+        run: |
+          grep -F "arbitrary_wordpress_profile_proxy'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          ! grep -E "wp_update_user|update_user_meta|users/|application-password" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php

@@ -17,6 +17,9 @@ $identifiers = eduardo_research_verified_localized_evidence('identifiers');
 $identity_lead = 'es' === $language
     ? 'Los identificadores académicos y las afiliaciones solo se muestran cuando su estado de evidencia está verificado.'
     : 'Academic identifiers and affiliations are exposed only when their evidence state is verified.';
+$hero_primary_target = sanitize_key((string) ($model['hero-primary-target'] ?? 'research')) ?: 'research';
+$hero_secondary_target = sanitize_key((string) ($model['hero-secondary-target'] ?? 'cv')) ?: 'cv';
+$final_cta_target = sanitize_key((string) ($model['final-cta-target'] ?? 'contact')) ?: 'contact';
 ?>
 <main id="main" tabindex="-1">
  <section class="research-shell research-hero research-hero-premium" aria-labelledby="research-title">
@@ -26,8 +29,8 @@ $identity_lead = 'es' === $language
    <p class="research-lead research-headline"><?php echo esc_html($model['researcher-headline']); ?></p>
    <p class="research-lead"><?php echo esc_html($model['hero-lead']); ?></p>
    <div class="research-actions">
-    <a class="research-button" href="<?php echo esc_url(eduardo_research_page_url('research')); ?>"><?php echo esc_html($model['final-cta-button']); ?></a>
-    <a class="research-text-link" href="<?php echo esc_url(eduardo_research_page_url('cv')); ?>"><?php echo esc_html(eduardo_research_t('view_cv')); ?> <span aria-hidden="true">↗</span></a>
+    <a class="research-button" href="<?php echo esc_url(eduardo_research_page_url($hero_primary_target)); ?>"><?php echo esc_html($model['final-cta-button']); ?></a>
+    <a class="research-text-link" href="<?php echo esc_url(eduardo_research_page_url($hero_secondary_target)); ?>"><?php echo esc_html(eduardo_research_t('view_cv')); ?> <span aria-hidden="true">↗</span></a>
    </div>
    <div class="research-capabilities">
     <span><?php echo esc_html(eduardo_research_t('evidence_aware')); ?></span><span><?php echo esc_html(eduardo_research_t('machine_readable')); ?></span><span><?php echo esc_html(eduardo_research_t('repro_first')); ?></span>
@@ -88,6 +91,6 @@ $identity_lead = 'es' === $language
   <div class="research-grid research-insights-grid"><?php if($insights->have_posts()):while($insights->have_posts()):$insights->the_post();?><article class="research-card research-card-insight"><p class="research-card-kicker"><?php echo esc_html(get_the_date());?></p><h3><a href="<?php the_permalink();?>"><?php the_title();?></a></h3><?php if(has_excerpt()):?><p><?php echo esc_html(get_the_excerpt());?></p><?php endif;?><span class="research-card-arrow" aria-hidden="true">↗</span></article><?php endwhile;else:?><article class="research-card research-empty research-empty-wide"><p class="research-card-kicker"><?php echo esc_html(eduardo_research_t('editorial_system'));?></p><h3><?php echo esc_html(eduardo_research_t('notes_ready'));?></h3><p><?php echo esc_html(eduardo_research_t('notes_ready_body'));?></p><div class="research-empty-lines" aria-hidden="true"><span></span><span></span><span></span></div></article><?php endif;wp_reset_postdata();?></div>
  </div></section>
 
- <section class="research-section research-cta" aria-labelledby="research-collaboration"><div class="research-shell research-cta-inner"><div><span class="research-section-number">05</span><div class="research-eyebrow"><?php echo esc_html(eduardo_research_t('contact'));?></div><h2 id="research-collaboration"><?php echo esc_html($model['final-cta-heading']);?></h2><p class="research-lead"><?php echo esc_html($model['final-cta-body']);?></p></div><div class="research-actions"><a class="research-button research-button-light" href="<?php echo esc_url(eduardo_research_page_url('contact'));?>"><?php echo esc_html(eduardo_research_t('start_conversation'));?> <span aria-hidden="true">↗</span></a></div></div></section>
+ <section class="research-section research-cta" aria-labelledby="research-collaboration"><div class="research-shell research-cta-inner"><div><span class="research-section-number">05</span><div class="research-eyebrow"><?php echo esc_html(eduardo_research_t('contact'));?></div><h2 id="research-collaboration"><?php echo esc_html($model['final-cta-heading']);?></h2><p class="research-lead"><?php echo esc_html($model['final-cta-body']);?></p></div><div class="research-actions"><a class="research-button research-button-light" href="<?php echo esc_url(eduardo_research_page_url($final_cta_target));?>"><?php echo esc_html(eduardo_research_t('start_conversation'));?> <span aria-hidden="true">↗</span></a></div></div></section>
 </main>
 <?php get_footer();

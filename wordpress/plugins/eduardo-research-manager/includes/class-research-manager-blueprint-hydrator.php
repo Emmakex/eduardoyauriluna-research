@@ -8,15 +8,18 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
     private Eduardo_Research_Manager_Blueprint $blueprints;
     private Eduardo_Research_Manager_Page_Resource $pages;
     private Eduardo_Research_Manager_Executor $executor;
+    private Eduardo_Research_Manager_Identity_Profile $identity;
 
     public function __construct(
         ?Eduardo_Research_Manager_Blueprint $blueprints = null,
         ?Eduardo_Research_Manager_Page_Resource $pages = null,
-        ?Eduardo_Research_Manager_Executor $executor = null
+        ?Eduardo_Research_Manager_Executor $executor = null,
+        ?Eduardo_Research_Manager_Identity_Profile $identity = null
     ) {
         $this->blueprints = $blueprints ?: Eduardo_Research_Manager::blueprint();
         $this->pages = $pages ?: Eduardo_Research_Manager::pages();
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
+        $this->identity = $identity ?: new Eduardo_Research_Manager_Identity_Profile($this->executor, Eduardo_Research_Manager::evidence_editor());
     }
 
     public function preview(array $blueprint): array|WP_Error {
@@ -26,6 +29,21 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
         $operations = array();
         $skipped = array();
         $apply_allowed = true;
+
+        $identity = $this->identity_seed($normalized);
+        if (is_wp_error($identity)) { return $identity; }
+        if ($identity) {
+            $prepared = $this->identity->preview_update($identity, true, 'Greenfield canonical blueprint v1');
+            if (is_wp_error($prepared)) { return $prepared; }
+            $apply_allowed = $apply_allowed && ! empty($prepared['apply_allowed']);
+            $operations[] = array(
+                'resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','language'=>'multi',
+                'status'=>(string) ($prepared['status'] ?? 'change'),'apply_allowed'=>! empty($prepared['apply_allowed']),
+                'plan_id'=>(string) ($prepared['plan_id'] ?? ''),'preview'=>$prepared['preview'] ?? array(),
+            );
+        } elseif ($this->has_legacy_identity_slots($normalized)) {
+            $skipped[] = array('resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','reason'=>'canonical_identity_already_initialized');
+        }
 
         foreach ($normalized['pages'] as $index => $record) {
             $page = $this->normalize_page_record($record, $index, $normalized['languages']);
@@ -68,6 +86,22 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
 
         $applied = array();
         $skipped = array();
+
+        $identity = $this->identity_seed($normalized);
+        if (is_wp_error($identity)) { return $identity; }
+        if ($identity) {
+            $prepared = $this->identity->preview_update($identity, true, 'Greenfield canonical blueprint v1');
+            if (is_wp_error($prepared)) { return $this->abort($prepared, $applied); }
+            $result = $this->identity->apply_preview($prepared);
+            if (is_wp_error($result)) { return $this->abort($result, $applied); }
+            $applied[] = array(
+                'resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','language'=>'multi',
+                'status'=>(string) ($result['status'] ?? 'applied'),'plan_id'=>(string) ($prepared['plan_id'] ?? ''),
+                'snapshot_id'=>(string) ($result['snapshot_id'] ?? ''),'verification'=>$result['verification'] ?? array(),
+            );
+        } elseif ($this->has_legacy_identity_slots($normalized)) {
+            $skipped[] = array('resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','reason'=>'canonical_identity_already_initialized');
+        }
 
         foreach ($normalized['pages'] as $index => $record) {
             $page = $this->normalize_page_record($record, $index, $normalized['languages']);
@@ -207,9 +241,53 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
             if (! is_array($values)) {
                 return $this->record_error($index, sprintf('Page slots for language "%s" must be an object-like array.', $language));
             }
+            if ('home' === $key) {
+                unset($values['researcher-name'], $values['researcher-headline']);
+            }
             if ($values) { $clean[$language] = $values; }
         }
         return array('key'=>$key,'slots'=>$clean);
+    }
+
+    /**
+     * Backward-compatible bootstrap bridge for the v1 bundled blueprint.
+     * Legacy home identity aliases may initialize canonical Identity once,
+     * but can never overwrite an already initialized Manager identity.
+     */
+    private function identity_seed(array $normalized): array|WP_Error {
+        $stored = get_option('eduardo_research_identity', array());
+        if (is_array($stored) && $stored) { return array(); }
+
+        $seed = array();
+        foreach ((array) ($normalized['pages'] ?? array()) as $record) {
+            if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
+            $slots = is_array($record['slots'] ?? null) ? $record['slots'] : array();
+            $en = is_array($slots['en'] ?? null) ? $slots['en'] : array();
+            $es = is_array($slots['es'] ?? null) ? $slots['es'] : array();
+            $name_en = trim(sanitize_text_field((string) ($en['researcher-name'] ?? '')));
+            $name_es = trim(sanitize_text_field((string) ($es['researcher-name'] ?? '')));
+            if ('' !== $name_en && '' !== $name_es && $name_en !== $name_es) {
+                return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
+            }
+            $name = '' !== $name_en ? $name_en : $name_es;
+            $headline = trim(sanitize_text_field((string) ($en['researcher-headline'] ?? '')));
+            $headline_es = trim(sanitize_text_field((string) ($es['researcher-headline'] ?? '')));
+            if ('' !== $name) { $seed['name'] = $name; }
+            if ('' !== $headline) { $seed['headline'] = $headline; }
+            if ('' !== $headline_es) { $seed['headline_es'] = $headline_es; }
+            break;
+        }
+        return $seed;
+    }
+
+    private function has_legacy_identity_slots(array $normalized): bool {
+        foreach ((array) ($normalized['pages'] ?? array()) as $record) {
+            if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
+            foreach ((array) ($record['slots'] ?? array()) as $values) {
+                if (is_array($values) && (array_key_exists('researcher-name', $values) || array_key_exists('researcher-headline', $values))) { return true; }
+            }
+        }
+        return false;
     }
 
     private function abort(WP_Error $error, array $applied): WP_Error {

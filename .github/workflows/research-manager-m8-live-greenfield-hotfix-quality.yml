@@ -6,6 +6,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-store.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
@@ -80,7 +81,7 @@ jobs:
           wp rewrite structure '/%postname%/' --hard --allow-root
           wp rewrite flush --hard --allow-root
 
-      - name: Reproduce live Privacy draft and prove stable Greenfield result
+      - name: Reproduce live Privacy draft and prove explicit Page State recovery
         shell: bash
         run: |
           set -euo pipefail
@@ -105,18 +106,41 @@ jobs:
           foreach ($before["checks"] as $check) {
               if ("page-privacy-policy" === (string) $check["id"]) { $privacy_before = $check; break; }
           }
-          if (! is_array($privacy_before) || "warning" !== (string) $privacy_before["status"] || "hydrate" !== (string) $privacy_before["next_action"]) {
+          if (! is_array($privacy_before) || "warning" !== (string) $privacy_before["status"] || "page-state" !== (string) $privacy_before["next_action"]) {
               fwrite(STDERR, wp_json_encode($privacy_before)); exit(1);
           }
 
-          $first = Eduardo_Research_Manager::pipeline()->preview($blueprint);
-          if (is_wp_error($first) || empty($first["apply_allowed"]) || "change" !== (string) $first["phases"]["hydration"]["status"] || (int) $first["phases"]["hydration"]["change_count"] <= 0) {
-              fwrite(STDERR, is_wp_error($first) ? $first->get_error_message() : wp_json_encode($first)); exit(1);
+          // Greenfield hydration may seed canonical Identity/content, but must never publish a draft Page implicitly.
+          $pipeline_preview = Eduardo_Research_Manager::pipeline()->preview($blueprint);
+          if (is_wp_error($pipeline_preview) || empty($pipeline_preview["apply_allowed"])) {
+              fwrite(STDERR, is_wp_error($pipeline_preview) ? $pipeline_preview->get_error_message() : wp_json_encode($pipeline_preview)); exit(1);
+          }
+          $pipeline_apply = Eduardo_Research_Manager::pipeline()->apply($blueprint);
+          if (is_wp_error($pipeline_apply) || empty($pipeline_apply["verified"])) {
+              fwrite(STDERR, is_wp_error($pipeline_apply) ? $pipeline_apply->get_error_message() : wp_json_encode($pipeline_apply)); exit(1);
+          }
+          $after_hydration = Eduardo_Research_Manager::pages()->inspect("privacy-policy", "en");
+          if (is_wp_error($after_hydration) || "draft" !== (string) $after_hydration["status"] || ! empty($after_hydration["published"])) {
+              fwrite(STDERR, is_wp_error($after_hydration) ? $after_hydration->get_error_message() : wp_json_encode($after_hydration)); exit(1);
           }
 
-          $applied = Eduardo_Research_Manager::pipeline()->apply($blueprint);
-          if (is_wp_error($applied) || empty($applied["verified"])) {
-              fwrite(STDERR, is_wp_error($applied) ? $applied->get_error_message() : wp_json_encode($applied)); exit(1);
+          // Publication repair belongs exclusively to the shared Page State lifecycle.
+          $state = new Eduardo_Research_Manager_Page_State_Editor();
+          $prepared = $state->preview_update("privacy-policy", ["status"=>"publish"], "CI: restore Privacy publication state explicitly");
+          if (is_wp_error($prepared) || empty($prepared["apply_allowed"])) {
+              fwrite(STDERR, is_wp_error($prepared) ? $prepared->get_error_message() : wp_json_encode($prepared)); exit(1);
+          }
+          $preview_state = Eduardo_Research_Manager::pages()->inspect("privacy-policy", "en");
+          if (is_wp_error($preview_state) || "draft" !== (string) $preview_state["status"]) {
+              fwrite(STDERR, is_wp_error($preview_state) ? $preview_state->get_error_message() : wp_json_encode($preview_state)); exit(1);
+          }
+          $state_apply = $state->apply_preview($prepared);
+          if (is_wp_error($state_apply) || empty($state_apply["verified"])) {
+              fwrite(STDERR, is_wp_error($state_apply) ? $state_apply->get_error_message() : wp_json_encode($state_apply)); exit(1);
+          }
+          $state_verify = $state->verify("privacy-policy", ["status"=>"publish"]);
+          if (is_wp_error($state_verify) || empty($state_verify["verified"])) {
+              fwrite(STDERR, is_wp_error($state_verify) ? $state_verify->get_error_message() : wp_json_encode($state_verify)); exit(1);
           }
 
           $privacy_after = Eduardo_Research_Manager::pages()->inspect("privacy-policy", "en");
