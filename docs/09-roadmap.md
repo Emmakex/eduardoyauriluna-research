@@ -13,8 +13,9 @@ Eduardo → ChatGPT → authenticated Research Manager → shared Manager servic
 The Research Theme owns deterministic frontend rendering. The Research Manager owns controlled site operations. ChatGPT is the primary managed instruction surface. WordPress Admin is the local/fallback/self-service surface. WP-CLI and SSH are optional bootstrap/automation/support transports.
 
 Canonical contract: `docs/22-chat-governed-manager-contract.md`.
-Accepted decision: ADR-015 in `docs/10-decisions.md`.
-Manager v1 completion tracker: issue #201.
+Accepted architecture decision: ADR-015 in `docs/10-decisions.md`.
+Manager v1 development-complete contract: ADR-017 in `docs/23-adr-017-manager-v1-development-complete.md` (accepted when #205 closes with CI green).
+Development completion tracker: issue #205. Final production acceptance tracker: issue #201.
 
 ---
 
@@ -30,6 +31,7 @@ Manager v1 completion tracker: issue #201.
 8. Every remote mutation is scoped, auditable and safe against duplicate retries/stale state.
 9. Multi-client SaaS/Control Center work must not displace the single-site Eduardo acceptance path.
 10. Status reporting must distinguish repository implementation, CI verification, real-site deployment and real ChatGPT-through-Manager verification.
+11. Final production acceptance is frozen while #205 remains open; implementation must be complete and CI-green first.
 
 ---
 
@@ -103,19 +105,22 @@ The Manager contains shared services and Admin/remote surfaces for the accepted 
 
 - blueprint/Greenfield lifecycle;
 - diagnostics/readiness;
-- structured Pages and bounded Theme navigation;
-- Insights;
-- Research Lines;
+- canonical Researcher Identity (`name`, EN headline, ES headline) with elevated evidence/identity policy;
+- structured Pages plus dedicated title/publication-state control and bounded Theme navigation;
+- typed resource inventory across Pages, Insights, Research Lines and Research Objects;
+- Insights including slug, scheduling, state and relationships;
+- Research Lines including slug/publication state and evidence-aware domain metadata;
 - Research Objects;
 - translations;
 - evidence;
 - SEO/GEO inspection, action planning and deterministic remediation;
 - bounded Theme design controls;
-- Media inspection, metadata, assignment and managed binary ingest;
-- remote non-secret audit correlation;
+- Media inspection, metadata, assignment and managed binary ingest through a shared domain service;
+- remote non-secret audit correlation plus cross-lifecycle operation inventory;
 - rendered verification;
-- academic connector adapters;
+- non-secret academic connection visibility/previews;
 - snapshot/executor/rollback infrastructure;
+- local Admin parity for canonical Identity and Page State;
 - WP-CLI Greenfield adapter;
 - standalone install bundle.
 
@@ -123,11 +128,11 @@ This phase is the shared engine behind the authenticated ChatGPT governance path
 
 ---
 
-# Phase 5 — ChatGPT-governed Manager bridge — M8 OPERATING ACCEPTANCE COMPLETE / v1 CLOSEOUT IN PROGRESS
+# Phase 5 — ChatGPT-governed Manager bridge — M8 OPERATING ACCEPTANCE COMPLETE / v1 DEVELOPMENT CLOSEOUT IN PROGRESS
 
 **Goal:** make the Research Manager the authenticated bridge through which we govern the real WordPress site from this ChatGPT workflow.
 
-Historical M1–M8 tracker: #97. Current Manager v1 completion tracker: #201.
+Historical M1–M8 tracker: #97. Development completion tracker: #205. Final Manager v1 production tracker: #201.
 
 ### Production acceptance milestone — Remote Media ✅ (2026-10-12)
 
@@ -177,8 +182,8 @@ The three normal-operation bypasses found during M8 are no longer open implement
 - [x] #194 / PR #200 — managed Media binary ingest without arbitrary URL/path proxying;
 - [x] PR #202 — production acceptance harnesses for remote audit, navigation and Media ingest;
 - [x] PR #202 — Media ingest Preview staging hardened with explicit cancel plus 15-minute scheduled cleanup;
-- [ ] deploy the Manager RC containing these capabilities to the real site;
-- [ ] execute the three new live production acceptances and preserve evidence.
+- [ ] deploy the final Manager v1 RC containing the #206 development closeout;
+- [ ] execute the new live production acceptances and preserve evidence.
 
 Installation/bootstrap, emergency recovery, local credential administration and optional WP-CLI/SSH support are not classified as normal-operation bypasses because the architecture explicitly permits them as bootstrap/fallback/support surfaces.
 
@@ -211,20 +216,25 @@ Installation/bootstrap, emergency recovery, local credential administration and 
 - [x] exact-plan Apply;
 - [x] stale plan/revision rejection;
 - [x] operation status retrieval;
+- [x] cross-lifecycle operation inventory;
 - [x] stored-state verification;
 - [x] rendered verification;
 - [x] rollback invocation where supported;
 - [x] retry/idempotency acceptance;
-- [x] audit correlation.
+- [x] audit correlation with safe lifecycle metadata.
 
-**M2 implementation is complete.** Page, Insight, Media and Design production slices already prove the lifecycle; the final RC battery extends that proof to navigation and managed Media ingest.
+**M2 implementation is complete.** Page, Insight, Media and Design production slices already prove the lifecycle; the final RC battery extends that proof to the final v1 breadth.
 
 ## M3 — Pages from ChatGPT ✅ implementation complete
 
 - [x] inspect Theme-controlled Pages remotely;
 - [x] inspect structured slots/current revision;
 - [x] create supported missing Theme Page with provenance and rollback;
-- [x] update structured Page slots;
+- [x] update structured Page slots without implicit publication side effects;
+- [x] dedicated Page title / `draft ↔ publish` state lifecycle;
+- [x] contract Page slugs intentionally immutable;
+- [x] front-page publication state contract-locked;
+- [x] local Admin parity through the same Page State service;
 - [x] manage permitted Theme presentation through bounded M7 design capabilities;
 - [x] EN/ES Page behavior defined by one Theme-owned Page resource with language-specific structured models/routes; separate WP Page pairing is N/A by architecture;
 - [x] Page-level SEO/GEO inspect/remediate capability;
@@ -240,7 +250,7 @@ A missing production contract Page must never be manufactured solely to exercise
 ## M4 — Insights/blog from ChatGPT ✅ implementation complete
 
 - [x] create draft/published Insight;
-- [x] update title/excerpt/body;
+- [x] update title/slug/excerpt/body;
 - [x] bounded authorship/type policy: author is the bound execution identity; `insight_type` replaces arbitrary taxonomy proxying;
 - [x] internal/research relationships to verified Research Lines;
 - [x] EN/ES translation pairing;
@@ -252,18 +262,20 @@ A missing production contract Page must never be manufactured solely to exercise
 - [x] rollback where supported;
 - [x] first real Insight operation from ChatGPT.
 
-Remaining v1 work is representative production breadth acceptance, not missing base implementation.
+Remaining v1 work is final production breadth acceptance, not missing base implementation.
 
 ## M5 — Research objects from ChatGPT ✅ implementation complete
 
 Authenticated typed gateways exist for:
 
-- [x] Research Lines;
+- [x] Research Lines with title/slug/publication status, evidence/research status, questions, order, topics and methods;
 - [x] Publications / outputs;
 - [x] Projects;
 - [x] Research Software;
 - [x] Datasets;
 - [x] evidence/provenance;
+- [x] canonical Researcher Identity name + EN/ES headline lifecycle;
+- [x] elevated `identity.write` for identity-critical identifiers;
 - [x] verified Research Line relations;
 - [x] structured EN/ES translations;
 - [x] stored/rendered verification and safe rollback contracts.
@@ -318,25 +330,45 @@ Identity/evidence-sensitive changes remain more strongly gated. Final v1 accepta
 - [x] normal bypasses to Admin/SSH/manual code identified;
 - [x] each normal-operation bypass converted into a typed Manager implementation gap and subsequently implemented (#192–#194).
 
-**M8 closeout remains valid.** Manager v1 closeout under #201 now proves broader routine-operation coverage and removes the three recorded normal-operation bypasses from the actual product path.
+**M8 closeout remains valid.** Manager v1 final acceptance under #201 will validate the broader, development-complete RC built after #205.
 
 **Phase 5 done when:** routine management of the Eduardo site can genuinely be driven from ChatGPT through the Manager, with real rendered verification.
 
 ---
 
-## Manager v1 closeout — issue #201
+## Manager v1 development closeout — issue #205 / PR #206
 
-Repository implementation for the accepted v1 contract is substantially complete. Remaining closure work is deliberately separated from implementation status:
+The accepted v1 implementation is now present on the #206 development branch. It is **not yet production-accepted** and must not be deployed for the final battery until implementation CI is green and #205 closes.
 
-- [x] remote audit, bounded navigation and managed Media ingest implemented;
-- [x] private Media ingest staging has explicit cancel + scheduled TTL cleanup;
-- [x] Preview-first production harnesses exist for the three new normal-operation closures;
-- [x] M1–M7 roadmap reconciled against the real implementation;
-- [ ] Manager 0.10.0 RC package passes full CI and is merged;
-- [ ] deploy the RC to `eduardoyauriluna.com`;
+- [x] canonical Identity source controls researcher name plus EN/ES headlines;
+- [x] identity-critical academic identifiers require elevated `identity.write`;
+- [x] dedicated Page title/publication-state lifecycle with immutable contract slugs and no implicit slot-driven publication;
+- [x] local Admin reuses the same Identity and Page State domain services;
+- [x] managed Insight slug update added to the existing editorial lifecycle;
+- [x] Research Line slug and publication-state updates added to its evidence-aware lifecycle;
+- [x] typed resource inventory implemented;
+- [x] academic connection read/preview visibility implemented without secrets/external writes;
+- [x] audit lifecycle metadata and cross-lifecycle operation inventory implemented;
+- [x] Media ingest business logic moved behind a shared service boundary;
+- [x] `/capabilities` reconciled with final editorial amplitude and safety boundaries;
+- [x] ADR-017 records the normative v1 development-complete contract;
+- [ ] all implementation CI green on the final #206 head;
+- [ ] merge #206;
+- [ ] package final release candidate;
+- [ ] close #205 and unfreeze #201 production acceptance.
+
+## Manager v1 final production closeout — issue #201
+
+Only after #205 closes:
+
+- [ ] deploy the final Manager v1 RC to `eduardoyauriluna.com`;
 - [ ] production-accept remote audit without Admin;
 - [ ] production-accept bounded navigation with exact rollback restoration;
 - [ ] production-accept managed Media ingest with final inventory cleanup;
+- [ ] production-accept canonical Identity using a bounded elevated temporary credential and exact rollback;
+- [ ] production-accept Page State title/status behavior without changing contract slugs;
+- [ ] production-accept Insight slug mutation with exact rollback;
+- [ ] production-accept Research Line slug/state breadth using a reversible non-fabricated fixture;
 - [ ] production-accept representative remaining M4/M5/M7 breadth using reversible/non-fabricated fixtures;
 - [ ] final `/capabilities`, read-only, revocation and audit smoke checks;
 - [ ] final no-normal-bypass review;
@@ -346,14 +378,14 @@ Repository implementation for the accepted v1 contract is substantially complete
 
 ## Phase 6 — Academic connections
 
-Existing repository adapters include ORCID, Crossref, OpenAlex, Zenodo, GitHub research-software preview and Scholar-compatible metadata.
+Existing repository adapters include ORCID, Crossref, OpenAlex, Zenodo, GitHub research-software preview and Scholar-compatible metadata. The Manager v1 also exposes bounded non-secret remote connection visibility/previews where safe.
 
 Real-data/production work remains:
 
 - [ ] verified ORCID supplied/confirmed;
 - [ ] real external identity reconciliation;
 - [ ] production tokens where optional authenticated reads require them;
-- [ ] real connection status exposed through Manager remote read surface;
+- [x] connection status can be exposed through the Manager remote read surface without secrets;
 - [ ] any external writes remain explicitly gated and are not implied by remote website-management permission.
 
 ---
