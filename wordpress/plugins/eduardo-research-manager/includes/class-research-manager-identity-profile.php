@@ -27,22 +27,26 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $headline = $this->text($stored['headline'] ?? '');
         if ('' === $headline) { $headline = trim((string) get_bloginfo('description')); }
         if ('' === $headline) { $headline = 'Research, software and evidence-driven digital systems'; }
+        $headline_es = $this->text($stored['headline_es'] ?? '');
+        if ('' === $headline_es) { $headline_es = 'Investigación, software y sistemas digitales basados en evidencia'; }
         return array(
             'name'=>$name,
             'headline'=>$headline,
+            'headline_es'=>$headline_es,
             'url'=>home_url('/'),
             'evidence_reference'=>$this->text($stored['evidence_reference'] ?? ''),
             'verified_at'=>$this->text($stored['verified_at'] ?? ''),
             'stored'=>$stored,
             'revision'=>$this->revision($stored),
-            'fields'=>array('name','headline'),
+            'fields'=>array('name','headline','headline_es'),
+            'languages'=>array('en','es'),
             'arbitrary_wordpress_profile_proxy'=>false,
         );
     }
 
     public function preview_update(array $changes, bool $evidence_confirmed = false, string $evidence_reference = ''): array|WP_Error {
         if (! $changes) { return new WP_Error('research_manager_identity_empty', 'Identity update requires at least one bounded field.'); }
-        $unknown = array_diff(array_keys($changes), array('name','headline'));
+        $unknown = array_diff(array_keys($changes), array('name','headline','headline_es'));
         if ($unknown) {
             return new WP_Error('research_manager_identity_field_not_allowed', 'Unsupported identity field: ' . implode(', ', array_map('sanitize_key', $unknown)));
         }
@@ -54,6 +58,7 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $next = is_array($current['stored'] ?? null) ? $current['stored'] : array();
         $next['name'] = (string) $current['name'];
         $next['headline'] = (string) $current['headline'];
+        $next['headline_es'] = (string) $current['headline_es'];
         foreach ($changes as $field => $value) {
             if (! is_scalar($value)) {
                 return new WP_Error('research_manager_identity_value_invalid', sprintf('Identity field "%s" must be scalar text.', $field));
@@ -144,8 +149,8 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $stored = is_array($current['stored'] ?? null) ? $current['stored'] : array();
         $checks = array();
         foreach ($expected as $key => $value) {
-            if (! in_array($key, array('name','headline','evidence_reference','verified_at'), true)) { continue; }
-            $actual = in_array($key, array('name','headline'), true) ? ($current[$key] ?? '') : ($stored[$key] ?? '');
+            if (! in_array($key, array('name','headline','headline_es','evidence_reference','verified_at'), true)) { continue; }
+            $actual = in_array($key, array('name','headline','headline_es'), true) ? ($current[$key] ?? '') : ($stored[$key] ?? '');
             $checks[$key] = $this->same($actual, $value);
         }
         return array('verified'=>! in_array(false, $checks, true),'checks'=>$checks,'actual'=>$current,'verified_at'=>gmdate(DATE_W3C));
