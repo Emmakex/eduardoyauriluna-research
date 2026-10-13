@@ -41,6 +41,25 @@ final class Eduardo_Research_Manager_Remote_Audit {
     }
     public function clear(): void {delete_option(self::OPTION);}
 
+    public static function operation_option_stores(): array {
+        return array(
+            'eduardo_research_manager_remote_operations',
+            'eduardo_research_manager_navigation_operations',
+            'eduardo_research_manager_remote_media_operations',
+            'eduardo_research_manager_remote_media_assignment_operations',
+            'eduardo_research_manager_remote_media_ingest_operations',
+            'eduardo_research_manager_remote_insight_pair_operations',
+            'eduardo_research_manager_remote_object_operations',
+            'eduardo_research_manager_remote_line_operations',
+            'eduardo_research_manager_remote_translation_operations',
+            'eduardo_research_manager_remote_evidence_operations',
+            'eduardo_research_manager_remote_seo_geo_operations',
+            'eduardo_research_manager_remote_design_operations',
+            'eduardo_research_manager_remote_design_variant_operations',
+            'eduardo_research_manager_remote_page_state_operations',
+        );
+    }
+
     private function enrich_from_operation_state(array $record): array {
         $operation_id=$this->text($record['operation_id']??''); if(''===$operation_id){return $record;}
         $state=$this->find_operation_state($operation_id); if(!$state){return $record;}
@@ -56,12 +75,7 @@ final class Eduardo_Research_Manager_Remote_Audit {
     }
 
     private function find_operation_state(string $operation_id): array {
-        $stores=array(
-            'eduardo_research_manager_remote_operations','eduardo_research_manager_remote_navigation_operations','eduardo_research_manager_remote_media_metadata_operations','eduardo_research_manager_remote_media_assignment_operations','eduardo_research_manager_remote_media_ingest_operations',
-            'eduardo_research_manager_remote_insight_pairing_operations','eduardo_research_manager_remote_object_operations','eduardo_research_manager_remote_line_operations','eduardo_research_manager_remote_translation_operations','eduardo_research_manager_remote_evidence_operations',
-            'eduardo_research_manager_remote_seo_geo_operations','eduardo_research_manager_remote_design_operations','eduardo_research_manager_remote_design_variant_operations','eduardo_research_manager_remote_page_state_operations',
-        );
-        foreach($stores as $option){$all=get_option($option,array());if(is_array($all)&&is_array($all[$operation_id]??null)){return $all[$operation_id];}}
+        foreach(self::operation_option_stores() as $option){$all=get_option($option,array());if(is_array($all)&&is_array($all[$operation_id]??null)){return $all[$operation_id];}}
         return array();
     }
     private function verification_status(mixed $value,bool $rendered=false): string {
@@ -70,7 +84,7 @@ final class Eduardo_Research_Manager_Remote_Audit {
         if(!array_key_exists('verified',$value)||null===$value['verified']){return 'pending';}
         return !empty($value['verified'])?'verified':'failed';
     }
-    private function target_summary(mixed $value): array {if(!is_array($value)){return array();}$allowed=array('resource','type','key','page_id','post_id','attachment_id','group','record_id','language','first_id','second_id');$summary=array();foreach($allowed as $key){if(!array_key_exists($key,$value)||!is_scalar($value[$key])){continue;}$summary[$key]=is_int($value[$key])?(int) $value[$key]:substr($this->text($value[$key]),0,120);}return $summary;}
+    private function target_summary(mixed $value): array {if(!is_array($value)){return array();}$allowed=array('resource','type','key','page_id','post_id','attachment_id','group','record_id','language','first_id','second_id','location');$summary=array();foreach($allowed as $key){if(!array_key_exists($key,$value)||!is_scalar($value[$key])){continue;}$summary[$key]=is_int($value[$key])?(int) $value[$key]:substr($this->text($value[$key]),0,120);}return $summary;}
     private function text(mixed $value): string {return is_scalar($value)?sanitize_text_field((string) $value):'';}
 }
 
