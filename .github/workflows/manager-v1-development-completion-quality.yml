@@ -5,6 +5,7 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/themes/eduardo-research/front-page.php'
       - 'scripts/manager-v1-identity-policy-contract-test.php'
       - 'scripts/manager-v1-development-completion-contract-test.php'
       - 'scripts/manager-v1-operation-observability-test.php'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - 'wordpress/themes/eduardo-research/inc/research-model.php'
+      - 'wordpress/themes/eduardo-research/front-page.php'
       - 'scripts/manager-v1-identity-policy-contract-test.php'
       - 'scripts/manager-v1-development-completion-contract-test.php'
       - 'scripts/manager-v1-operation-observability-test.php'
@@ -60,6 +62,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           php -l wordpress/themes/eduardo-research/inc/research-model.php
+          php -l wordpress/themes/eduardo-research/front-page.php
           php -l scripts/manager-v1-identity-policy-contract-test.php
           php -l scripts/manager-v1-development-completion-contract-test.php
           php -l scripts/manager-v1-operation-observability-test.php
@@ -81,6 +84,14 @@ jobs:
           grep -F "array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
           grep -F "'status'=>'post_status'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
           grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+      - name: Enforce bounded Page CTA targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "str_ends_with((string) \$slot, '-target')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
+          grep -F "research_manager_invalid_page_target" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
+          grep -F "eduardo_research_page_url(\$hero_primary_target)" wordpress/themes/eduardo-research/front-page.php
+          grep -F "eduardo_research_page_url(\$final_cta_target)" wordpress/themes/eduardo-research/front-page.php
       - name: Enforce canonical bilingual Identity and local parity
         shell: bash
         run: |
