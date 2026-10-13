@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php'
       - 'scripts/remote-media-ingest-lifecycle-test.php'
@@ -23,20 +24,31 @@ jobs:
       - name: PHP syntax
         run: |
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
           php -l scripts/remote-media-ingest-lifecycle-test.php
       - name: Run managed ingest lifecycle test
         run: php scripts/remote-media-ingest-lifecycle-test.php
-      - name: Enforce bounded binary contract
+      - name: Enforce shared domain service boundary
         run: |
-          grep -F "MAX_BYTES = 10485760" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "image/jpeg" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "image/png" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "image/webp" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "application/pdf" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "hash_file('sha256'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "Image ingest requires operator-reviewed alt_text" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "final class Eduardo_Research_Manager_Media_Ingest" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "private Eduardo_Research_Manager_Media_Ingest \$ingest" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "\$this->ingest->prepare" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "\$this->ingest->create_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "\$this->ingest->verify_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "\$this->ingest->rollback_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -F "media_handle_sideload" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -F "wp_delete_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+      - name: Enforce bounded binary contract in shared service
+        run: |
+          grep -F "MAX_BYTES = 10485760" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "image/jpeg" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "image/png" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "image/webp" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "application/pdf" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "hash_file('sha256'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "Image ingest requires operator-reviewed alt_text" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
       - name: Enforce private staging cleanup
         run: |
           grep -F "PLAN_TTL = 15 * MINUTE_IN_SECONDS" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
@@ -47,19 +59,20 @@ jobs:
           grep -F "/cancel'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
           grep -F "preview_cancel'=>true" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
           grep -F "private-temporary-ttl-15m" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
-      - name: Enforce safe provenance rollback
+      - name: Enforce safe provenance rollback in shared service
         run: |
-          grep -F "_eduardo_research_manager_ingest_operation" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "_eduardo_research_manager_ingest_operation" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
           grep -F "rollback_requires_unused_owned_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
-          grep -F "Media is now in use" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
-          grep -F "wp_delete_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          grep -F "Media is now in use" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "wp_delete_attachment" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
       - name: Enforce no arbitrary file proxy
         run: |
           grep -F "'arbitrary_url_ingest'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
           grep -F "'arbitrary_filesystem_path'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
-          ! grep -E "wp_remote_(get|post)|download_url|file_get_contents\([^)]*https?" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -E "wp_remote_(get|post)|download_url|file_get_contents\([^)]*https?" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
       - name: Enforce bootstrap registration
         run: |
+          grep -F "class-research-manager-media-ingest.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           grep -F "class-research-manager-remote-media-ingest-operations.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           grep -F "class-research-manager-remote-media-ingest-rest.php" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           grep -F "Eduardo_Research_Manager_Remote_Media_Ingest_REST" wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
