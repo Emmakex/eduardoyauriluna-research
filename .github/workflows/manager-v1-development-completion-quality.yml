@@ -42,6 +42,13 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-operations.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
@@ -65,6 +72,24 @@ jobs:
         run: php scripts/manager-v1-operation-observability-test.php
       - name: Run bounded Page state lifecycle test
         run: php scripts/manager-v1-page-state-lifecycle-test.php
+      - name: Enforce final editorial amplitude
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "array('slug','title','excerpt','content','language','insight_type','line_ids')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
+          grep -F "array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          grep -F "'status'=>'post_status'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+      - name: Enforce canonical bilingual Identity and local parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "function eduardo_research_canonical_identity_headline" wordpress/themes/eduardo-research/inc/research-model.php
+          grep -F "'headline_es'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
+          grep -F "Eduardo_Research_Manager_Identity_Profile" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
+          grep -F "Eduardo_Research_Manager_Page_State_Editor" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
+          grep -F "'identity.write'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
       - name: Enforce shared Media domain boundary
         shell: bash
         run: |
@@ -81,7 +106,8 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php \
-            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
       - name: Enforce remote connection secret boundary
         shell: bash
         run: |
