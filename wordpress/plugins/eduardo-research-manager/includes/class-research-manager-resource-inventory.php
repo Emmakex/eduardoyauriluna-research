@@ -26,7 +26,7 @@ final class Eduardo_Research_Manager_Resource_Inventory {
         $type=sanitize_key($type); if(!isset($this->types()[$type])){return $this->error('resource_type_unknown','Unsupported Manager resource type.');}
         if('pages'===$type){return $this->list_pages();}
         $page=max(1,(int) ($args['page']??1)); $per_page=max(1,min(50,(int) ($args['per_page']??20)));
-        $language=sanitize_key((string) ($args['language']??'')); if(''!==$language&&!in_array($language,EdUardo_Research_Manager::contract()->languages(),true)){return $this->error('resource_language_unknown','Language is outside the active Research contract.');}
+        $language=sanitize_key((string) ($args['language']??'')); if(''!==$language&&!in_array($language,Eduardo_Research_Manager::contract()->languages(),true)){return $this->error('resource_language_unknown','Language is outside the active Research contract.');}
         $status=sanitize_key((string) ($args['status']??'')); $allowed_statuses=array('publish','draft','future','private');
         if(''!==$status&&!in_array($status,$allowed_statuses,true)){return $this->error('resource_status_unknown','Unsupported resource status filter.');}
         $query_args=array('post_type'=>$this->post_type($type),'post_status'=>''!==$status?$status:$allowed_statuses,'posts_per_page'=>$per_page,'paged'=>$page,'orderby'=>array('modified'=>'DESC','ID'=>'DESC'),'no_found_rows'=>false);
