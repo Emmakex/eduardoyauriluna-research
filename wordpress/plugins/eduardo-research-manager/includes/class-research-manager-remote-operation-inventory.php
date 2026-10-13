@@ -9,13 +9,15 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory {
 
     public function query(array $args = array()): array {
         $items = $this->all();
+        $operation_id = sanitize_text_field((string) ($args['operation_id'] ?? ''));
         $status = sanitize_key((string) ($args['status'] ?? ''));
         $operation = sanitize_key((string) ($args['operation'] ?? ''));
         $connection = sanitize_text_field((string) ($args['connection_id'] ?? ''));
         $allowed_statuses = array('applied','pending-verification','verified','verification-failed','rolled-back');
         if ('' !== $status && ! in_array($status, $allowed_statuses, true)) { $status = ''; }
 
-        $filtered = array_values(array_filter($items, static function (array $item) use ($status, $operation, $connection): bool {
+        $filtered = array_values(array_filter($items, static function (array $item) use ($operation_id, $status, $operation, $connection): bool {
+            if ('' !== $operation_id && (string) ($item['operation_id'] ?? '') !== $operation_id) { return false; }
             if ('' !== $status && (string) ($item['display_status'] ?? '') !== $status) { return false; }
             if ('' !== $operation && (string) ($item['operation'] ?? '') !== $operation) { return false; }
             if ('' !== $connection && (string) ($item['connection_id'] ?? '') !== $connection) { return false; }
@@ -31,7 +33,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory {
             'per_page'=>$per_page,
             'total'=>$total,
             'total_pages'=>0 === $total ? 0 : (int) ceil($total / $per_page),
-            'filters'=>array_filter(array('status'=>$status,'operation'=>$operation,'connection_id'=>$connection), static fn(string $value): bool => '' !== $value),
+            'filters'=>array_filter(array('operation_id'=>$operation_id,'status'=>$status,'operation'=>$operation,'connection_id'=>$connection), static fn(string $value): bool => '' !== $value),
             'items'=>$offset < $total ? array_slice($filtered, $offset, $per_page) : array(),
             'read_only'=>true,
             'statuses'=>$allowed_statuses,
@@ -82,7 +84,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory {
             'source_revision'=>sanitize_text_field((string) ($operation['source_revision'] ?? '')),
             'resulting_revision'=>sanitize_text_field((string) ($operation['post_apply_revision'] ?? $operation['resulting_revision'] ?? '')),
             'lifecycle_status'=>$status,
-            'display_status'=>$this->display_status($status, $stored),
+            'display_status'=>$this->display_status($status),
             'stored_verification_status'=>$this->verification_status($stored, false),
             'rendered_verification_status'=>$this->verification_status($rendered, true),
             'rollback_available'=>in_array($status, array('applied','verified','verification-failed'), true),
@@ -96,7 +98,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory {
         );
     }
 
-    private function display_status(string $status, mixed $stored): string {
+    private function display_status(string $status): string {
         if ('applied' === $status) { return 'pending-verification'; }
         if ('verified' === $status) { return 'verified'; }
         if ('verification-failed' === $status) { return 'verification-failed'; }
