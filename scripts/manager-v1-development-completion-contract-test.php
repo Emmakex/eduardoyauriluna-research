@@ -18,9 +18,15 @@ check(str_contains($pageState,'research_manager_page_slug_immutable'),'Page stat
 check(str_contains($pageState,'research_manager_page_status_locked'),'Page state must protect contract-locked status');
 check(str_contains($pageState,"'front-page' ==="),'Page state must identify front-page lock');
 check(str_contains($pageState,"array('draft','publish')")||str_contains($pageState,"array('draft', 'publish')"),'Page state must remain bounded to draft/publish');
+$pageStateRest=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php');
+check(str_contains($pageStateRest,'validate_idempotency'),'Page state writes must use request idempotency guard');
+check(str_contains($pageStateRest,'remember_request'),'Page state writes must remember successful request results');
+check(str_contains($pageStateRest,"'idempotency'=>true"),'Page state capabilities must advertise idempotency');
 
 $resource=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php');
 foreach(array("'pages'=>array('scope'=>'pages.read'","'insights'=>array('scope'=>'insights.read'","'outputs'=>array('scope'=>'research.read'","'projects'=>array('scope'=>'research.read'","'software'=>array('scope'=>'research.read'","'datasets'=>array('scope'=>'research.read'") as $needle){check(str_contains($resource,$needle),'Resource inventory scope contract missing: '.$needle);}
+check(str_contains($resource,"'language'=>\$language"),'Resource inventory must preserve language filters');
+check(str_contains($resource,"pages()->inspect(sanitize_key(\$identifier),''!==\$language?\$language:'en')"),'Page get_resource must be language-aware');
 check(false===stripos($resource,'wp/v2'),'Resource inventory must not proxy arbitrary WordPress REST');
 
 $connections=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php');
