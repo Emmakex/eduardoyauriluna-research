@@ -73,13 +73,14 @@ final class Eduardo_Research_Manager_Media_Diagnostics {
     public function inspect(int $id): array|WP_Error { return array('usage'=>array('used'=>!empty($GLOBALS['erm_used'][$id]))); }
 }
 
+require_once __DIR__ . '/../wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php';
 require_once __DIR__ . '/../wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php';
 function check(bool $condition,string $message): void { if(!$condition){fwrite(STDERR,"FAIL: {$message}\n");exit(1);} }
 function upload_file(string $suffix,string $content): array { $path=tempnam(sys_get_temp_dir(),'erm-upload-'); file_put_contents($path,$content); return array('name'=>'research-'.$suffix,'tmp_name'=>$path,'size'=>filesize($path),'error'=>UPLOAD_ERR_OK,'type'=>''); }
 function raw_plan(string $id): array { return (array) (($GLOBALS['erm_options']['eduardo_research_manager_remote_media_ingest_plans'][$id] ?? array())); }
 
 $audit=new Eduardo_Research_Manager_Remote_Audit();
-$ops=new Eduardo_Research_Manager_Remote_Media_Ingest_Operations($audit);
+$ops=new Eduardo_Research_Manager_Remote_Media_Ingest_Operations($audit,new Eduardo_Research_Manager_Media_Ingest());
 $actor=array('connection_id'=>'rmt_media_ingest','wordpress_user_id'=>1,'request_id'=>'req-ingest-1');
 
 $bad=upload_file('script.php','<?php echo 1;');
@@ -151,4 +152,4 @@ check(null===get_post($id),'rollback must delete only owned unused attachment');
 check(count($audit->events)>=7,'ingest lifecycle including Preview cleanup must be audited');
 
 @unlink($file['tmp_name']);
-fwrite(STDOUT,"Managed Media ingest lifecycle + staging cleanup: PASS\n");
+fwrite(STDOUT,"Managed Media ingest lifecycle + shared domain service + staging cleanup: PASS\n");
