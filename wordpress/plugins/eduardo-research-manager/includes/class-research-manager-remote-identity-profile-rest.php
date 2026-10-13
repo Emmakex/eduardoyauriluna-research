@@ -44,7 +44,7 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_REST {
         if('/'.Eduardo_Research_Manager_Remote_REST::NAMESPACE.'/capabilities'!==$request->get_route()||is_wp_error($response)||!$response instanceof WP_REST_Response){return $response;}
         $payload=$response->get_data();if(!is_array($payload)||!is_array($payload['data']??null)){return $response;}
         $payload['data']['identity_profile_control']=array(
-            'available'=>true,'transport_base'=>'/research-manager/v1/identity-profile','fields'=>array('name','headline'),
+            'available'=>true,'transport_base'=>'/research-manager/v1/identity-profile','fields'=>array('name','headline','headline_es'),'languages'=>array('en','es'),
             'read_scope'=>'evidence.read','write_scopes'=>array('identity.write','evidence.write','operations.apply'),'rollback_scopes'=>array('identity.write','evidence.write','operations.rollback'),
             'lifecycle'=>array('inspect','plan','apply','status','verify','rollback'),'evidence_required'=>true,'stale_preview_protection'=>true,'idempotency'=>true,
             'theme_canonical_source'=>'eduardo_research_identity','arbitrary_wordpress_profile_proxy'=>false,
