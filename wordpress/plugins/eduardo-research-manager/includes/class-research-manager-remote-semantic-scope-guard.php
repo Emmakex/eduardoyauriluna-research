@@ -7,6 +7,8 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
     private const PLANS_OPTION = 'eduardo_research_manager_remote_plans';
     private const OPERATIONS_OPTION = 'eduardo_research_manager_remote_operations';
+    private const EVIDENCE_PLANS_OPTION = 'eduardo_research_manager_remote_evidence_plans';
+    private const EVIDENCE_OPERATIONS_OPTION = 'eduardo_research_manager_remote_evidence_operations';
 
     public function register(): void {
         add_filter('rest_request_before_callbacks', array($this, 'enforce'), 10, 3);
@@ -78,6 +80,17 @@ final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
             );
         }
 
+        if (is_array($data['research_evidence_control'] ?? null)) {
+            $data['research_evidence_control']['identity_policy'] = array(
+                'canonical_name_option'=>'eduardo_research_identity.name',
+                'critical_identifier_group'=>'identifiers',
+                'critical_write_scope'=>'identity.write',
+                'identity_update_scope'=>'identity.write',
+                'evidence_scope_still_required'=>true,
+                'arbitrary_wordpress_profile_proxy'=>false,
+            );
+        }
+
         $payload['data'] = $data;
         $response->set_data($payload);
         return $response;
@@ -125,6 +138,24 @@ final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
             return array('insights.write','translations.write');
         }
 
+        if ($prefix . '/research-evidence/plan' === $route) {
+            $params = $request->get_json_params();
+            if (! is_array($params)) { $params = $request->get_body_params(); }
+            return $this->evidence_request_requires_identity_scope($params) ? array('identity.write') : array();
+        }
+
+        if (preg_match('#^' . preg_quote($prefix, '#') . '/research-evidence/plans/([^/]+)/apply$#', $route, $matches)) {
+            return $this->stored_evidence_plan_requires_identity_scope(rawurldecode((string) $matches[1]))
+                ? array('identity.write')
+                : array();
+        }
+
+        if (preg_match('#^' . preg_quote($prefix, '#') . '/research-evidence/operations/([^/]+)/rollback$#', $route, $matches)) {
+            return $this->stored_evidence_operation_requires_identity_scope(rawurldecode((string) $matches[1]))
+                ? array('identity.write')
+                : array();
+        }
+
         return array();
     }
 
@@ -143,6 +174,33 @@ final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
         $operations = get_option(self::OPERATIONS_OPTION, array());
         if (! is_array($operations) || ! is_array($operations[$operation_id] ?? null)) { return ''; }
         return $this->normalise_operation((string) ($operations[$operation_id]['operation'] ?? ''));
+    }
+
+    private function evidence_request_requires_identity_scope(array $params): bool {
+        $operation = $this->normalise_operation((string) ($params['operation'] ?? ''));
+        if ('identity-update' === $operation) { return true; }
+        if (! in_array($operation, array('evidence-create','evidence-update','evidence-delete'), true)) { return false; }
+        $payload = is_array($params['payload'] ?? null) ? $params['payload'] : array();
+        return 'identifiers' === sanitize_key((string) ($payload['group'] ?? ''));
+    }
+
+    private function stored_evidence_plan_requires_identity_scope(string $plan_id): bool {
+        $plans = get_option(self::EVIDENCE_PLANS_OPTION, array());
+        if (! is_array($plans) || ! is_array($plans[$plan_id] ?? null)) { return false; }
+        return $this->evidence_state_requires_identity_scope($plans[$plan_id]);
+    }
+
+    private function stored_evidence_operation_requires_identity_scope(string $operation_id): bool {
+        $operations = get_option(self::EVIDENCE_OPERATIONS_OPTION, array());
+        if (! is_array($operations) || ! is_array($operations[$operation_id] ?? null)) { return false; }
+        return $this->evidence_state_requires_identity_scope($operations[$operation_id]);
+    }
+
+    private function evidence_state_requires_identity_scope(array $state): bool {
+        $operation = $this->normalise_operation((string) ($state['operation'] ?? ''));
+        if ('identity-update' === $operation) { return true; }
+        $target = is_array($state['target'] ?? null) ? $state['target'] : array();
+        return 'identifiers' === sanitize_key((string) ($target['group'] ?? ''));
     }
 
     private function semantic_scopes_for_operation(string $operation): array {
