@@ -103,7 +103,7 @@ final class Eduardo_Research_Manager_Page_Resource {
     public function slot_schema(string $key,string $language): array {
         if ('home' === $key && function_exists('eduardo_research_default_model')) {
             $schema = eduardo_research_default_model($language); $schema = is_array($schema) ? $schema : array();
-            unset($schema['researcher-name']);
+            unset($schema['researcher-name'], $schema['researcher-headline']);
             return $schema;
         }
         if (function_exists('eduardo_research_surface_models')) { $models = eduardo_research_surface_models($language); return is_array($models) && is_array($models[$key] ?? null) ? $models[$key] : array(); }
@@ -123,6 +123,7 @@ final class Eduardo_Research_Manager_Page_Resource {
     private function normalize_slots(array $schema,array $slots): array|WP_Error {
         $unknown = array_diff(array_keys($slots), array_keys($schema));
         if ($unknown) { return new WP_Error('research_manager_unknown_slot', 'Hydration contains slots outside the Theme model: ' . implode(', ', array_map('sanitize_key', $unknown))); }
+        $allowed_targets = array_fill_keys(array_keys($this->contract->pages()), true);
         $clean = array();
         foreach ($slots as $slot=>$value) {
             $default = $schema[$slot];
@@ -132,6 +133,14 @@ final class Eduardo_Research_Manager_Page_Resource {
                 continue;
             }
             if (! is_scalar($value)) { return new WP_Error('research_manager_invalid_slot_value', sprintf('Slot "%s" must be scalar text.', $slot)); }
+            if (str_ends_with((string) $slot, '-target')) {
+                $target = sanitize_key((string) $value);
+                if ('' === $target || ! isset($allowed_targets[$target])) {
+                    return new WP_Error('research_manager_invalid_page_target', sprintf('Slot "%s" must reference a registered Theme Page target.', $slot), array('allowed_targets'=>array_keys($allowed_targets)));
+                }
+                $clean[$slot] = $target;
+                continue;
+            }
             $clean[$slot] = sanitize_textarea_field((string) $value);
         }
         return $clean;
