@@ -22,6 +22,8 @@ function eduardo_research_default_model(?string $language = null): array {
             'researcher-name'=>$name,
             'researcher-headline'=>'Investigación, software y sistemas digitales basados en evidencia',
             'hero-lead'=>'Un perfil de investigación estructurado para el descubrimiento académico, la reproducibilidad y el contexto académico legible por máquinas.',
+            'hero-primary-target'=>'research',
+            'hero-secondary-target'=>'cv',
             'research-lines-heading'=>'Agenda de investigación',
             'research-lines-intro'=>'Las líneas activas de investigación, preguntas y métodos se publican aquí con una procedencia clara.',
             'selected-outputs-heading'=>'Resultados seleccionados',
@@ -31,6 +33,7 @@ function eduardo_research_default_model(?string $language = null): array {
             'final-cta-heading'=>'Investigación y colaboración',
             'final-cta-body'=>'Explora la agenda de investigación, los resultados y los artefactos reproducibles.',
             'final-cta-button'=>'Explorar investigación',
+            'final-cta-target'=>'contact',
         );
     }
     return array(
@@ -38,6 +41,8 @@ function eduardo_research_default_model(?string $language = null): array {
         'researcher-name'=>$name,
         'researcher-headline'=>get_bloginfo('description') ?: 'Research, software and evidence-driven digital systems',
         'hero-lead'=>'A structured research profile designed for scholarly discovery, reproducibility and machine-readable academic context.',
+        'hero-primary-target'=>'research',
+        'hero-secondary-target'=>'cv',
         'research-lines-heading'=>'Research agenda',
         'research-lines-intro'=>'Active research lines, questions and methods are published here with clear provenance.',
         'selected-outputs-heading'=>'Selected outputs',
@@ -47,6 +52,7 @@ function eduardo_research_default_model(?string $language = null): array {
         'final-cta-heading'=>'Research and collaboration',
         'final-cta-body'=>'Explore the research agenda, outputs and reproducible artefacts.',
         'final-cta-button'=>'Explore research',
+        'final-cta-target'=>'contact',
     );
 }
 
