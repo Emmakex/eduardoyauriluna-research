@@ -24,7 +24,7 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_Operations {
     public function create_plan(array $payload, array $actor): array|WP_Error {
         $changes = is_array($payload['changes'] ?? null) ? $payload['changes'] : array();
         if (! $changes) {
-            foreach (array('name','headline') as $field) {
+            foreach (array('name','headline','headline_es') as $field) {
                 if (array_key_exists($field, $payload)) { $changes[$field] = $payload[$field]; }
             }
         }
@@ -36,8 +36,9 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_Operations {
         if (is_wp_error($prepared)) { return $this->normalise($prepared, 400); }
         $now = time();
         $connection_id = sanitize_text_field((string) ($actor['connection_id'] ?? ''));
+        $source_revision = sanitize_text_field((string) ($prepared['baseline_revision'] ?? ''));
         $plan_id = 'erm-identity-plan-' . substr(hash('sha256', (string) wp_json_encode(array(
-            'changes'=>$changes,'baseline'=>$prepared['baseline_revision'] ?? '','connection_id'=>$connection_id,'nonce'=>wp_generate_uuid4(),
+            'changes'=>$changes,'baseline'=>$source_revision,'connection_id'=>$connection_id,'nonce'=>wp_generate_uuid4(),
         ))), 0, 24);
         $plan = array(
             'plan_id'=>$plan_id,
@@ -45,6 +46,7 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_Operations {
             'target'=>array('resource'=>'identity-profile'),
             'requested'=>array('changes'=>$changes),
             'prepared'=>$prepared,
+            'source_revision'=>$source_revision,
             'risk'=>(string) ($prepared['risk'] ?? 'evidence-required'),
             'apply_allowed'=>! empty($prepared['apply_allowed']),
             'confirmation_required'=>true,
@@ -87,10 +89,17 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_Operations {
 
         $result = $this->identity->apply_preview((array) ($plan['prepared'] ?? array()));
         if (is_wp_error($result)) { return $this->normalise($result, 409); }
+        $after = $this->identity->inspect();
+        if (is_wp_error($after)) {
+            $snapshot = (string) ($result['snapshot_id'] ?? '');
+            if ('' !== $snapshot) { $this->identity->rollback($snapshot); }
+            return $this->normalise($after, 409);
+        }
         $operation_id = 'erm-identity-op-' . str_replace('-', '', wp_generate_uuid4());
         $operation = array(
             'operation_id'=>$operation_id,'plan_id'=>$plan_id,'operation'=>'identity-profile-update',
             'target'=>array('resource'=>'identity-profile'),'requested'=>$plan['requested'] ?? array(),
+            'source_revision'=>(string) ($plan['source_revision'] ?? ''),'post_apply_revision'=>(string) ($after['revision'] ?? ''),
             'connection_id'=>(string) ($actor['connection_id'] ?? ''),'wordpress_user_id'=>(int) ($actor['wordpress_user_id'] ?? 0),
             'status'=>'applied','result'=>$result,'snapshot_id'=>(string) ($result['snapshot_id'] ?? ''),
             'stored_verification'=>is_array($result['verification'] ?? null) ? $result['verification'] : array(),
@@ -140,14 +149,14 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_Operations {
     }
 
     private function public_plan(array $plan): array {
-        return array_intersect_key($plan,array_flip(array('plan_id','operation','target','requested','risk','apply_allowed','confirmation_required','confirmation_class','connection_id','created_at','expires_at','status','operation_id','applied_at')));
+        return array_intersect_key($plan,array_flip(array('plan_id','operation','target','requested','source_revision','risk','apply_allowed','confirmation_required','confirmation_class','connection_id','created_at','expires_at','status','operation_id','applied_at')));
     }
     private function public_operation(array $operation): array {
-        return array_intersect_key($operation,array_flip(array('operation_id','plan_id','operation','target','requested','connection_id','status','stored_verification','created_at','applied_at','verified_at','rolled_back_at')));
+        return array_intersect_key($operation,array_flip(array('operation_id','plan_id','operation','target','requested','source_revision','post_apply_revision','connection_id','status','stored_verification','created_at','applied_at','verified_at','rolled_back_at')));
     }
     private function find(string $option,string $id): array { $all=get_option($option,array()); return is_array($all)&&is_array($all[$id]??null)?$all[$id]:array(); }
     private function put(string $option,string $id,array $value): void { $all=get_option($option,array());$all=is_array($all)?$all:array();$all[$id]=$value;if(count($all)>self::LIMIT){$all=array_slice($all,-self::LIMIT,null,true);}if(false===get_option($option,false)){add_option($option,$all,'',false);}else{update_option($option,$all,false);} }
-    private function audit(string $event,string $outcome,array $state,array $actor): void { $this->audit->record(array('request_id'=>(string)($actor['request_id']??''),'connection_id'=>(string)($actor['connection_id']??''),'wordpress_user_id'=>(int)($actor['wordpress_user_id']??0),'event'=>$event,'outcome'=>$outcome,'scope'=>'identity.write','plan_id'=>(string)($state['plan_id']??''),'operation_id'=>(string)($state['operation_id']??''),'operation'=>(string)($state['operation']??''),'target'=>$state['target']??array(),'status'=>(string)($state['status']??''))); }
+    private function audit(string $event,string $outcome,array $state,array $actor): void { $this->audit->record(array('request_id'=>(string)($actor['request_id']??''),'connection_id'=>(string)($actor['connection_id']??''),'wordpress_user_id'=>(int)($actor['wordpress_user_id']??0),'event'=>$event,'outcome'=>$outcome,'scope'=>'identity.write','plan_id'=>(string)($state['plan_id']??''),'operation_id'=>(string)($state['operation_id']??''),'operation'=>(string)($state['operation']??''),'target'=>$state['target']??array(),'source_revision'=>(string)($state['source_revision']??''),'resulting_revision'=>(string)($state['post_apply_revision']??''),'status'=>(string)($state['status']??''))); }
     private function normalise(WP_Error $error,int $status): WP_Error { $data=$error->get_error_data();if(!is_array($data)){$data=array();}$data['status']=$data['status']??$status;return new WP_Error($error->get_error_code(),$error->get_error_message(),$data); }
     private function error(string $code,string $message,int $status,array $extra=array()): WP_Error { return new WP_Error($code,$message,array_merge(array('status'=>$status),$extra)); }
 }
