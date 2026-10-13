@@ -136,6 +136,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory {
             'eduardo_research_manager_remote_line_operations'=>'research-line',
             'eduardo_research_manager_remote_translation_operations'=>'translation',
             'eduardo_research_manager_remote_evidence_operations'=>'evidence',
+            'eduardo_research_manager_remote_identity_profile_operations'=>'identity-profile',
             'eduardo_research_manager_remote_seo_geo_operations'=>'seo-geo',
             'eduardo_research_manager_remote_design_operations'=>'design',
             'eduardo_research_manager_remote_design_variant_operations'=>'design-variant',
