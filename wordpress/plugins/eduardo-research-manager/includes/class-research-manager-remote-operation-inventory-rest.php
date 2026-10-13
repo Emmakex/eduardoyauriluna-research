@@ -26,6 +26,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory_REST {
             'args'=>array(
                 'page'=>array('type'=>'integer','minimum'=>1,'default'=>1),
                 'per_page'=>array('type'=>'integer','minimum'=>1,'maximum'=>100,'default'=>50),
+                'operation_id'=>array('type'=>'string'),
                 'status'=>array('type'=>'string'),
                 'operation'=>array('type'=>'string'),
                 'connection_id'=>array('type'=>'string'),
@@ -37,6 +38,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory_REST {
         $data = $this->inventory->query(array(
             'page'=>(int) ($request->get_param('page') ?: 1),
             'per_page'=>(int) ($request->get_param('per_page') ?: 50),
+            'operation_id'=>(string) ($request->get_param('operation_id') ?: ''),
             'status'=>(string) ($request->get_param('status') ?: ''),
             'operation'=>(string) ($request->get_param('operation') ?: ''),
             'connection_id'=>(string) ($request->get_param('connection_id') ?: ''),
@@ -55,7 +57,7 @@ final class Eduardo_Research_Manager_Remote_Operation_Inventory_REST {
             'scope'=>'site.diagnostics',
             'max_page_size'=>100,
             'statuses'=>array('pending-verification','verified','verification-failed','rolled-back'),
-            'filters'=>array('status','operation','connection_id'),
+            'filters'=>array('operation_id','status','operation','connection_id'),
             'cross_lifecycle'=>true,
             'secret_fields_exposed'=>false,
         );
