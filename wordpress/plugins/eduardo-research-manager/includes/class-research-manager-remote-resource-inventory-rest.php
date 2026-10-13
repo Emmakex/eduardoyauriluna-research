@@ -21,11 +21,17 @@ final class Eduardo_Research_Manager_Remote_Resource_Inventory_REST {
         $result=$this->inventory->list((string) $request['type'],array('page'=>(int) ($request->get_param('page')?:1),'per_page'=>(int) ($request->get_param('per_page')?:20),'language'=>(string) ($request->get_param('language')?:''),'status'=>(string) ($request->get_param('status')?:'')));
         return is_wp_error($result)?$result:$this->response($request,$result);
     }
-    public function item(WP_REST_Request $request): WP_REST_Response|WP_Error {$result=$this->inventory->get((string) $request['type'],(string) $request['identifier']);return is_wp_error($result)?$result:$this->response($request,$result);}
+    public function item(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $result=$this->inventory->get((string) $request['type'],(string) $request['identifier'],array('language'=>(string) ($request->get_param('language')?:'')));
+        return is_wp_error($result)?$result:$this->response($request,$result);
+    }
     public function augment_capabilities(mixed $response,mixed $handler,WP_REST_Request $request): mixed {
         if('/'.Eduardo_Research_Manager_Remote_REST::NAMESPACE.'/capabilities'!==$request->get_route()||is_wp_error($response)||!$response instanceof WP_REST_Response){return $response;}
         $payload=$response->get_data();if(!is_array($payload)||!is_array($payload['data']??null)){return $response;}
-        $payload['data']['resource_inventory']=array('available'=>true,'catalog'=>'/research-manager/v1/resources','list'=>'/research-manager/v1/resources/{type}','get'=>'/research-manager/v1/resources/{type}/{identifier}','types'=>$this->inventory->types(),'max_per_page'=>50,'arbitrary_wordpress_proxy'=>false);
+        $payload['data']['resource_inventory']=array(
+            'available'=>true,'catalog'=>'/research-manager/v1/resources','list'=>'/research-manager/v1/resources/{type}','get'=>'/research-manager/v1/resources/{type}/{identifier}',
+            'types'=>$this->inventory->types(),'languages'=>Eduardo_Research_Manager::contract()->languages(),'language_filter'=>true,'max_per_page'=>50,'arbitrary_wordpress_proxy'=>false,
+        );
         $response->set_data($payload);return $response;
     }
     private function type_permission(WP_REST_Request $request): bool|WP_Error {$type=sanitize_key((string) $request['type']);$types=$this->inventory->types();if(!isset($types[$type])){return new WP_Error('validation_failed','Unsupported Manager resource type.',array('status'=>400));}return $this->auth->permission($request,(string) $types[$type]['scope']);}
