@@ -40,14 +40,21 @@ final class Eduardo_Research_Manager_Remote_Page_State_REST {
     }
     public function create_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $params=$this->json($request); $changes=is_array($params['changes']??null)?$params['changes']:array();
-        $result=$this->operations->create_plan((string) $request['key'],$changes,$this->actor($request),(string) ($params['reason']??''));
-        return is_wp_error($result)?$result:$this->response($request,$result);
+        return $this->idem($request, fn() => $this->operations->create_plan((string) $request['key'],$changes,$this->actor($request),(string) ($params['reason']??'')));
     }
     public function get_plan(WP_REST_Request $request): WP_REST_Response|WP_Error { $r=$this->operations->get_plan((string) $request['plan_id']); return is_wp_error($r)?$r:$this->response($request,$r); }
-    public function apply(WP_REST_Request $request): WP_REST_Response|WP_Error { $params=$this->json($request); $r=$this->operations->apply((string) $request['plan_id'],!empty($params['confirm']),$this->actor($request)); return is_wp_error($r)?$r:$this->response($request,$r); }
+    public function apply(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $params=$this->json($request);
+        return $this->idem($request, fn() => $this->operations->apply((string) $request['plan_id'],!empty($params['confirm']),$this->actor($request)));
+    }
     public function get_operation(WP_REST_Request $request): WP_REST_Response|WP_Error { $r=$this->operations->get_operation((string) $request['operation_id']); return is_wp_error($r)?$r:$this->response($request,$r); }
-    public function verify(WP_REST_Request $request): WP_REST_Response|WP_Error { $r=$this->operations->verify((string) $request['operation_id'],$this->actor($request)); return is_wp_error($r)?$r:$this->response($request,$r); }
-    public function rollback(WP_REST_Request $request): WP_REST_Response|WP_Error { $params=$this->json($request); $r=$this->operations->rollback((string) $request['operation_id'],!empty($params['confirm']),$this->actor($request)); return is_wp_error($r)?$r:$this->response($request,$r); }
+    public function verify(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        return $this->idem($request, fn() => $this->operations->verify((string) $request['operation_id'],$this->actor($request)));
+    }
+    public function rollback(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $params=$this->json($request);
+        return $this->idem($request, fn() => $this->operations->rollback((string) $request['operation_id'],!empty($params['confirm']),$this->actor($request)));
+    }
 
     public function augment_capabilities(mixed $response,mixed $handler,WP_REST_Request $request): mixed {
         if ('/' . Eduardo_Research_Manager_Remote_REST::NAMESPACE . '/capabilities' !== $request->get_route() || is_wp_error($response) || ! $response instanceof WP_REST_Response) { return $response; }
@@ -57,6 +64,7 @@ final class Eduardo_Research_Manager_Remote_Page_State_REST {
             'available'=>true,'inspect'=>'/research-manager/v1/pages/{key}/state','plan'=>'/research-manager/v1/pages/{key}/state/plan','transport'=>'/research-manager/v1/pages/state',
             'mutable_fields'=>array('title','status'),'allowed_statuses'=>array('draft','publish'),'archive_status'=>'draft','slug_editable'=>false,'destructive_delete'=>false,
             'read_scope'=>'pages.read','write_scopes'=>array('pages.write','operations.apply'),'rollback_scopes'=>array('pages.write','operations.rollback'),'implicit_publish_on_slot_update'=>false,
+            'stale_preview_protection'=>true,'idempotency'=>true,
         );
         $data['page_control']=$control; $payload['data']=$data; $response->set_data($payload); return $response;
     }
@@ -65,7 +73,19 @@ final class Eduardo_Research_Manager_Remote_Page_State_REST {
         $ok=$this->auth->permission($request,$primary); if(is_wp_error($ok)||true!==$ok){return $ok;}
         $credentials=Eduardo_Research_Manager::remote_credentials(); $state=$credentials->state();
         if($credentials->has_scope($state,$secondary)){return true;}
+        Eduardo_Research_Manager::remote_audit()->record(array(
+            'request_id'=>(string) $request->get_header('x-research-manager-request-id'),'connection_id'=>(string) ($state['connection_id']??''),'wordpress_user_id'=>(int) ($state['wordpress_user_id']??0),
+            'method'=>$request->get_method(),'route'=>$request->get_route(),'scope'=>$secondary,'event'=>'remote-request-rejected','outcome'=>'blocked','error_code'=>'scope_denied',
+        ));
         return new WP_Error('scope_denied',sprintf('Remote Manager connection does not grant %s.',$secondary),array('status'=>403));
+    }
+    private function idem(WP_REST_Request $request, callable $callback): WP_REST_Response|WP_Error {
+        $state=Eduardo_Research_Manager::remote_credentials()->state();$connection_id=(string) ($state['connection_id']??'');$request_id=trim((string) $request->get_header('x-research-manager-request-id'));
+        $guard=Eduardo_Research_Manager::remote_guard();$fingerprint=$guard->request_fingerprint($request);$previous=$guard->validate_idempotency($connection_id,$request_id,$fingerprint);
+        if(is_wp_error($previous)){return $previous;}
+        if(is_array($previous)){return new WP_REST_Response(array('ok'=>true,'request_id'=>$request_id,'idempotent_replay'=>true,'data'=>(array) ($previous['result']??array())),200);}
+        $result=$callback();if(is_wp_error($result)){return $result;}$result=is_array($result)?$result:array('result'=>$result);$guard->remember_request($connection_id,$request_id,$fingerprint,$result);
+        return new WP_REST_Response(array('ok'=>true,'request_id'=>$request_id,'idempotent_replay'=>false,'data'=>$result),200);
     }
     private function actor(WP_REST_Request $request): array { $state=Eduardo_Research_Manager::remote_credentials()->state(); return array('connection_id'=>(string) ($state['connection_id']??''),'wordpress_user_id'=>get_current_user_id(),'request_id'=>(string) $request->get_header('x-research-manager-request-id')); }
     private function json(WP_REST_Request $request): array { $params=$request->get_json_params(); if(!is_array($params)){$params=$request->get_body_params();} return is_array($params)?$params:array(); }
