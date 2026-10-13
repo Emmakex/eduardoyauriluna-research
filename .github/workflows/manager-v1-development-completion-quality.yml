@@ -8,6 +8,7 @@ on:
       - 'scripts/manager-v1-identity-policy-contract-test.php'
       - 'scripts/manager-v1-development-completion-contract-test.php'
       - 'scripts/manager-v1-operation-observability-test.php'
+      - 'scripts/manager-v1-page-state-lifecycle-test.php'
       - '.github/workflows/manager-v1-development-completion-quality.yml'
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - 'scripts/manager-v1-identity-policy-contract-test.php'
       - 'scripts/manager-v1-development-completion-contract-test.php'
       - 'scripts/manager-v1-operation-observability-test.php'
+      - 'scripts/manager-v1-page-state-lifecycle-test.php'
       - '.github/workflows/manager-v1-development-completion-quality.yml'
 
 permissions:
@@ -48,16 +50,29 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operation-inventory-rest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           php -l wordpress/themes/eduardo-research/inc/research-model.php
           php -l scripts/manager-v1-identity-policy-contract-test.php
           php -l scripts/manager-v1-development-completion-contract-test.php
           php -l scripts/manager-v1-operation-observability-test.php
+          php -l scripts/manager-v1-page-state-lifecycle-test.php
       - name: Run canonical identity policy contract
         run: php scripts/manager-v1-identity-policy-contract-test.php
       - name: Run development completion source contract
         run: php scripts/manager-v1-development-completion-contract-test.php
       - name: Run unified operation observability test
         run: php scripts/manager-v1-operation-observability-test.php
+      - name: Run bounded Page state lifecycle test
+        run: php scripts/manager-v1-page-state-lifecycle-test.php
+      - name: Enforce shared Media domain boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'final class Eduardo_Research_Manager_Media_Ingest' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F 'private Eduardo_Research_Manager_Media_Ingest $ingest' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -F 'media_handle_sideload' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
+          ! grep -F 'wp_delete_attachment' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
       - name: Enforce no generic bypasses in new remote surfaces
         shell: bash
         run: |
