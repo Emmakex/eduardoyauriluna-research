@@ -51,6 +51,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-seo
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-pairing.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-translation-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-evidence-editor.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-identity-profile.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-connections.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-orcid-adapter.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-crossref-adapter.php';
@@ -69,6 +70,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-gre
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-greenfield-cli.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-workspace.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-admin.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-v1-controls-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-insight-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-line-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-object-admin.php';
@@ -109,6 +111,8 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rem
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-translations-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-evidence-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-evidence-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-identity-profile-operations.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-identity-profile-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-connections-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-seo-geo-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-seo-geo-rest.php';
@@ -119,6 +123,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-des
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-design-variants-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-design-readiness.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-design-readiness-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-v1-capabilities.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager.php';
 
@@ -131,6 +136,7 @@ register_activation_hook(__FILE__, static function (): void {
 
 add_action('plugins_loaded', array('Eduardo_Research_Manager', 'boot'));
 add_action('plugins_loaded', static function (): void {
+    if (is_admin()) { (new Eduardo_Research_Manager_V1_Controls_Admin())->register(); }
     (new Eduardo_Research_Manager_Remote_Semantic_Scope_Guard())->register();
     (new Eduardo_Research_Manager_Remote_Operation_Inventory_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Resource_Inventory_REST(Eduardo_Research_Manager::remote_rest()))->register();
@@ -147,12 +153,14 @@ add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_Lines_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Translations_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Evidence_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Identity_Profile_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Connections_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_SEO_GEO_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_SEO_GEO_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_Variants_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_V1_Capabilities())->register();
 }, 11);
 
 if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
