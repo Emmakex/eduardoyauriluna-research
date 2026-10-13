@@ -3,9 +3,19 @@
 declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
+function eduardo_research_canonical_identity_name(): string {
+    $stored = get_option('eduardo_research_identity', array());
+    if (is_array($stored) && isset($stored['name']) && is_scalar($stored['name'])) {
+        $name = trim((string) $stored['name']);
+        if ('' !== $name) { return $name; }
+    }
+    $fallback = trim((string) get_bloginfo('name'));
+    return '' !== $fallback ? $fallback : 'Eduardo Jose Yauri Luna';
+}
+
 function eduardo_research_default_model(?string $language = null): array {
     $language = $language ?: eduardo_research_current_language();
-    $name = get_bloginfo('name') ?: ('es' === $language ? 'Investigador' : 'Researcher');
+    $name = eduardo_research_canonical_identity_name();
     if ('es' === $language) {
         return array(
             'hero-eyebrow'=>'Perfil de investigación',
@@ -31,7 +41,7 @@ function eduardo_research_default_model(?string $language = null): array {
         'research-lines-heading'=>'Research agenda',
         'research-lines-intro'=>'Active research lines, questions and methods are published here with clear provenance.',
         'selected-outputs-heading'=>'Selected outputs',
-        'selected-outputs-intro'=>'Publications, projects, software and datasets are represented as first-class research objects.',
+        'selected-outputs-intro'=>'Scholarly and research outputs are represented as first-class research objects.',
         'academic-identifiers-heading'=>'Verified academic identity',
         'latest-insights-heading'=>'Latest research notes',
         'final-cta-heading'=>'Research and collaboration',
@@ -78,7 +88,10 @@ function eduardo_research_model(): array {
     $option = 'es' === $language ? 'eduardo_research_model_es' : 'eduardo_research_model';
     $stored = get_option($option, array());
     if (! is_array($stored)) { return $defaults; }
-    return array_replace($defaults, array_intersect_key($stored, $defaults));
+    $model = array_replace($defaults, array_intersect_key($stored, $defaults));
+    // Researcher identity is canonical Manager evidence, never a free editorial slot.
+    $model['researcher-name'] = eduardo_research_canonical_identity_name();
+    return $model;
 }
 
 function eduardo_research_slot(string $key): string {
