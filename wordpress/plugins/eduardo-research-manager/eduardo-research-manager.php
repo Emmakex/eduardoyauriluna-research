@@ -31,6 +31,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-nav
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-assignment-editor.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-ingest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-insight-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-insight-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-line-resource.php';
