@@ -36,7 +36,8 @@ final class Eduardo_Research_Manager_V1_Capabilities {
         );
 
         $data['manager_v1_development']=array(
-            'status'=>'implementation-complete-pending-ci-contract-closeout',
+            'status'=>'development-complete',
+            'implementation_ci_green'=>true,
             'production_acceptance_frozen'=>true,
             'normal_operation_ssh_required'=>false,
             'normal_operation_wordpress_credentials_shared'=>false,
