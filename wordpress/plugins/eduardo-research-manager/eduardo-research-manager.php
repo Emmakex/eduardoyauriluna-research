@@ -26,6 +26,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-sna
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-executor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-editor.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-page-state-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-navigation.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-media-editor.php';
@@ -38,6 +39,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-out
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-project-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-software-resource.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-dataset-resource.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-resource-inventory.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-object-editor.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rendered-verifier.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remediation.php';
@@ -77,11 +79,16 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-git
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-crossref-admin.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-credentials.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-audit.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-operation-inventory.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-request-guard.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-semantic-scope-guard.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-operation-inventory-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-pages-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-page-state-operations.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-page-state-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-resource-inventory-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-navigation-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-media-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-media-metadata-operations.php';
@@ -101,6 +108,7 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-rem
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-translations-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-evidence-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-evidence-rest.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-connections-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-seo-geo-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-seo-geo-rest.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-remote-seo-geo-readiness-rest.php';
@@ -123,7 +131,10 @@ register_activation_hook(__FILE__, static function (): void {
 add_action('plugins_loaded', array('Eduardo_Research_Manager', 'boot'));
 add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_Semantic_Scope_Guard())->register();
+    (new Eduardo_Research_Manager_Remote_Operation_Inventory_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Resource_Inventory_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Pages_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Page_State_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Navigation_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Media_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Media_Metadata_REST(Eduardo_Research_Manager::remote_rest()))->register();
@@ -135,6 +146,7 @@ add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_Lines_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Translations_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Evidence_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Connections_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_SEO_GEO_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_SEO_GEO_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_REST(Eduardo_Research_Manager::remote_rest()))->register();
