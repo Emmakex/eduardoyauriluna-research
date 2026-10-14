@@ -17,6 +17,7 @@ final class Eduardo_Research_Manager_Media_Ingest {
         $checksum = hash_file('sha256', (string) $validated['tmp_name']);
         if (! is_string($checksum) || '' === $checksum) { return $this->error('validation_failed', 'Unable to checksum uploaded Media binary.', 400); }
 
+        require_once ABSPATH . 'wp-admin/includes/file.php';
         $staged = wp_tempnam((string) $validated['filename']);
         if (! is_string($staged) || '' === $staged || ! copy((string) $validated['tmp_name'], $staged)) {
             if (is_string($staged) && '' !== $staged && file_exists($staged)) { @unlink($staged); }
