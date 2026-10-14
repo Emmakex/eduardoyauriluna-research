@@ -41,7 +41,7 @@ $first = $audit->record(array(
     'token'=>'must-never-be-stored',
     'authorization'=>'Bearer must-never-be-stored',
 ));
-$audit->record(array(
+$blockedEvent = array(
     'request_id'=>'req-b',
     'connection_id'=>'conn-2',
     'wordpress_user_id'=>1,
@@ -54,7 +54,13 @@ $audit->record(array(
     'operation_id'=>'op-b',
     'plan_id'=>'plan-b',
     'reason'=>'negative permission proof',
-));
+);
+$blockedFirst = $audit->record($blockedEvent);
+$blockedDuplicate = $audit->record($blockedEvent);
+check(
+    (string) ($blockedFirst['event_id'] ?? '') === (string) ($blockedDuplicate['event_id'] ?? ''),
+    'an exact duplicate audit event must reuse the original canonical event'
+);
 $audit->record(array(
     'request_id'=>'req-c',
     'connection_id'=>'conn-1',
@@ -72,7 +78,7 @@ foreach (array('token','token_hash','authorization','password','secret','cookie'
 }
 
 $by_request = $audit->query(array('request_id'=>'req-b'));
-check(1 === $by_request['total'], 'request_id filter must return one record');
+check(1 === $by_request['total'], 'request_id filter must return one record after an exact duplicate write');
 check('req-b' === $by_request['items'][0]['request_id'], 'request_id filter returned wrong record');
 check('scope_denied' === $by_request['items'][0]['error_code'], 'correlated denial lost error code');
 
