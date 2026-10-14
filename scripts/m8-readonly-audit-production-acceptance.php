@@ -168,19 +168,27 @@ final class M8ReadonlyAuditProductionAcceptance
             throw new RuntimeException('Unable to read Remote Audit source contract.');
         }
 
+        $compactSource = str_replace([" ", "\t", "\r", "\n"], '', $source);
+        $compactSourceLower = strtolower($compactSource);
         $fields = [
             'event_id','timestamp','request_id','connection_id','wordpress_user_id','method','route',
             'scope','event','outcome','error_code','operation_id','plan_id','reason',
         ];
         foreach ($fields as $field) {
-            $this->check('audit-field-' . str_replace('_', '-', $field), str_contains($source, "'{$field}' =>"), ['field'=>$field]);
+            $singleQuoted = "'{$field}'=>";
+            $doubleQuoted = '"' . $field . '"=>';
+            $this->check(
+                'audit-field-' . str_replace('_', '-', $field),
+                str_contains($compactSource, $singleQuoted) || str_contains($compactSource, $doubleQuoted),
+                ['field'=>$field]
+            );
         }
         foreach (self::FORBIDDEN_KEYS as $key) {
-            $singleQuoted = "'" . $key . "' =>";
-            $doubleQuoted = '"' . $key . '" =>';
+            $singleQuoted = "'" . strtolower($key) . "'=>";
+            $doubleQuoted = '"' . strtolower($key) . '"=>';
             $this->check(
                 'audit-forbids-' . str_replace('_', '-', $key),
-                !str_contains(strtolower($source), strtolower($singleQuoted)) && !str_contains(strtolower($source), strtolower($doubleQuoted)),
+                !str_contains($compactSourceLower, $singleQuoted) && !str_contains($compactSourceLower, $doubleQuoted),
                 ['forbidden_key'=>$key]
             );
         }
