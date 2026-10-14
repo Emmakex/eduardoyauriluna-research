@@ -44,9 +44,13 @@ jobs:
       - name: Enforce audit whitelist and no secret fields
         run: |
           grep -F "Bounded non-secret audit trail" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -E "'event_id'[[:space:]]*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
           grep -E "'request_id'[[:space:]]*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
           grep -E "'connection_id'[[:space:]]*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
           ! grep -E "['\"](token|token_hash|authorization|password|secret|cookie)['\"][[:space:]]*=>" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-audit.php
+          grep -F '\$compactSource = str_replace' scripts/m8-readonly-audit-production-acceptance.php
+          grep -F 'str_contains(\$compactSource, \$singleQuoted)' scripts/m8-readonly-audit-production-acceptance.php
+          grep -F 'str_contains(\$compactSourceLower, \$singleQuoted)' scripts/m8-readonly-audit-production-acceptance.php
           grep -F "assertNoSecretKeys" scripts/m8-readonly-audit-production-acceptance.php
       - name: Enforce evidence secret guard and revocation proof
         run: |
