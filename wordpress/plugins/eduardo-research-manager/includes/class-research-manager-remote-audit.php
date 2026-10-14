@@ -24,7 +24,9 @@ final class Eduardo_Research_Manager_Remote_Audit {
             'stored_verification_status'=>substr(sanitize_key((string) ($record['stored_verification_status']??'')),0,60),'rendered_verification_status'=>substr(sanitize_key((string) ($record['rendered_verification_status']??'')),0,60),
             'rollback_available'=>(bool) ($record['rollback_available']??false),'rollback_status'=>substr(sanitize_key((string) ($record['rollback_status']??'')),0,60),'reason'=>substr($this->text($record['reason']??''),0,500),
         );
-        $records=get_option(self::OPTION,array());$records=is_array($records)?array_values($records):array();array_unshift($records,$entry);$records=array_slice($records,0,self::MAX_RECORDS);
+        $records=get_option(self::OPTION,array());$records=is_array($records)?array_values($records):array();
+        foreach($records as $existing){if(is_array($existing)&&$this->same_event($existing,$entry)){return $existing;}}
+        array_unshift($records,$entry);$records=array_slice($records,0,self::MAX_RECORDS);
         if(false===get_option(self::OPTION,false)){add_option(self::OPTION,$records,'',false);}else{update_option(self::OPTION,$records,false);}return $entry;
     }
 
@@ -84,6 +86,10 @@ final class Eduardo_Research_Manager_Remote_Audit {
         if(array_key_exists('requested',$value)&&empty($value['requested'])){return 'not-requested';}
         if(!array_key_exists('verified',$value)||null===$value['verified']){return 'pending';}
         return !empty($value['verified'])?'verified':'failed';
+    }
+    private function same_event(array $existing,array $candidate): bool {
+        foreach($candidate as $key=>$value){if(in_array($key,array('event_id','timestamp'),true)){continue;}if(!array_key_exists($key,$existing)||$existing[$key]!==$value){return false;}}
+        return true;
     }
     private function target_summary(mixed $value): array {if(!is_array($value)){return array();}$allowed=array('resource','type','key','page_id','post_id','attachment_id','group','record_id','language','first_id','second_id','location');$summary=array();foreach($allowed as $key){if(!array_key_exists($key,$value)||!is_scalar($value[$key])){continue;}$summary[$key]=is_int($value[$key])?(int) $value[$key]:substr($this->text($value[$key]),0,120);}return $summary;}
     private function text(mixed $value): string {return is_scalar($value)?sanitize_text_field((string) $value):'';}
