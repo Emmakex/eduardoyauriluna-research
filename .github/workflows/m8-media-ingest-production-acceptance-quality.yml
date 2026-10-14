@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/m8-media-ingest-production-acceptance.php'
       - 'scripts/remote-media-ingest-lifecycle-test.php'
+      - 'scripts/media-ingest-rest-bootstrap-test.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-rest.php'
@@ -26,8 +28,15 @@ jobs:
         run: |
           php -l scripts/m8-media-ingest-production-acceptance.php
           php -l scripts/remote-media-ingest-lifecycle-test.php
+          php -l scripts/media-ingest-rest-bootstrap-test.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-operations.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-ingest-rest.php
+      - name: Prove REST bootstrap loads WordPress file helpers before staging
+        run: |
+          php scripts/media-ingest-rest-bootstrap-test.php
+          grep -F "require_once ABSPATH . 'wp-admin/includes/file.php';" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-ingest.php
+          grep -F "wp_tempnam" scripts/media-ingest-rest-bootstrap-test.php
       - name: Run isolated ingest lifecycle including staging cleanup
         run: php scripts/remote-media-ingest-lifecycle-test.php
       - name: Enforce generated local fixture and multipart upload
