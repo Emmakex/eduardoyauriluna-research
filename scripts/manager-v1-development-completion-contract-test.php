@@ -104,9 +104,16 @@ check(str_contains($v1caps,"['publication_state']=array('available'=>true,'allow
 check(str_contains($v1caps,"['local_admin_parity']=true"),'Capabilities must advertise Page State local Admin parity');
 check(str_contains($v1caps,"'registered_theme_targets_only'=>true"),'Capabilities must advertise bounded Theme Page targets');
 check(str_contains($v1caps,"'arbitrary_urls'=>false"),'Capabilities must reject arbitrary CTA URLs');
-check(str_contains($v1caps,"'production_acceptance_frozen'=>true"),'Capabilities must keep production acceptance frozen until development closeout');
+check(str_contains($v1caps,"'status'=>'production-accepted'"),'Capabilities must advertise v1 as production accepted after M8 closeout');
+check(str_contains($v1caps,"'production_acceptance_frozen'=>false"),'Capabilities must unfreeze production acceptance after closeout');
+check(str_contains($v1caps,"'production_acceptance_status'=>'complete'"),'Capabilities must advertise production acceptance completion');
+check(str_contains($v1caps,"'site_scope'=>'single-site'"),'Capabilities must identify the accepted v1 as single-site');
+check(str_contains($v1caps,"'future_multiclient_saas_in_v1'=>false"),'Capabilities must keep future multi-client SaaS productisation outside v1');
+check(str_contains($v1caps,"'normal_operation_ssh_required'=>false"),'Capabilities must keep normal SSH bypass disabled');
+check(str_contains($v1caps,"'normal_operation_wordpress_credentials_shared'=>false"),'Capabilities must keep shared WordPress credentials out of normal operation');
+check(str_contains($v1caps,"'arbitrary_wordpress_rest_proxy'=>false"),'Capabilities must keep arbitrary WordPress REST proxy disabled');
 
 $bootstrap=source('wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php');
 foreach(array('Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST','Remote_Identity_Profile_REST','V1_Controls_Admin','V1_Capabilities') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
 
-fwrite(STDOUT,"Manager v1 development completion source contract: PASS\n");
+fwrite(STDOUT,"Manager v1 development/production closeout source contract: PASS\n");
