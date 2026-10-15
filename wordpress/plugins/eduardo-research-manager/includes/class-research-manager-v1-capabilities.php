@@ -36,9 +36,16 @@ final class Eduardo_Research_Manager_V1_Capabilities {
         );
 
         $data['manager_v1_development']=array(
-            'status'=>'development-complete',
+            'status'=>'production-accepted',
             'implementation_ci_green'=>true,
-            'production_acceptance_frozen'=>true,
+            'production_acceptance_frozen'=>false,
+            'production_acceptance_status'=>'complete',
+            'production_pair'=>array(
+                'theme'=>'1.0.0',
+                'manager'=>defined('EDUARDO_RESEARCH_MANAGER_VERSION')?EDUARDO_RESEARCH_MANAGER_VERSION:'',
+            ),
+            'site_scope'=>'single-site',
+            'future_multiclient_saas_in_v1'=>false,
             'normal_operation_ssh_required'=>false,
             'normal_operation_wordpress_credentials_shared'=>false,
             'local_admin_shared_service_parity'=>true,
