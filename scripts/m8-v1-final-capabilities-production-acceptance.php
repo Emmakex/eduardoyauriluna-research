@@ -209,7 +209,12 @@ final class M8V1FinalCapabilitiesProductionAcceptance
     }
 
     private function data(array $response): array {return is_array($response['data']??null)?$response['data']:[];}
-    private function host(string $url): string {return strtolower((string)(parse_url($url,PHP_URL_HOST)?:''));}
+    private function host(string $url): string
+    {
+        $url = trim($url);
+        if ('' !== $url && !str_contains($url, '://')) $url = 'https://' . $url;
+        return strtolower((string) (parse_url($url, PHP_URL_HOST) ?: ''));
+    }
     private function normalise(array $items): array {$items=array_values(array_unique(array_map('strval',$items)));sort($items);return $items;}
 
     private function check(string $id,bool $pass,array $details): void
