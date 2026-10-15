@@ -94,7 +94,19 @@ final class Eduardo_Research_Manager_Remote_Objects_REST {
         $kind = sanitize_key((string) $request['kind']);
         $post_id = absint($request['post_id']);
         $result = Eduardo_Research_Manager::object_editor()->inspect($kind, $post_id);
-        return is_wp_error($result) ? $result : $this->response($request, $result);
+        if (is_wp_error($result)) {
+            $code = (string) $result->get_error_code();
+            if (in_array($code, array(
+                'research_manager_output_missing',
+                'research_manager_project_missing',
+                'research_manager_software_missing',
+                'research_manager_dataset_missing',
+            ), true)) {
+                $result->add_data(array('status'=>404), $code);
+            }
+            return $result;
+        }
+        return $this->response($request, $result);
     }
 
     public function create_plan(WP_REST_Request $request): WP_REST_Response|WP_Error {
