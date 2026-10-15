@@ -73,12 +73,18 @@ final class M8V1FinalCapabilitiesProductionAcceptance
                 && ($versions['api'] ?? '') === 'v1',
                 ['status_manager'=>$status['manager_version'] ?? null,'status_theme'=>$status['theme_version'] ?? null,'versions'=>$versions]
             );
+
+            $mode = $status['mode'] ?? null;
+            $greenfield = is_array($mode)
+                ? (($mode['mode'] ?? '') === 'greenfield' && !empty($mode['greenfield']) && empty($mode['migration']))
+                : ($mode === 'greenfield');
+
             $this->check('production-site-contract',
-                ($status['mode'] ?? '') === 'greenfield'
+                $greenfield
                 && $this->host((string) ($status['canonical_domain'] ?? '')) === 'eduardoyauriluna.com'
                 && $languages === ['en','es']
                 && !empty($status['preset']['compatible']),
-                ['mode'=>$status['mode'] ?? null,'canonical_domain'=>$status['canonical_domain'] ?? null,'languages'=>$languages,'preset'=>$status['preset'] ?? null]
+                ['mode'=>$mode,'canonical_domain'=>$status['canonical_domain'] ?? null,'languages'=>$languages,'preset'=>$status['preset'] ?? null]
             );
 
             $granted = $this->normalise((array) ($caps['granted_scopes'] ?? []));
