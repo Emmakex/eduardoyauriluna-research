@@ -94,9 +94,13 @@ const httpServer = createServer(async (req, res) => {
     json(res, 400, { ok: false, code: 'method_required' });
     return;
   }
+  if (!req.url) {
+    json(res, 400, { ok: false, code: 'url_required' });
+    return;
+  }
 
   try {
-    const mcpRequest = req as IncomingMessage & { method: string };
+    const mcpRequest = req as IncomingMessage & { method: string; url: string };
     await handleMcp(mcpRequest, res);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unhandled request error';
