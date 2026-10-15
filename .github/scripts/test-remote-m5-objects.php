@@ -218,8 +218,14 @@ foreach (array_reverse(array('output','project','software','dataset')) as $kind)
 }
 foreach (array_reverse(array('output','project','software','dataset')) as $kind) {
     m5o_rollback($token, (string) $created[$kind]['operation_id']);
-    if (get_post((int) $created[$kind]['post_id']) instanceof WP_Post) {
+    $post_id = (int) $created[$kind]['post_id'];
+    if (get_post($post_id) instanceof WP_Post) {
         m5o_fail('creation rollback did not remove ' . $kind, $created[$kind]);
+    }
+    $missing = m5o_request('GET', 'research-objects/' . $kind . '/' . $post_id, $token);
+    $expected_code = 'research_manager_' . $kind . '_missing';
+    if (404 !== $missing->get_status() || $expected_code !== (string) ($missing->get_data()['code'] ?? '')) {
+        m5o_fail('missing Research Object did not return semantic 404 for ' . $kind, $missing->get_data());
     }
 }
 
