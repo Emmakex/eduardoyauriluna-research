@@ -17,10 +17,10 @@ function clientWith(fetchImpl: typeof fetch): ResearchManagerClient {
 }
 
 test('read-only status call uses only the fixed Research Manager v1 route and signed request headers', async () => {
-  let seenUrl: URL | null = null;
+  let seenUrl = '';
   let seenInit: RequestInit | undefined;
   const client = clientWith(async (input, init) => {
-    seenUrl = new URL(input instanceof Request ? input.url : input.toString());
+    seenUrl = input instanceof Request ? input.url : input.toString();
     seenInit = init;
     return new Response(JSON.stringify({ ok: true, data: { manager_version: '0.10.4' } }), {
       status: 200,
@@ -30,8 +30,10 @@ test('read-only status call uses only the fixed Research Manager v1 route and si
 
   const result = await client.status();
   assert.deepEqual(result, { manager_version: '0.10.4' });
-  assert.equal(seenUrl?.origin, 'https://eduardoyauriluna.com');
-  assert.equal(seenUrl?.pathname, '/wp-json/research-manager/v1/status');
+  assert.notEqual(seenUrl, '');
+  const parsedUrl = new URL(seenUrl);
+  assert.equal(parsedUrl.origin, 'https://eduardoyauriluna.com');
+  assert.equal(parsedUrl.pathname, '/wp-json/research-manager/v1/status');
   assert.equal(seenInit?.method, 'GET');
 
   const headers = new Headers(seenInit?.headers);
