@@ -1,0 +1,48 @@
+name: Research Manager MCP Bridge Quality
+
+on:
+  pull_request:
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - 'docs/57-chatgpt-mcp-bridge.md'
+      - '.github/workflows/research-manager-mcp-bridge-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - 'docs/57-chatgpt-mcp-bridge.md'
+      - '.github/workflows/research-manager-mcp-bridge-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: bridge/research-manager-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Enforce bounded bridge surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "export type ResearchManagerReadRoute = '/status' | '/versions' | '/capabilities';" src/manager-client.ts
+          grep -F "'research_status'" src/server.ts
+          grep -F "'research_versions'" src/server.ts
+          grep -F "'research_capabilities'" src/server.ts
+          ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
+          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 3
