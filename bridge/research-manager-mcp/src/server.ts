@@ -15,9 +15,11 @@ async function withCapability(capability: CommercialCapability, operation: () =>
   return toolResult(await operation());
 }
 
+const languageSchema = z.string().regex(/^[a-z][a-z0-9-]{1,15}$/);
+
 export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
   const server = new McpServer(
-    { name: 'site-control-mcp', version: '0.5.0' },
+    { name: 'site-control-mcp', version: '0.6.0' },
     {
       instructions:
         `This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) ` +
@@ -78,19 +80,41 @@ export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
       description:
         'Inspect one registered Theme-owned page in one enabled language. The page key and language must belong to the tenant contract.',
       inputSchema: z.object({
-        key: z
-          .string()
-          .regex(/^[a-z0-9][a-z0-9-]{0,62}$/)
-          .describe('Registered page key, for example home or about'),
-        language: z
-          .string()
-          .regex(/^[a-z][a-z0-9-]{1,15}$/)
-          .describe('Enabled lowercase language code, for example en or es'),
+        key: z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/).describe('Registered page key, for example home or about'),
+        language: languageSchema.describe('Enabled lowercase language code, for example en or es'),
       }),
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ key, language }) =>
-      withCapability('pages.read', () => adapter.inspectPage({ key, language })),
+    async ({ key, language }) => withCapability('pages.read', () => adapter.inspectPage({ key, language })),
+  );
+
+  server.registerTool(
+    'site_insights_list',
+    {
+      title: 'List managed insights',
+      description:
+        'List Research Insights managed by the bound tenant. Optionally restrict the inventory to one enabled language.',
+      inputSchema: z.object({
+        language: languageSchema.optional().describe('Optional enabled lowercase language code, for example en or es'),
+      }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ language }) =>
+      withCapability('insights.read', () => adapter.listInsights(language ? { language } : {})),
+  );
+
+  server.registerTool(
+    'site_insight_inspect',
+    {
+      title: 'Inspect managed insight',
+      description:
+        'Inspect one explicitly managed Research Insight by its positive WordPress post ID. Unmanaged posts are rejected by the adapter backend.',
+      inputSchema: z.object({
+        postId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).describe('Positive managed Insight post ID'),
+      }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ postId }) => withCapability('insights.read', () => adapter.inspectInsight({ postId })),
   );
 
   return server;

@@ -82,7 +82,7 @@ const httpServer = createServer(async (req,res)=>{
   try { pathname=new URL(req.url ?? '/','http://localhost').pathname; } catch { json(res,400,{ok:false,code:'invalid_url'}); return; }
   if (pathname==='/healthz') {
     if (req.method!=='GET') { json(res,405,{ok:false,code:'method_not_allowed'}); return; }
-    const body:Record<string,unknown>={ok:true,service:'site-control-mcp',version:'0.5.0',phase:'read-surfaces-pages',routing:config.sharedRouting?'shared':'single-tenant'};
+    const body:Record<string,unknown>={ok:true,service:'site-control-mcp',version:'0.6.0',phase:'read-surfaces-pages-insights',routing:config.sharedRouting?'shared':'single-tenant'};
     if (!config.sharedRouting) body.tenant=registry.metadata(config.activeTenantId);
     json(res,200,body); return;
   }

@@ -3,6 +3,14 @@ export interface SitePageInspectionRequest {
   language: string;
 }
 
+export interface SiteInsightListRequest {
+  language?: string;
+}
+
+export interface SiteInsightInspectionRequest {
+  postId: number;
+}
+
 export interface SiteControlAdapter {
   readonly kind: string;
   readonly tenantId: string;
@@ -13,4 +21,6 @@ export interface SiteControlAdapter {
   capabilities(): Promise<unknown>;
   listPages(): Promise<unknown>;
   inspectPage(request: SitePageInspectionRequest): Promise<unknown>;
+  listInsights(request: SiteInsightListRequest): Promise<unknown>;
+  inspectInsight(request: SiteInsightInspectionRequest): Promise<unknown>;
 }
