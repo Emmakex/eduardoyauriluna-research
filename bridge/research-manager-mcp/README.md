@@ -4,7 +4,7 @@ Commercial MCP control core with `eduardoyauriluna.com` as the first reference t
 
 The product is designed so additional customers can be provisioned without forking the codebase.
 
-## Current surface — v0.2.0 foundation
+## Current surface — v0.3.0 tenant isolation
 
 The accepted read-only surface remains compatible and exposes exactly three MCP tools:
 
@@ -17,9 +17,10 @@ There is no arbitrary REST/path proxy. The Research Manager adapter only calls t
 ## Commercial architecture
 
 ```text
-MCP client
+MCP client / workspace
+  → authenticated principal
   → Site Control MCP core
-  → registered tenant
+  → allowed tenant
   → registered adapter
   → bounded customer-side manager/connector
   → customer system
@@ -27,24 +28,43 @@ MCP client
 
 The runtime has a closed tenant registry. A caller cannot provide an arbitrary backend URL or credential.
 
-### Preferred tenant registry mode
+## Shared multi-tenant mode
 
-`MCP_TENANTS_JSON` contains non-secret tenant definitions. Each definition references the environment-variable name holding its Manager credential.
+Shared routing is opt-in with `MCP_SHARED_ROUTING=true`.
+
+- tenants are provisioned through `MCP_TENANTS_JSON`;
+- principals are provisioned through `MCP_PRINCIPALS_JSON`;
+- both tenant backend credentials and principal bearer credentials are referenced by secret name rather than embedded in JSON;
+- each principal has an explicit allowlist of tenant IDs;
+- unknown principals, unknown tenants and cross-tenant access fail closed;
+- the shared endpoint is `/mcp/{tenant-id}`;
+- rate/usage counters are isolated by `principal × tenant`;
+- access decisions emit structured audit events with principal ID, tenant ID and outcome, never bearer material.
 
 Example:
 
 ```bash
-export MCP_TENANTS_JSON='[{"id":"eduardo-research","label":"Eduardo Research","adapter":"research-manager","baseUrl":"https://eduardoyauriluna.com","readTokenEnv":"TENANT_EDUARDO_READ_TOKEN","languages":["en","es"]}]'
-export TENANT_EDUARDO_READ_TOKEN='...'
-export MCP_TENANT_ID='eduardo-research'
+export MCP_TENANTS_JSON='[{"id":"client-one","label":"Client One","adapter":"research-manager","baseUrl":"https://client-one.example","readTokenEnv":"CLIENT_ONE_MANAGER_TOKEN","languages":["es","en"]},{"id":"client-two","label":"Client Two","adapter":"research-manager","baseUrl":"https://client-two.example","readTokenEnv":"CLIENT_TWO_MANAGER_TOKEN","languages":["es","en"]}]'
+export CLIENT_ONE_MANAGER_TOKEN='...'
+export CLIENT_TWO_MANAGER_TOKEN='...'
+
+export MCP_PRINCIPALS_JSON='[{"id":"agency-workspace","bearerTokenEnv":"AGENCY_BEARER_TOKEN","tenants":["client-one","client-two"]},{"id":"client-one-workspace","bearerTokenEnv":"CLIENT_ONE_BEARER_TOKEN","tenants":["client-one"]}]'
+export AGENCY_BEARER_TOKEN='...'
+export CLIENT_ONE_BEARER_TOKEN='...'
+export MCP_SHARED_ROUTING=true
+export MCP_REQUESTS_PER_MINUTE=120
 npm run dev
 ```
 
-The registry JSON contains no bearer secret.
+The agency principal can connect to either registered tenant endpoint. The client-one principal is denied if it tries `/mcp/client-two` even when it knows that tenant ID.
 
-### Legacy/reference single-tenant mode
+## Secret-provider boundary
 
-For the Eduardo reference lab the previous variables remain supported:
+Configuration resolves credentials through the `SecretResolver` interface. v0.3.0 ships an environment-backed implementation, but the tenant/principal contracts depend on secret references, so Vault/KMS/managed secret-store resolvers can be added without changing tenant definitions or MCP tools.
+
+## Private/single-tenant mode
+
+For private deployments and the Eduardo reference lab, the previous variables remain supported:
 
 ```bash
 export ERM_BASE_URL=https://eduardoyauriluna.com
@@ -53,12 +73,21 @@ export MCP_TENANT_ID=eduardo-research
 npm run dev
 ```
 
+The endpoint remains:
+
+```text
+http://127.0.0.1:8787/mcp
+```
+
+A non-loopback single-tenant deployment requires the legacy outer `MCP_BEARER_TOKEN`. Shared mode does not use that variable; it requires configured principals.
+
 ## Runtime
 
 Requirements:
 
 - Node.js 22+
-- a least-privilege backend credential for the selected tenant
+- a least-privilege backend credential for each provisioned tenant
+- an authenticated principal profile for every shared-mode MCP workspace/client
 
 Health check:
 
@@ -66,31 +95,26 @@ Health check:
 curl -s http://127.0.0.1:8787/healthz
 ```
 
-MCP endpoint:
+In shared mode the health response does not enumerate tenant metadata.
 
-```text
-http://127.0.0.1:8787/mcp
-```
-
-Use MCP Inspector against the Streamable HTTP endpoint for protocol/tool acceptance.
+Use MCP Inspector against the relevant Streamable HTTP endpoint for protocol/tool acceptance.
 
 ## Security boundary
 
 - backend credentials are server-side only;
 - tenant configuration is closed and server-controlled;
-- secrets are referenced outside the registry definition;
+- principal-to-tenant access is deny-by-default;
+- secrets are referenced outside tenant/principal definitions;
 - the MCP client cannot supply arbitrary Manager/backend routes;
-- loopback is the default bind address;
-- binding outside loopback requires a distinct `MCP_BEARER_TOKEN`;
 - Host and Origin allowlists remain enforced;
 - adapter errors expose typed non-secret diagnostics only;
-- tenant IDs are identifiers, not authorization.
-
-A shared write-capable commercial endpoint will additionally require authenticated principal → allowed tenant mapping before multi-tenant routing is enabled.
+- tenant IDs are identifiers, not authorization;
+- rate/usage counters are independent for each principal and tenant;
+- structured access audit events contain identifiers/outcomes but no tokens.
 
 ## Write roadmap
 
-Broad write tools are intentionally deferred until the commercial tenant/auth boundary is accepted. Phase 2 preserves the connected gateway semantics, including for Research Manager:
+Broad write tools remain deferred until this tenant-isolation slice is accepted in CI and then proven against the Eduardo reference tenant. Phase 2B will preserve the connected gateway semantics, including for Research Manager:
 
 `Preview → explicit Apply → Verify → Rollback`
 
