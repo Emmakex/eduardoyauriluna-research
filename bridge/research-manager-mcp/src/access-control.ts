@@ -17,10 +17,15 @@ export class PrincipalRegistry {
 
   constructor(principals: readonly PrincipalAccess[]) {
     const ids = new Set<string>();
+    const bearerTokens = new Set<string>();
     for (const principal of principals) {
       if (ids.has(principal.id)) throw new Error(`Duplicate principal id: ${principal.id}`);
       ids.add(principal.id);
       if (!principal.bearerToken) throw new Error(`Principal ${principal.id} is missing bearer token material`);
+      if (bearerTokens.has(principal.bearerToken)) {
+        throw new Error(`Duplicate bearer credential assigned to multiple principals`);
+      }
+      bearerTokens.add(principal.bearerToken);
       if (principal.allowedTenantIds.length === 0) {
         throw new Error(`Principal ${principal.id} must be allowed at least one tenant`);
       }
