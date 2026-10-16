@@ -1,61 +1,33 @@
 # Site Control MCP — commercial core
 
-Commercial MCP control core with `eduardoyauriluna.com` as the first reference tenant and Research Manager as the first bounded adapter.
+Reusable commercial MCP control core. `eduardoyauriluna.com` is the first reference tenant and Research Manager is the first bounded adapter; additional customers are provisioned without forking the codebase.
 
-The product is designed so additional customers can be provisioned without forking the codebase.
+## Current surface — v0.10.0 read platform
 
-## Current surface — v0.9.0 read platform
-
-The current MCP surface is read-only and exposes 22 bounded tools:
+The MCP is read-only and exposes 32 bounded tools:
 
 - `research_status`, `research_versions`, `research_capabilities` — `site.read`;
-- `site_pages_list`, `site_page_inspect` — `pages.read`;
-- `site_insights_list`, `site_insight_inspect` — `insights.read`;
-- `site_research_objects_list`, `site_research_object_inspect`, `site_research_lines_list`, `site_research_line_inspect` — `research.read`;
-- `site_translations_list`, `site_translation_inspect` — `translations.read`;
-- `site_evidence_inventory`, `site_evidence_identity`, `site_evidence_list`, `site_evidence_inspect` — `evidence.read`;
-- `site_navigation_inspect` — `navigation.read`;
-- `site_media_list`, `site_media_inspect`, `site_media_diagnostics`, `site_media_diagnostic_inspect` — `media.read`.
+- Pages — 2 tools under `pages.read`;
+- Insights — 2 tools under `insights.read`;
+- Research Objects/Lines — 4 tools under `research.read`;
+- Translations — 2 tools under `translations.read`;
+- Evidence/identity inspection — 4 tools under `evidence.read`;
+- Navigation — 1 tool under `navigation.read`;
+- Media inventory/diagnostics — 4 tools under `media.read`;
+- SEO/GEO diagnostics/indexability/actions/readiness — 7 tools under `seo.read`;
+- Design state/variants/readiness — 3 tools under `design.read`.
 
-Research Manager remains the first adapter. The MCP caller never supplies a Manager route, backend URL or arbitrary WordPress resource.
+Every tool is additionally subject to the connected backend's own scope checks. Research Manager SEO/GEO reads require `site.diagnostics + seo.read`; Design requires `design.read`; Navigation currently maps to the Manager's bounded `pages.read` navigation contract.
 
-### Pages
+## SEO/GEO boundary
 
-- `GET /research-manager/v1/pages`;
-- `GET /research-manager/v1/pages/{registered-key}?language={enabled-language}`.
+Read routes are fixed to `/seo-geo/site`, `/seo-geo/resource`, `/seo-geo/resource/actions`, `/seo-geo/indexability`, `/seo-geo/indexability/resource`, `/seo-geo/internal-links`, and `/seo-geo/readiness`.
 
-### Insights
+Managed resource types are closed to `page|insight|line|output|project|software|dataset`. Pages require registered `key + language`; Research records require a positive `postId`. Internal-link scans are bounded to `1..500` and aggregate readiness sampling to `1..5` per type. No arbitrary metadata, HTML or WordPress route editor exists.
 
-- `GET /research-manager/v1/insights` with optional `language`;
-- `GET /research-manager/v1/insights/{positive-post-id}`.
+## Design boundary
 
-### Research Objects + Lines
-
-- `GET /research-manager/v1/research-objects` with optional closed `kind` and enabled `language`;
-- `GET /research-manager/v1/research-objects/{kind}/{positive-post-id}`;
-- `GET /research-manager/v1/research-lines` with optional enabled `language`;
-- `GET /research-manager/v1/research-lines/{positive-post-id}`.
-
-Object kinds are closed to `output`, `project`, `software`, `dataset`.
-
-### Translations + Evidence
-
-Translations are closed to structured Research post types and optionally an enabled tenant language. Evidence reads are closed to the supported evidence groups and bounded record IDs. Identity is inspection-only in the current surface; no `identity.write` tool is exposed.
-
-### Navigation
-
-- `GET /research-manager/v1/navigation`.
-
-Commercial permission is `navigation.read`. The Research Manager adapter independently requires its backend navigation read contract (`pages.read`) and only exposes registered Theme navigation targets; arbitrary URLs/menu proxying remain disabled.
-
-### Media
-
-- `GET /research-manager/v1/media` with bounded `page`, `per_page`, `search`, and closed `mime_type` filters;
-- `GET /research-manager/v1/media/{positive-attachment-id}`;
-- `GET /research-manager/v1/media/diagnostics` with scan limit `1..500`;
-- `GET /research-manager/v1/media/diagnostics/{positive-attachment-id}`.
-
-Closed MIME filters: `image`, `audio`, `video`, `pdf`, `application/pdf`. The backend does not expose filesystem paths and the MCP does not expose upload, delete, binary replacement or remediation apply operations in this phase.
+Read routes are fixed to `/design`, `/design/variants`, and `/design/readiness`. Current dimensions include bounded palette, typography, density, hero/section/card/collection variants, accessibility, responsive and reduced-motion readiness. No arbitrary CSS, font URL, HTML, class name or token-name surface exists.
 
 ## Commercial architecture
 
@@ -69,48 +41,34 @@ MCP client / workspace
   → customer system
 ```
 
-Effective permission is always:
+Effective permission is:
 
 `tenant entitlement ∩ principal capability ∩ backend authorization`
 
-Legacy configurations default to only `site.read`; every additional module requires explicit commercial activation.
+Shared mode routes through `/mcp/{tenant-id}` with deny-by-default principal→tenant authorization, per-principal/per-tenant usage boundaries, secret references, and non-secret audit events.
 
-## Multi-tenant and security boundary
+No tool accepts arbitrary backend URLs, generic routes, `wp/v2`, SQL, shell, filesystem access, arbitrary uploads or direct DB operations.
 
-- shared routing is opt-in with `MCP_SHARED_ROUTING=true`;
-- shared endpoint: `/mcp/{tenant-id}`;
-- principal → tenant mapping is deny-by-default;
-- backend and principal credentials are server-side secret references;
-- rate/usage isolation is `principal × tenant`;
-- typed commercial capabilities gate every tool invocation;
-- language, kinds, IDs, pagination and module-specific filters are bounded before adapter transport;
-- no arbitrary `wp/v2`, SQL, shell, filesystem, backend URL or generic route proxy;
-- access and entitlement denials are auditable without token material.
-
-For private/reference deployment:
+For the private/reference deployment, activate only the modules needed by the tenant, for example:
 
 ```bash
 export ERM_BASE_URL=https://eduardoyauriluna.com
 export ERM_READ_TOKEN='...'
 export MCP_TENANT_ID=eduardo-research
-export MCP_TENANT_ENTITLEMENTS=site.read,pages.read,insights.read,research.read,translations.read,evidence.read,navigation.read,media.read
+export MCP_TENANT_ENTITLEMENTS=site.read,pages.read,insights.read,research.read,translations.read,evidence.read,navigation.read,media.read,seo.read,design.read
 npm run dev
 ```
 
-Health:
+Health endpoint: `/healthz`.
 
-```bash
-curl -s http://127.0.0.1:8787/healthz
-```
+## Next gate
 
-## Roadmap
+Phase 2B.1 code breadth is complete after this slice. Before writes, the remaining gates are:
 
-Phase 2B.1 next closes SEO/GEO/design inspection, exact capability mapping and production read acceptance.
+1. exact tool→commercial capability→backend scope manifest/CI proof;
+2. production acceptance with temporary least-privilege read credentials;
+3. revoke the acceptance credentials.
 
-Broad writes remain behind:
-
-`Preview/Plan → explicit Apply → Verify → Rollback`
-
-Write credentials remain separate and least-privilege.
+Phase 2B.2 then adds bounded `Preview/Plan → explicit Apply → Verify → Rollback` with separate write/elevated credentials.
 
 See `docs/57-chatgpt-mcp-bridge.md`, `docs/58-commercial-mcp-platform.md` and issue #223.

@@ -42,22 +42,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "| '/navigation' | '/media' | '/media/diagnostics';" src/manager-client.ts
-          grep -F "'site_navigation_inspect'" src/server.ts
-          grep -F "'site_media_list'" src/server.ts
-          grep -F "'site_media_inspect'" src/server.ts
-          grep -F "'site_media_diagnostics'" src/server.ts
-          grep -F "'site_media_diagnostic_inspect'" src/server.ts
-          grep -F "withCapability('navigation.read'" src/server.ts
-          grep -F "withCapability('media.read'" src/server.ts
-          grep -F "z.enum(['image','audio','video','pdf','application/pdf'])" src/server.ts
-          grep -F "mediaInventory(options:" src/manager-client.ts
-          grep -F "mediaDiagnostics(limit?:number)" src/manager-client.ts
-          grep -F "inspectNavigation(): Promise<unknown>" src/adapters/site-control.ts
-          grep -F "mediaDiagnostics(request: SiteMediaDiagnosticsRequest): Promise<unknown>" src/adapters/site-control.ts
-          grep -F "COMMERCIAL_CAPABILITIES" src/entitlements.ts
-          grep -F "'navigation.read'" src/entitlements.ts
-          grep -F "'media.read'" src/entitlements.ts
+          grep -F "| '/seo-geo/site' | '/seo-geo/indexability' | '/seo-geo/internal-links' | '/seo-geo/readiness'" src/manager-client.ts
+          grep -F "| '/design' | '/design/variants' | '/design/readiness';" src/manager-client.ts
+          grep -F "'site_seo_geo_site'" src/server.ts
+          grep -F "'site_seo_geo_resource'" src/server.ts
+          grep -F "'site_seo_geo_resource_actions'" src/server.ts
+          grep -F "'site_seo_geo_indexability'" src/server.ts
+          grep -F "'site_seo_geo_resource_indexability'" src/server.ts
+          grep -F "'site_seo_geo_internal_links'" src/server.ts
+          grep -F "'site_seo_geo_readiness'" src/server.ts
+          grep -F "'site_design_inspect'" src/server.ts
+          grep -F "'site_design_variants'" src/server.ts
+          grep -F "'site_design_readiness'" src/server.ts
+          grep -F "withCapability('seo.read'" src/server.ts
+          grep -F "withCapability('design.read'" src/server.ts
+          grep -F "z.enum(['page','insight','line','output','project','software','dataset'])" src/server.ts
+          grep -F "SEO internal links limit',1,500" src/manager-client.ts
+          grep -F "SEO readiness per-type limit',1,5" src/manager-client.ts
+          grep -F "seoResourceEndpoint(" src/manager-client.ts
+          grep -F "designReadiness(rendered?:boolean)" src/manager-client.ts
+          grep -F "seoResource(request: SiteSeoResourceRequest): Promise<unknown>" src/adapters/site-control.ts
+          grep -F "designReadiness(request: SiteDesignReadinessRequest): Promise<unknown>" src/adapters/site-control.ts
+          grep -F "'seo.read'" src/entitlements.ts
+          grep -F "'design.read'" src/entitlements.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
-          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 22
+          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 32
