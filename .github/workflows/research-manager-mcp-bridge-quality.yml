@@ -42,10 +42,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "export type ResearchManagerReadRoute = '/status' | '/versions' | '/capabilities';" src/manager-client.ts
+          grep -F "export type ResearchManagerStaticReadRoute = '/status' | '/versions' | '/capabilities' | '/pages';" src/manager-client.ts
           grep -F "'research_status'" src/server.ts
           grep -F "'research_versions'" src/server.ts
           grep -F "'research_capabilities'" src/server.ts
+          grep -F "'site_pages_list'" src/server.ts
+          grep -F "'site_page_inspect'" src/server.ts
+          grep -F "withCapability('pages.read'" src/server.ts
+          grep -F "listPages(): Promise<unknown>" src/adapters/site-control.ts
+          grep -F "inspectPage(request: SitePageInspectionRequest): Promise<unknown>" src/adapters/site-control.ts
+          grep -F "return this.getStatic('/pages');" src/manager-client.ts
+          grep -F "new URL(\`/wp-json/research-manager/v1/pages/\${encodeURIComponent(key)}\`" src/manager-client.ts
           grep -F "export interface SiteControlAdapter" src/adapters/site-control.ts
           grep -F "class TenantRegistry" src/tenant-registry.ts
           grep -F "class PrincipalRegistry" src/access-control.ts
@@ -53,11 +60,10 @@ jobs:
           grep -F "class UsageBoundary" src/usage-boundary.ts
           grep -F "COMMERCIAL_CAPABILITIES" src/entitlements.ts
           grep -F "runWithAuthorizationContext" src/http.ts
-          grep -F "requireCapability('site.read')" src/server.ts
           grep -F "tenant_not_entitled" src/entitlements.ts
           grep -F "principal_not_granted" src/entitlements.ts
           grep -F "MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON" src/config.ts
           grep -F "tenant_access_denied" src/http.ts
           grep -F "sharedTenantFromPath" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
-          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 3
+          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 5
