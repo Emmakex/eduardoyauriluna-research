@@ -31,7 +31,6 @@ test('read-only status call uses only the fixed Research Manager v1 route and si
 
   const result = await client.status();
   assert.deepEqual(result, { manager_version: '0.10.4' });
-  assert.notEqual(seenUrl, '');
   const parsedUrl = new URL(seenUrl);
   assert.equal(parsedUrl.origin, 'https://eduardoyauriluna.com');
   assert.equal(parsedUrl.pathname, '/wp-json/research-manager/v1/status');
@@ -42,6 +41,53 @@ test('read-only status call uses only the fixed Research Manager v1 route and si
   assert.match(headers.get('X-Research-Manager-Request-Id') ?? '', /^mcp-status-/);
   assert.match(headers.get('X-Research-Manager-Nonce') ?? '', /^[a-f0-9]{32}$/);
   assert.match(headers.get('X-Research-Manager-Timestamp') ?? '', /^\d{10,}$/);
+});
+
+test('Pages inventory uses the fixed Research Manager /pages route', async () => {
+  let seenUrl = '';
+  const client = clientWith(async (input) => {
+    seenUrl = input instanceof Request ? input.url : input.toString();
+    return new Response(JSON.stringify({ ok: true, data: { items: [], count: 0, languages: ['en', 'es'] } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+
+  const result = await client.pages();
+  assert.deepEqual(result, { items: [], count: 0, languages: ['en', 'es'] });
+  const url = new URL(seenUrl);
+  assert.equal(url.pathname, '/wp-json/research-manager/v1/pages');
+  assert.equal(url.search, '');
+});
+
+test('Page inspection constructs only the bounded page route and language query', async () => {
+  let seenUrl = '';
+  const client = clientWith(async (input) => {
+    seenUrl = input instanceof Request ? input.url : input.toString();
+    return new Response(JSON.stringify({ ok: true, data: { key: 'about', language: 'es', page_id: 12 } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+
+  const result = await client.page('about', 'es');
+  assert.deepEqual(result, { key: 'about', language: 'es', page_id: 12 });
+  const url = new URL(seenUrl);
+  assert.equal(url.pathname, '/wp-json/research-manager/v1/pages/about');
+  assert.equal(url.searchParams.get('language'), 'es');
+  assert.match(url.search, /^\?language=es$/);
+});
+
+test('Page inspection rejects route-like keys and invalid languages before transport', async () => {
+  let calls = 0;
+  const client = clientWith(async () => {
+    calls += 1;
+    return new Response(JSON.stringify({ ok: true, data: {} }), { status: 200 });
+  });
+
+  assert.throws(() => client.page('../wp/v2/users', 'en'), /Page key/);
+  assert.throws(() => client.page('about', '../en'), /Page language/);
+  assert.equal(calls, 0);
 });
 
 test('Manager errors expose typed non-secret diagnostics and never echo the bearer token', async () => {

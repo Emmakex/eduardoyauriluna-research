@@ -39,219 +39,78 @@ const runtimes = new Map(config.tenants.map((tenant) => [tenant.id, createTenant
 
 function hostnameFromHeader(value: string | undefined): string | null {
   if (!value) return null;
-  try {
-    return new URL(`http://${value}`).hostname.toLowerCase();
-  } catch {
-    return null;
-  }
+  try { return new URL(`http://${value}`).hostname.toLowerCase(); } catch { return null; }
 }
-
 function allowedHost(req: IncomingMessage): boolean {
   if (config.allowedHosts.length === 0) return true;
   const hostname = hostnameFromHeader(req.headers.host);
   return hostname !== null && config.allowedHosts.includes(hostname);
 }
-
 function allowedOrigin(req: IncomingMessage): boolean {
   const origin = req.headers.origin;
   if (!origin) return true;
   if (config.allowedOriginHosts.length === 0) return false;
-  try {
-    return config.allowedOriginHosts.includes(new URL(origin).hostname.toLowerCase());
-  } catch {
-    return false;
-  }
+  try { return config.allowedOriginHosts.includes(new URL(origin).hostname.toLowerCase()); } catch { return false; }
 }
-
 function secureEqual(left: string, right: string): boolean {
   const supplied = Buffer.from(left, 'utf8');
   const expected = Buffer.from(right, 'utf8');
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
-
 function legacyPrincipal(req: IncomingMessage): PrincipalAccess | null {
   const tenant = registry.require(config.activeTenantId);
-  if (config.inboundBearerToken === null) {
-    return {
-      id: 'loopback-local',
-      bearerToken: '',
-      allowedTenantIds: [config.activeTenantId],
-      capabilities: tenant.entitlements,
-    };
-  }
+  if (config.inboundBearerToken === null) return { id:'loopback-local', bearerToken:'', allowedTenantIds:[config.activeTenantId], capabilities:tenant.entitlements };
   const header = req.headers.authorization ?? '';
-  if (!header.startsWith('Bearer ')) return null;
-  if (!secureEqual(header.slice(7), config.inboundBearerToken)) return null;
-  return {
-    id: 'legacy-bearer',
-    bearerToken: '',
-    allowedTenantIds: [config.activeTenantId],
-    capabilities: tenant.entitlements,
-  };
+  if (!header.startsWith('Bearer ') || !secureEqual(header.slice(7), config.inboundBearerToken)) return null;
+  return { id:'legacy-bearer', bearerToken:'', allowedTenantIds:[config.activeTenantId], capabilities:tenant.entitlements };
 }
-
 function json(res: ServerResponse, status: number, body: Record<string, unknown>): void {
-  const payload = JSON.stringify(body);
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  res.end(payload);
+  res.statusCode = status; res.setHeader('Content-Type','application/json; charset=utf-8'); res.setHeader('Cache-Control','no-store'); res.end(JSON.stringify(body));
 }
-
 function sharedTenantFromPath(pathname: string): string | null {
-  const match = /^\/mcp\/([a-z0-9][a-z0-9-]{1,62})$/.exec(pathname);
-  return match?.[1] ?? null;
+  return /^\/mcp\/([a-z0-9][a-z0-9-]{1,62})$/.exec(pathname)?.[1] ?? null;
+}
+function audit(principalId:string,tenantId:string,outcome:'allowed'|'denied'|'rate_limited',path:string):void {
+  console.error(`[mcp-access] ${accessAuditEvent({ principalId, tenantId, outcome, requestPath:path })}`);
+}
+function entitlementAudit(event:{capability:string;reason:string;principalId:string;tenantId:string}):void {
+  console.error(`[mcp-entitlement] ${JSON.stringify({event:'mcp_entitlement_denied',timestamp:new Date().toISOString(),principal_id:event.principalId,tenant_id:event.tenantId,capability:event.capability,reason:event.reason})}`);
 }
 
-function audit(principalId: string, tenantId: string, outcome: 'allowed' | 'denied' | 'rate_limited', path: string): void {
-  console.error(`[mcp-access] ${accessAuditEvent({ principalId, tenantId, outcome, requestPath: path })}`);
-}
-
-function entitlementAudit(event: {
-  capability: string;
-  reason: string;
-  principalId: string;
-  tenantId: string;
-}): void {
-  console.error(
-    `[mcp-entitlement] ${JSON.stringify({
-      event: 'mcp_entitlement_denied',
-      timestamp: new Date().toISOString(),
-      principal_id: event.principalId,
-      tenant_id: event.tenantId,
-      capability: event.capability,
-      reason: event.reason,
-    })}`,
-  );
-}
-
-const httpServer = createServer(async (req, res) => {
-  let pathname = '/';
-  try {
-    pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
-  } catch {
-    json(res, 400, { ok: false, code: 'invalid_url' });
-    return;
+const httpServer = createServer(async (req,res)=>{
+  let pathname='/';
+  try { pathname=new URL(req.url ?? '/','http://localhost').pathname; } catch { json(res,400,{ok:false,code:'invalid_url'}); return; }
+  if (pathname==='/healthz') {
+    if (req.method!=='GET') { json(res,405,{ok:false,code:'method_not_allowed'}); return; }
+    const body:Record<string,unknown>={ok:true,service:'site-control-mcp',version:'0.5.0',phase:'read-surfaces-pages',routing:config.sharedRouting?'shared':'single-tenant'};
+    if (!config.sharedRouting) body.tenant=registry.metadata(config.activeTenantId);
+    json(res,200,body); return;
   }
-
-  if (pathname === '/healthz') {
-    if (req.method !== 'GET') {
-      json(res, 405, { ok: false, code: 'method_not_allowed' });
-      return;
-    }
-    const body: Record<string, unknown> = {
-      ok: true,
-      service: 'site-control-mcp',
-      version: '0.4.0',
-      phase: 'commercial-entitlements',
-      routing: config.sharedRouting ? 'shared' : 'single-tenant',
-    };
-    if (!config.sharedRouting) body.tenant = registry.metadata(config.activeTenantId);
-    json(res, 200, body);
-    return;
-  }
-
-  if (!allowedHost(req) || !allowedOrigin(req)) {
-    json(res, 403, { ok: false, code: 'request_origin_denied' });
-    return;
-  }
-
-  let tenantId: string;
-  let principal: PrincipalAccess | null;
-
+  if (!allowedHost(req)||!allowedOrigin(req)) { json(res,403,{ok:false,code:'request_origin_denied'}); return; }
+  let tenantId:string; let principal:PrincipalAccess|null;
   if (config.sharedRouting) {
-    const requestedTenant = sharedTenantFromPath(pathname);
-    if (!requestedTenant || !runtimes.has(requestedTenant)) {
-      json(res, 404, { ok: false, code: 'not_found' });
-      return;
-    }
-    tenantId = requestedTenant;
-    principal = principalRegistry.authenticate(req.headers.authorization);
+    const requestedTenant=sharedTenantFromPath(pathname);
+    if (!requestedTenant||!runtimes.has(requestedTenant)) { json(res,404,{ok:false,code:'not_found'}); return; }
+    tenantId=requestedTenant; principal=principalRegistry.authenticate(req.headers.authorization);
   } else {
-    if (pathname !== '/mcp') {
-      json(res, 404, { ok: false, code: 'not_found' });
-      return;
-    }
-    tenantId = config.activeTenantId;
-    principal = legacyPrincipal(req);
+    if (pathname!=='/mcp') { json(res,404,{ok:false,code:'not_found'}); return; }
+    tenantId=config.activeTenantId; principal=legacyPrincipal(req);
   }
-
-  if (principal === null) {
-    const key = { principalId: 'anonymous', tenantId };
-    usage.deny(key);
-    audit(key.principalId, tenantId, 'denied', pathname);
-    res.setHeader('WWW-Authenticate', 'Bearer');
-    json(res, 401, { ok: false, code: 'authentication_failed' });
-    return;
-  }
-
-  if (config.sharedRouting && !principalRegistry.canAccess(principal, tenantId)) {
-    usage.deny({ principalId: principal.id, tenantId });
-    audit(principal.id, tenantId, 'denied', pathname);
-    json(res, 403, { ok: false, code: 'tenant_access_denied' });
-    return;
-  }
-
-  if (!usage.admit({ principalId: principal.id, tenantId })) {
-    audit(principal.id, tenantId, 'rate_limited', pathname);
-    res.setHeader('Retry-After', '60');
-    json(res, 429, { ok: false, code: 'rate_limited' });
-    return;
-  }
-
-  if (!req.method) {
-    json(res, 400, { ok: false, code: 'method_required' });
-    return;
-  }
-  if (!req.url) {
-    json(res, 400, { ok: false, code: 'url_required' });
-    return;
-  }
-
-  const runtime = runtimes.get(tenantId);
-  if (!runtime) {
-    json(res, 404, { ok: false, code: 'not_found' });
-    return;
-  }
-  const tenant = registry.require(tenantId);
-
-  audit(principal.id, tenantId, 'allowed', pathname);
+  if (principal===null) { const key={principalId:'anonymous',tenantId}; usage.deny(key); audit(key.principalId,tenantId,'denied',pathname); res.setHeader('WWW-Authenticate','Bearer'); json(res,401,{ok:false,code:'authentication_failed'}); return; }
+  if (config.sharedRouting&&!principalRegistry.canAccess(principal,tenantId)) { usage.deny({principalId:principal.id,tenantId}); audit(principal.id,tenantId,'denied',pathname); json(res,403,{ok:false,code:'tenant_access_denied'}); return; }
+  if (!usage.admit({principalId:principal.id,tenantId})) { audit(principal.id,tenantId,'rate_limited',pathname); res.setHeader('Retry-After','60'); json(res,429,{ok:false,code:'rate_limited'}); return; }
+  if (!req.method) { json(res,400,{ok:false,code:'method_required'}); return; }
+  if (!req.url) { json(res,400,{ok:false,code:'url_required'}); return; }
+  const runtime=runtimes.get(tenantId); if (!runtime) { json(res,404,{ok:false,code:'not_found'}); return; }
+  const tenant=registry.require(tenantId); audit(principal.id,tenantId,'allowed',pathname);
   try {
-    const mcpRequest = req as IncomingMessage & { method: string; url: string };
-    const originalUrl = mcpRequest.url;
-    mcpRequest.url = '/mcp';
-    try {
-      await runWithAuthorizationContext(
-        {
-          principalId: principal.id,
-          tenantId,
-          tenantEntitlements: tenant.entitlements,
-          principalCapabilities: principal.capabilities,
-          onDenied: entitlementAudit,
-        },
-        async () => runtime.handle(mcpRequest, res),
-      );
-    } finally {
-      mcpRequest.url = originalUrl;
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unhandled request error';
-    console.error(`[mcp] request failed tenant=${tenantId}: ${message}`);
-    if (!res.headersSent) json(res, 500, { ok: false, code: 'bridge_error' });
-    else res.end();
+    const mcpRequest=req as IncomingMessage&{method:string;url:string}; const originalUrl=mcpRequest.url; mcpRequest.url='/mcp';
+    try { await runWithAuthorizationContext({principalId:principal.id,tenantId,tenantEntitlements:tenant.entitlements,principalCapabilities:principal.capabilities,onDenied:entitlementAudit},async()=>runtime.handle(mcpRequest,res)); }
+    finally { mcpRequest.url=originalUrl; }
+  } catch(error) {
+    const message=error instanceof Error?error.message:'unhandled request error'; console.error(`[mcp] request failed tenant=${tenantId}: ${message}`); if(!res.headersSent) json(res,500,{ok:false,code:'bridge_error'}); else res.end();
   }
 });
-
-httpServer.listen(config.port, config.bindHost, () => {
-  const target = config.sharedRouting ? 'shared-tenants' : config.activeTenantId;
-  console.error(`[mcp] site-control bridge target=${target} listening on http://${config.bindHost}:${config.port}/mcp`);
-});
-
-async function shutdown(signal: string): Promise<void> {
-  console.error(`[mcp] ${signal}; shutting down`);
-  httpServer.close();
-  await Promise.all([...runtimes.values()].map(async (runtime) => runtime.mcp.close()));
-}
-
-process.once('SIGINT', () => void shutdown('SIGINT'));
-process.once('SIGTERM', () => void shutdown('SIGTERM'));
+httpServer.listen(config.port,config.bindHost,()=>{ const target=config.sharedRouting?'shared-tenants':config.activeTenantId; console.error(`[mcp] site-control bridge target=${target} listening on http://${config.bindHost}:${config.port}/mcp`); });
+async function shutdown(signal:string):Promise<void>{ console.error(`[mcp] ${signal}; shutting down`); httpServer.close(); await Promise.all([...runtimes.values()].map(async(runtime)=>runtime.mcp.close())); }
+process.once('SIGINT',()=>void shutdown('SIGINT')); process.once('SIGTERM',()=>void shutdown('SIGTERM'));

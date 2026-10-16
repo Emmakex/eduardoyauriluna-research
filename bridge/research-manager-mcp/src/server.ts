@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/server';
+import * as z from 'zod/v4';
 import type { SiteControlAdapter } from './adapters/site-control.js';
-import { requireCapability } from './entitlements.js';
+import { requireCapability, type CommercialCapability } from './entitlements.js';
 
 function toolResult(data: unknown) {
   return {
@@ -9,14 +10,14 @@ function toolResult(data: unknown) {
   };
 }
 
-async function withSiteRead(operation: () => Promise<unknown>) {
-  requireCapability('site.read');
+async function withCapability(capability: CommercialCapability, operation: () => Promise<unknown>) {
+  requireCapability(capability);
   return toolResult(await operation());
 }
 
 export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
   const server = new McpServer(
-    { name: 'site-control-mcp', version: '0.4.0' },
+    { name: 'site-control-mcp', version: '0.5.0' },
     {
       instructions:
         `This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) ` +
@@ -36,7 +37,7 @@ export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
       description: 'Read the authenticated status of the currently bound tenant through its registered adapter.',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => withSiteRead(() => adapter.status()),
+    async () => withCapability('site.read', () => adapter.status()),
   );
 
   server.registerTool(
@@ -46,7 +47,7 @@ export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
       description: 'Read the active application, theme/runtime and API versions exposed by the registered adapter.',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => withSiteRead(() => adapter.versions()),
+    async () => withCapability('site.read', () => adapter.versions()),
   );
 
   server.registerTool(
@@ -56,7 +57,40 @@ export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
       description: 'Read the authenticated bounded capability and granted-scope inventory for the bound tenant.',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => withSiteRead(() => adapter.capabilities()),
+    async () => withCapability('site.read', () => adapter.capabilities()),
+  );
+
+  server.registerTool(
+    'site_pages_list',
+    {
+      title: 'List managed pages',
+      description:
+        'List the registered Theme-owned page inventory and language-specific structured-slot availability for the bound tenant.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async () => withCapability('pages.read', () => adapter.listPages()),
+  );
+
+  server.registerTool(
+    'site_page_inspect',
+    {
+      title: 'Inspect managed page',
+      description:
+        'Inspect one registered Theme-owned page in one enabled language. The page key and language must belong to the tenant contract.',
+      inputSchema: z.object({
+        key: z
+          .string()
+          .regex(/^[a-z0-9][a-z0-9-]{0,62}$/)
+          .describe('Registered page key, for example home or about'),
+        language: z
+          .string()
+          .regex(/^[a-z][a-z0-9-]{1,15}$/)
+          .describe('Enabled lowercase language code, for example en or es'),
+      }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ key, language }) =>
+      withCapability('pages.read', () => adapter.inspectPage({ key, language })),
   );
 
   return server;
