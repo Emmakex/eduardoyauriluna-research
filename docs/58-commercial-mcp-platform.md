@@ -11,8 +11,9 @@ Target operating model:
 ```text
 Customer / operator
   → ChatGPT / OpenAI / compatible MCP client
+  → authenticated principal / workspace
   → Commercial MCP control platform
-  → authenticated tenant boundary
+  → authorized tenant boundary
   → registered adapter
   → bounded customer-side manager/connector
   → WordPress / ecommerce / ERP / CRM / custom software
@@ -43,6 +44,23 @@ Credentials are not stored inside the tenant registry payload. The registry refe
 
 The LLM never receives tenant secrets.
 
+## Principal model
+
+A tenant ID is never authorization.
+
+Shared SaaS mode introduces authenticated principals/workspaces. Each principal has:
+
+- a stable principal ID;
+- a server-side bearer/OAuth credential reference;
+- an explicit allowlist of tenant IDs;
+- later, capability/entitlement and commercial-plan metadata.
+
+The authorization order is fixed:
+
+`authenticate principal → resolve requested registered tenant → verify principal-to-tenant grant → rate/usage admission → adapter execution`
+
+A principal that knows another customer's tenant ID is denied unless that tenant is explicitly present in its allowlist.
+
 ## Adapter model
 
 The commercial MCP core depends on adapter contracts rather than WordPress-specific implementation details.
@@ -71,11 +89,15 @@ One managed control platform serves multiple isolated tenants. Recommended for S
 
 Commercial unit: connected site/system plus enabled capability package and usage.
 
+Shared routing uses a tenant-scoped MCP URL (`/mcp/{tenant-id}`) plus authenticated principal authorization. The URL identifies the target; the principal grant authorizes it.
+
 ### Private managed instance
 
 The same product image is deployed in dedicated infrastructure managed by us for a customer that needs stronger isolation.
 
 Commercial unit: private instance + connected systems + support/SLA.
+
+Private mode can remain bound to one active tenant at `/mcp`.
 
 ### Enterprise / customer infrastructure
 
@@ -119,43 +141,66 @@ Target onboarding:
 3. install/configure the bounded customer-side connector/manager;
 4. register backend origin;
 5. provision least-privilege secrets;
-6. choose enabled capability package;
-7. run readiness/compatibility acceptance;
-8. connect approved MCP client/workspace;
-9. activate audit and usage metering.
+6. create principal/workspace grants;
+7. choose enabled capability package;
+8. run readiness/compatibility acceptance;
+9. connect approved MCP client/workspace;
+10. activate audit and usage metering.
 
 ## Multi-tenant security requirements
 
-Before a shared public multi-tenant endpoint can expose write tools, the platform must add:
+Before a shared public multi-tenant endpoint can expose write tools, the platform must enforce:
 
 - authenticated principals/workspaces;
 - principal → allowed tenant mapping;
 - deny-by-default tenant selection;
 - per-tenant credential profiles;
-- per-tenant rate limits/quotas;
-- immutable audit correlation;
-- secret-manager integration;
+- per-principal/per-tenant rate limits and usage counters;
+- immutable/persistent audit correlation for production;
+- secret-manager-compatible credential resolution;
 - tenant-safe logs/metrics;
 - explicit capability entitlement checks;
 - billing/usage hooks that never weaken authorization.
 
 Tenant IDs are identifiers, not authorization. Knowing another tenant ID must never grant access.
 
-## Current implementation — v0.2 commercial foundation
+## Secret provider contract
 
-`bridge/research-manager-mcp` is being refactored to establish the commercial core while keeping the accepted Research Manager read-only surface compatible.
+The commercial core resolves credentials through a `SecretResolver` interface rather than reading arbitrary secret material inside tenant logic.
 
-Current foundation:
+v0.3 ships `EnvSecretResolver` as the first implementation. The tenant/principal configuration only stores secret references, so a Vault, cloud KMS/secret manager or customer-managed resolver can replace the environment implementation without changing MCP tools, tenant IDs or adapter contracts.
+
+## Usage and audit boundary
+
+v0.3 introduces a first in-process commercial guard keyed by:
+
+`principal ID × tenant ID`
+
+This provides independent per-minute admission counters, denied/rate-limited accounting and structured access events that contain principal ID, tenant ID, request path and outcome but never bearer material.
+
+This is the enforcement boundary for the current prototype, not the final billing ledger. Before external commercial launch, usage/audit persistence must move to durable storage/telemetry with retention and tamper-resistance appropriate to the deployment class.
+
+## Current implementation — v0.3 tenant isolation
+
+`bridge/research-manager-mcp` now contains the reusable commercial core while keeping the accepted Research Manager read-only surface compatible.
+
+Implemented:
 
 - adapter interface separated from MCP server;
 - `research-manager` as the first adapter;
-- closed tenant registry;
-- tenant configuration supports multiple registered tenants;
-- registry references secret environment variables instead of embedding bearer credentials;
-- runtime binds to one registered tenant through `MCP_TENANT_ID` while shared principal-to-tenant routing is built and accepted;
-- legacy single-tenant `ERM_*` configuration remains supported for the Eduardo reference lab.
+- closed multi-tenant registry;
+- tenant configuration references backend secrets instead of embedding bearer credentials;
+- authenticated principal registry with explicit allowed tenant IDs;
+- shared routing only when `MCP_SHARED_ROUTING=true`;
+- shared tenant endpoints at `/mcp/{tenant-id}`;
+- deny-by-default unknown/cross-tenant behavior;
+- independent `principal × tenant` rate/usage counters;
+- structured non-secret access audit events;
+- `SecretResolver` abstraction with environment-backed implementation;
+- health response does not enumerate tenants in shared mode;
+- private/single-tenant mode remains backward compatible for the Eduardo reference lab.
 
-The next commercial slice is authenticated shared tenant routing. Only after that gate is accepted should broad Phase 2 write tools be multiplied across domains.
+The next commercial slice after v0.3 acceptance is capability entitlement/read-surface expansion, followed by bounded Preview/Apply/Verify/Rollback write workflows.
 
 ## Product naming
 

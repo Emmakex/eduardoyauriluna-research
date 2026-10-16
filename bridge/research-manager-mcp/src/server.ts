@@ -10,7 +10,7 @@ function toolResult(data: unknown) {
 
 export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
   const server = new McpServer(
-    { name: 'site-control-mcp', version: '0.2.0' },
+    { name: 'site-control-mcp', version: '0.3.0' },
     {
       instructions:
         `This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) ` +
