@@ -4,35 +4,43 @@ Commercial MCP control core with `eduardoyauriluna.com` as the first reference t
 
 The product is designed so additional customers can be provisioned without forking the codebase.
 
-## Current surface — v0.6.0 Pages + Insights read
+## Current surface — v0.7.0 Pages + Insights + Research read
 
-The current MCP surface is read-only and exposes seven bounded tools:
+The current MCP surface is read-only and exposes eleven bounded tools:
 
 - `research_status` — `site.read`;
 - `research_versions` — `site.read`;
 - `research_capabilities` — `site.read`;
-- `site_pages_list` — `pages.read`;
-- `site_page_inspect` — `pages.read`;
-- `site_insights_list` — `insights.read`;
-- `site_insight_inspect` — `insights.read`.
+- `site_pages_list` / `site_page_inspect` — `pages.read`;
+- `site_insights_list` / `site_insight_inspect` — `insights.read`;
+- `site_research_objects_list` / `site_research_object_inspect` — `research.read`;
+- `site_research_lines_list` / `site_research_line_inspect` — `research.read`.
 
-Research Manager remains the first adapter.
+Research Manager remains the first adapter. The MCP caller never supplies a Manager route, backend URL or arbitrary WordPress resource.
 
-### Pages mapping
+### Pages
 
 - `GET /research-manager/v1/pages`;
 - `GET /research-manager/v1/pages/{registered-key}?language={enabled-language}`.
 
-Page keys and languages are validated before transport. The Manager then independently validates the active Research preset and its own backend scope.
-
-### Insights mapping
+### Insights
 
 - `GET /research-manager/v1/insights` with optional `language`;
 - `GET /research-manager/v1/insights/{positive-post-id}`.
 
-The list endpoint only returns explicitly managed Research Insights. Detail inspection rejects missing or unmanaged WordPress posts. Language is constrained to the tenant language contract and IDs must be positive integers before transport.
+### Research Objects
 
-The MCP caller cannot supply an arbitrary Manager path, URL, post type or WordPress REST endpoint.
+- `GET /research-manager/v1/research-objects` with optional closed `kind` and enabled `language`;
+- `GET /research-manager/v1/research-objects/{kind}/{positive-post-id}`.
+
+The object kind is a closed enum: `output`, `project`, `software`, `dataset`. Unsupported kinds are rejected before transport.
+
+### Research Lines
+
+- `GET /research-manager/v1/research-lines` with optional enabled `language`;
+- `GET /research-manager/v1/research-lines/{positive-post-id}`.
+
+Research Manager independently enforces backend `research.read` and its active Research preset/resource contracts.
 
 ## Commercial architecture
 
@@ -46,74 +54,33 @@ MCP client / workspace
   → customer system
 ```
 
-The runtime has a closed tenant registry. A caller cannot provide an arbitrary backend URL or credential.
+Effective permission is always:
 
-## Shared multi-tenant mode
+`tenant entitlement ∩ principal capability ∩ backend authorization`
 
-Shared routing is opt-in with `MCP_SHARED_ROUTING=true`.
+Legacy configurations default to only `site.read`; Pages, Insights and Research modules require explicit commercial activation.
 
-- tenants are provisioned through `MCP_TENANTS_JSON`;
-- principals are provisioned through `MCP_PRINCIPALS_JSON`;
-- backend and principal credentials are referenced by secret name rather than embedded in JSON;
-- each principal has an explicit tenant allowlist;
-- unknown principals, unknown tenants and cross-tenant access fail closed;
-- the shared endpoint is `/mcp/{tenant-id}`;
-- rate/usage counters are isolated by `principal × tenant`;
-- access decisions emit structured non-secret audit events.
+## Multi-tenant and security boundary
 
-## Commercial entitlements
+- shared routing is opt-in with `MCP_SHARED_ROUTING=true`;
+- shared endpoint: `/mcp/{tenant-id}`;
+- principal → tenant mapping is deny-by-default;
+- backend and principal credentials are server-side secret references;
+- rate/usage isolation is `principal × tenant`;
+- typed commercial capabilities gate every tool invocation;
+- language, kind and IDs are bounded before adapter transport;
+- no arbitrary `wp/v2`, SQL, shell, filesystem, backend URL or generic route proxy;
+- access and entitlement denials are auditable without token material.
 
-The effective permission is always:
-
-`tenant entitlement ∩ principal capability`
-
-A tool also remains subject to the connected backend's independent credential/scope checks.
-
-Examples:
-
-- `pages.read` in both layers → Pages tools commercially allowed;
-- `insights.read` in both layers → Insights tools commercially allowed;
-- missing tenant module → `tenant_not_entitled`;
-- missing principal grant → `principal_not_granted`;
-- missing request authorization context → fail closed.
-
-Legacy configurations default to only `site.read`. Pages and Insights therefore require explicit product entitlement activation.
-
-## Secret-provider boundary
-
-Configuration resolves credentials through the `SecretResolver` interface. Tenant/principal definitions carry secret references rather than secret values, allowing a Vault/KMS/managed-secret resolver later without changing MCP tools or tenant IDs.
-
-## Private/single-tenant mode
-
-The Eduardo reference lab and private customer deployments remain supported:
+For private/reference deployment:
 
 ```bash
 export ERM_BASE_URL=https://eduardoyauriluna.com
 export ERM_READ_TOKEN='...'
 export MCP_TENANT_ID=eduardo-research
-export MCP_TENANT_ENTITLEMENTS=site.read,pages.read,insights.read
+export MCP_TENANT_ENTITLEMENTS=site.read,pages.read,insights.read,research.read
 npm run dev
 ```
-
-Endpoint:
-
-```text
-http://127.0.0.1:8787/mcp
-```
-
-A non-loopback single-tenant deployment requires the legacy outer `MCP_BEARER_TOKEN`. Shared mode instead requires configured principals.
-
-## Runtime and security boundary
-
-- Node.js 22+;
-- least-privilege backend credential per tenant;
-- authenticated principal profile for shared-mode clients;
-- closed tenant and capability catalogs;
-- no caller-controlled Manager route;
-- no arbitrary `wp/v2`, database, filesystem, shell or backend URL surface;
-- Host/Origin allowlists remain enforced;
-- rate/usage boundaries are isolated per principal/tenant;
-- access and entitlement denials are auditable without token material.
 
 Health:
 
@@ -121,20 +88,14 @@ Health:
 curl -s http://127.0.0.1:8787/healthz
 ```
 
-Use MCP Inspector against the relevant Streamable HTTP endpoint for protocol/tool acceptance.
-
 ## Roadmap
 
-Phase 2B.1 continues domain-by-domain with Research objects/lines, translations/evidence, navigation/media and SEO/GEO/design inspection.
+Phase 2B.1 continues with translations/evidence, navigation/media and SEO/GEO/design inspection.
 
-Broad writes remain behind the connected gateway lifecycle, including Research Manager:
+Broad writes remain behind:
 
 `Preview → explicit Apply → Verify → Rollback`
 
 Write credentials remain separate and least-privilege.
 
-See:
-
-- `docs/57-chatgpt-mcp-bridge.md`
-- `docs/58-commercial-mcp-platform.md`
-- issue #223
+See `docs/57-chatgpt-mcp-bridge.md`, `docs/58-commercial-mcp-platform.md` and issue #223.
