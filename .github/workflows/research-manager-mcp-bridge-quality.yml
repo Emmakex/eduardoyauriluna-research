@@ -48,5 +48,11 @@ jobs:
           grep -F "'research_capabilities'" src/server.ts
           grep -F "export interface SiteControlAdapter" src/adapters/site-control.ts
           grep -F "class TenantRegistry" src/tenant-registry.ts
+          grep -F "class PrincipalRegistry" src/access-control.ts
+          grep -F "interface SecretResolver" src/secret-resolver.ts
+          grep -F "class UsageBoundary" src/usage-boundary.ts
+          grep -F "MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON" src/config.ts
+          grep -F "tenant_access_denied" src/http.ts
+          grep -F "sharedTenantFromPath" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
           test "$(grep -c "server.registerTool(" src/server.ts)" -eq 3
