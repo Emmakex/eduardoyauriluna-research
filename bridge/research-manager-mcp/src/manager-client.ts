@@ -1,16 +1,23 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TenantConfig } from './config.js';
-import type { ResearchEvidenceGroup, ResearchObjectKind, ResearchTranslationType } from './adapters/site-control.js';
+import type {
+  ResearchEvidenceGroup,
+  ResearchObjectKind,
+  ResearchTranslationType,
+  SiteMediaMimeFilter,
+} from './adapters/site-control.js';
 
 export type ResearchManagerStaticReadRoute =
   | '/status' | '/versions' | '/capabilities' | '/pages' | '/insights'
   | '/research-objects' | '/research-lines' | '/research-translations'
-  | '/research-evidence' | '/research-evidence/identity';
+  | '/research-evidence' | '/research-evidence/identity'
+  | '/navigation' | '/media' | '/media/diagnostics';
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 interface ManagerEnvelope { ok?: boolean; code?: string; message?: string; data?: unknown; }
 const researchObjectKinds = new Set<ResearchObjectKind>(['output','project','software','dataset']);
 const translationTypes = new Set<ResearchTranslationType>(['research_line','research_output','research_project','research_software','research_dataset']);
 const evidenceGroups = new Set<ResearchEvidenceGroup>(['profile','affiliations','identifiers','research_questions','methods','experience','education','awards','contact']);
+const mediaMimeFilters = new Set<SiteMediaMimeFilter>(['image','audio','video','pdf','application/pdf']);
 
 export class ResearchManagerError extends Error {
   readonly status:number|null; readonly code:string; readonly requestId:string;
@@ -39,11 +46,25 @@ export class ResearchManagerClient {
   evidenceRecords(group:ResearchEvidenceGroup):Promise<unknown>{if(!evidenceGroups.has(group))throw new Error('Unsupported Research evidence group');return this.getEndpoint(new URL(`/wp-json/research-manager/v1/research-evidence/${group}`,this.baseUrl),`evidence-${group}`,`/research-evidence/${group}`);}
   evidenceRecord(group:ResearchEvidenceGroup,recordId:string):Promise<unknown>{if(!evidenceGroups.has(group))throw new Error('Unsupported Research evidence group');if(!/^[A-Za-z0-9._:-]{1,128}$/.test(recordId))throw new Error('Evidence record ID has an invalid format');return this.getEndpoint(new URL(`/wp-json/research-manager/v1/research-evidence/${group}/${encodeURIComponent(recordId)}`,this.baseUrl),`evidence-${group}-record`,`/research-evidence/${group}/{record_id}`);}
 
+  navigation():Promise<unknown>{return this.getStatic('/navigation');}
+  mediaInventory(options:{page?:number;perPage?:number;search?:string;mimeType?:SiteMediaMimeFilter}={}):Promise<unknown>{
+    const endpoint=new URL('/wp-json/research-manager/v1/media',this.baseUrl);
+    if(options.page!==undefined){this.requireBoundedInteger(options.page,'Media page',1,100000);endpoint.searchParams.set('page',String(options.page));}
+    if(options.perPage!==undefined){this.requireBoundedInteger(options.perPage,'Media perPage',1,100);endpoint.searchParams.set('per_page',String(options.perPage));}
+    if(options.search!==undefined){if(options.search.length>128)throw new Error('Media search must be 128 characters or fewer');if(options.search)endpoint.searchParams.set('search',options.search);}
+    if(options.mimeType!==undefined){if(!mediaMimeFilters.has(options.mimeType))throw new Error('Unsupported media MIME filter');endpoint.searchParams.set('mime_type',options.mimeType);}
+    return this.getEndpoint(endpoint,'media','/media');
+  }
+  mediaItem(attachmentId:number):Promise<unknown>{this.requirePositiveId(attachmentId,'Media attachment');return this.getEndpoint(new URL(`/wp-json/research-manager/v1/media/${attachmentId}`,this.baseUrl),`media-${attachmentId}`,`/media/${attachmentId}`);}
+  mediaDiagnostics(limit?:number):Promise<unknown>{const endpoint=new URL('/wp-json/research-manager/v1/media/diagnostics',this.baseUrl);if(limit!==undefined){this.requireBoundedInteger(limit,'Media diagnostics limit',1,500);endpoint.searchParams.set('limit',String(limit));}return this.getEndpoint(endpoint,limit?`media-diagnostics-${limit}`:'media-diagnostics','/media/diagnostics');}
+  mediaDiagnosticItem(attachmentId:number):Promise<unknown>{this.requirePositiveId(attachmentId,'Media diagnostic attachment');return this.getEndpoint(new URL(`/wp-json/research-manager/v1/media/diagnostics/${attachmentId}`,this.baseUrl),`media-diagnostic-${attachmentId}`,`/media/diagnostics/${attachmentId}`);}
+
   private getStatic(route:ResearchManagerStaticReadRoute):Promise<unknown>{return this.getEndpoint(new URL(`/wp-json/research-manager/v1${route}`,this.baseUrl),route.slice(1).replaceAll('/','-'),route);}
   private validLanguage(language:string):boolean{return /^[a-z][a-z0-9-]{1,15}$/.test(language);}
   private requirePositiveId(postId:number,label:string):void{if(!Number.isSafeInteger(postId)||postId<=0)throw new Error(`${label} post ID must be a positive integer`);}
+  private requireBoundedInteger(value:number,label:string,min:number,max:number):void{if(!Number.isSafeInteger(value)||value<min||value>max)throw new Error(`${label} must be an integer between ${min} and ${max}`);}
   private async getEndpoint(endpoint:URL,label:string,diagnosticRoute:string):Promise<unknown>{
-    const requestId=`mcp-${label}-${Date.now()}-${randomUUID()}`;const headers=new Headers({Accept:'application/json',Authorization:`Bearer ${this.token}`,'User-Agent':'Site-Control-MCP/0.8.0 ResearchManagerAdapter','X-Research-Manager-Request-Id':requestId,'X-Research-Manager-Nonce':randomBytes(16).toString('hex'),'X-Research-Manager-Timestamp':Math.floor(Date.now()/1000).toString()});
+    const requestId=`mcp-${label}-${Date.now()}-${randomUUID()}`;const headers=new Headers({Accept:'application/json',Authorization:`Bearer ${this.token}`,'User-Agent':'Site-Control-MCP/0.9.0 ResearchManagerAdapter','X-Research-Manager-Request-Id':requestId,'X-Research-Manager-Nonce':randomBytes(16).toString('hex'),'X-Research-Manager-Timestamp':Math.floor(Date.now()/1000).toString()});
     let response:Response;try{response=await this.fetchImpl(endpoint,{method:'GET',headers,redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});}catch(error){const detail=error instanceof Error?error.message:'network failure';throw new ResearchManagerError(`Research Manager request failed: ${detail}`,{status:null,code:'transport_error',requestId});}
     const raw=await response.text();let envelope:ManagerEnvelope={};try{const parsed:unknown=raw?JSON.parse(raw):{};if(typeof parsed==='object'&&parsed!==null)envelope=parsed as ManagerEnvelope;}catch{throw new ResearchManagerError(`Research Manager returned invalid JSON (HTTP ${response.status})`,{status:response.status,code:'invalid_json',requestId});}
     if(!response.ok||envelope.ok!==true||!('data'in envelope))throw new ResearchManagerError(`Research Manager rejected ${diagnosticRoute} with HTTP ${response.status}: ${envelope.code??'request_failed'}`,{status:response.status,code:envelope.code??'request_failed',requestId});return envelope.data;
