@@ -85,6 +85,17 @@ test('shared routing is deny-by-default and rejects principals that reference un
   assert.throws(() => loadConfig(noPrincipals), /MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON/);
 });
 
+test('principal registry rejects one bearer credential assigned to multiple principals', () => {
+  assert.throws(
+    () =>
+      new PrincipalRegistry([
+        { id: 'one', bearerToken: 'same-secret', allowedTenantIds: ['client-one'] },
+        { id: 'two', bearerToken: 'same-secret', allowedTenantIds: ['client-two'] },
+      ]),
+    /Duplicate bearer credential/,
+  );
+});
+
 test('secret resolution is reference-based and fails closed when a referenced secret is absent', () => {
   const resolver = new EnvSecretResolver({ KNOWN_SECRET: 'value-from-secret-store-contract' });
   assert.equal(resolver.resolve('KNOWN_SECRET'), 'value-from-secret-store-contract');
