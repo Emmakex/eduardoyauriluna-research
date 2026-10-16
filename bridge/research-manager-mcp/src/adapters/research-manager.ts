@@ -5,6 +5,10 @@ import type {
   SiteInsightInspectionRequest,
   SiteInsightListRequest,
   SitePageInspectionRequest,
+  SiteResearchLineInspectionRequest,
+  SiteResearchLineListRequest,
+  SiteResearchObjectInspectionRequest,
+  SiteResearchObjectListRequest,
 } from './site-control.js';
 
 export class ResearchManagerAdapter implements SiteControlAdapter {
@@ -27,19 +31,41 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   listPages(): Promise<unknown> { return this.client.pages(); }
 
   inspectPage(request: SitePageInspectionRequest): Promise<unknown> {
-    if (!this.languages.includes(request.language)) throw new Error(`Page language is not enabled for tenant ${this.tenantId}`);
+    this.requireLanguage(request.language, 'Page');
     return this.client.page(request.key, request.language);
   }
 
   listInsights(request: SiteInsightListRequest): Promise<unknown> {
     const language = request.language ?? '';
-    if (language && !this.languages.includes(language)) {
-      throw new Error(`Insight language is not enabled for tenant ${this.tenantId}`);
-    }
+    if (language) this.requireLanguage(language, 'Insight');
     return this.client.insights(language);
   }
 
   inspectInsight(request: SiteInsightInspectionRequest): Promise<unknown> {
     return this.client.insight(request.postId);
+  }
+
+  listResearchObjects(request: SiteResearchObjectListRequest): Promise<unknown> {
+    const language = request.language ?? '';
+    if (language) this.requireLanguage(language, 'Research Object');
+    return this.client.researchObjects(request.kind, language);
+  }
+
+  inspectResearchObject(request: SiteResearchObjectInspectionRequest): Promise<unknown> {
+    return this.client.researchObject(request.kind, request.postId);
+  }
+
+  listResearchLines(request: SiteResearchLineListRequest): Promise<unknown> {
+    const language = request.language ?? '';
+    if (language) this.requireLanguage(language, 'Research Line');
+    return this.client.researchLines(language);
+  }
+
+  inspectResearchLine(request: SiteResearchLineInspectionRequest): Promise<unknown> {
+    return this.client.researchLine(request.postId);
+  }
+
+  private requireLanguage(language: string, label: string): void {
+    if (!this.languages.includes(language)) throw new Error(`${label} language is not enabled for tenant ${this.tenantId}`);
   }
 }
