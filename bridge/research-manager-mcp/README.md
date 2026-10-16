@@ -4,7 +4,7 @@ Commercial MCP control core with `eduardoyauriluna.com` as the first reference t
 
 The product is designed so additional customers can be provisioned without forking the codebase.
 
-## Current surface — v0.3.0 tenant isolation
+## Current surface — v0.4.0 commercial entitlements
 
 The accepted read-only surface remains compatible and exposes exactly three MCP tools:
 
@@ -19,8 +19,8 @@ There is no arbitrary REST/path proxy. The Research Manager adapter only calls t
 ```text
 MCP client / workspace
   → authenticated principal
-  → Site Control MCP core
-  → allowed tenant
+  → authorized tenant
+  → commercial entitlement gate
   → registered adapter
   → bounded customer-side manager/connector
   → customer system
@@ -34,33 +34,39 @@ Shared routing is opt-in with `MCP_SHARED_ROUTING=true`.
 
 - tenants are provisioned through `MCP_TENANTS_JSON`;
 - principals are provisioned through `MCP_PRINCIPALS_JSON`;
-- both tenant backend credentials and principal bearer credentials are referenced by secret name rather than embedded in JSON;
+- tenant backend credentials and principal bearer credentials are referenced by secret name rather than embedded in JSON;
 - each principal has an explicit allowlist of tenant IDs;
 - unknown principals, unknown tenants and cross-tenant access fail closed;
 - the shared endpoint is `/mcp/{tenant-id}`;
 - rate/usage counters are isolated by `principal × tenant`;
 - access decisions emit structured audit events with principal ID, tenant ID and outcome, never bearer material.
 
-Example:
+## Commercial entitlements
 
-```bash
-export MCP_TENANTS_JSON='[{"id":"client-one","label":"Client One","adapter":"research-manager","baseUrl":"https://client-one.example","readTokenEnv":"CLIENT_ONE_MANAGER_TOKEN","languages":["es","en"]},{"id":"client-two","label":"Client Two","adapter":"research-manager","baseUrl":"https://client-two.example","readTokenEnv":"CLIENT_TWO_MANAGER_TOKEN","languages":["es","en"]}]'
-export CLIENT_ONE_MANAGER_TOKEN='...'
-export CLIENT_TWO_MANAGER_TOKEN='...'
+A tenant being reachable does not mean every product module is available.
 
-export MCP_PRINCIPALS_JSON='[{"id":"agency-workspace","bearerTokenEnv":"AGENCY_BEARER_TOKEN","tenants":["client-one","client-two"]},{"id":"client-one-workspace","bearerTokenEnv":"CLIENT_ONE_BEARER_TOKEN","tenants":["client-one"]}]'
-export AGENCY_BEARER_TOKEN='...'
-export CLIENT_ONE_BEARER_TOKEN='...'
-export MCP_SHARED_ROUTING=true
-export MCP_REQUESTS_PER_MINUTE=120
-npm run dev
-```
+Each tenant declares `entitlements`, representing modules/capabilities it has contracted. Each principal declares `capabilities`, representing the permissions/role granted to that user/workspace.
 
-The agency principal can connect to either registered tenant endpoint. The client-one principal is denied if it tries `/mcp/client-two` even when it knows that tenant ID.
+The effective permission is always:
+
+`tenant entitlement ∩ principal capability`
+
+Examples:
+
+- tenant has `seo.read`, principal has `seo.read` → allowed;
+- tenant does not have `seo.read` → `tenant_not_entitled`;
+- tenant has `seo.read`, principal lacks it → `principal_not_granted`;
+- no request authorization context → fail closed.
+
+If old configuration omits these fields, the default is only `site.read`.
+
+The current tools all require `site.read`. Future Pages, SEO/GEO, Media, Design, Research and write tools will each require their exact commercial capability before the adapter/backend authorization layer is reached.
+
+Commercial entitlements do **not** replace Research Manager scopes or any future backend permission model. Both layers must permit the operation.
 
 ## Secret-provider boundary
 
-Configuration resolves credentials through the `SecretResolver` interface. v0.3.0 ships an environment-backed implementation, but the tenant/principal contracts depend on secret references, so Vault/KMS/managed secret-store resolvers can be added without changing tenant definitions or MCP tools.
+Configuration resolves credentials through the `SecretResolver` interface. v0.4.0 currently ships an environment-backed implementation, but the tenant/principal contracts depend on secret references, so Vault/KMS/managed secret-store resolvers can be added without changing tenant definitions or MCP tools.
 
 ## Private/single-tenant mode
 
@@ -70,6 +76,7 @@ For private deployments and the Eduardo reference lab, the previous variables re
 export ERM_BASE_URL=https://eduardoyauriluna.com
 export ERM_READ_TOKEN='...'
 export MCP_TENANT_ID=eduardo-research
+export MCP_TENANT_ENTITLEMENTS=site.read
 npm run dev
 ```
 
@@ -104,17 +111,19 @@ Use MCP Inspector against the relevant Streamable HTTP endpoint for protocol/too
 - backend credentials are server-side only;
 - tenant configuration is closed and server-controlled;
 - principal-to-tenant access is deny-by-default;
+- commercial capabilities are typed and closed;
+- every tool invocation requires its capability in both tenant and principal layers;
 - secrets are referenced outside tenant/principal definitions;
 - the MCP client cannot supply arbitrary Manager/backend routes;
 - Host and Origin allowlists remain enforced;
 - adapter errors expose typed non-secret diagnostics only;
 - tenant IDs are identifiers, not authorization;
 - rate/usage counters are independent for each principal and tenant;
-- structured access audit events contain identifiers/outcomes but no tokens.
+- access and entitlement denials emit structured non-secret audit events.
 
 ## Write roadmap
 
-Broad write tools remain deferred until this tenant-isolation slice is accepted in CI and then proven against the Eduardo reference tenant. Phase 2B will preserve the connected gateway semantics, including for Research Manager:
+Broad write tools remain deferred until tenant isolation and commercial entitlements are accepted. Phase 2B preserves the connected gateway semantics, including for Research Manager:
 
 `Preview → explicit Apply → Verify → Rollback`
 
