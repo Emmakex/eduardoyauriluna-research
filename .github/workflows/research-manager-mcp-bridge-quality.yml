@@ -42,21 +42,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "'/research-translations'" src/manager-client.ts
-          grep -F "'/research-evidence'" src/manager-client.ts
-          grep -F "'/research-evidence/identity'" src/manager-client.ts
-          grep -F "'site_translations_list'" src/server.ts
-          grep -F "'site_translation_inspect'" src/server.ts
-          grep -F "'site_evidence_inventory'" src/server.ts
-          grep -F "'site_evidence_identity'" src/server.ts
-          grep -F "'site_evidence_list'" src/server.ts
-          grep -F "'site_evidence_inspect'" src/server.ts
-          grep -F "withCapability('translations.read'" src/server.ts
-          grep -F "withCapability('evidence.read'" src/server.ts
-          grep -F "z.enum(['research_line','research_output','research_project','research_software','research_dataset'])" src/server.ts
-          grep -F "z.enum(['profile','affiliations','identifiers','research_questions','methods','experience','education','awards','contact'])" src/server.ts
-          grep -F "export interface SiteControlAdapter" src/adapters/site-control.ts
+          grep -F "| '/navigation' | '/media' | '/media/diagnostics';" src/manager-client.ts
+          grep -F "'site_navigation_inspect'" src/server.ts
+          grep -F "'site_media_list'" src/server.ts
+          grep -F "'site_media_inspect'" src/server.ts
+          grep -F "'site_media_diagnostics'" src/server.ts
+          grep -F "'site_media_diagnostic_inspect'" src/server.ts
+          grep -F "withCapability('navigation.read'" src/server.ts
+          grep -F "withCapability('media.read'" src/server.ts
+          grep -F "z.enum(['image','audio','video','pdf','application/pdf'])" src/server.ts
+          grep -F "mediaInventory(options:" src/manager-client.ts
+          grep -F "mediaDiagnostics(limit?:number)" src/manager-client.ts
+          grep -F "inspectNavigation(): Promise<unknown>" src/adapters/site-control.ts
+          grep -F "mediaDiagnostics(request: SiteMediaDiagnosticsRequest): Promise<unknown>" src/adapters/site-control.ts
           grep -F "COMMERCIAL_CAPABILITIES" src/entitlements.ts
+          grep -F "'navigation.read'" src/entitlements.ts
+          grep -F "'media.read'" src/entitlements.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
-          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 17
+          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 22
