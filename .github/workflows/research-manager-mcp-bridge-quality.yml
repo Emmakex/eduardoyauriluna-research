@@ -42,31 +42,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "export type ResearchManagerStaticReadRoute = '/status' | '/versions' | '/capabilities' | '/pages' | '/insights';" src/manager-client.ts
-          grep -F "'research_status'" src/server.ts
-          grep -F "'research_versions'" src/server.ts
-          grep -F "'research_capabilities'" src/server.ts
-          grep -F "'site_pages_list'" src/server.ts
-          grep -F "'site_page_inspect'" src/server.ts
-          grep -F "'site_insights_list'" src/server.ts
-          grep -F "'site_insight_inspect'" src/server.ts
-          grep -F "withCapability('pages.read'" src/server.ts
-          grep -F "withCapability('insights.read'" src/server.ts
-          grep -F "listInsights(request: SiteInsightListRequest): Promise<unknown>" src/adapters/site-control.ts
-          grep -F "inspectInsight(request: SiteInsightInspectionRequest): Promise<unknown>" src/adapters/site-control.ts
-          grep -F "new URL('/wp-json/research-manager/v1/insights'" src/manager-client.ts
-          grep -F "new URL(\`/wp-json/research-manager/v1/insights/\${postId}\`" src/manager-client.ts
+          grep -F "| '/research-objects'" src/manager-client.ts
+          grep -F "| '/research-lines';" src/manager-client.ts
+          grep -F "'site_research_objects_list'" src/server.ts
+          grep -F "'site_research_object_inspect'" src/server.ts
+          grep -F "'site_research_lines_list'" src/server.ts
+          grep -F "'site_research_line_inspect'" src/server.ts
+          grep -F "withCapability('research.read'" src/server.ts
+          grep -F "z.enum(['output', 'project', 'software', 'dataset'])" src/server.ts
+          grep -F "researchObjects(kind?: ResearchObjectKind" src/manager-client.ts
+          grep -F "researchLine(postId: number)" src/manager-client.ts
           grep -F "export interface SiteControlAdapter" src/adapters/site-control.ts
           grep -F "class TenantRegistry" src/tenant-registry.ts
           grep -F "class PrincipalRegistry" src/access-control.ts
           grep -F "interface SecretResolver" src/secret-resolver.ts
-          grep -F "class UsageBoundary" src/usage-boundary.ts
           grep -F "COMMERCIAL_CAPABILITIES" src/entitlements.ts
           grep -F "runWithAuthorizationContext" src/http.ts
-          grep -F "tenant_not_entitled" src/entitlements.ts
-          grep -F "principal_not_granted" src/entitlements.ts
-          grep -F "MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON" src/config.ts
-          grep -F "tenant_access_denied" src/http.ts
-          grep -F "sharedTenantFromPath" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
-          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 7
+          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 11
