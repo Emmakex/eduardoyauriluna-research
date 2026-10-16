@@ -14,6 +14,7 @@ Customer / operator
   → authenticated principal / workspace
   → Commercial MCP control platform
   → authorized tenant boundary
+  → commercial entitlement gate
   → registered adapter
   → bounded customer-side manager/connector
   → WordPress / ecommerce / ERP / CRM / custom software
@@ -26,6 +27,8 @@ A model or MCP caller may choose an allowed operation, but it must never supply 
 
 A customer system exists in the platform only after it has been provisioned as a tenant and connected through an approved adapter.
 
+Commercial entitlement is an additional product gate, never a replacement for the authorization enforced by the customer-side manager/connector.
+
 ## Tenant model
 
 Each tenant has a stable internal ID and a closed server-side configuration:
@@ -36,7 +39,7 @@ Each tenant has a stable internal ID and a closed server-side configuration:
 - approved backend origin;
 - language contract;
 - credential profile references;
-- enabled capability groups;
+- contracted capability entitlements;
 - audit/billing identity;
 - deployment class.
 
@@ -53,13 +56,49 @@ Shared SaaS mode introduces authenticated principals/workspaces. Each principal 
 - a stable principal ID;
 - a server-side bearer/OAuth credential reference;
 - an explicit allowlist of tenant IDs;
-- later, capability/entitlement and commercial-plan metadata.
+- an explicit capability grant set/role.
 
 The authorization order is fixed:
 
-`authenticate principal → resolve requested registered tenant → verify principal-to-tenant grant → rate/usage admission → adapter execution`
+`authenticate principal → resolve registered tenant → verify principal-to-tenant grant → rate/usage admission → resolve effective commercial capabilities → tool gate → adapter/backend authorization`
 
 A principal that knows another customer's tenant ID is denied unless that tenant is explicitly present in its allowlist.
+
+## Commercial entitlement model
+
+The platform separates what the customer has purchased from what a user/workspace is allowed to do.
+
+- **Tenant entitlements**: modules/capabilities enabled for that customer/site/system.
+- **Principal capabilities**: actions allowed for the authenticated user/workspace/role.
+- **Effective capability**: intersection of those two sets.
+
+A tool is executable only when its required capability is present in both layers.
+
+Examples:
+
+- tenant has `seo.read` + principal has `seo.read` → commercial gate allows the tool;
+- tenant lacks `seo.read` → deny with `tenant_not_entitled`;
+- tenant has `seo.read` but principal lacks it → deny with `principal_not_granted`;
+- request has no authorization context → fail closed with `context_missing`.
+
+The backend then independently evaluates its own credential/scopes. Passing the commercial gate does not grant backend permission.
+
+The initial closed capability catalog covers:
+
+- `site.read`, diagnostics;
+- Pages read/write;
+- Insights read/write;
+- Research read/write;
+- translations and evidence;
+- SEO/GEO read/write;
+- Media read/write;
+- Navigation read/write;
+- Design read/write;
+- Connections read/write;
+- Apply/Rollback;
+- elevated identity, external publication, software update and destructive-delete actions.
+
+Unknown capability names are rejected during configuration loading.
 
 ## Adapter model
 
@@ -89,7 +128,7 @@ One managed control platform serves multiple isolated tenants. Recommended for S
 
 Commercial unit: connected site/system plus enabled capability package and usage.
 
-Shared routing uses a tenant-scoped MCP URL (`/mcp/{tenant-id}`) plus authenticated principal authorization. The URL identifies the target; the principal grant authorizes it.
+Shared routing uses a tenant-scoped MCP URL (`/mcp/{tenant-id}`) plus authenticated principal authorization. The URL identifies the target; the principal grant authorizes it; entitlements determine which product modules are usable.
 
 ### Private managed instance
 
@@ -109,7 +148,7 @@ These are deployment variants of one product, not separate codebases.
 
 ## Capability packaging
 
-Commercial capability groups should remain independently grantable and billable. Candidate groups:
+Commercial capability groups remain independently grantable and billable. Candidate product packages can combine the typed capabilities into offers such as:
 
 - Read / diagnostics;
 - Content & Pages;
@@ -123,6 +162,8 @@ Commercial capability groups should remain independently grantable and billable.
 - Integrations;
 - Automation / scheduled operations;
 - elevated enterprise actions.
+
+Pricing packages may change without changing the authorization semantics: every MCP tool still maps to one or more exact typed capabilities.
 
 Write access must always preserve the connected gateway's lifecycle. For Research Manager this is:
 
@@ -141,8 +182,8 @@ Target onboarding:
 3. install/configure the bounded customer-side connector/manager;
 4. register backend origin;
 5. provision least-privilege secrets;
-6. create principal/workspace grants;
-7. choose enabled capability package;
+6. choose tenant capability package/entitlements;
+7. create principal/workspace grants/roles;
 8. run readiness/compatibility acceptance;
 9. connect approved MCP client/workspace;
 10. activate audit and usage metering.
@@ -156,10 +197,10 @@ Before a shared public multi-tenant endpoint can expose write tools, the platfor
 - deny-by-default tenant selection;
 - per-tenant credential profiles;
 - per-principal/per-tenant rate limits and usage counters;
+- request-scoped commercial entitlement checks;
 - immutable/persistent audit correlation for production;
 - secret-manager-compatible credential resolution;
 - tenant-safe logs/metrics;
-- explicit capability entitlement checks;
 - billing/usage hooks that never weaken authorization.
 
 Tenant IDs are identifiers, not authorization. Knowing another tenant ID must never grant access.
@@ -168,21 +209,23 @@ Tenant IDs are identifiers, not authorization. Knowing another tenant ID must ne
 
 The commercial core resolves credentials through a `SecretResolver` interface rather than reading arbitrary secret material inside tenant logic.
 
-v0.3 ships `EnvSecretResolver` as the first implementation. The tenant/principal configuration only stores secret references, so a Vault, cloud KMS/secret manager or customer-managed resolver can replace the environment implementation without changing MCP tools, tenant IDs or adapter contracts.
+The current implementation ships `EnvSecretResolver` first. The tenant/principal configuration only stores secret references, so a Vault, cloud KMS/secret manager or customer-managed resolver can replace the environment implementation without changing MCP tools, tenant IDs or adapter contracts.
 
 ## Usage and audit boundary
 
-v0.3 introduces a first in-process commercial guard keyed by:
+The current commercial guard is keyed by:
 
 `principal ID × tenant ID`
 
 This provides independent per-minute admission counters, denied/rate-limited accounting and structured access events that contain principal ID, tenant ID, request path and outcome but never bearer material.
 
+Entitlement denials add structured reason codes (`tenant_not_entitled`, `principal_not_granted`) plus the denied capability without exposing secrets.
+
 This is the enforcement boundary for the current prototype, not the final billing ledger. Before external commercial launch, usage/audit persistence must move to durable storage/telemetry with retention and tamper-resistance appropriate to the deployment class.
 
-## Current implementation — v0.3 tenant isolation
+## Current implementation — v0.4 commercial entitlements
 
-`bridge/research-manager-mcp` now contains the reusable commercial core while keeping the accepted Research Manager read-only surface compatible.
+`bridge/research-manager-mcp` contains the reusable commercial core while keeping the accepted Research Manager read-only surface compatible.
 
 Implemented:
 
@@ -197,10 +240,16 @@ Implemented:
 - independent `principal × tenant` rate/usage counters;
 - structured non-secret access audit events;
 - `SecretResolver` abstraction with environment-backed implementation;
+- closed typed commercial capability catalog;
+- per-tenant entitlement lists;
+- per-principal capability grants;
+- request-scoped authorization context through MCP execution;
+- tool invocation gate using tenant/principal intersection;
+- structured entitlement-denial reason codes;
 - health response does not enumerate tenants in shared mode;
 - private/single-tenant mode remains backward compatible for the Eduardo reference lab.
 
-The next commercial slice after v0.3 acceptance is capability entitlement/read-surface expansion, followed by bounded Preview/Apply/Verify/Rollback write workflows.
+The next commercial slice after v0.4 acceptance is bounded read/list/inspect surface expansion by domain. Broad writes remain behind Preview/Apply/Verify/Rollback and separate backend write credentials.
 
 ## Product naming
 

@@ -1,9 +1,11 @@
 import { timingSafeEqual } from 'node:crypto';
+import type { CommercialCapability } from './entitlements.js';
 
 export interface PrincipalAccess {
   id: string;
   bearerToken: string;
   allowedTenantIds: readonly string[];
+  capabilities: readonly CommercialCapability[];
 }
 
 function secureEqual(left: string, right: string): boolean {
@@ -28,6 +30,9 @@ export class PrincipalRegistry {
       bearerTokens.add(principal.bearerToken);
       if (principal.allowedTenantIds.length === 0) {
         throw new Error(`Principal ${principal.id} must be allowed at least one tenant`);
+      }
+      if (principal.capabilities.length === 0) {
+        throw new Error(`Principal ${principal.id} must be granted at least one commercial capability`);
       }
     }
     this.principals = principals;

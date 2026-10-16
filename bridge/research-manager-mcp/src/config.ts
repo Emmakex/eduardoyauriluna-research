@@ -1,4 +1,5 @@
 import type { PrincipalAccess } from './access-control.js';
+import { parseCapabilityList, type CommercialCapability } from './entitlements.js';
 import { EnvSecretResolver, type SecretResolver } from './secret-resolver.js';
 
 export type TenantAdapter = 'research-manager';
@@ -11,6 +12,7 @@ export interface TenantConfig {
   managerReadToken: string;
   managerTimeoutMs: number;
   languages: readonly string[];
+  entitlements: readonly CommercialCapability[];
 }
 
 export interface BridgeConfig {
@@ -34,12 +36,14 @@ interface TenantDefinition {
   readTokenEnv?: unknown;
   timeoutMs?: unknown;
   languages?: unknown;
+  entitlements?: unknown;
 }
 
 interface PrincipalDefinition {
   id?: unknown;
   bearerTokenEnv?: unknown;
   tenants?: unknown;
+  capabilities?: unknown;
 }
 
 function required(name: string, env: NodeJS.ProcessEnv): string {
@@ -132,6 +136,7 @@ function tenantFromDefinition(
     managerReadToken: managerToken(resolver.resolve(tokenReference), tokenReference),
     managerTimeoutMs: timeoutMs,
     languages: languages(definition.languages, `${prefix}.languages`),
+    entitlements: parseCapabilityList(definition.entitlements, `${prefix}.entitlements`),
   };
 }
 
@@ -161,6 +166,10 @@ function configuredTenants(env: NodeJS.ProcessEnv, resolver: SecretResolver): re
       managerReadToken: managerToken(resolver.resolve('ERM_READ_TOKEN'), 'ERM_READ_TOKEN'),
       managerTimeoutMs: positiveInt('ERM_TIMEOUT_MS', env.ERM_TIMEOUT_MS, 20_000),
       languages: csv(env.MCP_TENANT_LANGUAGES || 'en,es'),
+      entitlements: parseCapabilityList(
+        csv(env.MCP_TENANT_ENTITLEMENTS || 'site.read'),
+        'MCP_TENANT_ENTITLEMENTS',
+      ),
     },
   ];
 }
@@ -202,6 +211,7 @@ function configuredPrincipals(
       id,
       bearerToken: resolver.resolve(definition.bearerTokenEnv.trim()),
       allowedTenantIds,
+      capabilities: parseCapabilityList(definition.capabilities, `${prefix}.capabilities`),
     };
   });
 }

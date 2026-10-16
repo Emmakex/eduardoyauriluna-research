@@ -6,6 +6,7 @@ import { PrincipalRegistry, type PrincipalAccess } from './access-control.js';
 import { ResearchManagerAdapter } from './adapters/research-manager.js';
 import type { SiteControlAdapter } from './adapters/site-control.js';
 import { loadConfig, type TenantConfig } from './config.js';
+import { runWithAuthorizationContext } from './entitlements.js';
 import { createBridgeServer } from './server.js';
 import { TenantRegistry } from './tenant-registry.js';
 import { accessAuditEvent, UsageBoundary } from './usage-boundary.js';
@@ -69,11 +70,13 @@ function secureEqual(left: string, right: string): boolean {
 }
 
 function legacyPrincipal(req: IncomingMessage): PrincipalAccess | null {
+  const tenant = registry.require(config.activeTenantId);
   if (config.inboundBearerToken === null) {
     return {
       id: 'loopback-local',
       bearerToken: '',
       allowedTenantIds: [config.activeTenantId],
+      capabilities: tenant.entitlements,
     };
   }
   const header = req.headers.authorization ?? '';
@@ -83,6 +86,7 @@ function legacyPrincipal(req: IncomingMessage): PrincipalAccess | null {
     id: 'legacy-bearer',
     bearerToken: '',
     allowedTenantIds: [config.activeTenantId],
+    capabilities: tenant.entitlements,
   };
 }
 
@@ -103,6 +107,24 @@ function audit(principalId: string, tenantId: string, outcome: 'allowed' | 'deni
   console.error(`[mcp-access] ${accessAuditEvent({ principalId, tenantId, outcome, requestPath: path })}`);
 }
 
+function entitlementAudit(event: {
+  capability: string;
+  reason: string;
+  principalId: string;
+  tenantId: string;
+}): void {
+  console.error(
+    `[mcp-entitlement] ${JSON.stringify({
+      event: 'mcp_entitlement_denied',
+      timestamp: new Date().toISOString(),
+      principal_id: event.principalId,
+      tenant_id: event.tenantId,
+      capability: event.capability,
+      reason: event.reason,
+    })}`,
+  );
+}
+
 const httpServer = createServer(async (req, res) => {
   let pathname = '/';
   try {
@@ -120,8 +142,8 @@ const httpServer = createServer(async (req, res) => {
     const body: Record<string, unknown> = {
       ok: true,
       service: 'site-control-mcp',
-      version: '0.3.0',
-      phase: 'tenant-isolation',
+      version: '0.4.0',
+      phase: 'commercial-entitlements',
       routing: config.sharedRouting ? 'shared' : 'single-tenant',
     };
     if (!config.sharedRouting) body.tenant = registry.metadata(config.activeTenantId);
@@ -191,6 +213,7 @@ const httpServer = createServer(async (req, res) => {
     json(res, 404, { ok: false, code: 'not_found' });
     return;
   }
+  const tenant = registry.require(tenantId);
 
   audit(principal.id, tenantId, 'allowed', pathname);
   try {
@@ -198,7 +221,16 @@ const httpServer = createServer(async (req, res) => {
     const originalUrl = mcpRequest.url;
     mcpRequest.url = '/mcp';
     try {
-      await runtime.handle(mcpRequest, res);
+      await runWithAuthorizationContext(
+        {
+          principalId: principal.id,
+          tenantId,
+          tenantEntitlements: tenant.entitlements,
+          principalCapabilities: principal.capabilities,
+          onDenied: entitlementAudit,
+        },
+        async () => runtime.handle(mcpRequest, res),
+      );
     } finally {
       mcpRequest.url = originalUrl;
     }
