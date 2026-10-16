@@ -31,7 +31,7 @@ function entitlementAudit(event:{capability:string;reason:string;principalId:str
 
 const httpServer=createServer(async(req,res)=>{
   let pathname='/';try{pathname=new URL(req.url??'/','http://localhost').pathname;}catch{json(res,400,{ok:false,code:'invalid_url'});return;}
-  if(pathname==='/healthz'){if(req.method!=='GET'){json(res,405,{ok:false,code:'method_not_allowed'});return;}const body:Record<string,unknown>={ok:true,service:'site-control-mcp',version:'0.8.0',phase:'read-surfaces-pages-insights-research-translations-evidence',routing:config.sharedRouting?'shared':'single-tenant'};if(!config.sharedRouting)body.tenant=registry.metadata(config.activeTenantId);json(res,200,body);return;}
+  if(pathname==='/healthz'){if(req.method!=='GET'){json(res,405,{ok:false,code:'method_not_allowed'});return;}const body:Record<string,unknown>={ok:true,service:'site-control-mcp',version:'0.9.0',phase:'read-surfaces-pages-insights-research-translations-evidence-navigation-media',routing:config.sharedRouting?'shared':'single-tenant'};if(!config.sharedRouting)body.tenant=registry.metadata(config.activeTenantId);json(res,200,body);return;}
   if(!allowedHost(req)||!allowedOrigin(req)){json(res,403,{ok:false,code:'request_origin_denied'});return;}
   let tenantId:string;let principal:PrincipalAccess|null;
   if(config.sharedRouting){const requestedTenant=sharedTenantFromPath(pathname);if(!requestedTenant||!runtimes.has(requestedTenant)){json(res,404,{ok:false,code:'not_found'});return;}tenantId=requestedTenant;principal=principalRegistry.authenticate(req.headers.authorization);}else{if(pathname!=='/mcp'){json(res,404,{ok:false,code:'not_found'});return;}tenantId=config.activeTenantId;principal=legacyPrincipal(req);}
