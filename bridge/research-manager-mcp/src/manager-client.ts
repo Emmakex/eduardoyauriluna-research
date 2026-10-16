@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { BridgeConfig } from './config.js';
+import type { TenantConfig } from './config.js';
 
 export type ResearchManagerReadRoute = '/status' | '/versions' | '/capabilities';
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -31,7 +31,10 @@ export class ResearchManagerClient {
   private readonly timeoutMs: number;
   private readonly fetchImpl: FetchLike;
 
-  constructor(config: Pick<BridgeConfig, 'managerBaseUrl' | 'managerReadToken' | 'managerTimeoutMs'>, fetchImpl: FetchLike = fetch) {
+  constructor(
+    config: Pick<TenantConfig, 'managerBaseUrl' | 'managerReadToken' | 'managerTimeoutMs'>,
+    fetchImpl: FetchLike = fetch,
+  ) {
     this.baseUrl = config.managerBaseUrl;
     this.token = config.managerReadToken;
     this.timeoutMs = config.managerTimeoutMs;
@@ -57,7 +60,7 @@ export class ResearchManagerClient {
     const headers = new Headers({
       Accept: 'application/json',
       Authorization: `Bearer ${this.token}`,
-      'User-Agent': 'Eduardo-Research-Manager-MCP/0.1.0',
+      'User-Agent': 'Site-Control-MCP/0.2.0 ResearchManagerAdapter',
       'X-Research-Manager-Request-Id': requestId,
       'X-Research-Manager-Nonce': randomBytes(16).toString('hex'),
       'X-Research-Manager-Timestamp': Math.floor(Date.now() / 1000).toString(),
