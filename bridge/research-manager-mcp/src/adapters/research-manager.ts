@@ -6,6 +6,10 @@ import type {
   SiteEvidenceListRequest,
   SiteInsightInspectionRequest,
   SiteInsightListRequest,
+  SiteMediaDiagnosticInspectionRequest,
+  SiteMediaDiagnosticsRequest,
+  SiteMediaInspectionRequest,
+  SiteMediaListRequest,
   SitePageInspectionRequest,
   SiteResearchLineInspectionRequest,
   SiteResearchLineListRequest,
@@ -46,6 +50,11 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   evidenceIdentity(): Promise<unknown> { return this.client.evidenceIdentity(); }
   listEvidence(request: SiteEvidenceListRequest): Promise<unknown> { return this.client.evidenceRecords(request.group); }
   inspectEvidence(request: SiteEvidenceInspectionRequest): Promise<unknown> { return this.client.evidenceRecord(request.group,request.recordId); }
+  inspectNavigation(): Promise<unknown> { return this.client.navigation(); }
+  listMedia(request: SiteMediaListRequest): Promise<unknown> { return this.client.mediaInventory(request); }
+  inspectMedia(request: SiteMediaInspectionRequest): Promise<unknown> { return this.client.mediaItem(request.attachmentId); }
+  mediaDiagnostics(request: SiteMediaDiagnosticsRequest): Promise<unknown> { return this.client.mediaDiagnostics(request.limit); }
+  inspectMediaDiagnostic(request: SiteMediaDiagnosticInspectionRequest): Promise<unknown> { return this.client.mediaDiagnosticItem(request.attachmentId); }
 
   private requireLanguage(language:string,label:string):void {
     if(!this.languages.includes(language)) throw new Error(`${label} language is not enabled for tenant ${this.tenantId}`);
