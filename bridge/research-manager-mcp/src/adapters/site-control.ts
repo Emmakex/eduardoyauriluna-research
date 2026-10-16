@@ -30,6 +30,17 @@ export type ResearchEvidenceGroup =
 export interface SiteEvidenceListRequest { group: ResearchEvidenceGroup; }
 export interface SiteEvidenceInspectionRequest { group: ResearchEvidenceGroup; recordId: string; }
 
+export type SiteMediaMimeFilter = 'image' | 'audio' | 'video' | 'pdf' | 'application/pdf';
+export interface SiteMediaListRequest {
+  page?: number;
+  perPage?: number;
+  search?: string;
+  mimeType?: SiteMediaMimeFilter;
+}
+export interface SiteMediaInspectionRequest { attachmentId: number; }
+export interface SiteMediaDiagnosticsRequest { limit?: number; }
+export interface SiteMediaDiagnosticInspectionRequest { attachmentId: number; }
+
 export interface SiteControlAdapter {
   readonly kind: string;
   readonly tenantId: string;
@@ -51,4 +62,9 @@ export interface SiteControlAdapter {
   evidenceIdentity(): Promise<unknown>;
   listEvidence(request: SiteEvidenceListRequest): Promise<unknown>;
   inspectEvidence(request: SiteEvidenceInspectionRequest): Promise<unknown>;
+  inspectNavigation(): Promise<unknown>;
+  listMedia(request: SiteMediaListRequest): Promise<unknown>;
+  inspectMedia(request: SiteMediaInspectionRequest): Promise<unknown>;
+  mediaDiagnostics(request: SiteMediaDiagnosticsRequest): Promise<unknown>;
+  inspectMediaDiagnostic(request: SiteMediaDiagnosticInspectionRequest): Promise<unknown>;
 }
