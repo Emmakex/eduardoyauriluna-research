@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/server';
-import type { ResearchManagerClient } from './manager-client.js';
+import type { SiteControlAdapter } from './adapters/site-control.js';
 
 function toolResult(data: unknown) {
   return {
@@ -8,14 +8,15 @@ function toolResult(data: unknown) {
   };
 }
 
-export function createBridgeServer(client: ResearchManagerClient): McpServer {
+export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
   const server = new McpServer(
-    { name: 'eduardo-research-manager', version: '0.1.0' },
+    { name: 'site-control-mcp', version: '0.2.0' },
     {
       instructions:
-        'This server controls the single-site Research Manager for eduardoyauriluna.com. ' +
-        'Use only the registered bounded tools. Never infer or construct arbitrary WordPress or REST routes. ' +
-        'Phase 1 is read-only.',
+        `This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) ` +
+        `through the ${adapter.kind} adapter. Use only registered bounded tools. ` +
+        'Never infer or construct arbitrary WordPress, REST, database, filesystem or shell routes. ' +
+        'The current surface is read-only.',
       capabilities: { tools: { listChanged: false } },
       maxToolInputElements: 32,
     },
@@ -24,31 +25,31 @@ export function createBridgeServer(client: ResearchManagerClient): McpServer {
   server.registerTool(
     'research_status',
     {
-      title: 'Research site status',
-      description: 'Read the authenticated Research Manager site status for eduardoyauriluna.com.',
+      title: 'Site status',
+      description: 'Read the authenticated status of the currently bound tenant through its registered adapter.',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => toolResult(await client.status()),
+    async () => toolResult(await adapter.status()),
   );
 
   server.registerTool(
     'research_versions',
     {
-      title: 'Research site versions',
-      description: 'Read the active Research Manager, Research Theme, and API versions.',
+      title: 'Site versions',
+      description: 'Read the active application, theme/runtime and API versions exposed by the registered adapter.',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => toolResult(await client.versions()),
+    async () => toolResult(await adapter.versions()),
   );
 
   server.registerTool(
     'research_capabilities',
     {
-      title: 'Research Manager capabilities',
-      description: 'Read the authenticated bounded capability and granted-scope inventory.',
+      title: 'Site capabilities',
+      description: 'Read the authenticated bounded capability and granted-scope inventory for the bound tenant.',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => toolResult(await client.capabilities()),
+    async () => toolResult(await adapter.capabilities()),
   );
 
   return server;

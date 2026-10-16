@@ -1,6 +1,6 @@
 {
-  "name": "@eduardoyauri/research-manager-mcp",
-  "version": "0.1.0",
+  "name": "@eduardoyauri/site-control-mcp",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {

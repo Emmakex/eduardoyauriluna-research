@@ -2,13 +2,24 @@ import { timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { createMcpHandler } from '@modelcontextprotocol/server';
-import { loadConfig } from './config.js';
-import { ResearchManagerClient } from './manager-client.js';
+import { ResearchManagerAdapter } from './adapters/research-manager.js';
+import { loadConfig, type TenantConfig } from './config.js';
 import { createBridgeServer } from './server.js';
+import { TenantRegistry } from './tenant-registry.js';
 
 const config = loadConfig();
-const manager = new ResearchManagerClient(config);
-const mcp = createMcpHandler(() => createBridgeServer(manager));
+const registry = new TenantRegistry(config.tenants);
+const tenant = registry.require(config.activeTenantId);
+
+function createAdapter(selected: TenantConfig) {
+  switch (selected.adapter) {
+    case 'research-manager':
+      return new ResearchManagerAdapter(selected);
+  }
+}
+
+const adapter = createAdapter(tenant);
+const mcp = createMcpHandler(() => createBridgeServer(adapter));
 const handleMcp = toNodeHandler(mcp, {
   onerror(error) {
     const message = error instanceof Error ? error.message : 'unknown adapter error';
@@ -73,7 +84,13 @@ const httpServer = createServer(async (req, res) => {
       json(res, 405, { ok: false, code: 'method_not_allowed' });
       return;
     }
-    json(res, 200, { ok: true, service: 'research-manager-mcp', version: '0.1.0', phase: 'read-only' });
+    json(res, 200, {
+      ok: true,
+      service: 'site-control-mcp',
+      version: '0.2.0',
+      phase: 'commercial-foundation',
+      tenant: registry.metadata(tenant.id),
+    });
     return;
   }
 
@@ -111,7 +128,9 @@ const httpServer = createServer(async (req, res) => {
 });
 
 httpServer.listen(config.port, config.bindHost, () => {
-  console.error(`[mcp] research-manager bridge listening on http://${config.bindHost}:${config.port}/mcp`);
+  console.error(
+    `[mcp] site-control bridge tenant=${tenant.id} adapter=${tenant.adapter} listening on http://${config.bindHost}:${config.port}/mcp`,
+  );
 });
 
 async function shutdown(signal: string): Promise<void> {
