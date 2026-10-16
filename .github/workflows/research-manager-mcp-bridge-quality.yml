@@ -51,6 +51,11 @@ jobs:
           grep -F "class PrincipalRegistry" src/access-control.ts
           grep -F "interface SecretResolver" src/secret-resolver.ts
           grep -F "class UsageBoundary" src/usage-boundary.ts
+          grep -F "COMMERCIAL_CAPABILITIES" src/entitlements.ts
+          grep -F "runWithAuthorizationContext" src/http.ts
+          grep -F "requireCapability('site.read')" src/server.ts
+          grep -F "tenant_not_entitled" src/entitlements.ts
+          grep -F "principal_not_granted" src/entitlements.ts
           grep -F "MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON" src/config.ts
           grep -F "tenant_access_denied" src/http.ts
           grep -F "sharedTenantFromPath" src/http.ts
