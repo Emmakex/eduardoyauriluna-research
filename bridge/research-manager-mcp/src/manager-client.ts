@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TenantConfig } from './config.js';
 
-export type ResearchManagerStaticReadRoute = '/status' | '/versions' | '/capabilities' | '/pages';
+export type ResearchManagerStaticReadRoute = '/status' | '/versions' | '/capabilities' | '/pages' | '/insights';
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 interface ManagerEnvelope {
@@ -41,32 +41,32 @@ export class ResearchManagerClient {
     this.fetchImpl = fetchImpl;
   }
 
-  status(): Promise<unknown> {
-    return this.getStatic('/status');
-  }
-
-  versions(): Promise<unknown> {
-    return this.getStatic('/versions');
-  }
-
-  capabilities(): Promise<unknown> {
-    return this.getStatic('/capabilities');
-  }
-
-  pages(): Promise<unknown> {
-    return this.getStatic('/pages');
-  }
+  status(): Promise<unknown> { return this.getStatic('/status'); }
+  versions(): Promise<unknown> { return this.getStatic('/versions'); }
+  capabilities(): Promise<unknown> { return this.getStatic('/capabilities'); }
+  pages(): Promise<unknown> { return this.getStatic('/pages'); }
 
   page(key: string, language: string): Promise<unknown> {
-    if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(key)) {
-      throw new Error('Page key must be a lowercase registered key');
-    }
-    if (!/^[a-z][a-z0-9-]{1,15}$/.test(language)) {
-      throw new Error('Page language must be a lowercase language code');
-    }
+    if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(key)) throw new Error('Page key must be a lowercase registered key');
+    if (!/^[a-z][a-z0-9-]{1,15}$/.test(language)) throw new Error('Page language must be a lowercase language code');
     const endpoint = new URL(`/wp-json/research-manager/v1/pages/${encodeURIComponent(key)}`, this.baseUrl);
     endpoint.searchParams.set('language', language);
     return this.getEndpoint(endpoint, `page-${key}-${language}`, `/pages/${key}`);
+  }
+
+  insights(language = ''): Promise<unknown> {
+    if (language && !/^[a-z][a-z0-9-]{1,15}$/.test(language)) {
+      throw new Error('Insight language must be a lowercase language code');
+    }
+    const endpoint = new URL('/wp-json/research-manager/v1/insights', this.baseUrl);
+    if (language) endpoint.searchParams.set('language', language);
+    return this.getEndpoint(endpoint, language ? `insights-${language}` : 'insights', '/insights');
+  }
+
+  insight(postId: number): Promise<unknown> {
+    if (!Number.isSafeInteger(postId) || postId <= 0) throw new Error('Insight post ID must be a positive integer');
+    const endpoint = new URL(`/wp-json/research-manager/v1/insights/${postId}`, this.baseUrl);
+    return this.getEndpoint(endpoint, `insight-${postId}`, `/insights/${postId}`);
   }
 
   private getStatic(route: ResearchManagerStaticReadRoute): Promise<unknown> {
@@ -79,7 +79,7 @@ export class ResearchManagerClient {
     const headers = new Headers({
       Accept: 'application/json',
       Authorization: `Bearer ${this.token}`,
-      'User-Agent': 'Site-Control-MCP/0.5.0 ResearchManagerAdapter',
+      'User-Agent': 'Site-Control-MCP/0.6.0 ResearchManagerAdapter',
       'X-Research-Manager-Request-Id': requestId,
       'X-Research-Manager-Nonce': randomBytes(16).toString('hex'),
       'X-Research-Manager-Timestamp': Math.floor(Date.now() / 1000).toString(),
@@ -118,14 +118,9 @@ export class ResearchManagerClient {
     if (!response.ok || envelope.ok !== true || !('data' in envelope)) {
       throw new ResearchManagerError(
         `Research Manager rejected ${diagnosticRoute} with HTTP ${response.status}: ${envelope.code ?? 'request_failed'}`,
-        {
-          status: response.status,
-          code: envelope.code ?? 'request_failed',
-          requestId,
-        },
+        { status: response.status, code: envelope.code ?? 'request_failed', requestId },
       );
     }
-
     return envelope.data;
   }
 }
