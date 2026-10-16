@@ -5,12 +5,14 @@ on:
     paths:
       - 'bridge/research-manager-mcp/**'
       - 'docs/57-chatgpt-mcp-bridge.md'
+      - 'docs/58-commercial-mcp-platform.md'
       - '.github/workflows/research-manager-mcp-bridge-quality.yml'
   push:
     branches: [main]
     paths:
       - 'bridge/research-manager-mcp/**'
       - 'docs/57-chatgpt-mcp-bridge.md'
+      - 'docs/58-commercial-mcp-platform.md'
       - '.github/workflows/research-manager-mcp-bridge-quality.yml'
 
 permissions:
@@ -44,5 +46,7 @@ jobs:
           grep -F "'research_status'" src/server.ts
           grep -F "'research_versions'" src/server.ts
           grep -F "'research_capabilities'" src/server.ts
+          grep -F "export interface SiteControlAdapter" src/adapters/site-control.ts
+          grep -F "class TenantRegistry" src/tenant-registry.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
           test "$(grep -c "server.registerTool(" src/server.ts)" -eq 3
