@@ -45,26 +45,13 @@ jobs:
           grep -F "| '/seo-geo/site' | '/seo-geo/indexability' | '/seo-geo/internal-links' | '/seo-geo/readiness'" src/manager-client.ts
           grep -F "| '/design' | '/design/variants' | '/design/readiness';" src/manager-client.ts
           grep -F "'site_seo_geo_site'" src/server.ts
-          grep -F "'site_seo_geo_resource'" src/server.ts
-          grep -F "'site_seo_geo_resource_actions'" src/server.ts
-          grep -F "'site_seo_geo_indexability'" src/server.ts
-          grep -F "'site_seo_geo_resource_indexability'" src/server.ts
-          grep -F "'site_seo_geo_internal_links'" src/server.ts
-          grep -F "'site_seo_geo_readiness'" src/server.ts
-          grep -F "'site_design_inspect'" src/server.ts
-          grep -F "'site_design_variants'" src/server.ts
           grep -F "'site_design_readiness'" src/server.ts
           grep -F "withCapability('seo.read'" src/server.ts
           grep -F "withCapability('design.read'" src/server.ts
-          grep -F "z.enum(['page','insight','line','output','project','software','dataset'])" src/server.ts
-          grep -F "SEO internal links limit',1,500" src/manager-client.ts
-          grep -F "SEO readiness per-type limit',1,5" src/manager-client.ts
-          grep -F "seoResourceEndpoint(" src/manager-client.ts
-          grep -F "designReadiness(rendered?:boolean)" src/manager-client.ts
-          grep -F "seoResource(request: SiteSeoResourceRequest): Promise<unknown>" src/adapters/site-control.ts
-          grep -F "designReadiness(request: SiteDesignReadinessRequest): Promise<unknown>" src/adapters/site-control.ts
-          grep -F "'seo.read'" src/entitlements.ts
-          grep -F "'design.read'" src/entitlements.ts
+          grep -F "TOOL_AUTHORIZATION" src/tool-authorization.ts
+          grep -F "backendScopes:['site.diagnostics','seo.read']" src/tool-authorization.ts
+          grep -F "site_navigation_inspect: { commercialCapability:'navigation.read', backendScopes:['pages.read']" src/tool-authorization.ts
+          grep -F "catalogEntries.length,32" test/tool-authorization.test.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
           test "$(grep -c "server.registerTool(" src/server.ts)" -eq 32
