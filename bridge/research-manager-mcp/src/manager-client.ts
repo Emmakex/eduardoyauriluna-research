@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TenantConfig } from './config.js';
 
-export type ResearchManagerReadRoute = '/status' | '/versions' | '/capabilities';
+export type ResearchManagerStaticReadRoute = '/status' | '/versions' | '/capabilities' | '/pages';
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 interface ManagerEnvelope {
@@ -42,25 +42,44 @@ export class ResearchManagerClient {
   }
 
   status(): Promise<unknown> {
-    return this.get('/status');
+    return this.getStatic('/status');
   }
 
   versions(): Promise<unknown> {
-    return this.get('/versions');
+    return this.getStatic('/versions');
   }
 
   capabilities(): Promise<unknown> {
-    return this.get('/capabilities');
+    return this.getStatic('/capabilities');
   }
 
-  private async get(route: ResearchManagerReadRoute): Promise<unknown> {
-    const label = route.slice(1).replaceAll('/', '-');
-    const requestId = `mcp-${label}-${Date.now()}-${randomUUID()}`;
+  pages(): Promise<unknown> {
+    return this.getStatic('/pages');
+  }
+
+  page(key: string, language: string): Promise<unknown> {
+    if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(key)) {
+      throw new Error('Page key must be a lowercase registered key');
+    }
+    if (!/^[a-z][a-z0-9-]{1,15}$/.test(language)) {
+      throw new Error('Page language must be a lowercase language code');
+    }
+    const endpoint = new URL(`/wp-json/research-manager/v1/pages/${encodeURIComponent(key)}`, this.baseUrl);
+    endpoint.searchParams.set('language', language);
+    return this.getEndpoint(endpoint, `page-${key}-${language}`, `/pages/${key}`);
+  }
+
+  private getStatic(route: ResearchManagerStaticReadRoute): Promise<unknown> {
     const endpoint = new URL(`/wp-json/research-manager/v1${route}`, this.baseUrl);
+    return this.getEndpoint(endpoint, route.slice(1).replaceAll('/', '-'), route);
+  }
+
+  private async getEndpoint(endpoint: URL, label: string, diagnosticRoute: string): Promise<unknown> {
+    const requestId = `mcp-${label}-${Date.now()}-${randomUUID()}`;
     const headers = new Headers({
       Accept: 'application/json',
       Authorization: `Bearer ${this.token}`,
-      'User-Agent': 'Site-Control-MCP/0.2.0 ResearchManagerAdapter',
+      'User-Agent': 'Site-Control-MCP/0.5.0 ResearchManagerAdapter',
       'X-Research-Manager-Request-Id': requestId,
       'X-Research-Manager-Nonce': randomBytes(16).toString('hex'),
       'X-Research-Manager-Timestamp': Math.floor(Date.now() / 1000).toString(),
@@ -98,7 +117,7 @@ export class ResearchManagerClient {
 
     if (!response.ok || envelope.ok !== true || !('data' in envelope)) {
       throw new ResearchManagerError(
-        `Research Manager rejected ${route} with HTTP ${response.status}: ${envelope.code ?? 'request_failed'}`,
+        `Research Manager rejected ${diagnosticRoute} with HTTP ${response.status}: ${envelope.code ?? 'request_failed'}`,
         {
           status: response.status,
           code: envelope.code ?? 'request_failed',
