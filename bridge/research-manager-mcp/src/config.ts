@@ -1,3 +1,6 @@
+import type { PrincipalAccess } from './access-control.js';
+import { EnvSecretResolver, type SecretResolver } from './secret-resolver.js';
+
 export type TenantAdapter = 'research-manager';
 
 export interface TenantConfig {
@@ -12,7 +15,10 @@ export interface TenantConfig {
 
 export interface BridgeConfig {
   tenants: readonly TenantConfig[];
+  principals: readonly PrincipalAccess[];
   activeTenantId: string;
+  sharedRouting: boolean;
+  requestsPerMinute: number;
   bindHost: string;
   port: number;
   inboundBearerToken: string | null;
@@ -28,6 +34,12 @@ interface TenantDefinition {
   readTokenEnv?: unknown;
   timeoutMs?: unknown;
   languages?: unknown;
+}
+
+interface PrincipalDefinition {
+  id?: unknown;
+  bearerTokenEnv?: unknown;
+  tenants?: unknown;
 }
 
 function required(name: string, env: NodeJS.ProcessEnv): string {
@@ -50,9 +62,24 @@ function positiveInt(name: string, raw: string | undefined, fallback: number): n
   return parsed;
 }
 
+function enabled(name: string, raw: string | undefined): boolean {
+  if (!raw) return false;
+  const normalized = raw.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  throw new Error(`${name} must be true/false`);
+}
+
 function tenantId(raw: unknown, field: string): string {
   if (typeof raw !== 'string' || !/^[a-z0-9][a-z0-9-]{1,62}$/.test(raw)) {
     throw new Error(`${field} must be a lowercase tenant id (2-63 chars)`);
+  }
+  return raw;
+}
+
+function principalId(raw: unknown, field: string): string {
+  if (typeof raw !== 'string' || !/^[a-z0-9][a-z0-9._-]{1,62}$/.test(raw)) {
+    throw new Error(`${field} must be a lowercase principal id (2-63 chars)`);
   }
   return raw;
 }
@@ -79,7 +106,11 @@ function languages(raw: unknown, field: string): readonly string[] {
   return [...new Set(raw.map((item) => (item as string).trim().toLowerCase()))];
 }
 
-function tenantFromDefinition(definition: TenantDefinition, env: NodeJS.ProcessEnv, index: number): TenantConfig {
+function tenantFromDefinition(
+  definition: TenantDefinition,
+  resolver: SecretResolver,
+  index: number,
+): TenantConfig {
   const prefix = `MCP_TENANTS_JSON[${index}]`;
   const id = tenantId(definition.id, `${prefix}.id`);
   const label = typeof definition.label === 'string' && definition.label.trim() ? definition.label.trim() : id;
@@ -87,7 +118,7 @@ function tenantFromDefinition(definition: TenantDefinition, env: NodeJS.ProcessE
   if (typeof definition.readTokenEnv !== 'string' || !definition.readTokenEnv.trim()) {
     throw new Error(`${prefix}.readTokenEnv is required`);
   }
-  const tokenEnv = definition.readTokenEnv.trim();
+  const tokenReference = definition.readTokenEnv.trim();
   const timeoutMs =
     typeof definition.timeoutMs === 'number' && Number.isInteger(definition.timeoutMs) && definition.timeoutMs > 0
       ? definition.timeoutMs
@@ -98,13 +129,13 @@ function tenantFromDefinition(definition: TenantDefinition, env: NodeJS.ProcessE
     label,
     adapter: 'research-manager',
     managerBaseUrl: httpsUrl(definition.baseUrl, `${prefix}.baseUrl`),
-    managerReadToken: managerToken(required(tokenEnv, env), tokenEnv),
+    managerReadToken: managerToken(resolver.resolve(tokenReference), tokenReference),
     managerTimeoutMs: timeoutMs,
     languages: languages(definition.languages, `${prefix}.languages`),
   };
 }
 
-function configuredTenants(env: NodeJS.ProcessEnv): readonly TenantConfig[] {
+function configuredTenants(env: NodeJS.ProcessEnv, resolver: SecretResolver): readonly TenantConfig[] {
   const raw = (env.MCP_TENANTS_JSON ?? '').trim();
   if (raw) {
     let parsed: unknown;
@@ -116,7 +147,7 @@ function configuredTenants(env: NodeJS.ProcessEnv): readonly TenantConfig[] {
     if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('MCP_TENANTS_JSON must be a non-empty array');
     return parsed.map((item, index) => {
       if (typeof item !== 'object' || item === null) throw new Error(`MCP_TENANTS_JSON[${index}] must be an object`);
-      return tenantFromDefinition(item as TenantDefinition, env, index);
+      return tenantFromDefinition(item as TenantDefinition, resolver, index);
     });
   }
 
@@ -127,31 +158,88 @@ function configuredTenants(env: NodeJS.ProcessEnv): readonly TenantConfig[] {
       label: (env.MCP_TENANT_LABEL ?? 'Eduardo Research').trim() || 'Eduardo Research',
       adapter: 'research-manager',
       managerBaseUrl,
-      managerReadToken: managerToken(required('ERM_READ_TOKEN', env), 'ERM_READ_TOKEN'),
+      managerReadToken: managerToken(resolver.resolve('ERM_READ_TOKEN'), 'ERM_READ_TOKEN'),
       managerTimeoutMs: positiveInt('ERM_TIMEOUT_MS', env.ERM_TIMEOUT_MS, 20_000),
       languages: csv(env.MCP_TENANT_LANGUAGES || 'en,es'),
     },
   ];
 }
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
-  const tenants = configuredTenants(env);
+function configuredPrincipals(
+  env: NodeJS.ProcessEnv,
+  resolver: SecretResolver,
+  tenantIds: ReadonlySet<string>,
+): readonly PrincipalAccess[] {
+  const raw = (env.MCP_PRINCIPALS_JSON ?? '').trim();
+  if (!raw) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('MCP_PRINCIPALS_JSON must be valid JSON');
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('MCP_PRINCIPALS_JSON must be a non-empty array');
+
+  return parsed.map((item, index) => {
+    if (typeof item !== 'object' || item === null) throw new Error(`MCP_PRINCIPALS_JSON[${index}] must be an object`);
+    const definition = item as PrincipalDefinition;
+    const prefix = `MCP_PRINCIPALS_JSON[${index}]`;
+    const id = principalId(definition.id, `${prefix}.id`);
+    if (typeof definition.bearerTokenEnv !== 'string' || !definition.bearerTokenEnv.trim()) {
+      throw new Error(`${prefix}.bearerTokenEnv is required`);
+    }
+    if (!Array.isArray(definition.tenants) || definition.tenants.length === 0) {
+      throw new Error(`${prefix}.tenants must be a non-empty tenant id array`);
+    }
+    const allowedTenantIds = [...new Set(definition.tenants.map((entry, tenantIndex) => tenantId(entry, `${prefix}.tenants[${tenantIndex}]`)))];
+    for (const allowedTenantId of allowedTenantIds) {
+      if (!tenantIds.has(allowedTenantId)) {
+        throw new Error(`${prefix} references unknown tenant id: ${allowedTenantId}`);
+      }
+    }
+    return {
+      id,
+      bearerToken: resolver.resolve(definition.bearerTokenEnv.trim()),
+      allowedTenantIds,
+    };
+  });
+}
+
+export function loadConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  resolver: SecretResolver = new EnvSecretResolver(env),
+): BridgeConfig {
+  const tenants = configuredTenants(env, resolver);
   const requestedTenant = (env.MCP_TENANT_ID ?? '').trim();
   const activeTenantId = requestedTenant || tenants[0]!.id;
   if (!tenants.some((tenant) => tenant.id === activeTenantId)) {
     throw new Error(`MCP_TENANT_ID is not registered: ${activeTenantId}`);
   }
 
+  const tenantIds = new Set(tenants.map((tenant) => tenant.id));
+  const principals = configuredPrincipals(env, resolver, tenantIds);
+  const sharedRouting = enabled('MCP_SHARED_ROUTING', env.MCP_SHARED_ROUTING);
   const bindHost = (env.MCP_BIND_HOST ?? '127.0.0.1').trim();
   const inboundBearerToken = (env.MCP_BEARER_TOKEN ?? '').trim() || null;
   const isLoopback = ['127.0.0.1', '::1', 'localhost'].includes(bindHost.toLowerCase());
-  if (!isLoopback && inboundBearerToken === null) {
-    throw new Error('MCP_BEARER_TOKEN is required when MCP_BIND_HOST is not loopback');
+
+  if (sharedRouting && principals.length === 0) {
+    throw new Error('MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON');
+  }
+  if (sharedRouting && inboundBearerToken !== null) {
+    throw new Error('MCP_BEARER_TOKEN is legacy single-tenant auth and cannot be used with MCP_SHARED_ROUTING');
+  }
+  if (!sharedRouting && !isLoopback && inboundBearerToken === null) {
+    throw new Error('MCP_BEARER_TOKEN is required for non-loopback single-tenant mode');
   }
 
   return {
     tenants,
+    principals,
     activeTenantId,
+    sharedRouting,
+    requestsPerMinute: positiveInt('MCP_REQUESTS_PER_MINUTE', env.MCP_REQUESTS_PER_MINUTE, 120),
     bindHost,
     port: positiveInt('MCP_PORT', env.MCP_PORT, 8787),
     inboundBearerToken,
