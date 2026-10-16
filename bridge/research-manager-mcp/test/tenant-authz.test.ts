@@ -20,6 +20,7 @@ function sharedEnv(): NodeJS.ProcessEnv {
         baseUrl: 'https://client-one.example',
         readTokenEnv: 'CLIENT_ONE_MANAGER_TOKEN',
         languages: ['es', 'en'],
+        entitlements: ['site.read'],
       },
       {
         id: 'client-two',
@@ -28,6 +29,7 @@ function sharedEnv(): NodeJS.ProcessEnv {
         baseUrl: 'https://client-two.example',
         readTokenEnv: 'CLIENT_TWO_MANAGER_TOKEN',
         languages: ['en'],
+        entitlements: ['site.read'],
       },
     ]),
     MCP_PRINCIPALS_JSON: JSON.stringify([
@@ -35,11 +37,13 @@ function sharedEnv(): NodeJS.ProcessEnv {
         id: 'agency-workspace',
         bearerTokenEnv: 'AGENCY_BEARER_TOKEN',
         tenants: ['client-one', 'client-two'],
+        capabilities: ['site.read'],
       },
       {
         id: 'client-one-workspace',
         bearerTokenEnv: 'CLIENT_ONE_BEARER_TOKEN',
         tenants: ['client-one'],
+        capabilities: ['site.read'],
       },
     ]),
     MCP_SHARED_ROUTING: 'true',
@@ -76,6 +80,7 @@ test('shared routing is deny-by-default and rejects principals that reference un
       id: 'bad-workspace',
       bearerTokenEnv: 'AGENCY_BEARER_TOKEN',
       tenants: ['client-one', 'not-provisioned'],
+      capabilities: ['site.read'],
     },
   ]);
   assert.throws(() => loadConfig(env), /references unknown tenant id: not-provisioned/);
@@ -89,8 +94,8 @@ test('principal registry rejects one bearer credential assigned to multiple prin
   assert.throws(
     () =>
       new PrincipalRegistry([
-        { id: 'one', bearerToken: 'same-secret', allowedTenantIds: ['client-one'] },
-        { id: 'two', bearerToken: 'same-secret', allowedTenantIds: ['client-two'] },
+        { id: 'one', bearerToken: 'same-secret', allowedTenantIds: ['client-one'], capabilities: ['site.read'] },
+        { id: 'two', bearerToken: 'same-secret', allowedTenantIds: ['client-two'], capabilities: ['site.read'] },
       ]),
     /Duplicate bearer credential/,
   );
