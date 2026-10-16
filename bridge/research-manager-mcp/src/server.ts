@@ -12,10 +12,11 @@ const researchObjectKindSchema = z.enum(['output','project','software','dataset'
 const translationTypeSchema = z.enum(['research_line','research_output','research_project','research_software','research_dataset']);
 const evidenceGroupSchema = z.enum(['profile','affiliations','identifiers','research_questions','methods','experience','education','awards','contact']);
 const evidenceRecordIdSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/);
+const mediaMimeSchema = z.enum(['image','audio','video','pdf','application/pdf']);
 
 export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
   const server = new McpServer(
-    { name:'site-control-mcp', version:'0.8.0' },
+    { name:'site-control-mcp', version:'0.9.0' },
     { instructions:`This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) through the ${adapter.kind} adapter. Use only registered bounded tools. Every tool invocation is subject to tenant and principal commercial entitlements in addition to backend scopes. Never infer or construct arbitrary WordPress, REST, database, filesystem or shell routes. The current surface is read-only.`, capabilities:{tools:{listChanged:false}}, maxToolInputElements:32 },
   );
 
@@ -41,6 +42,13 @@ export function createBridgeServer(adapter: SiteControlAdapter): McpServer {
   server.registerTool('site_evidence_identity',{title:'Research evidence identity',description:'Read the verified academic identity/provenance state exposed by the bounded evidence gateway.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>withCapability('evidence.read',()=>adapter.evidenceIdentity()));
   server.registerTool('site_evidence_list',{title:'List research evidence',description:'List evidence records in one closed evidence group.',inputSchema:z.object({group:evidenceGroupSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({group})=>withCapability('evidence.read',()=>adapter.listEvidence({group})));
   server.registerTool('site_evidence_inspect',{title:'Inspect research evidence',description:'Inspect one evidence record by closed group and bounded record ID.',inputSchema:z.object({group:evidenceGroupSchema,recordId:evidenceRecordIdSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({group,recordId})=>withCapability('evidence.read',()=>adapter.inspectEvidence({group,recordId})));
+
+  server.registerTool('site_navigation_inspect',{title:'Inspect site navigation',description:'Inspect bounded registered Theme navigation for the tenant, including primary/footer state and language-aware targets.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>withCapability('navigation.read',()=>adapter.inspectNavigation()));
+
+  server.registerTool('site_media_list',{title:'List media inventory',description:'List bounded WordPress media metadata with optional pagination, text search and a closed media MIME filter.',inputSchema:z.object({page:z.number().int().min(1).max(100000).optional(),perPage:z.number().int().min(1).max(100).optional(),search:z.string().max(128).optional(),mimeType:mediaMimeSchema.optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async({page,perPage,search,mimeType})=>withCapability('media.read',()=>adapter.listMedia({...(page!==undefined?{page}:{}),...(perPage!==undefined?{perPage}:{}),...(search!==undefined?{search}:{}),...(mimeType!==undefined?{mimeType}:{})})));
+  server.registerTool('site_media_inspect',{title:'Inspect media item',description:'Inspect one media attachment using a positive attachment ID; filesystem paths are not exposed by the backend.',inputSchema:z.object({attachmentId:postIdSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({attachmentId})=>withCapability('media.read',()=>adapter.inspectMedia({attachmentId})));
+  server.registerTool('site_media_diagnostics',{title:'Media diagnostics',description:'Read bounded media readiness diagnostics such as missing/weak alt text, unused attachments, duplicate candidates and large image dimensions.',inputSchema:z.object({limit:z.number().int().min(1).max(500).optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async({limit})=>withCapability('media.read',()=>adapter.mediaDiagnostics(limit!==undefined?{limit}:{})));
+  server.registerTool('site_media_diagnostic_inspect',{title:'Inspect media diagnostic',description:'Inspect diagnostics for one media attachment by positive ID.',inputSchema:z.object({attachmentId:postIdSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({attachmentId})=>withCapability('media.read',()=>adapter.inspectMediaDiagnostic({attachmentId})));
 
   return server;
 }
