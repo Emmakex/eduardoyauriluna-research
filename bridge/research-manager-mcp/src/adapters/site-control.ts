@@ -51,6 +51,7 @@ export interface SiteResearchLineListRequest { language?: string; }
 export interface SiteResearchLineInspectionRequest { postId: number; }
 
 export type SiteResearchRecordStatus = 'draft' | 'publish';
+type OptionalWithUndefined<T> = { [K in keyof T]?: T[K] | undefined };
 export interface SiteResearchLineData {
   title: string;
   slug?: string | undefined;
@@ -65,7 +66,7 @@ export interface SiteResearchLineData {
   topics?: string[] | undefined;
   methods?: string[] | undefined;
 }
-export type SiteResearchLineChanges = Partial<SiteResearchLineData>;
+export type SiteResearchLineChanges = OptionalWithUndefined<SiteResearchLineData>;
 export interface SiteResearchLineCreatePlanRequest {
   data: SiteResearchLineData;
   evidenceConfirmed?: boolean | undefined;
@@ -142,10 +143,10 @@ export type SiteResearchObjectCreateData =
   | SiteResearchProjectCreateData
   | SiteResearchSoftwareCreateData
   | SiteResearchDatasetCreateData;
-export type SiteResearchOutputChanges = Omit<Partial<SiteResearchOutputCreateData>, 'status' | 'slug'>;
-export type SiteResearchProjectChanges = Omit<Partial<SiteResearchProjectCreateData>, 'status' | 'slug'>;
-export type SiteResearchSoftwareChanges = Omit<Partial<SiteResearchSoftwareCreateData>, 'status' | 'slug'>;
-export type SiteResearchDatasetChanges = Omit<Partial<SiteResearchDatasetCreateData>, 'status' | 'slug'>;
+export type SiteResearchOutputChanges = Omit<OptionalWithUndefined<SiteResearchOutputCreateData>, 'status' | 'slug'>;
+export type SiteResearchProjectChanges = Omit<OptionalWithUndefined<SiteResearchProjectCreateData>, 'status' | 'slug'>;
+export type SiteResearchSoftwareChanges = Omit<OptionalWithUndefined<SiteResearchSoftwareCreateData>, 'status' | 'slug'>;
+export type SiteResearchDatasetChanges = Omit<OptionalWithUndefined<SiteResearchDatasetCreateData>, 'status' | 'slug'>;
 export type SiteResearchObjectChanges =
   | SiteResearchOutputChanges
   | SiteResearchProjectChanges
