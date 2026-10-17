@@ -2,6 +2,7 @@ import { ResearchManagerClient } from '../manager-client.js';
 import { ResearchManagerWriteClient } from '../write-manager-client.js';
 import { ResearchManagerA3WriteClient } from '../a3-write-client.js';
 import { ResearchManagerA4WriteClient } from '../a4-write-client.js';
+import { ResearchManagerA5WriteClient } from '../a5-write-client.js';
 import type { TenantConfig } from '../config.js';
 import type {
   EvidenceApplyRequest,
@@ -26,6 +27,17 @@ import type {
   SeoGeoRemediationRollbackRequest,
   SeoGeoRemediationVerifyRequest,
 } from '../a4-contracts.js';
+import type {
+  MediaIngestApplyRequest,
+  MediaIngestCancelRequest,
+  MediaIngestPlanRequest,
+  MediaIngestRollbackRequest,
+  MediaIngestVerifyRequest,
+  MediaMetadataApplyRequest,
+  MediaMetadataRollbackRequest,
+  MediaMetadataUpdatePlanRequest,
+  MediaMetadataVerifyRequest,
+} from '../a5-contracts.js';
 import type {
   SiteControlAdapter,
   SiteDesignReadinessRequest,
@@ -80,6 +92,7 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   private readonly writeClient:ResearchManagerWriteClient;
   private readonly a3WriteClient:ResearchManagerA3WriteClient;
   private readonly a4WriteClient:ResearchManagerA4WriteClient;
+  private readonly a5WriteClient:ResearchManagerA5WriteClient;
   constructor(tenant:TenantConfig,fetchImpl:typeof fetch=fetch){
     this.tenantId=tenant.id;
     this.tenantLabel=tenant.label;
@@ -88,6 +101,7 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
     this.writeClient=new ResearchManagerWriteClient(tenant,fetchImpl);
     this.a3WriteClient=new ResearchManagerA3WriteClient(tenant,fetchImpl);
     this.a4WriteClient=new ResearchManagerA4WriteClient(tenant,fetchImpl);
+    this.a5WriteClient=new ResearchManagerA5WriteClient(tenant,fetchImpl);
   }
   status():Promise<unknown>{return this.client.status();}
   versions():Promise<unknown>{return this.client.versions();}
@@ -150,6 +164,15 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   inspectMedia(request:SiteMediaInspectionRequest):Promise<unknown>{return this.client.mediaItem(request.attachmentId);}
   mediaDiagnostics(request:SiteMediaDiagnosticsRequest):Promise<unknown>{return this.client.mediaDiagnostics(request.limit);}
   inspectMediaDiagnostic(request:SiteMediaDiagnosticInspectionRequest):Promise<unknown>{return this.client.mediaDiagnosticItem(request.attachmentId);}
+  planMediaIngest(request:MediaIngestPlanRequest):Promise<unknown>{return this.a5WriteClient.planIngest(request);}
+  cancelMediaIngest(request:MediaIngestCancelRequest):Promise<unknown>{return this.a5WriteClient.cancelIngest(request);}
+  applyMediaIngest(request:MediaIngestApplyRequest):Promise<unknown>{return this.a5WriteClient.applyIngest(request);}
+  verifyMediaIngest(request:MediaIngestVerifyRequest):Promise<unknown>{return this.a5WriteClient.verifyIngest(request);}
+  rollbackMediaIngest(request:MediaIngestRollbackRequest):Promise<unknown>{return this.a5WriteClient.rollbackIngest(request);}
+  planMediaMetadataUpdate(request:MediaMetadataUpdatePlanRequest):Promise<unknown>{return this.a5WriteClient.planMetadataUpdate(request);}
+  applyMediaMetadata(request:MediaMetadataApplyRequest):Promise<unknown>{return this.a5WriteClient.applyMetadata(request);}
+  verifyMediaMetadata(request:MediaMetadataVerifyRequest):Promise<unknown>{return this.a5WriteClient.verifyMetadata(request);}
+  rollbackMediaMetadata(request:MediaMetadataRollbackRequest):Promise<unknown>{return this.a5WriteClient.rollbackMetadata(request);}
   seoSite():Promise<unknown>{return this.client.seoSite();}
   seoResource(request:SiteSeoResourceRequest):Promise<unknown>{this.requireSeoLanguage(request);return this.client.seoResource(request);}
   seoResourceActions(request:SiteSeoResourceRequest):Promise<unknown>{this.requireSeoLanguage(request);return this.client.seoResourceActions(request);}
