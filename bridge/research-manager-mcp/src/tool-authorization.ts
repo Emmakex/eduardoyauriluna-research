@@ -72,6 +72,10 @@ export const TOOL_AUTHORIZATION = {
   site_identity_profile_rollback: { commercialCapability:'identity.write', additionalCommercialCapabilities:['operations.rollback'], backendScopes:['evidence.read','operations.rollback','evidence.write','identity.write'], readOnly:false },
 
   site_navigation_inspect: { commercialCapability:'navigation.read', backendScopes:['pages.read'], readOnly:true },
+  site_navigation_update_plan: { commercialCapability:'navigation.write', backendScopes:['operations.apply','pages.write'], readOnly:false },
+  site_navigation_apply: { commercialCapability:'navigation.write', backendScopes:['pages.read','operations.apply','pages.write'], readOnly:false },
+  site_navigation_verify: { commercialCapability:'navigation.write', backendScopes:['pages.read','site.diagnostics'], readOnly:false },
+  site_navigation_rollback: { commercialCapability:'operations.rollback', backendScopes:['pages.read','operations.rollback','pages.write'], readOnly:false },
 
   site_media_list: { commercialCapability:'media.read', backendScopes:['media.read'], readOnly:true },
   site_media_inspect: { commercialCapability:'media.read', backendScopes:['media.read'], readOnly:true },
@@ -105,7 +109,4 @@ export const TOOL_AUTHORIZATION = {
 } as const satisfies Record<string, ToolAuthorizationContract>;
 
 export type SiteControlToolName = keyof typeof TOOL_AUTHORIZATION;
-
-export function toolAuthorization(name: SiteControlToolName): ToolAuthorizationContract {
-  return TOOL_AUTHORIZATION[name];
-}
+export function toolAuthorization(name: SiteControlToolName): ToolAuthorizationContract { return TOOL_AUTHORIZATION[name]; }
