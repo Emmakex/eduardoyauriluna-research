@@ -8,6 +8,7 @@ INSPECTOR_VERSION="${MCP_INSPECTOR_VERSION:-2.5.0}"
 EXPECTED_TOOL_COUNT="${MCP_EXPECTED_TOOL_COUNT:-96}"
 EXPECTED_ROUTING="${MCP_EXPECTED_ROUTING:-shared}"
 SKIP_REFERENCE_READS="${MCP_SKIP_REFERENCE_READS:-false}"
+ALLOW_INSECURE_HTTP="${MCP_ALLOW_INSECURE_HTTP:-false}"
 EVIDENCE_DIR="${MCP_EVIDENCE_DIR:-$(pwd)/tmp/phase2c-mcp-remote-acceptance}"
 
 case "$EXPECTED_ROUTING" in
@@ -18,6 +19,14 @@ case "$SKIP_REFERENCE_READS" in
   true|false) ;;
   *) echo "MCP_SKIP_REFERENCE_READS must be true or false" >&2; exit 2 ;;
 esac
+case "$ALLOW_INSECURE_HTTP" in
+  true|false) ;;
+  *) echo "MCP_ALLOW_INSECURE_HTTP must be true or false" >&2; exit 2 ;;
+esac
+if [[ "$MCP_SERVER_URL" != https://* ]] && [ "$ALLOW_INSECURE_HTTP" != 'true' ]; then
+  echo 'live remote acceptance requires an HTTPS MCP_SERVER_URL' >&2
+  exit 2
+fi
 
 mkdir -p "$EVIDENCE_DIR"
 chmod 700 "$EVIDENCE_DIR"
