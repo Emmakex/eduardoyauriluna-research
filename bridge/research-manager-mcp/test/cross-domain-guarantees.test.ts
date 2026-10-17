@@ -72,15 +72,18 @@ test('the MCP source tree contains no generic backend-route or WordPress write e
   }
 });
 
-test('outer authorization binds principal, tenant, entitlement intersection and usage boundary before MCP dispatch', () => {
+test('outer authorization binds principal, tenant, entitlement intersection, usage and persistent audit before MCP dispatch', () => {
   const http = source('http.ts');
   const entitlements = source('entitlements.ts');
   assert.match(http, /principalRegistry\.authenticate/);
   assert.match(http, /principalRegistry\.canAccess/);
   assert.match(http, /usage\.admit/);
   assert.match(http, /runWithAuthorizationContext/);
-  assert.match(http, /accessAuditEvent/);
+  assert.match(http, /accessAuditRecord/);
+  assert.match(http, /createTelemetrySink/);
+  assert.match(http, /requestId=`mcp-http-/);
   assert.match(http, /mcp_entitlement_denied/);
+  assert.match(http, /telemetry_unavailable/);
   assert.match(entitlements, /tenantEntitlements\.includes\(capability\)/);
   assert.match(entitlements, /principalCapabilities\.includes\(capability\)/);
 });
