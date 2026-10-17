@@ -63,18 +63,30 @@ jobs:
           grep -F "'site_identity_profile_update_plan'" src/a3-write-tools.ts
           grep -F "'site_identity_profile_rollback'" src/a3-write-tools.ts
           grep -F "withCapabilities(['identity.write','operations.rollback']" src/a3-write-tools.ts
+          grep -F "'site_seo_geo_remediation_plan'" src/a4-write-tools.ts
+          grep -F "'site_seo_geo_remediation_apply'" src/a4-write-tools.ts
+          grep -F "'site_seo_geo_remediation_verify'" src/a4-write-tools.ts
+          grep -F "'site_seo_geo_remediation_rollback'" src/a4-write-tools.ts
+          grep -F "withCapability('seo.write'" src/a4-write-tools.ts
+          grep -F "withCapability('operations.rollback'" src/a4-write-tools.ts
           grep -F "TOOL_AUTHORIZATION" src/tool-authorization.ts
           grep -F "site_translation_apply: { commercialCapability:'translations.write', backendScopes:['translations.read','operations.apply','translations.write']" src/tool-authorization.ts
           grep -F "site_evidence_apply: { commercialCapability:'evidence.write', backendScopes:['evidence.read','operations.apply','evidence.write']" src/tool-authorization.ts
           grep -F "site_identity_profile_update_plan: { commercialCapability:'identity.write', backendScopes:['operations.apply','evidence.write','identity.write']" src/tool-authorization.ts
           grep -F "site_identity_profile_rollback: { commercialCapability:'identity.write', additionalCommercialCapabilities:['operations.rollback']" src/tool-authorization.ts
-          grep -F "catalogEntries.length,71" test/tool-authorization.test.ts
+          grep -F "site_seo_geo_remediation_plan: { commercialCapability:'seo.write', backendScopes:['operations.apply','seo.write']" src/tool-authorization.ts
+          grep -F "site_seo_geo_remediation_apply: { commercialCapability:'seo.write', backendScopes:['seo.read','operations.apply','seo.write']" src/tool-authorization.ts
+          grep -F "site_seo_geo_remediation_verify: { commercialCapability:'seo.write', backendScopes:['seo.read','site.diagnostics']" src/tool-authorization.ts
+          grep -F "site_seo_geo_remediation_rollback: { commercialCapability:'operations.rollback', backendScopes:['seo.read','operations.rollback','seo.write']" src/tool-authorization.ts
+          grep -F "catalogEntries.length,75" test/tool-authorization.test.ts
           grep -F "registerResearchWriteTools(server,adapter)" src/extended-server.ts
           grep -F "registerA3WriteTools(server,adapter as SiteControlAdapter&A3WriteAdapter)" src/extended-server.ts
+          grep -F "registerA4WriteTools(server,adapter as SiteControlAdapter&A4WriteAdapter)" src/extended-server.ts
           grep -F "from './extended-server.js'" src/http.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
           BASE_TOOLS="$(grep -c "server.registerTool(" src/server.ts)"
           RESEARCH_WRITE_TOOLS="$(grep -c "server.registerTool(" src/research-write-tools.ts)"
           A3_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a3-write-tools.ts)"
-          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS ))" -eq 71
+          A4_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a4-write-tools.ts)"
+          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS ))" -eq 75
