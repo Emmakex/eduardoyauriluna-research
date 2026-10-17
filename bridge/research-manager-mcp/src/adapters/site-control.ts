@@ -15,24 +15,24 @@ export interface SiteInsightInspectionRequest { postId: number; }
 export type SiteInsightStatus = 'draft' | 'publish';
 export interface SiteInsightCreateData {
   title: string;
-  slug?: string;
-  excerpt?: string;
-  content?: string;
+  slug?: string | undefined;
+  excerpt?: string | undefined;
+  content?: string | undefined;
   language: string;
   insight_type: string;
   status: SiteInsightStatus;
 }
 export interface SiteInsightCreatePlanRequest { data: SiteInsightCreateData; reason?: string; }
 export interface SiteInsightUpdateChanges {
-  slug?: string;
-  title?: string;
-  excerpt?: string;
-  content?: string;
-  language?: string;
-  insight_type?: string;
-  status?: SiteInsightStatus;
-  scheduled_at?: string;
-  line_ids?: number[];
+  slug?: string | undefined;
+  title?: string | undefined;
+  excerpt?: string | undefined;
+  content?: string | undefined;
+  language?: string | undefined;
+  insight_type?: string | undefined;
+  status?: SiteInsightStatus | undefined;
+  scheduled_at?: string | undefined;
+  line_ids?: number[] | undefined;
 }
 export interface SiteInsightUpdatePlanRequest { postId: number; changes: SiteInsightUpdateChanges; reason?: string; }
 export interface SiteInsightApplyRequest { planId: string; confirm: true; }
