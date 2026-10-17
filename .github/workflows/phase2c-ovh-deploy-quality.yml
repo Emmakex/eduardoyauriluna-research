@@ -61,8 +61,7 @@ jobs:
           [[ "$INGRESS_REF" =~ ^caddy@sha256:[0-9a-f]{64}$ ]]
           grep -F "default: $INGRESS_REF" .github/workflows/phase2c-ovh-deploy.yml
           grep -F "$MCP_REF" docs/60-phase-2c-live-ovh-handoff.md
-          grep -F "$INGRESS_REF" docs/60-phase2c-live-ovh-handoff.md 2>/dev/null || \
-            grep -F "$INGRESS_REF" docs/60-phase-2c-live-ovh-handoff.md
+          grep -F "$INGRESS_REF" docs/60-phase-2c-live-ovh-handoff.md
 
       - name: Prove deploy, previous digest recording and rollback without new image ref
         shell: bash
