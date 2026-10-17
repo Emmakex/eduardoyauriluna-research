@@ -15,7 +15,7 @@ services:
       - no-new-privileges:true
     user: "10001:10001"
     networks:
-      - mcp_internal
+      - mcp_backend
     stop_grace_period: 15s
 
   ingress:
@@ -41,11 +41,13 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
-      - mcp_internal
+      - mcp_backend
+      - ingress_egress
 
 networks:
-  mcp_internal:
+  mcp_backend:
     internal: true
+  ingress_egress:
 
 volumes:
   caddy_data:
