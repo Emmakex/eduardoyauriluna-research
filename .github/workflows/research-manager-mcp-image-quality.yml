@@ -1,0 +1,69 @@
+name: Research Manager MCP Image Quality
+
+on:
+  pull_request:
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-image-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-image-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build one production image
+        run: docker build -t research-manager-mcp:ci bridge/research-manager-mcp
+
+      - name: Smoke single-tenant mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name mcp-single \
+            -e ERM_BASE_URL=https://example.invalid \
+            -e ERM_READ_TOKEN=ermt1_ci_read \
+            -e MCP_BEARER_TOKEN=ci-single-outer-token \
+            -p 127.0.0.1:18787:8787 \
+            research-manager-mcp:ci
+          trap 'docker rm -f mcp-single >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18787/healthz | grep -q '"routing":"single-tenant"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs mcp-single
+          exit 1
+
+      - name: Smoke shared multi-tenant mode with the same image
+        shell: bash
+        run: |
+          set -euo pipefail
+          TENANTS='[{"id":"ci-tenant","label":"CI Tenant","adapter":"research-manager","baseUrl":"https://example.invalid","readTokenEnv":"CI_MANAGER_READ_TOKEN","languages":["en","es"],"entitlements":["site.read"]}]'
+          PRINCIPALS='[{"id":"ci-principal","bearerTokenEnv":"CI_PRINCIPAL_TOKEN","tenants":["ci-tenant"],"capabilities":["site.read"]}]'
+          docker run -d --rm --name mcp-shared \
+            -e MCP_SHARED_ROUTING=true \
+            -e MCP_TENANTS_JSON="$TENANTS" \
+            -e MCP_PRINCIPALS_JSON="$PRINCIPALS" \
+            -e CI_MANAGER_READ_TOKEN=ermt1_ci_read \
+            -e CI_PRINCIPAL_TOKEN=ci-principal-token \
+            -p 127.0.0.1:18788:8787 \
+            research-manager-mcp:ci
+          trap 'docker rm -f mcp-shared >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18788/healthz | grep -q '"routing":"shared"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs mcp-shared
+          exit 1
