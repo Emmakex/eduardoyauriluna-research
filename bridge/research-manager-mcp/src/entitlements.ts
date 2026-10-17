@@ -34,7 +34,6 @@ export const COMMERCIAL_CAPABILITIES = [
 export type CommercialCapability = (typeof COMMERCIAL_CAPABILITIES)[number];
 
 export const ELEVATED_COMMERCIAL_CAPABILITIES = [
-  'operations.rollback',
   'identity.write',
   'external_publish.execute',
   'software_update.execute',
