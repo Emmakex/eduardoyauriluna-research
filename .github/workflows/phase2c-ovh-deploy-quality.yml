@@ -7,6 +7,8 @@ on:
       - 'bridge/research-manager-mcp/compose.ingress.example.yml'
       - 'bridge/research-manager-mcp/compose.production.example.yml'
       - 'bridge/research-manager-mcp/ingress/Caddyfile'
+      - 'deploy/phase2c-release.json'
+      - 'docs/60-phase-2c-live-ovh-handoff.md'
       - '.github/workflows/phase2c-ovh-deploy.yml'
       - '.github/workflows/phase2c-ovh-deploy-quality.yml'
       - '.github/workflows/research-manager-mcp-publish-image.yml'
@@ -17,6 +19,8 @@ on:
       - 'bridge/research-manager-mcp/compose.ingress.example.yml'
       - 'bridge/research-manager-mcp/compose.production.example.yml'
       - 'bridge/research-manager-mcp/ingress/Caddyfile'
+      - 'deploy/phase2c-release.json'
+      - 'docs/60-phase-2c-live-ovh-handoff.md'
       - '.github/workflows/phase2c-ovh-deploy.yml'
       - '.github/workflows/phase2c-ovh-deploy-quality.yml'
       - '.github/workflows/research-manager-mcp-publish-image.yml'
@@ -43,6 +47,21 @@ jobs:
             bridge/research-manager-mcp/compose.ingress.example.yml \
             bridge/research-manager-mcp/compose.production.example.yml \
             .github/workflows/research-manager-mcp-publish-image.yml
+
+      - name: Validate live release bundle matches immutable workflow defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE=deploy/phase2c-release.json
+          jq -e '.phase == "2C" and .status == "ready_for_live_ovh_deploy" and .live_acceptance_required == true' "$RELEASE" >/dev/null
+          jq -e '.bounded_tool_count == 96 and .reference_tenant_id == "eduardo-research"' "$RELEASE" >/dev/null
+          MCP_REF="$(jq -r '.mcp_image' "$RELEASE")"
+          INGRESS_REF="$(jq -r '.ingress.image' "$RELEASE")"
+          [[ "$MCP_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]
+          [[ "$INGRESS_REF" =~ ^caddy@sha256:[0-9a-f]{64}$ ]]
+          grep -F "default: $INGRESS_REF" .github/workflows/phase2c-ovh-deploy.yml
+          grep -F "$MCP_REF" docs/60-phase-2c-live-ovh-handoff.md
+          grep -F "$INGRESS_REF" docs/60-phase-2c-live-ovh-handoff.md
 
       - name: Prove deploy, previous digest recording and rollback without new image ref
         shell: bash
