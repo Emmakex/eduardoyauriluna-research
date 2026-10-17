@@ -27,10 +27,20 @@ import type {
   SitePageSlotsPlanRequest,
   SitePageSlotsRollbackRequest,
   SitePageSlotsVerifyRequest,
+  SiteResearchLineApplyRequest,
+  SiteResearchLineCreatePlanRequest,
   SiteResearchLineInspectionRequest,
   SiteResearchLineListRequest,
+  SiteResearchLineRollbackRequest,
+  SiteResearchLineUpdatePlanRequest,
+  SiteResearchLineVerifyRequest,
+  SiteResearchObjectApplyRequest,
+  SiteResearchObjectCreatePlanRequest,
   SiteResearchObjectInspectionRequest,
   SiteResearchObjectListRequest,
+  SiteResearchObjectRollbackRequest,
+  SiteResearchObjectUpdatePlanRequest,
+  SiteResearchObjectVerifyRequest,
   SiteSeoInternalLinksRequest,
   SiteSeoReadinessRequest,
   SiteSeoResourceRequest,
@@ -73,8 +83,18 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   rollbackInsightPairing(request:SiteInsightPairingRollbackRequest):Promise<unknown>{return this.writeClient.rollbackInsightPairing(request);}
   listResearchObjects(request:SiteResearchObjectListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Object');return this.client.researchObjects(request.kind,language);}
   inspectResearchObject(request:SiteResearchObjectInspectionRequest):Promise<unknown>{return this.client.researchObject(request.kind,request.postId);}
+  planResearchObjectCreate(request:SiteResearchObjectCreatePlanRequest):Promise<unknown>{const language=request.data.language??'';if(language)this.requireLanguage(language,'Research Object');return this.writeClient.planResearchObjectCreate(request);}
+  planResearchObjectUpdate(request:SiteResearchObjectUpdatePlanRequest):Promise<unknown>{const language=request.changes.language??'';if(language)this.requireLanguage(language,'Research Object');return this.writeClient.planResearchObjectUpdate(request);}
+  applyResearchObject(request:SiteResearchObjectApplyRequest):Promise<unknown>{return this.writeClient.applyResearchObject(request);}
+  verifyResearchObject(request:SiteResearchObjectVerifyRequest):Promise<unknown>{return this.writeClient.verifyResearchObject(request);}
+  rollbackResearchObject(request:SiteResearchObjectRollbackRequest):Promise<unknown>{return this.writeClient.rollbackResearchObject(request);}
   listResearchLines(request:SiteResearchLineListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Line');return this.client.researchLines(language);}
   inspectResearchLine(request:SiteResearchLineInspectionRequest):Promise<unknown>{return this.client.researchLine(request.postId);}
+  planResearchLineCreate(request:SiteResearchLineCreatePlanRequest):Promise<unknown>{const language=request.data.language??'';if(language)this.requireLanguage(language,'Research Line');return this.writeClient.planResearchLineCreate(request);}
+  planResearchLineUpdate(request:SiteResearchLineUpdatePlanRequest):Promise<unknown>{const language=request.changes.language??'';if(language)this.requireLanguage(language,'Research Line');return this.writeClient.planResearchLineUpdate(request);}
+  applyResearchLine(request:SiteResearchLineApplyRequest):Promise<unknown>{return this.writeClient.applyResearchLine(request);}
+  verifyResearchLine(request:SiteResearchLineVerifyRequest):Promise<unknown>{return this.writeClient.verifyResearchLine(request);}
+  rollbackResearchLine(request:SiteResearchLineRollbackRequest):Promise<unknown>{return this.writeClient.rollbackResearchLine(request);}
   listTranslations(request:SiteTranslationListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Translation');return this.client.translations(request.postType,language);}
   inspectTranslation(request:SiteTranslationInspectionRequest):Promise<unknown>{return this.client.translation(request.postId);}
   evidenceInventory():Promise<unknown>{return this.client.evidenceInventory();}
