@@ -12,25 +12,26 @@ function client(fetchImpl:typeof fetch,token:string|null=writeToken){return new 
 function ok(data:unknown){return new Response(JSON.stringify({ok:true,data}),{status:200,headers:{'Content-Type':'application/json'}});}
 
 test('Media ingest Plan sends bounded multipart binary and metadata',async()=>{
-  let captured:FormData|null=null;
+  const captured:{form?:FormData}={};
   const api=client(async(input,init)=>{
     assert.equal(new URL(input instanceof Request?input.url:input.toString()).pathname,'/wp-json/research-manager/v1/media/ingest/plan');
     assert.equal(init?.method,'POST');
     assert.ok(init?.body instanceof FormData);
-    captured=init.body;
+    captured.form=init.body;
     assert.equal(new Headers(init.headers).has('Content-Type'),false);
     return ok({plan_id:ingestPlanId,operation:'media-ingest'});
   });
   const payload=Buffer.from('bounded-image-bytes').toString('base64');
   await api.planIngest({fileName:'portrait.jpg',mimeType:'image/jpeg',contentBase64:payload,title:'Portrait',altText:'Portrait of Eduardo',caption:'Research profile'});
-  assert.ok(captured);
-  const file=captured.get('file');
+  const form=captured.form;
+  assert.ok(form);
+  const file=form.get('file');
   assert.ok(file instanceof Blob);
   assert.equal(file.type,'image/jpeg');
   assert.equal(await file.text(),'bounded-image-bytes');
-  assert.equal(captured.get('title'),'Portrait');
-  assert.equal(captured.get('alt_text'),'Portrait of Eduardo');
-  assert.equal(captured.get('caption'),'Research profile');
+  assert.equal(form.get('title'),'Portrait');
+  assert.equal(form.get('alt_text'),'Portrait of Eduardo');
+  assert.equal(form.get('caption'),'Research profile');
 });
 
 test('Media ingest rejects unsafe input before transport',()=>{
