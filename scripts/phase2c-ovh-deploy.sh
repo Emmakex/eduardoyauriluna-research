@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${MCP_IMAGE_REF:?set MCP_IMAGE_REF to the immutable MCP digest reference}"
 : "${MCP_INGRESS_IMAGE:?set MCP_INGRESS_IMAGE to an immutable ingress digest reference}"
 : "${MCP_PUBLIC_HOST:?set MCP_PUBLIC_HOST to the public MCP hostname}"
 
@@ -22,13 +21,16 @@ if ! [[ "$MCP_PUBLIC_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]; then
   echo 'MCP_PUBLIC_HOST is not a valid bounded hostname' >&2
   exit 2
 fi
-if ! [[ "$MCP_IMAGE_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]; then
-  echo 'MCP_IMAGE_REF must be the GHCR digest reference produced by the publish workflow' >&2
-  exit 2
-fi
 if ! [[ "$MCP_INGRESS_IMAGE" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]; then
   echo 'MCP_INGRESS_IMAGE must be an immutable digest reference' >&2
   exit 2
+fi
+if [ "$ACTION" = 'deploy' ]; then
+  : "${MCP_IMAGE_REF:?set MCP_IMAGE_REF to the immutable MCP digest reference}"
+  if ! [[ "$MCP_IMAGE_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]; then
+    echo 'MCP_IMAGE_REF must be the GHCR digest reference produced by the publish workflow' >&2
+    exit 2
+  fi
 fi
 
 mkdir -p "$DEPLOY_DIR/ingress"
