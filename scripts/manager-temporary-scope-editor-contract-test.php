@@ -40,6 +40,8 @@ $action = substr($admin, $actionStart, $actionEnd - $actionStart);
 check(str_contains($action, 'set_temporary_scopes($connectionId, $scopes)'), 'Temporary scope admin action must delegate to credential service');
 check(false === strpos($action, 'issue_temporary_token'), 'Saving temporary scopes must not issue a replacement token');
 check(str_contains($admin, 'value="save_temporary_scopes"'), 'Temporary session UI must expose scope editing');
+check(str_contains($admin, 'Edit scopes'), 'Temporary session UI must expose an Edit scopes action');
+check(str_contains($admin, 'style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap"'), 'Edit scopes and Revoke temporary controls must share the Action cell');
 check(str_contains($admin, 'Save temporary scopes'), 'Temporary session UI must expose an explicit save action');
 check(str_contains($admin, 'The existing temporary token is not rotated.'), 'Temporary scope editor must explain token preservation');
 check(str_contains($admin, "'scope' => 'credentials.manage'"), 'Temporary scope changes must remain locally audited as credential management');
