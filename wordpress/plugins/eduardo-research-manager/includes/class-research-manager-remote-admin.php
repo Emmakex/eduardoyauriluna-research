@@ -129,7 +129,7 @@ final class Eduardo_Research_Manager_Remote_Admin {
 
           <hr style="margin:28px 0">
           <h2><?php echo esc_html__('Temporary scoped sessions', 'eduardo-research-manager'); ?></h2>
-          <p><?php echo esc_html__('Create an independent one-time credential for acceptance, Media work or maintenance. Creating or revoking a temporary session does not modify the primary token or its scopes.', 'eduardo-research-manager'); ?></p>
+          <p><?php echo esc_html__('Create an independent one-time credential for acceptance, Media work or maintenance. Creating, editing scopes, or revoking a temporary session does not modify the primary token or its scopes.', 'eduardo-research-manager'); ?></p>
 
           <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="max-width:1000px;border:1px solid #dcdcde;padding:16px;margin:12px 0 20px;background:#fff">
             <input type="hidden" name="action" value="eduardo_research_manager_remote">
@@ -163,15 +163,33 @@ final class Eduardo_Research_Manager_Remote_Admin {
                     <td><?php if (! empty($temporary['token_prefix'])) : ?><code><?php echo esc_html((string) $temporary['token_prefix']); ?>…</code><?php else : ?>—<?php endif; ?></td>
                     <td><code style="white-space:normal"><?php echo esc_html(implode(', ', (array) ($temporary['scopes'] ?? array()))); ?></code></td>
                     <td><?php echo esc_html((string) ($temporary['last_used_at'] ?? '')); ?></td>
-                    <td>
+                    <td style="min-width:280px">
                       <?php if (! empty($temporary['credential_present']) && ! empty($temporary['enabled'])) : ?>
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                          <input type="hidden" name="action" value="eduardo_research_manager_remote">
-                          <input type="hidden" name="remote_action" value="revoke_temporary">
-                          <input type="hidden" name="temporary_connection_id" value="<?php echo esc_attr((string) ($temporary['connection_id'] ?? '')); ?>">
-                          <?php wp_nonce_field('erm_remote_connection'); ?>
-                          <button class="button" type="submit"><?php echo esc_html__('Revoke temporary', 'eduardo-research-manager'); ?></button>
-                        </form>
+                        <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+                          <details>
+                            <summary class="button" style="display:inline-block"><?php echo esc_html__('Edit scopes', 'eduardo-research-manager'); ?></summary>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="min-width:430px;padding:12px 0">
+                              <input type="hidden" name="action" value="eduardo_research_manager_remote">
+                              <input type="hidden" name="remote_action" value="save_temporary_scopes">
+                              <input type="hidden" name="temporary_connection_id" value="<?php echo esc_attr((string) ($temporary['connection_id'] ?? '')); ?>">
+                              <?php wp_nonce_field('erm_remote_connection'); ?>
+                              <fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:6px 12px;margin:8px 0 12px">
+                                <?php foreach ($supported as $scope) : ?>
+                                  <label><input type="checkbox" name="temporary_scopes[]" value="<?php echo esc_attr($scope); ?>" <?php checked(in_array($scope, (array) ($temporary['scopes'] ?? array()), true)); ?>> <code><?php echo esc_html($scope); ?></code></label>
+                                <?php endforeach; ?>
+                              </fieldset>
+                              <p class="description"><?php echo esc_html__('Changes take effect immediately. The existing temporary token is not rotated.', 'eduardo-research-manager'); ?></p>
+                              <?php submit_button(__('Save temporary scopes', 'eduardo-research-manager'), 'secondary', 'submit', false); ?>
+                            </form>
+                          </details>
+                          <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="eduardo_research_manager_remote">
+                            <input type="hidden" name="remote_action" value="revoke_temporary">
+                            <input type="hidden" name="temporary_connection_id" value="<?php echo esc_attr((string) ($temporary['connection_id'] ?? '')); ?>">
+                            <?php wp_nonce_field('erm_remote_connection'); ?>
+                            <button class="button" type="submit"><?php echo esc_html__('Revoke temporary', 'eduardo-research-manager'); ?></button>
+                          </form>
+                        </div>
                       <?php else : ?>
                         —
                       <?php endif; ?>
@@ -269,6 +287,14 @@ final class Eduardo_Research_Manager_Remote_Admin {
                 $label = sanitize_text_field((string) wp_unslash($_POST['temporary_label'] ?? 'Temporary Remote Session'));
                 $result = $this->credentials->issue_temporary_token($scopes, $user_id, $label);
                 $message = 'Temporary Remote Manager token generated. Copy it now; the primary credential was not changed.';
+                break;
+            case 'save_temporary_scopes':
+                $connectionId = sanitize_text_field((string) wp_unslash($_POST['temporary_connection_id'] ?? ''));
+                $scopes = isset($_POST['temporary_scopes']) && is_array($_POST['temporary_scopes'])
+                    ? array_map('sanitize_text_field', wp_unslash($_POST['temporary_scopes']))
+                    : array();
+                $result = $this->credentials->set_temporary_scopes($connectionId, $scopes);
+                $message = 'Temporary Remote Manager scopes updated. The existing token remains valid and was not rotated.';
                 break;
             case 'revoke_temporary':
                 $connectionId = sanitize_text_field((string) wp_unslash($_POST['temporary_connection_id'] ?? ''));
