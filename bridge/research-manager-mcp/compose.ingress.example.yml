@@ -9,6 +9,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
+    volumes:
+      - mcp_telemetry:/var/lib/site-control-mcp
     cap_drop:
       - ALL
     security_opt:
@@ -50,5 +52,6 @@ networks:
   ingress_egress:
 
 volumes:
+  mcp_telemetry:
   caddy_data:
   caddy_config:
