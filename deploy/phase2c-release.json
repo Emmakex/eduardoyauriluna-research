@@ -1,0 +1,16 @@
+{
+  "phase": "2C",
+  "status": "ready_for_live_ovh_deploy",
+  "source_commit": "319ba800c612b758cd58b8a344496df93d96b2dc",
+  "mcp_image": "ghcr.io/emmakex/site-control-mcp@sha256:e55f801dd6ee0c41a38c66e164e7206738f235dd2632cb15f5c24f05bf241144",
+  "mcp_publish_workflow_run": 39055314467,
+  "mcp_image_reference_artifact": 12108593890,
+  "ingress": {
+    "product": "Caddy",
+    "version": "2.11.7-alpine",
+    "image": "caddy@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f"
+  },
+  "reference_tenant_id": "eduardo-research",
+  "bounded_tool_count": 96,
+  "live_acceptance_required": true
+}
