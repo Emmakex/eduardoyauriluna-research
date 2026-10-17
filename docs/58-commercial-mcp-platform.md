@@ -2,9 +2,9 @@
 
 ## Product principle
 
-The MCP work must be built as a reusable commercial product, not as a one-off controller for `eduardoyauriluna.com`.
+The MCP work is a reusable commercial product, not a one-off controller for `eduardoyauriluna.com`.
 
-The Eduardo Research installation remains the reference tenant and acceptance lab, but every new bridge capability should be reusable across customers without forking the codebase.
+The Eduardo Research installation remains the reference tenant and production acceptance lab, but every capability must be reusable for the next customer without forking the repository or creating a customer-specific MCP implementation.
 
 Target operating model:
 
@@ -20,6 +20,20 @@ Customer / operator
   → WordPress / ecommerce / ERP / CRM / custom software
   → verification / audit
 ```
+
+## Architecture decision — one product, shared or private deployment
+
+The commercial MCP has one codebase, one capability model, one adapter model and one release line. Deployment isolation is configuration/infrastructure, not a source-code fork.
+
+The initial managed production target is our OVH infrastructure, containerized and exposed only through an authenticated HTTPS MCP endpoint behind the platform ingress/reverse proxy.
+
+The same product supports three deployment classes:
+
+1. **Managed shared / multi-tenant** — one MCP platform serves multiple isolated customers/tenants.
+2. **Private managed** — the same product image is dedicated to one customer, normally in our OVH infrastructure.
+3. **Enterprise / customer infrastructure** — the same product image runs in customer-controlled infrastructure when required.
+
+No deployment class may weaken the adapter, authorization, capability, verification or audit contracts.
 
 ## Commercial invariant
 
@@ -46,6 +60,24 @@ Each tenant has a stable internal ID and a closed server-side configuration:
 Credentials are not stored inside the tenant registry payload. The registry references a secret identifier/environment variable and the runtime resolves the secret server-side.
 
 The LLM never receives tenant secrets.
+
+### Shared-mode isolation
+
+In managed shared mode, every customer is a separate tenant. At minimum, each tenant has independent:
+
+- backend origin and adapter registration;
+- read/write/elevated backend credential references;
+- entitlement set;
+- principal/workspace allowlist;
+- rate/usage accounting boundary;
+- audit correlation;
+- language and capability contract.
+
+Knowing another tenant ID never grants access to it.
+
+### Private-mode isolation
+
+In private managed mode, the same product image is bound to one active customer/tenant. Private mode does not use a different codebase and does not gain arbitrary backend access; it keeps the same typed tools, scopes and Preview/Apply/Verify/Rollback rules.
 
 ## Principal model
 
@@ -83,7 +115,7 @@ Examples:
 
 The backend then independently evaluates its own credential/scopes. Passing the commercial gate does not grant backend permission.
 
-The initial closed capability catalog covers:
+The closed capability catalog covers:
 
 - `site.read`, diagnostics;
 - Pages read/write;
@@ -106,7 +138,7 @@ The commercial MCP core depends on adapter contracts rather than WordPress-speci
 
 Initial adapter:
 
-- `research-manager`: bounded control of the accepted Research Manager v1 APIs.
+- `research-manager`: bounded control of the accepted Research Manager APIs.
 
 Planned commercial adapters can include, when a bounded customer-side gateway exists:
 
@@ -122,21 +154,32 @@ An adapter is not an arbitrary HTTP proxy. It exposes typed commercial capabilit
 
 ## Commercial deployment models
 
-### Managed SaaS
+### Managed shared / multi-tenant on OVH
 
-One managed control platform serves multiple isolated tenants. Recommended for SMEs and recurring subscriptions.
+One managed MCP control platform in our OVH infrastructure serves multiple isolated tenants.
 
 Commercial unit: connected site/system plus enabled capability package and usage.
 
-Shared routing uses a tenant-scoped MCP URL (`/mcp/{tenant-id}`) plus authenticated principal authorization. The URL identifies the target; the principal grant authorizes it; entitlements determine which product modules are usable.
+Shared routing uses a tenant-scoped MCP endpoint such as `/mcp/{tenant-id}` plus authenticated principal authorization. The URL identifies the target; the principal grant authorizes it; entitlements determine which product modules are usable.
 
-### Private managed instance
+Requirements before shared write access is generally enabled:
 
-The same product image is deployed in dedicated infrastructure managed by us for a customer that needs stronger isolation.
+- authenticated principals/workspaces;
+- deny-by-default principal → tenant mapping;
+- per-tenant backend credential profiles;
+- per-principal/per-tenant rate and usage boundaries;
+- persistent tenant-safe audit correlation;
+- server-side secret resolution;
+- HTTPS-only external endpoint;
+- no tenant enumeration from public health/status surfaces.
+
+### Private managed instance on OVH
+
+The same product image is deployed in dedicated infrastructure/runtime for one customer requiring stronger isolation.
 
 Commercial unit: private instance + connected systems + support/SLA.
 
-Private mode can remain bound to one active tenant at `/mcp`.
+Private mode may expose a single authenticated `/mcp` endpoint bound to one configured tenant. It keeps the same tools and security lifecycle as shared mode.
 
 ### Enterprise / customer infrastructure
 
@@ -145,6 +188,22 @@ The same product image and adapter contracts run in the customer's infrastructur
 Commercial unit: licence/subscription + deployment/onboarding + support/SLA.
 
 These are deployment variants of one product, not separate codebases.
+
+## OVH runtime target
+
+The managed runtime target is a containerized service in our OVH infrastructure with:
+
+- Docker-managed MCP runtime;
+- HTTPS ingress/reverse proxy;
+- remote MCP endpoint and `/healthz`;
+- outer client/principal authentication separated from backend Manager credentials;
+- server-side secret references only;
+- shared multi-tenant or private single-tenant configuration selected without code changes;
+- persistent audit/usage telemetry suitable for production;
+- controlled deployment/rollback of the MCP service itself;
+- no direct exposure of WordPress, database, shell or filesystem administration through MCP.
+
+Local `127.0.0.1:8787` + MCP Inspector remains an engineering/acceptance path, not the steady-state production topology.
 
 ## Capability packaging
 
@@ -170,6 +229,61 @@ Write access must always preserve the connected gateway's lifecycle. For Researc
 `Preview/Plan → explicit Apply → Verify → Rollback`
 
 Elevated identity, destructive deletion, software update and external publication actions remain separately permissioned.
+
+## Current accepted baseline
+
+The commercial foundation, tenant isolation, entitlement gate and read surfaces have been accepted. Page-slot mutation is the first production-accepted write lifecycle through MCP.
+
+Accepted Page lifecycle:
+
+`Plan → Apply → stored/rendered Verify → Rollback → baseline readback → credential revocation`
+
+This acceptance is the template for every additional write domain; it is not permission to bypass domain-specific Manager contracts.
+
+## Phase 2C — full bounded write surface
+
+Objective: expose through MCP the normal bounded write capabilities already provided by Research Manager so the accepted Research website can be operated end-to-end from an approved MCP client without routine WordPress Admin, SSH, WP-CLI, direct REST, database or filesystem access.
+
+Implementation order:
+
+1. **Insights** — draft/create, edit, relationships, translation pairing, scheduling/status and reversible verification lifecycle.
+2. **Research objects** — Lines, Outputs/Publications, Projects, Software and Datasets.
+3. **Translations + Evidence** — structured pair/unpair and bounded evidence management; identity-sensitive operations remain elevated.
+4. **SEO/GEO** — deterministic remediation writes only where the Manager exposes a legitimate bounded target.
+5. **Media** — bounded ingest/update lifecycle through accepted Manager contracts.
+6. **Navigation** — bounded registered Theme navigation changes.
+7. **Design** — palette, typography, density and registered component variants; no arbitrary CSS/HTML/page-builder control.
+
+Each domain must ship with:
+
+- exact typed MCP tools;
+- commercial capability mapping;
+- exact backend-scope mapping;
+- least-privilege read/write/elevated credential use;
+- immutable Preview/Plan where the Manager contract provides it;
+- explicit Apply/confirmation;
+- stored/rendered Verify as applicable;
+- safe Rollback/exact restoration where supported;
+- idempotency/stale-plan/domain-boundary tests;
+- production acceptance with reversible fixtures or legitimate natural targets;
+- credential revocation proof after acceptance.
+
+A domain is not complete merely because Research Manager already supports it; it is complete when the MCP adapter exposes and production-accepts the bounded lifecycle without weakening the Manager boundary.
+
+## Phase 2D — managed OVH production deployment
+
+After the required Phase 2C write surface is complete:
+
+1. package the MCP runtime as the production image;
+2. deploy to our OVH infrastructure;
+3. configure HTTPS ingress and health checks;
+4. configure outer MCP client/principal authentication;
+5. provision the Eduardo reference tenant with least-privilege backend credentials;
+6. prove remote read/write lifecycle through the HTTPS MCP endpoint;
+7. validate secret rotation/revocation without service restart where supported;
+8. validate audit/usage persistence;
+9. validate shared-routing isolation with at least two test tenants before general multi-client write enablement;
+10. retain private single-tenant deployment as the dedicated-customer option using the same image.
 
 ## Commercial onboarding target
 
@@ -213,7 +327,7 @@ The current implementation ships `EnvSecretResolver` first. The tenant/principal
 
 ## Usage and audit boundary
 
-The current commercial guard is keyed by:
+The commercial guard is keyed by:
 
 `principal ID × tenant ID`
 
@@ -221,35 +335,7 @@ This provides independent per-minute admission counters, denied/rate-limited acc
 
 Entitlement denials add structured reason codes (`tenant_not_entitled`, `principal_not_granted`) plus the denied capability without exposing secrets.
 
-This is the enforcement boundary for the current prototype, not the final billing ledger. Before external commercial launch, usage/audit persistence must move to durable storage/telemetry with retention and tamper-resistance appropriate to the deployment class.
-
-## Current implementation — v0.4 commercial entitlements
-
-`bridge/research-manager-mcp` contains the reusable commercial core while keeping the accepted Research Manager read-only surface compatible.
-
-Implemented:
-
-- adapter interface separated from MCP server;
-- `research-manager` as the first adapter;
-- closed multi-tenant registry;
-- tenant configuration references backend secrets instead of embedding bearer credentials;
-- authenticated principal registry with explicit allowed tenant IDs;
-- shared routing only when `MCP_SHARED_ROUTING=true`;
-- shared tenant endpoints at `/mcp/{tenant-id}`;
-- deny-by-default unknown/cross-tenant behavior;
-- independent `principal × tenant` rate/usage counters;
-- structured non-secret access audit events;
-- `SecretResolver` abstraction with environment-backed implementation;
-- closed typed commercial capability catalog;
-- per-tenant entitlement lists;
-- per-principal capability grants;
-- request-scoped authorization context through MCP execution;
-- tool invocation gate using tenant/principal intersection;
-- structured entitlement-denial reason codes;
-- health response does not enumerate tenants in shared mode;
-- private/single-tenant mode remains backward compatible for the Eduardo reference lab.
-
-The next commercial slice after v0.4 acceptance is bounded read/list/inspect surface expansion by domain. Broad writes remain behind Preview/Apply/Verify/Rollback and separate backend write credentials.
+Before external commercial launch, usage/audit persistence must use durable storage/telemetry with retention and tamper-resistance appropriate to the deployment class.
 
 ## Product naming
 
