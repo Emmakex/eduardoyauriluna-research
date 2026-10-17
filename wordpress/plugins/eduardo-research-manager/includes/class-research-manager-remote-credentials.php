@@ -195,6 +195,35 @@ final class Eduardo_Research_Manager_Remote_Credentials {
         return $connections;
     }
 
+    public function set_temporary_scopes(string $connection_id, array $scopes): array|WP_Error {
+        $connection_id = trim($connection_id);
+        $scopes = $this->sanitize_scopes($scopes);
+        if (! $scopes) {
+            return new WP_Error('validation_failed', 'At least one supported remote scope is required.', array('status'=>400));
+        }
+
+        $temporary = $this->raw_temporary_states();
+        if ('' === $connection_id || ! isset($temporary[$connection_id]) || ! is_array($temporary[$connection_id])) {
+            return new WP_Error('validation_failed', 'Temporary Remote Manager credential was not found.', array('status'=>404));
+        }
+
+        $state = $temporary[$connection_id];
+        if (empty($state['enabled']) || '' === (string) ($state['token_hash'] ?? '')) {
+            return new WP_Error('capability_unavailable', 'Revoked temporary Remote Manager credentials cannot change scopes.', array('status'=>409));
+        }
+
+        $state['scopes'] = $scopes;
+        $state['kind'] = 'temporary';
+        $temporary[$connection_id] = $state;
+        $this->persist_temporary_states($temporary);
+
+        if ((string) ($this->authenticated_state['connection_id'] ?? '') === $connection_id) {
+            $this->authenticated_state = $state;
+        }
+
+        return $this->public_state($state, 'temporary');
+    }
+
     public function revoke_temporary(string $connection_id): array|WP_Error {
         $connection_id = trim($connection_id);
         $temporary = $this->raw_temporary_states();
