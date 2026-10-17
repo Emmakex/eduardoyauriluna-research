@@ -10,7 +10,12 @@ import type {
   SiteInsightCreatePlanRequest,
   SiteInsightInspectionRequest,
   SiteInsightListRequest,
+  SiteInsightPairPlanRequest,
+  SiteInsightPairingApplyRequest,
+  SiteInsightPairingRollbackRequest,
+  SiteInsightPairingVerifyRequest,
   SiteInsightRollbackRequest,
+  SiteInsightUnpairPlanRequest,
   SiteInsightUpdatePlanRequest,
   SiteInsightVerifyRequest,
   SiteMediaDiagnosticInspectionRequest,
@@ -61,6 +66,11 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   applyInsight(request:SiteInsightApplyRequest):Promise<unknown>{return this.writeClient.applyInsight(request);}
   async verifyInsight(request:SiteInsightVerifyRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requireOperation(operation,['insight-create','insight-update'],'Insight Verify','an allowed Insight operation');return this.writeClient.verifyInsight(request);}
   async rollbackInsight(request:SiteInsightRollbackRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requireOperation(operation,['insight-create','insight-update'],'Insight Rollback','an allowed Insight operation');return this.writeClient.rollbackInsight(request);}
+  planInsightPair(request:SiteInsightPairPlanRequest):Promise<unknown>{return this.writeClient.planInsightPair(request);}
+  planInsightUnpair(request:SiteInsightUnpairPlanRequest):Promise<unknown>{return this.writeClient.planInsightUnpair(request);}
+  applyInsightPairing(request:SiteInsightPairingApplyRequest):Promise<unknown>{return this.writeClient.applyInsightPairing(request);}
+  verifyInsightPairing(request:SiteInsightPairingVerifyRequest):Promise<unknown>{return this.writeClient.verifyInsightPairing(request);}
+  rollbackInsightPairing(request:SiteInsightPairingRollbackRequest):Promise<unknown>{return this.writeClient.rollbackInsightPairing(request);}
   listResearchObjects(request:SiteResearchObjectListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Object');return this.client.researchObjects(request.kind,language);}
   inspectResearchObject(request:SiteResearchObjectInspectionRequest):Promise<unknown>{return this.client.researchObject(request.kind,request.postId);}
   listResearchLines(request:SiteResearchLineListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Line');return this.client.researchLines(language);}

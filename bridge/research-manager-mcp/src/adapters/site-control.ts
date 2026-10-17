@@ -38,6 +38,11 @@ export interface SiteInsightUpdatePlanRequest { postId: number; changes: SiteIns
 export interface SiteInsightApplyRequest { planId: string; confirm: true; }
 export interface SiteInsightVerifyRequest { operationId: string; rendered: true; }
 export interface SiteInsightRollbackRequest { operationId: string; confirm: true; }
+export interface SiteInsightPairPlanRequest { firstId: number; secondId: number; }
+export interface SiteInsightUnpairPlanRequest { postId: number; }
+export interface SiteInsightPairingApplyRequest { planId: string; confirm: true; }
+export interface SiteInsightPairingVerifyRequest { operationId: string; rendered: boolean; }
+export interface SiteInsightPairingRollbackRequest { operationId: string; confirm: true; }
 
 export type ResearchObjectKind = 'output' | 'project' | 'software' | 'dataset';
 export interface SiteResearchObjectListRequest { kind?: ResearchObjectKind; language?: string; }
@@ -90,6 +95,11 @@ export interface SiteControlAdapter {
   applyInsight(request: SiteInsightApplyRequest): Promise<unknown>;
   verifyInsight(request: SiteInsightVerifyRequest): Promise<unknown>;
   rollbackInsight(request: SiteInsightRollbackRequest): Promise<unknown>;
+  planInsightPair(request: SiteInsightPairPlanRequest): Promise<unknown>;
+  planInsightUnpair(request: SiteInsightUnpairPlanRequest): Promise<unknown>;
+  applyInsightPairing(request: SiteInsightPairingApplyRequest): Promise<unknown>;
+  verifyInsightPairing(request: SiteInsightPairingVerifyRequest): Promise<unknown>;
+  rollbackInsightPairing(request: SiteInsightPairingRollbackRequest): Promise<unknown>;
   listResearchObjects(request: SiteResearchObjectListRequest): Promise<unknown>;
   inspectResearchObject(request: SiteResearchObjectInspectionRequest): Promise<unknown>;
   listResearchLines(request: SiteResearchLineListRequest): Promise<unknown>;

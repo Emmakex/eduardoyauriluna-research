@@ -25,6 +25,11 @@ export const TOOL_AUTHORIZATION = {
   site_insight_apply: { commercialCapability:'insights.write', backendScopes:['operations.apply'], readOnly:false },
   site_insight_verify: { commercialCapability:'insights.write', backendScopes:['site.read','site.diagnostics'], readOnly:false },
   site_insight_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback'], readOnly:false },
+  site_insight_pair_plan: { commercialCapability:'translations.write', backendScopes:['operations.apply','insights.write','translations.write'], readOnly:false },
+  site_insight_unpair_plan: { commercialCapability:'translations.write', backendScopes:['operations.apply','insights.write','translations.write'], readOnly:false },
+  site_insight_pairing_apply: { commercialCapability:'translations.write', backendScopes:['operations.apply','insights.write','translations.write'], readOnly:false },
+  site_insight_pairing_verify: { commercialCapability:'translations.write', backendScopes:['site.read','site.diagnostics'], readOnly:false },
+  site_insight_pairing_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback','insights.write','translations.write'], readOnly:false },
 
   site_research_objects_list: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
   site_research_object_inspect: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
