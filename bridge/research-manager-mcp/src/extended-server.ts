@@ -5,6 +5,8 @@ import type { A4WriteAdapter } from './a4-contracts.js';
 import { registerA4WriteTools } from './a4-write-tools.js';
 import type { A5WriteAdapter } from './a5-contracts.js';
 import { registerA5WriteTools } from './a5-write-tools.js';
+import type { A6WriteAdapter } from './a6-contracts.js';
+import { registerA6WriteTools } from './a6-write-tools.js';
 import type { SiteControlAdapter } from './adapters/site-control.js';
 import { registerResearchWriteTools } from './research-write-tools.js';
 import { createBridgeServer as createBaseBridgeServer } from './server.js';
@@ -15,5 +17,6 @@ export function createBridgeServer(adapter:SiteControlAdapter):McpServer{
   registerA3WriteTools(server,adapter as SiteControlAdapter&A3WriteAdapter);
   registerA4WriteTools(server,adapter as SiteControlAdapter&A4WriteAdapter);
   registerA5WriteTools(server,adapter as SiteControlAdapter&A5WriteAdapter);
+  registerA6WriteTools(server,adapter as SiteControlAdapter&A6WriteAdapter);
   return server;
 }
