@@ -33,8 +33,18 @@ export const TOOL_AUTHORIZATION = {
 
   site_research_objects_list: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
   site_research_object_inspect: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
+  site_research_object_create_plan: { commercialCapability:'research.write', backendScopes:['operations.apply','research.write'], readOnly:false },
+  site_research_object_update_plan: { commercialCapability:'research.write', backendScopes:['operations.apply','research.write'], readOnly:false },
+  site_research_object_apply: { commercialCapability:'research.write', backendScopes:['research.read','operations.apply','research.write'], readOnly:false },
+  site_research_object_verify: { commercialCapability:'research.write', backendScopes:['research.read','site.diagnostics'], readOnly:false },
+  site_research_object_rollback: { commercialCapability:'operations.rollback', backendScopes:['research.read','operations.rollback','research.write'], readOnly:false },
   site_research_lines_list: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
   site_research_line_inspect: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
+  site_research_line_create_plan: { commercialCapability:'research.write', backendScopes:['operations.apply','research.write'], readOnly:false },
+  site_research_line_update_plan: { commercialCapability:'research.write', backendScopes:['operations.apply','research.write'], readOnly:false },
+  site_research_line_apply: { commercialCapability:'research.write', backendScopes:['research.read','operations.apply','research.write'], readOnly:false },
+  site_research_line_verify: { commercialCapability:'research.write', backendScopes:['research.read','site.diagnostics'], readOnly:false },
+  site_research_line_rollback: { commercialCapability:'operations.rollback', backendScopes:['research.read','operations.rollback','research.write'], readOnly:false },
 
   site_translations_list: { commercialCapability:'translations.read', backendScopes:['translations.read'], readOnly:true },
   site_translation_inspect: { commercialCapability:'translations.read', backendScopes:['translations.read'], readOnly:true },
