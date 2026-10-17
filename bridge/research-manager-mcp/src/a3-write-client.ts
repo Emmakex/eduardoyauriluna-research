@@ -152,7 +152,7 @@ export class ResearchManagerA3WriteClient {
   }
 
   planIdentityUpdate(request:IdentityProfilePlanRequest):Promise<unknown>{
-    this.requireIdentityChanges(request.changes);
+    this.requireIdentityChanges(request.changes as unknown as Record<string,unknown>);
     this.requireEvidenceContext(request);
     return this.post('/identity-profile/plan',{changes:request.changes,...this.evidencePayload(request)},'identity-update-plan');
   }
