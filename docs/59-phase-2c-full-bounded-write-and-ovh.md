@@ -39,20 +39,31 @@ Implementation evidence:
 
 - base Insight lifecycle: PR #246 → `22b3874d1ad9a62296e629366e174b06501577a6`;
 - EN/ES pair/unpair lifecycle: PR #247 → `aea77cd02ff9791dceedef604dc5e915d5c7bfe8`;
-- current MCP bounded catalog after A1: 46 tools;
+- MCP bounded catalog after A1: 46 tools;
 - typecheck, unit tests, build, bounded-surface guard and WP-CLI fallback PASS on PR #247.
 
 ### A2 — Research objects
 
-- [ ] Research Lines lifecycle;
-- [ ] Outputs/Publications lifecycle;
-- [ ] Projects lifecycle;
-- [ ] Research Software lifecycle;
-- [ ] Datasets lifecycle;
-- [ ] relationships and verified Research-Line constraints;
-- [ ] exact Apply/Verify/Rollback;
-- [ ] local tests/CI;
+- [x] Research Lines lifecycle;
+- [x] Outputs/Publications lifecycle;
+- [x] Projects lifecycle;
+- [x] Research Software lifecycle;
+- [x] Datasets lifecycle;
+- [x] relationships and verified Research-Line constraints;
+- [x] exact Apply/Verify/Rollback;
+- [x] local tests/CI;
 - [ ] representative reversible production acceptance.
+
+Implementation evidence:
+
+- Research Line + shared Research Object lifecycle: PR #248 → `35404e22ca4e961feb60fdb3f11f7e71b47dd9fd`;
+- dedicated Manager gateways preserved for `/research-lines/*` and `/research-objects/*`;
+- evidence confirmation/reference gate preserved for evidence-sensitive writes;
+- strict per-kind MCP schemas for Output, Project, Software and Dataset;
+- Object update intentionally excludes `status` and `slug`, matching the Manager contract;
+- exact Line/Object plan and operation ID domains plus operation-domain preflight;
+- MCP bounded catalog after A2: 56 tools;
+- typecheck, unit tests, build, bounded-surface guard and WP-CLI fallback PASS on PR #248.
 
 ### A3 — Translations + Evidence
 
