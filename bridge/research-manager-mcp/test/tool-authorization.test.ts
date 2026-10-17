@@ -4,16 +4,23 @@ import test from 'node:test';
 import { TOOL_AUTHORIZATION } from '../src/tool-authorization.js';
 
 function serverMappings(): Map<string,string> {
-  const source=[
+  const sources=[
     readFileSync(new URL('../src/server.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/research-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a3-write-tools.ts',import.meta.url),'utf8'),
-  ].join('\n');
+  ];
   const mappings=new Map<string,string>();
-  const single=/server\.registerTool\('([^']+)'[\s\S]*?withCapability\('([^']+)'/g;
-  for(const match of source.matchAll(single))mappings.set(match[1]!,match[2]!);
-  const multiple=/server\.registerTool\('([^']+)'[\s\S]*?withCapabilities\(\['([^']+)'/g;
-  for(const match of source.matchAll(multiple))mappings.set(match[1]!,match[2]!);
+  for(const source of sources){
+    for(const line of source.split('\n')){
+      const tool=line.match(/server\.registerTool\('([^']+)'/);
+      if(!tool)continue;
+      const single=line.match(/withCapability\('([^']+)'/);
+      const multiple=line.match(/withCapabilities\(\['([^']+)'/);
+      const capability=single?.[1]??multiple?.[1];
+      assert.ok(capability,`${tool[1]} must declare a primary commercial capability on its registration line`);
+      mappings.set(tool[1]!,capability);
+    }
+  }
   return mappings;
 }
 
