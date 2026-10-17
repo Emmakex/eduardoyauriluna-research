@@ -4,6 +4,7 @@ import { ResearchManagerError } from './manager-client.js';
 import type {
   SitePageSlotsApplyRequest,
   SitePageSlotsPlanRequest,
+  SitePageSlotsVerifyRequest,
   SitePageSlotValue,
 } from './adapters/site-control.js';
 
@@ -11,7 +12,11 @@ type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<
 interface ManagerEnvelope { ok?: boolean; code?: string; message?: string; data?: unknown; }
 
 type WriteClientConfig = Pick<TenantConfig, 'managerBaseUrl' | 'managerWriteToken' | 'managerTimeoutMs'>;
-type WriteRoute = '/operations/plan' | `/plans/${string}/apply`;
+type WriteRoute =
+  | '/operations/plan'
+  | `/plans/${string}`
+  | `/plans/${string}/apply`
+  | `/operations/${string}/verify`;
 
 export class ResearchManagerWriteClient {
   private readonly baseUrl: URL;
@@ -49,15 +54,32 @@ export class ResearchManagerWriteClient {
     );
   }
 
-  applyPageSlots(request: SitePageSlotsApplyRequest): Promise<unknown> {
+  async applyPageSlots(request: SitePageSlotsApplyRequest): Promise<unknown> {
     this.requirePlanId(request.planId);
     if (request.confirm !== true) {
       throw new Error('Page slot Apply requires explicit confirmation');
     }
+    const plan = await this.get(
+      `/plans/${encodeURIComponent(request.planId)}`,
+      'page-slots-apply-preflight',
+    );
+    this.requirePageSlotsOperation(plan, 'plan');
     return this.post(
       `/plans/${encodeURIComponent(request.planId)}/apply`,
       { confirm: true },
       'page-slots-apply',
+    );
+  }
+
+  verifyPageSlots(request: SitePageSlotsVerifyRequest): Promise<unknown> {
+    this.requireOperationId(request.operationId);
+    if (request.rendered !== true) {
+      throw new Error('Page slot Verify requires rendered verification');
+    }
+    return this.post(
+      `/operations/${encodeURIComponent(request.operationId)}/verify`,
+      { rendered: true },
+      'page-slots-verify',
     );
   }
 
@@ -76,6 +98,23 @@ export class ResearchManagerWriteClient {
   private requirePlanId(planId: string): void {
     if (!/^erm-remote-plan-[a-f0-9]{20}-[a-f0-9]{8}$/.test(planId)) {
       throw new Error('Page slot plan ID has an invalid format');
+    }
+  }
+
+  private requireOperationId(operationId: string): void {
+    if (!/^erm-operation-[a-f0-9]{32}$/.test(operationId)) {
+      throw new Error('Page slot operation ID has an invalid format');
+    }
+  }
+
+  private requirePageSlotsOperation(value: unknown, label: string): void {
+    if (
+      typeof value !== 'object'
+      || value === null
+      || Array.isArray(value)
+      || (value as Record<string, unknown>).operation !== 'page-slots-update'
+    ) {
+      throw new Error(`Page slot ${label} does not reference a page-slots-update operation`);
     }
   }
 
@@ -103,7 +142,20 @@ export class ResearchManagerWriteClient {
     }
   }
 
-  private async post(route: WriteRoute, body: unknown, label: string): Promise<unknown> {
+  private get(route: WriteRoute, label: string): Promise<unknown> {
+    return this.request(route, 'GET', undefined, label);
+  }
+
+  private post(route: WriteRoute, body: unknown, label: string): Promise<unknown> {
+    return this.request(route, 'POST', body, label);
+  }
+
+  private async request(
+    route: WriteRoute,
+    method: 'GET' | 'POST',
+    body: unknown | undefined,
+    label: string,
+  ): Promise<unknown> {
     if (!this.token) {
       throw new Error('Research Manager write credential is not configured for this tenant');
     }
@@ -113,19 +165,19 @@ export class ResearchManagerWriteClient {
     const headers = new Headers({
       Accept: 'application/json',
       Authorization: `Bearer ${this.token}`,
-      'Content-Type': 'application/json',
       'User-Agent': 'Site-Control-MCP/0.10.0 ResearchManagerAdapter',
       'X-Research-Manager-Request-Id': requestId,
       'X-Research-Manager-Nonce': randomBytes(16).toString('hex'),
       'X-Research-Manager-Timestamp': Math.floor(Date.now() / 1000).toString(),
     });
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
 
     let response: Response;
     try {
       response = await this.fetchImpl(endpoint, {
-        method: 'POST',
+        method,
         headers,
-        body: JSON.stringify(body),
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         redirect: 'error',
         signal: AbortSignal.timeout(this.timeoutMs),
       });
