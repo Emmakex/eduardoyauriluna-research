@@ -5,7 +5,12 @@ import type {
   SiteInsightApplyRequest,
   SiteInsightCreateData,
   SiteInsightCreatePlanRequest,
+  SiteInsightPairPlanRequest,
+  SiteInsightPairingApplyRequest,
+  SiteInsightPairingRollbackRequest,
+  SiteInsightPairingVerifyRequest,
   SiteInsightRollbackRequest,
+  SiteInsightUnpairPlanRequest,
   SiteInsightUpdateChanges,
   SiteInsightUpdatePlanRequest,
   SiteInsightVerifyRequest,
@@ -25,7 +30,13 @@ type WriteRoute =
   | `/plans/${string}`
   | `/plans/${string}/apply`
   | `/operations/${string}/verify`
-  | `/operations/${string}/rollback`;
+  | `/operations/${string}/rollback`
+  | '/insights/pairing/plan'
+  | `/insights/pairing/plans/${string}`
+  | `/insights/pairing/plans/${string}/apply`
+  | `/insights/pairing/operations/${string}`
+  | `/insights/pairing/operations/${string}/verify`
+  | `/insights/pairing/operations/${string}/rollback`;
 
 export class ResearchManagerWriteClient {
   private readonly baseUrl: URL;
@@ -173,6 +184,72 @@ export class ResearchManagerWriteClient {
     );
   }
 
+  planInsightPair(request: SiteInsightPairPlanRequest): Promise<unknown> {
+    this.requirePostId(request.firstId, 'First Insight');
+    this.requirePostId(request.secondId, 'Second Insight');
+    return this.post(
+      '/insights/pairing/plan',
+      { operation: 'insight-pair', payload: { first_id: request.firstId, second_id: request.secondId } },
+      'insight-pair-plan',
+    );
+  }
+
+  planInsightUnpair(request: SiteInsightUnpairPlanRequest): Promise<unknown> {
+    this.requirePostId(request.postId, 'Insight');
+    return this.post(
+      '/insights/pairing/plan',
+      { operation: 'insight-unpair', payload: { post_id: request.postId } },
+      'insight-unpair-plan',
+    );
+  }
+
+  applyInsightPairing(request: SiteInsightPairingApplyRequest): Promise<unknown> {
+    this.requirePairingPlanId(request.planId);
+    if (request.confirm !== true) throw new Error('Insight pairing Apply requires explicit confirmation');
+    return this.get(
+      `/insights/pairing/plans/${encodeURIComponent(request.planId)}`,
+      'insight-pairing-apply-preflight',
+    ).then((plan) => {
+      this.requireOperationType(plan, ['insight-pair', 'insight-unpair'], 'Insight pairing plan', 'an allowed Insight pairing operation');
+      return this.post(
+        `/insights/pairing/plans/${encodeURIComponent(request.planId)}/apply`,
+        { confirm: true },
+        'insight-pairing-apply',
+      );
+    });
+  }
+
+  verifyInsightPairing(request: SiteInsightPairingVerifyRequest): Promise<unknown> {
+    this.requirePairingOperationId(request.operationId);
+    return this.get(
+      `/insights/pairing/operations/${encodeURIComponent(request.operationId)}`,
+      'insight-pairing-verify-preflight',
+    ).then((operation) => {
+      this.requireOperationType(operation, ['insight-pair', 'insight-unpair'], 'Insight pairing operation', 'an allowed Insight pairing operation');
+      return this.post(
+        `/insights/pairing/operations/${encodeURIComponent(request.operationId)}/verify`,
+        { rendered: request.rendered },
+        'insight-pairing-verify',
+      );
+    });
+  }
+
+  rollbackInsightPairing(request: SiteInsightPairingRollbackRequest): Promise<unknown> {
+    this.requirePairingOperationId(request.operationId);
+    if (request.confirm !== true) throw new Error('Insight pairing Rollback requires explicit confirmation');
+    return this.get(
+      `/insights/pairing/operations/${encodeURIComponent(request.operationId)}`,
+      'insight-pairing-rollback-preflight',
+    ).then((operation) => {
+      this.requireOperationType(operation, ['insight-pair', 'insight-unpair'], 'Insight pairing operation', 'an allowed Insight pairing operation');
+      return this.post(
+        `/insights/pairing/operations/${encodeURIComponent(request.operationId)}/rollback`,
+        { confirm: true },
+        'insight-pairing-rollback',
+      );
+    });
+  }
+
   private requireKey(key: string): void {
     if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(key)) {
       throw new Error('Page key must be a lowercase registered key');
@@ -198,6 +275,18 @@ export class ResearchManagerWriteClient {
   private requireOperationId(operationId: string, label: string): void {
     if (!/^erm-operation-[a-f0-9]{32}$/.test(operationId)) {
       throw new Error(`${label} operation ID has an invalid format`);
+    }
+  }
+
+  private requirePairingPlanId(planId: string): void {
+    if (!/^erm-insight-pair-plan-[a-f0-9]{18}-[a-f0-9]{8}$/.test(planId)) {
+      throw new Error('Insight pairing plan ID has an invalid format');
+    }
+  }
+
+  private requirePairingOperationId(operationId: string): void {
+    if (!/^erm-insight-pair-op-[a-f0-9]{32}$/.test(operationId)) {
+      throw new Error('Insight pairing operation ID has an invalid format');
     }
   }
 
