@@ -1,0 +1,134 @@
+name: Research Manager MCP HTTPS Ingress Quality
+
+on:
+  pull_request:
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-ingress-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-ingress-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ingress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Caddy ingress configuration
+        run: |
+          docker run --rm \
+            -e MCP_PUBLIC_HOST=localhost \
+            -v "$PWD/bridge/research-manager-mcp/ingress/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+
+      - name: Build MCP production image
+        run: docker build -t research-manager-mcp:ingress-ci bridge/research-manager-mcp
+
+      - name: Start private MCP behind TLS ingress
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create mcp-ingress-ci
+          docker run -d --rm --name research-manager-mcp --network mcp-ingress-ci \
+            -e ERM_BASE_URL=https://example.invalid \
+            -e ERM_READ_TOKEN=ermt1_ci_read \
+            -e MCP_BEARER_TOKEN=ci-private-outer-token \
+            -e MCP_ALLOWED_HOSTS=localhost \
+            research-manager-mcp:ingress-ci
+          docker run -d --rm --name mcp-ingress --network mcp-ingress-ci \
+            -e MCP_PUBLIC_HOST=localhost \
+            -p 127.0.0.1:18080:80 \
+            -p 127.0.0.1:18443:443 \
+            -v "$PWD/bridge/research-manager-mcp/ingress/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine
+
+      - name: Prove HTTPS-only private surface and auth forwarding
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup() { docker rm -f mcp-ingress research-manager-mcp >/dev/null 2>&1 || true; docker network rm mcp-ingress-ci >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 45); do
+            if curl -kfsS https://localhost:18443/healthz | grep -q '"routing":"single-tenant"'; then break; fi
+            sleep 1
+          done
+          curl -kfsS https://localhost:18443/healthz | grep -q '"routing":"single-tenant"'
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:18080/healthz)" = "308"
+          test "$(curl -ksS -o /dev/null -w '%{http_code}' https://localhost:18443/not-exposed)" = "404"
+          test "$(curl -ksS -o /dev/null -w '%{http_code}' https://localhost:18443/mcp)" = "401"
+          AUTH_CODE="$(curl -ksS -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Authorization: Bearer ci-private-outer-token' \
+            -H 'Content-Type: application/json' \
+            --data '{}' https://localhost:18443/mcp)"
+          test "$AUTH_CODE" != "401"
+          test "$AUTH_CODE" != "403"
+          test "$AUTH_CODE" != "404"
+          trap - EXIT
+          cleanup
+
+      - name: Start shared MCP behind the same TLS ingress
+        shell: bash
+        run: |
+          set -euo pipefail
+          TENANTS='[{"id":"ci-tenant","label":"CI Tenant","adapter":"research-manager","baseUrl":"https://example.invalid","readTokenEnv":"CI_TENANT_READ_TOKEN","languages":["en","es"],"entitlements":["site.read"]},{"id":"other-tenant","label":"Other Tenant","adapter":"research-manager","baseUrl":"https://example.invalid","readTokenEnv":"CI_OTHER_READ_TOKEN","languages":["en"],"entitlements":["site.read"]}]'
+          PRINCIPALS='[{"id":"ci-principal","bearerTokenEnv":"CI_PRINCIPAL_TOKEN","tenants":["ci-tenant"],"capabilities":["site.read"]}]'
+          docker network create mcp-ingress-ci
+          docker run -d --rm --name research-manager-mcp --network mcp-ingress-ci \
+            -e MCP_SHARED_ROUTING=true \
+            -e MCP_TENANTS_JSON="$TENANTS" \
+            -e MCP_PRINCIPALS_JSON="$PRINCIPALS" \
+            -e CI_TENANT_READ_TOKEN=ermt1_ci_read \
+            -e CI_OTHER_READ_TOKEN=ermt1_ci_other \
+            -e CI_PRINCIPAL_TOKEN=ci-principal-token \
+            -e MCP_ALLOWED_HOSTS=localhost \
+            research-manager-mcp:ingress-ci
+          docker run -d --rm --name mcp-ingress --network mcp-ingress-ci \
+            -e MCP_PUBLIC_HOST=localhost \
+            -p 127.0.0.1:18080:80 \
+            -p 127.0.0.1:18443:443 \
+            -v "$PWD/bridge/research-manager-mcp/ingress/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine
+
+      - name: Prove shared routing does not enumerate tenants
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup() { docker rm -f mcp-ingress research-manager-mcp >/dev/null 2>&1 || true; docker network rm mcp-ingress-ci >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 45); do
+            if curl -kfsS https://localhost:18443/healthz | grep -q '"routing":"shared"'; then break; fi
+            sleep 1
+          done
+          HEALTH="$(curl -kfsS https://localhost:18443/healthz)"
+          echo "$HEALTH" | grep -q '"routing":"shared"'
+          ! echo "$HEALTH" | grep -q 'ci-tenant'
+          ! echo "$HEALTH" | grep -q 'other-tenant'
+
+          KNOWN_ANON="$(curl -ksS -o /tmp/known-anon -w '%{http_code}' https://localhost:18443/mcp/ci-tenant)"
+          UNKNOWN_ANON="$(curl -ksS -o /tmp/unknown-anon -w '%{http_code}' https://localhost:18443/mcp/not-real)"
+          test "$KNOWN_ANON" = "401"
+          test "$UNKNOWN_ANON" = "401"
+          cmp /tmp/known-anon /tmp/unknown-anon
+
+          KNOWN_DENIED="$(curl -ksS -o /tmp/known-denied -w '%{http_code}' \
+            -H 'Authorization: Bearer ci-principal-token' https://localhost:18443/mcp/other-tenant)"
+          UNKNOWN_DENIED="$(curl -ksS -o /tmp/unknown-denied -w '%{http_code}' \
+            -H 'Authorization: Bearer ci-principal-token' https://localhost:18443/mcp/not-real)"
+          test "$KNOWN_DENIED" = "403"
+          test "$UNKNOWN_DENIED" = "403"
+          cmp /tmp/known-denied /tmp/unknown-denied
+
+          ALLOWED_CODE="$(curl -ksS -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Authorization: Bearer ci-principal-token' \
+            -H 'Content-Type: application/json' \
+            --data '{}' https://localhost:18443/mcp/ci-tenant)"
+          test "$ALLOWED_CODE" != "401"
+          test "$ALLOWED_CODE" != "403"
+          test "$ALLOWED_CODE" != "404"
