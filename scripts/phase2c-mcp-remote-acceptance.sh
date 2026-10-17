@@ -7,11 +7,16 @@ set -euo pipefail
 INSPECTOR_VERSION="${MCP_INSPECTOR_VERSION:-2.5.0}"
 EXPECTED_TOOL_COUNT="${MCP_EXPECTED_TOOL_COUNT:-96}"
 EXPECTED_ROUTING="${MCP_EXPECTED_ROUTING:-shared}"
+SKIP_REFERENCE_READS="${MCP_SKIP_REFERENCE_READS:-false}"
 EVIDENCE_DIR="${MCP_EVIDENCE_DIR:-$(pwd)/tmp/phase2c-mcp-remote-acceptance}"
 
 case "$EXPECTED_ROUTING" in
   shared|single-tenant) ;;
   *) echo "MCP_EXPECTED_ROUTING must be shared or single-tenant" >&2; exit 2 ;;
+esac
+case "$SKIP_REFERENCE_READS" in
+  true|false) ;;
+  *) echo "MCP_SKIP_REFERENCE_READS must be true or false" >&2; exit 2 ;;
 esac
 
 mkdir -p "$EVIDENCE_DIR"
@@ -19,6 +24,7 @@ chmod 700 "$EVIDENCE_DIR"
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 CONFIG="$WORK_DIR/mcp.json"
+CURL_AUTH_CONFIG="$WORK_DIR/curl-auth.conf"
 export MCP_STORAGE_DIR="$WORK_DIR/storage"
 export MCP_INSPECTOR_OAUTH_STATE_PATH="$WORK_DIR/oauth.json"
 mkdir -p "$MCP_STORAGE_DIR"
@@ -39,12 +45,21 @@ fs.writeFileSync(path, JSON.stringify({
   },
 }, null, 2), { mode: 0o600 });
 NODE
-chmod 600 "$CONFIG"
+node - "$CURL_AUTH_CONFIG" "$MCP_TOKEN" <<'NODE'
+const fs = require('node:fs');
+const [path, token] = process.argv.slice(2);
+const escaped = `Authorization: Bearer ${token}`.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+fs.writeFileSync(path, `header = "${escaped}"\n`, { mode: 0o600 });
+NODE
+chmod 600 "$CONFIG" "$CURL_AUTH_CONFIG"
 
 mcp() {
   npx --yes "@modelcontextprotocol/inspector@${INSPECTOR_VERSION}" --cli \
     --config "$CONFIG" --server phase2c \
     --stored-auth-only --format json "$@"
+}
+curl_auth() {
+  curl --config "$CURL_AUTH_CONFIG" "$@"
 }
 
 health_url="$(node - "$MCP_SERVER_URL" <<'NODE'
@@ -112,19 +127,23 @@ jq -e --argjson want "$required_tools" \
 printf 'ok: bounded catalog %s/%s + critical tools present\n' "$actual_tool_count" "$EXPECTED_TOOL_COUNT"
 
 # 4. Safe reference-tenant reads through the commercial MCP layer.
-mcp --method tools/call --tool-name research_status --tool-args-json '{}' > "$EVIDENCE_DIR/research-status.json"
-mcp --method tools/call --tool-name research_versions --tool-args-json '{}' > "$EVIDENCE_DIR/research-versions.json"
-mcp --method tools/call --tool-name research_capabilities --tool-args-json '{}' > "$EVIDENCE_DIR/research-capabilities.json"
-mcp --method tools/call --tool-name site_navigation_inspect --tool-args-json '{}' > "$EVIDENCE_DIR/navigation.json"
-mcp --method tools/call --tool-name site_design_readiness --tool-args-json '{"rendered":true}' > "$EVIDENCE_DIR/design-readiness.json"
-for file in research-status research-versions research-capabilities navigation design-readiness; do
-  jq -e '.result' "$EVIDENCE_DIR/${file}.json" >/dev/null
-  if grep -Eqi 'Bearer[[:space:]]+[A-Za-z0-9._~+/-]+|ermt1_|erm1_' "$EVIDENCE_DIR/${file}.json"; then
-    echo "secret-like material detected in ${file} evidence" >&2
-    exit 1
-  fi
-done
-printf 'ok: reference-tenant safe reads\n'
+if [ "$SKIP_REFERENCE_READS" = 'false' ]; then
+  mcp --method tools/call --tool-name research_status --tool-args-json '{}' > "$EVIDENCE_DIR/research-status.json"
+  mcp --method tools/call --tool-name research_versions --tool-args-json '{}' > "$EVIDENCE_DIR/research-versions.json"
+  mcp --method tools/call --tool-name research_capabilities --tool-args-json '{}' > "$EVIDENCE_DIR/research-capabilities.json"
+  mcp --method tools/call --tool-name site_navigation_inspect --tool-args-json '{}' > "$EVIDENCE_DIR/navigation.json"
+  mcp --method tools/call --tool-name site_design_readiness --tool-args-json '{"rendered":true}' > "$EVIDENCE_DIR/design-readiness.json"
+  for file in research-status research-versions research-capabilities navigation design-readiness; do
+    jq -e '.result' "$EVIDENCE_DIR/${file}.json" >/dev/null
+    if grep -Eqi 'Bearer[[:space:]]+[A-Za-z0-9._~+/-]+|ermt1_|erm1_' "$EVIDENCE_DIR/${file}.json"; then
+      echo "secret-like material detected in ${file} evidence" >&2
+      exit 1
+    fi
+  done
+  printf 'ok: reference-tenant safe reads\n'
+else
+  printf 'skip: reference-tenant reads (CI contract mode only)\n'
+fi
 
 # 5. Shared-mode anti-enumeration and optional second-tenant isolation.
 if [ "$EXPECTED_ROUTING" = 'shared' ]; then
@@ -135,14 +154,12 @@ if [ "$EXPECTED_ROUTING" = 'shared' ]; then
   test "$unknown_anon_code" = "401"
   cmp "$WORK_DIR/anonymous.json" "$WORK_DIR/unknown-anon.json"
 
-  unknown_auth_code="$(curl --silent --show-error --output "$WORK_DIR/unknown-auth.json" --write-out '%{http_code}' \
-    -H "Authorization: Bearer ${MCP_TOKEN}" "$unknown_url")"
+  unknown_auth_code="$(curl_auth --silent --show-error --output "$WORK_DIR/unknown-auth.json" --write-out '%{http_code}' "$unknown_url")"
   test "$unknown_auth_code" = "403"
   jq -e '.code == "tenant_access_denied"' "$WORK_DIR/unknown-auth.json" >/dev/null
 
   if [ -n "${MCP_DENIED_TENANT_URL:-}" ]; then
-    denied_code="$(curl --silent --show-error --output "$WORK_DIR/denied-tenant.json" --write-out '%{http_code}' \
-      -H "Authorization: Bearer ${MCP_TOKEN}" "$MCP_DENIED_TENANT_URL")"
+    denied_code="$(curl_auth --silent --show-error --output "$WORK_DIR/denied-tenant.json" --write-out '%{http_code}' "$MCP_DENIED_TENANT_URL")"
     test "$denied_code" = "403"
     cmp "$WORK_DIR/unknown-auth.json" "$WORK_DIR/denied-tenant.json"
     printf 'ok: second-tenant access denied and indistinguishable from unknown tenant\n'
@@ -164,6 +181,7 @@ cat > "$EVIDENCE_DIR/result.json" <<EOF
   "routing": "${EXPECTED_ROUTING}",
   "tool_count": ${actual_tool_count},
   "persistent_telemetry": true,
+  "reference_reads_checked": $([ "$SKIP_REFERENCE_READS" = 'false' ] && printf true || printf false),
   "two_tenant_isolation_checked": $([ -n "${MCP_DENIED_TENANT_URL:-}" ] && printf true || printf false)
 }
 EOF
