@@ -9,9 +9,14 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
+    volumes:
+      - mcp_telemetry:/var/lib/site-control-mcp
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
     user: "10001:10001"
     stop_grace_period: 15s
+
+volumes:
+  mcp_telemetry:

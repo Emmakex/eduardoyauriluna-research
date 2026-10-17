@@ -1,0 +1,113 @@
+name: Research Manager MCP Persistent Telemetry Quality
+
+on:
+  pull_request:
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-telemetry-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-telemetry-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  telemetry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build -t research-manager-mcp:telemetry-ci bridge/research-manager-mcp
+
+      - name: Persistent telemetry is mandatory when production requires it
+        shell: bash
+        run: |
+          set -euo pipefail
+          if docker run --rm \
+            -e ERM_BASE_URL=https://example.invalid \
+            -e ERM_READ_TOKEN=ermt1_ci_read \
+            -e MCP_BEARER_TOKEN=ci-outer-secret \
+            -e MCP_REQUIRE_PERSISTENT_TELEMETRY=true \
+            research-manager-mcp:telemetry-ci; then
+            echo 'service unexpectedly started without MCP_TELEMETRY_PATH' >&2
+            exit 1
+          fi
+
+      - name: Start read-only runtime with persistent telemetry volume
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/mcp-telemetry"
+          sudo chown 10001:10001 "$RUNNER_TEMP/mcp-telemetry"
+          docker run -d --rm --name mcp-telemetry \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            -v "$RUNNER_TEMP/mcp-telemetry:/var/lib/site-control-mcp" \
+            -p 127.0.0.1:18789:8787 \
+            -e ERM_BASE_URL=https://example.invalid \
+            -e ERM_READ_TOKEN=ermt1_ci_read \
+            -e MCP_BEARER_TOKEN=ci-outer-secret \
+            -e MCP_TELEMETRY_PATH=/var/lib/site-control-mcp/events.jsonl \
+            -e MCP_REQUIRE_PERSISTENT_TELEMETRY=true \
+            research-manager-mcp:telemetry-ci
+
+      - name: Persist correlated access and usage events without bearer material
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup() { docker rm -f mcp-telemetry >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18789/healthz | grep -q '"persistent_telemetry":true'; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18789/healthz | grep -q '"persistent_telemetry":true'
+
+          STATUS="$(curl -sS -D /tmp/telemetry-headers -o /tmp/telemetry-body -w '%{http_code}' http://127.0.0.1:18789/mcp)"
+          test "$STATUS" = "401"
+          REQUEST_ID="$(awk -F': ' 'tolower($1)=="x-request-id" {gsub("\\r", "", $2); print $2}' /tmp/telemetry-headers)"
+          test -n "$REQUEST_ID"
+
+          AUTH_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Authorization: Bearer ci-outer-secret' \
+            -H 'Content-Type: application/json' \
+            --data '{}' http://127.0.0.1:18789/mcp)"
+          test "$AUTH_STATUS" != "401"
+          test "$AUTH_STATUS" != "403"
+
+          EVENTS="$RUNNER_TEMP/mcp-telemetry/events.jsonl"
+          test -s "$EVENTS"
+          sudo grep -qF '"event":"mcp_access"' "$EVENTS"
+          sudo grep -qF "\"request_id\":\"$REQUEST_ID\"" "$EVENTS"
+          sudo grep -qF '"principal_id":"anonymous"' "$EVENTS"
+          sudo grep -qF '"outcome":"allowed"' "$EVENTS"
+          sudo grep -qF '"usage":{' "$EVENTS"
+          ! sudo grep -qF 'ci-outer-secret' "$EVENTS"
+          test "$(stat -c '%a' "$EVENTS")" = "600"
+
+          LINES_BEFORE="$(sudo wc -l "$EVENTS" | awk '{print $1}')"
+          docker rm -f mcp-telemetry >/dev/null
+          trap - EXIT
+
+          docker run -d --rm --name mcp-telemetry \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            -v "$RUNNER_TEMP/mcp-telemetry:/var/lib/site-control-mcp" \
+            -p 127.0.0.1:18789:8787 \
+            -e ERM_BASE_URL=https://example.invalid \
+            -e ERM_READ_TOKEN=ermt1_ci_read \
+            -e MCP_BEARER_TOKEN=ci-outer-secret \
+            -e MCP_TELEMETRY_PATH=/var/lib/site-control-mcp/events.jsonl \
+            -e MCP_REQUIRE_PERSISTENT_TELEMETRY=true \
+            research-manager-mcp:telemetry-ci
+          trap cleanup EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18789/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18789/mcp)" = "401"
+          LINES_AFTER="$(sudo wc -l "$EVENTS" | awk '{print $1}')"
+          test "$LINES_AFTER" -gt "$LINES_BEFORE"

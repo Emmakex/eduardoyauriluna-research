@@ -1,3 +1,4 @@
+import { isAbsolute } from 'node:path';
 import type { PrincipalAccess } from './access-control.js';
 import { parseCapabilityList, type CommercialCapability } from './entitlements.js';
 import { EnvSecretResolver, type SecretResolver } from './secret-resolver.js';
@@ -28,6 +29,8 @@ export interface BridgeConfig {
   inboundBearerToken: string | null;
   allowedHosts: string[];
   allowedOriginHosts: string[];
+  telemetryPath: string | null;
+  requirePersistentTelemetry: boolean;
 }
 
 interface TenantDefinition {
@@ -76,6 +79,15 @@ function enabled(name: string, raw: string | undefined): boolean {
   if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
   if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
   throw new Error(`${name} must be true/false`);
+}
+
+function optionalAbsolutePath(name: string, raw: string | undefined): string | null {
+  const value = (raw ?? '').trim();
+  if (!value) return null;
+  if (!isAbsolute(value) || value.includes('\0') || value.length > 4096) {
+    throw new Error(`${name} must be a bounded absolute filesystem path`);
+  }
+  return value;
 }
 
 function tenantId(raw: unknown, field: string): string {
@@ -259,6 +271,8 @@ export function loadConfig(
   const bindHost = (env.MCP_BIND_HOST ?? '127.0.0.1').trim();
   const inboundBearerToken = (env.MCP_BEARER_TOKEN ?? '').trim() || null;
   const isLoopback = ['127.0.0.1', '::1', 'localhost'].includes(bindHost.toLowerCase());
+  const requirePersistentTelemetry = enabled('MCP_REQUIRE_PERSISTENT_TELEMETRY', env.MCP_REQUIRE_PERSISTENT_TELEMETRY);
+  const telemetryPath = optionalAbsolutePath('MCP_TELEMETRY_PATH', env.MCP_TELEMETRY_PATH);
 
   if (sharedRouting && principals.length === 0) {
     throw new Error('MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON');
@@ -268,6 +282,9 @@ export function loadConfig(
   }
   if (!sharedRouting && !isLoopback && inboundBearerToken === null) {
     throw new Error('MCP_BEARER_TOKEN is required for non-loopback single-tenant mode');
+  }
+  if (requirePersistentTelemetry && telemetryPath === null) {
+    throw new Error('MCP_REQUIRE_PERSISTENT_TELEMETRY requires MCP_TELEMETRY_PATH');
   }
 
   return {
@@ -281,5 +298,7 @@ export function loadConfig(
     inboundBearerToken,
     allowedHosts: csv(env.MCP_ALLOWED_HOSTS || 'localhost,127.0.0.1'),
     allowedOriginHosts: csv(env.MCP_ALLOWED_ORIGIN_HOSTS),
+    telemetryPath,
+    requirePersistentTelemetry,
   };
 }

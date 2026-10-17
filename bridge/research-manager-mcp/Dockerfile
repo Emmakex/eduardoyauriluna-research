@@ -22,7 +22,9 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 RUN groupadd --system --gid 10001 mcp \
- && useradd --system --uid 10001 --gid mcp --home-dir /app --shell /usr/sbin/nologin mcp
+ && useradd --system --uid 10001 --gid mcp --home-dir /app --shell /usr/sbin/nologin mcp \
+ && mkdir -p /var/lib/site-control-mcp \
+ && chown -R mcp:mcp /var/lib/site-control-mcp
 
 COPY --from=build --chown=mcp:mcp /app/package.json ./package.json
 COPY --from=build --chown=mcp:mcp /app/node_modules ./node_modules

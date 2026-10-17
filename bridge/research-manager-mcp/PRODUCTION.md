@@ -24,15 +24,32 @@ Set `MCP_SHARED_ROUTING=true`, provide `MCP_TENANTS_JSON` and `MCP_PRINCIPALS_JS
 
 No secret belongs in the image, Compose file, tenant registry JSON or source repository.
 
+## Persistent telemetry
+
+Managed production must configure:
+
+```text
+MCP_TELEMETRY_PATH=/var/lib/site-control-mcp/events.jsonl
+MCP_REQUIRE_PERSISTENT_TELEMETRY=true
+```
+
+Both production Compose examples mount `/var/lib/site-control-mcp` on a dedicated persistent volume while the rest of the application filesystem remains read-only. The container image provisions that mountpoint for UID/GID `10001`.
+
+The service appends correlated access, entitlement and principal × tenant usage data as JSONL without bearer or Research Manager credential material. When persistent telemetry is required, the service fails startup without a configured/writable destination and refuses to continue an allowed request if a telemetry append later fails.
+
+See `OPERATIONS.md` for retention, credential rotation and revocation procedures.
+
 ## Reverse proxy boundary
 
-The example Compose file publishes the container only on host loopback (`127.0.0.1`). Put the HTTPS reverse proxy/ingress in front of that listener. Configure `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGIN_HOSTS` for the public bridge hostname before exposing the service.
+The direct production Compose example publishes the container only on host loopback (`127.0.0.1`). For the public managed topology prefer `compose.ingress.example.yml`, which keeps the application container on the internal Docker network and exposes only the HTTPS ingress.
 
-`GET /healthz` is intentionally unauthenticated and contains no Manager credential. It is used by the container healthcheck and deployment smoke tests.
+Configure `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGIN_HOSTS` for the public bridge hostname before exposing the service.
+
+`GET /healthz` is intentionally unauthenticated and contains no Manager credential. It reports whether persistent telemetry is active and is used by the container healthcheck and deployment smoke tests.
 
 ## Deployment and rollback
 
-Use immutable image tags or digests. `compose.production.example.yml` requires both `MCP_IMAGE` and `MCP_IMAGE_TAG` so a deployment is explicit.
+Use immutable image tags or digests. `compose.production.example.yml` and `compose.ingress.example.yml` require explicit accepted image inputs so a deployment is reproducible.
 
 Deploy:
 
@@ -46,4 +63,4 @@ Rollback is the same operation with the previously accepted immutable tag:
 MCP_IMAGE=<registry/image> MCP_IMAGE_TAG=<previous-tag> docker compose -f compose.production.example.yml up -d
 ```
 
-Do not rebuild an old tag during rollback. Keep the previous accepted image available until the new deployment has passed health and MCP acceptance checks.
+Do not rebuild an old tag during rollback. Keep the previous accepted image available until the new deployment has passed health, telemetry and MCP acceptance checks. Preserve the telemetry volume across application image rollback unless the incident procedure explicitly requires otherwise.
