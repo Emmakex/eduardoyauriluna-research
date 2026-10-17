@@ -80,8 +80,16 @@ jobs:
           grep -F "'site_navigation_apply'" src/a6-write-tools.ts
           grep -F "'site_navigation_verify'" src/a6-write-tools.ts
           grep -F "'site_navigation_rollback'" src/a6-write-tools.ts
-          grep -F "withCapability('navigation.write'" src/a6-write-tools.ts
-          grep -F "withCapability('operations.rollback'" src/a6-write-tools.ts
+          grep -F "'site_design_preset_update_plan'" src/a7-write-tools.ts
+          grep -F "'site_design_preset_apply'" src/a7-write-tools.ts
+          grep -F "'site_design_preset_verify'" src/a7-write-tools.ts
+          grep -F "'site_design_preset_rollback'" src/a7-write-tools.ts
+          grep -F "'site_design_variant_update_plan'" src/a7-write-tools.ts
+          grep -F "'site_design_variant_apply'" src/a7-write-tools.ts
+          grep -F "'site_design_variant_verify'" src/a7-write-tools.ts
+          grep -F "'site_design_variant_rollback'" src/a7-write-tools.ts
+          grep -F "withCapability('design.write'" src/a7-write-tools.ts
+          grep -F "withCapability('operations.rollback'" src/a7-write-tools.ts
           grep -F "TOOL_AUTHORIZATION" src/tool-authorization.ts
           grep -F "site_translation_apply: { commercialCapability:'translations.write', backendScopes:['translations.read','operations.apply','translations.write']" src/tool-authorization.ts
           grep -F "site_evidence_apply: { commercialCapability:'evidence.write', backendScopes:['evidence.read','operations.apply','evidence.write']" src/tool-authorization.ts
@@ -101,12 +109,21 @@ jobs:
           grep -F "site_navigation_apply: { commercialCapability:'navigation.write', backendScopes:['pages.read','operations.apply','pages.write']" src/tool-authorization.ts
           grep -F "site_navigation_verify: { commercialCapability:'navigation.write', backendScopes:['pages.read','site.diagnostics']" src/tool-authorization.ts
           grep -F "site_navigation_rollback: { commercialCapability:'operations.rollback', backendScopes:['pages.read','operations.rollback','pages.write']" src/tool-authorization.ts
-          grep -F "catalogEntries.length,88" test/tool-authorization.test.ts
+          grep -F "site_design_preset_update_plan: { commercialCapability:'design.write', backendScopes:['operations.apply','design.write']" src/tool-authorization.ts
+          grep -F "site_design_preset_apply: { commercialCapability:'design.write', backendScopes:['design.read','operations.apply','design.write']" src/tool-authorization.ts
+          grep -F "site_design_preset_verify: { commercialCapability:'design.write', backendScopes:['design.read']" src/tool-authorization.ts
+          grep -F "site_design_preset_rollback: { commercialCapability:'operations.rollback', backendScopes:['design.read','operations.rollback','design.write']" src/tool-authorization.ts
+          grep -F "site_design_variant_update_plan: { commercialCapability:'design.write', backendScopes:['operations.apply','design.write']" src/tool-authorization.ts
+          grep -F "site_design_variant_apply: { commercialCapability:'design.write', backendScopes:['design.read','operations.apply','design.write']" src/tool-authorization.ts
+          grep -F "site_design_variant_verify: { commercialCapability:'design.write', backendScopes:['design.read']" src/tool-authorization.ts
+          grep -F "site_design_variant_rollback: { commercialCapability:'operations.rollback', backendScopes:['design.read','operations.rollback','design.write']" src/tool-authorization.ts
+          grep -F "catalogEntries.length,96" test/tool-authorization.test.ts
           grep -F "registerResearchWriteTools(server,adapter)" src/extended-server.ts
           grep -F "registerA3WriteTools(server,adapter as SiteControlAdapter&A3WriteAdapter)" src/extended-server.ts
           grep -F "registerA4WriteTools(server,adapter as SiteControlAdapter&A4WriteAdapter)" src/extended-server.ts
           grep -F "registerA5WriteTools(server,adapter as SiteControlAdapter&A5WriteAdapter)" src/extended-server.ts
           grep -F "registerA6WriteTools(server,adapter as SiteControlAdapter&A6WriteAdapter)" src/extended-server.ts
+          grep -F "registerA7WriteTools(server,adapter as SiteControlAdapter&A7WriteAdapter)" src/extended-server.ts
           grep -F "from './extended-server.js'" src/http.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
@@ -116,4 +133,5 @@ jobs:
           A4_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a4-write-tools.ts)"
           A5_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a5-write-tools.ts)"
           A6_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a6-write-tools.ts)"
-          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS + A5_WRITE_TOOLS + A6_WRITE_TOOLS ))" -eq 88
+          A7_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a7-write-tools.ts)"
+          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS + A5_WRITE_TOOLS + A6_WRITE_TOOLS + A7_WRITE_TOOLS ))" -eq 96
