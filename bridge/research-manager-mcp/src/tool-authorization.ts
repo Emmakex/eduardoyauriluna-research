@@ -85,6 +85,10 @@ export const TOOL_AUTHORIZATION = {
   site_seo_geo_resource_indexability: { commercialCapability:'seo.read', backendScopes:['site.diagnostics','seo.read'], readOnly:true },
   site_seo_geo_internal_links: { commercialCapability:'seo.read', backendScopes:['site.diagnostics','seo.read'], readOnly:true },
   site_seo_geo_readiness: { commercialCapability:'seo.read', backendScopes:['site.diagnostics','seo.read'], readOnly:true },
+  site_seo_geo_remediation_plan: { commercialCapability:'seo.write', backendScopes:['operations.apply','seo.write'], readOnly:false },
+  site_seo_geo_remediation_apply: { commercialCapability:'seo.write', backendScopes:['seo.read','operations.apply','seo.write'], readOnly:false },
+  site_seo_geo_remediation_verify: { commercialCapability:'seo.write', backendScopes:['seo.read','site.diagnostics'], readOnly:false },
+  site_seo_geo_remediation_rollback: { commercialCapability:'operations.rollback', backendScopes:['seo.read','operations.rollback','seo.write'], readOnly:false },
 
   site_design_inspect: { commercialCapability:'design.read', backendScopes:['design.read'], readOnly:true },
   site_design_variants: { commercialCapability:'design.read', backendScopes:['design.read'], readOnly:true },
