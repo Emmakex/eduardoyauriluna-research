@@ -1,0 +1,31 @@
+{
+  admin off
+}
+
+{$MCP_PUBLIC_HOST} {
+  log {
+    output stdout
+    format json
+  }
+
+  header {
+    -Server
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "no-referrer"
+    X-Frame-Options "DENY"
+  }
+
+  @mcp_surface path /healthz /mcp /mcp/*
+  handle @mcp_surface {
+    reverse_proxy research-manager-mcp:8787 {
+      flush_interval -1
+      header_up Host {host}
+      header_up X-Forwarded-Host {host}
+      header_up X-Forwarded-Proto {scheme}
+    }
+  }
+
+  handle {
+    respond "Not Found" 404
+  }
+}
