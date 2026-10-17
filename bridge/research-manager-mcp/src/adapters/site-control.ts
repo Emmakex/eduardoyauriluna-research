@@ -50,6 +50,125 @@ export interface SiteResearchObjectInspectionRequest { kind: ResearchObjectKind;
 export interface SiteResearchLineListRequest { language?: string; }
 export interface SiteResearchLineInspectionRequest { postId: number; }
 
+export type SiteResearchRecordStatus = 'draft' | 'publish';
+type OptionalWithUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+export interface SiteResearchLineData {
+  title: string;
+  slug?: string | undefined;
+  excerpt?: string | undefined;
+  content?: string | undefined;
+  language?: string | undefined;
+  status?: SiteResearchRecordStatus | undefined;
+  evidence_status?: string | undefined;
+  research_status?: string | undefined;
+  central_question?: string | undefined;
+  order?: string | undefined;
+  topics?: string[] | undefined;
+  methods?: string[] | undefined;
+}
+export type SiteResearchLineChanges = OptionalWithUndefined<SiteResearchLineData>;
+export interface SiteResearchLineCreatePlanRequest {
+  data: SiteResearchLineData;
+  evidenceConfirmed?: boolean | undefined;
+  evidenceReference?: string | undefined;
+}
+export interface SiteResearchLineUpdatePlanRequest {
+  postId: number;
+  changes: SiteResearchLineChanges;
+  evidenceConfirmed?: boolean | undefined;
+  evidenceReference?: string | undefined;
+}
+export interface SiteResearchLineApplyRequest { planId: string; confirm: true; }
+export interface SiteResearchLineVerifyRequest { operationId: string; rendered: boolean; }
+export interface SiteResearchLineRollbackRequest { operationId: string; confirm: true; }
+
+export interface SiteResearchObjectBaseCreateData {
+  title: string;
+  slug?: string | undefined;
+  excerpt?: string | undefined;
+  content?: string | undefined;
+  language?: string | undefined;
+  status?: SiteResearchRecordStatus | undefined;
+}
+export interface SiteResearchOutputCreateData extends SiteResearchObjectBaseCreateData {
+  output_type?: string | undefined;
+  review_status?: string | undefined;
+  publication_date?: string | undefined;
+  venue?: string | undefined;
+  doi?: string | undefined;
+  authors?: string[] | undefined;
+  line_ids?: number[] | undefined;
+}
+export interface SiteResearchProjectCreateData extends SiteResearchObjectBaseCreateData {
+  project_status?: string | undefined;
+  question?: string | undefined;
+  role?: string | undefined;
+  start_date?: string | undefined;
+  end_date?: string | undefined;
+  partner?: string | undefined;
+  funding?: string | undefined;
+  project_url?: string | undefined;
+  methods?: string[] | undefined;
+  line_ids?: number[] | undefined;
+}
+export interface SiteResearchSoftwareCreateData extends SiteResearchObjectBaseCreateData {
+  software_status?: string | undefined;
+  version?: string | undefined;
+  release_date?: string | undefined;
+  repository_url?: string | undefined;
+  archive_url?: string | undefined;
+  license?: string | undefined;
+  documentation_url?: string | undefined;
+  doi?: string | undefined;
+  programming_languages?: string[] | undefined;
+  line_ids?: number[] | undefined;
+}
+export interface SiteResearchDatasetCreateData extends SiteResearchObjectBaseCreateData {
+  version?: string | undefined;
+  publication_date?: string | undefined;
+  repository?: string | undefined;
+  doi?: string | undefined;
+  license?: string | undefined;
+  access_level?: string | undefined;
+  methodology?: string | undefined;
+  provenance?: string | undefined;
+  size?: string | undefined;
+  documentation_url?: string | undefined;
+  ethics_notes?: string | undefined;
+  formats?: string[] | undefined;
+  line_ids?: number[] | undefined;
+}
+export type SiteResearchObjectCreateData =
+  | SiteResearchOutputCreateData
+  | SiteResearchProjectCreateData
+  | SiteResearchSoftwareCreateData
+  | SiteResearchDatasetCreateData;
+export type SiteResearchOutputChanges = Omit<OptionalWithUndefined<SiteResearchOutputCreateData>, 'status' | 'slug'>;
+export type SiteResearchProjectChanges = Omit<OptionalWithUndefined<SiteResearchProjectCreateData>, 'status' | 'slug'>;
+export type SiteResearchSoftwareChanges = Omit<OptionalWithUndefined<SiteResearchSoftwareCreateData>, 'status' | 'slug'>;
+export type SiteResearchDatasetChanges = Omit<OptionalWithUndefined<SiteResearchDatasetCreateData>, 'status' | 'slug'>;
+export type SiteResearchObjectChanges =
+  | SiteResearchOutputChanges
+  | SiteResearchProjectChanges
+  | SiteResearchSoftwareChanges
+  | SiteResearchDatasetChanges;
+export interface SiteResearchObjectCreatePlanRequest {
+  kind: ResearchObjectKind;
+  data: SiteResearchObjectCreateData;
+  evidenceConfirmed?: boolean | undefined;
+  evidenceReference?: string | undefined;
+}
+export interface SiteResearchObjectUpdatePlanRequest {
+  kind: ResearchObjectKind;
+  postId: number;
+  changes: SiteResearchObjectChanges;
+  evidenceConfirmed?: boolean | undefined;
+  evidenceReference?: string | undefined;
+}
+export interface SiteResearchObjectApplyRequest { planId: string; confirm: true; }
+export interface SiteResearchObjectVerifyRequest { operationId: string; rendered: boolean; }
+export interface SiteResearchObjectRollbackRequest { operationId: string; confirm: true; }
+
 export type ResearchTranslationType =
   | 'research_line' | 'research_output' | 'research_project' | 'research_software' | 'research_dataset';
 export interface SiteTranslationListRequest { postType: ResearchTranslationType; language?: string; }
@@ -102,8 +221,18 @@ export interface SiteControlAdapter {
   rollbackInsightPairing(request: SiteInsightPairingRollbackRequest): Promise<unknown>;
   listResearchObjects(request: SiteResearchObjectListRequest): Promise<unknown>;
   inspectResearchObject(request: SiteResearchObjectInspectionRequest): Promise<unknown>;
+  planResearchObjectCreate(request: SiteResearchObjectCreatePlanRequest): Promise<unknown>;
+  planResearchObjectUpdate(request: SiteResearchObjectUpdatePlanRequest): Promise<unknown>;
+  applyResearchObject(request: SiteResearchObjectApplyRequest): Promise<unknown>;
+  verifyResearchObject(request: SiteResearchObjectVerifyRequest): Promise<unknown>;
+  rollbackResearchObject(request: SiteResearchObjectRollbackRequest): Promise<unknown>;
   listResearchLines(request: SiteResearchLineListRequest): Promise<unknown>;
   inspectResearchLine(request: SiteResearchLineInspectionRequest): Promise<unknown>;
+  planResearchLineCreate(request: SiteResearchLineCreatePlanRequest): Promise<unknown>;
+  planResearchLineUpdate(request: SiteResearchLineUpdatePlanRequest): Promise<unknown>;
+  applyResearchLine(request: SiteResearchLineApplyRequest): Promise<unknown>;
+  verifyResearchLine(request: SiteResearchLineVerifyRequest): Promise<unknown>;
+  rollbackResearchLine(request: SiteResearchLineRollbackRequest): Promise<unknown>;
   listTranslations(request: SiteTranslationListRequest): Promise<unknown>;
   inspectTranslation(request: SiteTranslationInspectionRequest): Promise<unknown>;
   evidenceInventory(): Promise<unknown>;

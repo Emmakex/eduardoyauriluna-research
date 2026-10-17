@@ -60,11 +60,23 @@ jobs:
           grep -F "'site_insight_pairing_apply'" src/server.ts
           grep -F "'site_insight_pairing_verify'" src/server.ts
           grep -F "'site_insight_pairing_rollback'" src/server.ts
+          grep -F "'site_research_line_create_plan'" src/research-write-tools.ts
+          grep -F "'site_research_line_update_plan'" src/research-write-tools.ts
+          grep -F "'site_research_line_apply'" src/research-write-tools.ts
+          grep -F "'site_research_line_verify'" src/research-write-tools.ts
+          grep -F "'site_research_line_rollback'" src/research-write-tools.ts
+          grep -F "'site_research_object_create_plan'" src/research-write-tools.ts
+          grep -F "'site_research_object_update_plan'" src/research-write-tools.ts
+          grep -F "'site_research_object_apply'" src/research-write-tools.ts
+          grep -F "'site_research_object_verify'" src/research-write-tools.ts
+          grep -F "'site_research_object_rollback'" src/research-write-tools.ts
           grep -F "withCapability('seo.read'" src/server.ts
           grep -F "withCapability('design.read'" src/server.ts
           grep -F "withCapability('insights.write'" src/server.ts
           grep -F "withCapability('translations.write'" src/server.ts
+          grep -F "withCapability('research.write'" src/research-write-tools.ts
           grep -F "withCapability('operations.rollback'" src/server.ts
+          grep -F "withCapability('operations.rollback'" src/research-write-tools.ts
           grep -F "TOOL_AUTHORIZATION" src/tool-authorization.ts
           grep -F "backendScopes:['site.diagnostics','seo.read']" src/tool-authorization.ts
           grep -F "site_navigation_inspect: { commercialCapability:'navigation.read', backendScopes:['pages.read']" src/tool-authorization.ts
@@ -76,7 +88,19 @@ jobs:
           grep -F "site_insight_pair_plan: { commercialCapability:'translations.write', backendScopes:['operations.apply','insights.write','translations.write']" src/tool-authorization.ts
           grep -F "site_insight_pairing_verify: { commercialCapability:'translations.write', backendScopes:['site.read','site.diagnostics']" src/tool-authorization.ts
           grep -F "site_insight_pairing_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback','insights.write','translations.write']" src/tool-authorization.ts
-          grep -F "catalogEntries.length,46" test/tool-authorization.test.ts
+          grep -F "site_research_line_create_plan: { commercialCapability:'research.write', backendScopes:['operations.apply','research.write']" src/tool-authorization.ts
+          grep -F "site_research_line_apply: { commercialCapability:'research.write', backendScopes:['research.read','operations.apply','research.write']" src/tool-authorization.ts
+          grep -F "site_research_line_verify: { commercialCapability:'research.write', backendScopes:['research.read','site.diagnostics']" src/tool-authorization.ts
+          grep -F "site_research_line_rollback: { commercialCapability:'operations.rollback', backendScopes:['research.read','operations.rollback','research.write']" src/tool-authorization.ts
+          grep -F "site_research_object_create_plan: { commercialCapability:'research.write', backendScopes:['operations.apply','research.write']" src/tool-authorization.ts
+          grep -F "site_research_object_apply: { commercialCapability:'research.write', backendScopes:['research.read','operations.apply','research.write']" src/tool-authorization.ts
+          grep -F "site_research_object_verify: { commercialCapability:'research.write', backendScopes:['research.read','site.diagnostics']" src/tool-authorization.ts
+          grep -F "site_research_object_rollback: { commercialCapability:'operations.rollback', backendScopes:['research.read','operations.rollback','research.write']" src/tool-authorization.ts
+          grep -F "catalogEntries.length,56" test/tool-authorization.test.ts
+          grep -F "registerResearchWriteTools(server,adapter)" src/extended-server.ts
+          grep -F "from './extended-server.js'" src/http.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
-          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 46
+          BASE_TOOLS="$(grep -c "server.registerTool(" src/server.ts)"
+          RESEARCH_WRITE_TOOLS="$(grep -c "server.registerTool(" src/research-write-tools.ts)"
+          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS ))" -eq 56

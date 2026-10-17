@@ -7,7 +7,7 @@ import { ResearchManagerAdapter } from './adapters/research-manager.js';
 import type { SiteControlAdapter } from './adapters/site-control.js';
 import { loadConfig, type TenantConfig } from './config.js';
 import { runWithAuthorizationContext } from './entitlements.js';
-import { createBridgeServer } from './server.js';
+import { createBridgeServer } from './extended-server.js';
 import { TenantRegistry } from './tenant-registry.js';
 import { accessAuditEvent, UsageBoundary } from './usage-boundary.js';
 
