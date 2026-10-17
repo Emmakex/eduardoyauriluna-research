@@ -15,6 +15,7 @@ export const TOOL_AUTHORIZATION = {
   site_page_inspect: { commercialCapability:'pages.read', backendScopes:['site.read'], readOnly:true },
   site_page_slots_plan: { commercialCapability:'pages.write', backendScopes:['operations.apply'], readOnly:false },
   site_page_slots_apply: { commercialCapability:'pages.write', backendScopes:['operations.apply'], readOnly:false },
+  site_page_slots_verify: { commercialCapability:'pages.write', backendScopes:['site.read','site.diagnostics'], readOnly:false },
   site_insights_list: { commercialCapability:'insights.read', backendScopes:['site.read'], readOnly:true },
   site_insight_inspect: { commercialCapability:'insights.read', backendScopes:['site.read'], readOnly:true },
 
