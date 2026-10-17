@@ -16,8 +16,9 @@ on:
         required: false
         type: string
       ingress_image_ref:
-        description: Immutable ingress image digest ref, for example caddy@sha256:...
+        description: Immutable Caddy 2.11.7-alpine multi-platform digest; change only through reviewed upgrade
         required: true
+        default: caddy@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
         type: string
       public_host:
         description: Public HTTPS MCP hostname only, without scheme/path
