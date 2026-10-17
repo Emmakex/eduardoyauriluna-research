@@ -1,4 +1,11 @@
 export interface SitePageInspectionRequest { key: string; language: string; }
+export type SitePageSlotValue = string | string[];
+export interface SitePageSlotsPlanRequest {
+  key: string;
+  language: string;
+  slots: Record<string, SitePageSlotValue>;
+  reason?: string;
+}
 export interface SiteInsightListRequest { language?: string; }
 export interface SiteInsightInspectionRequest { postId: number; }
 
@@ -42,6 +49,7 @@ export interface SiteControlAdapter {
   capabilities(): Promise<unknown>;
   listPages(): Promise<unknown>;
   inspectPage(request: SitePageInspectionRequest): Promise<unknown>;
+  planPageSlots(request: SitePageSlotsPlanRequest): Promise<unknown>;
   listInsights(request: SiteInsightListRequest): Promise<unknown>;
   inspectInsight(request: SiteInsightInspectionRequest): Promise<unknown>;
   listResearchObjects(request: SiteResearchObjectListRequest): Promise<unknown>;
