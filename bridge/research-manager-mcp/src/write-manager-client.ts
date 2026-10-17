@@ -199,7 +199,7 @@ export class ResearchManagerWriteClient {
   }
 
   planResearchLineCreate(request: SiteResearchLineCreatePlanRequest): Promise<unknown> {
-    this.requireResearchFields(request.data as Record<string, unknown>, LINE_FIELDS, true, 'Research Line');
+    this.requireResearchFields(request.data as unknown as Record<string, unknown>, LINE_FIELDS, true, 'Research Line');
     this.requireEvidenceContext(request.evidenceConfirmed, request.evidenceReference, 'Research Line');
     return this.post('/research-lines/plan', {
       operation: 'line-create',
@@ -213,7 +213,7 @@ export class ResearchManagerWriteClient {
 
   planResearchLineUpdate(request: SiteResearchLineUpdatePlanRequest): Promise<unknown> {
     this.requirePostId(request.postId, 'Research Line');
-    this.requireResearchFields(request.changes as Record<string, unknown>, LINE_FIELDS, false, 'Research Line update');
+    this.requireResearchFields(request.changes as unknown as Record<string, unknown>, LINE_FIELDS, false, 'Research Line update');
     this.requireEvidenceContext(request.evidenceConfirmed, request.evidenceReference, 'Research Line');
     return this.post('/research-lines/plan', {
       operation: 'line-update',
@@ -254,7 +254,7 @@ export class ResearchManagerWriteClient {
 
   planResearchObjectCreate(request: SiteResearchObjectCreatePlanRequest): Promise<unknown> {
     this.requireResearchObjectKind(request.kind);
-    this.requireResearchFields(request.data as Record<string, unknown>, OBJECT_CREATE_FIELDS[request.kind], true, `Research ${request.kind}`);
+    this.requireResearchFields(request.data as unknown as Record<string, unknown>, OBJECT_CREATE_FIELDS[request.kind], true, `Research ${request.kind}`);
     this.requireEvidenceContext(request.evidenceConfirmed, request.evidenceReference, 'Research Object');
     return this.post('/research-objects/plan', {
       operation: 'object-create',
@@ -270,7 +270,7 @@ export class ResearchManagerWriteClient {
   planResearchObjectUpdate(request: SiteResearchObjectUpdatePlanRequest): Promise<unknown> {
     this.requireResearchObjectKind(request.kind);
     this.requirePostId(request.postId, 'Research Object');
-    this.requireResearchFields(request.changes as Record<string, unknown>, OBJECT_UPDATE_FIELDS[request.kind], false, `Research ${request.kind} update`);
+    this.requireResearchFields(request.changes as unknown as Record<string, unknown>, OBJECT_UPDATE_FIELDS[request.kind], false, `Research ${request.kind} update`);
     this.requireEvidenceContext(request.evidenceConfirmed, request.evidenceReference, 'Research Object');
     return this.post('/research-objects/plan', {
       operation: 'object-update',
