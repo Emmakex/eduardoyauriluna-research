@@ -1,0 +1,79 @@
+name: Phase 2C MCP Remote Acceptance Runner Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase2c-mcp-remote-acceptance.sh'
+      - '.github/workflows/phase2c-mcp-remote-acceptance-quality.yml'
+      - 'bridge/research-manager-mcp/**'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/phase2c-mcp-remote-acceptance.sh'
+      - '.github/workflows/phase2c-mcp-remote-acceptance-quality.yml'
+      - 'bridge/research-manager-mcp/**'
+
+permissions:
+  contents: read
+
+jobs:
+  runner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+
+      - name: Shell syntax and security contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/phase2c-mcp-remote-acceptance.sh
+          grep -F 'live remote acceptance requires an HTTPS MCP_SERVER_URL' scripts/phase2c-mcp-remote-acceptance.sh
+          grep -F 'MCP_REQUIRE_PERSISTENT_TELEMETRY' bridge/research-manager-mcp/.env.example
+          grep -F 'MCP_TOKEN' scripts/phase2c-mcp-remote-acceptance.sh
+          grep -F 'curl --config "$CURL_AUTH_CONFIG"' scripts/phase2c-mcp-remote-acceptance.sh
+          ! grep -E 'curl .*Authorization: Bearer.*MCP_TOKEN' scripts/phase2c-mcp-remote-acceptance.sh
+
+      - name: Build production image
+        run: docker build -t research-manager-mcp:remote-acceptance-ci bridge/research-manager-mcp
+
+      - name: Start authenticated local contract target
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/mcp-remote-telemetry"
+          sudo chown 10001:10001 "$RUNNER_TEMP/mcp-remote-telemetry"
+          docker run -d --rm --name mcp-remote-acceptance \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            -v "$RUNNER_TEMP/mcp-remote-telemetry:/var/lib/site-control-mcp" \
+            -p 127.0.0.1:18790:8787 \
+            -e ERM_BASE_URL=https://example.invalid \
+            -e ERM_READ_TOKEN=ermt1_ci_read \
+            -e MCP_BEARER_TOKEN=ci-remote-outer-secret \
+            -e MCP_TELEMETRY_PATH=/var/lib/site-control-mcp/events.jsonl \
+            -e MCP_REQUIRE_PERSISTENT_TELEMETRY=true \
+            research-manager-mcp:remote-acceptance-ci
+
+      - name: Exercise remote acceptance runner without production reads
+        shell: bash
+        env:
+          MCP_SERVER_URL: http://127.0.0.1:18790/mcp
+          MCP_TOKEN: ci-remote-outer-secret
+          MCP_EXPECTED_ROUTING: single-tenant
+          MCP_ALLOW_INSECURE_HTTP: 'true'
+          MCP_SKIP_REFERENCE_READS: 'true'
+          MCP_EVIDENCE_DIR: ${{ runner.temp }}/mcp-remote-evidence
+        run: |
+          set -euo pipefail
+          cleanup() { docker rm -f mcp-remote-acceptance >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18790/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          bash scripts/phase2c-mcp-remote-acceptance.sh
+          jq -e '.status == "PASS" and .tool_count == 96 and .persistent_telemetry == true and .reference_reads_checked == false' "$MCP_EVIDENCE_DIR/result.json" >/dev/null
+          ! grep -R -F -- "$MCP_TOKEN" "$MCP_EVIDENCE_DIR"
