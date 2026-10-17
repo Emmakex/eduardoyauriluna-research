@@ -12,8 +12,7 @@ import type {
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 interface ManagerEnvelope { ok?: boolean; code?: string; message?: string; data?: unknown; }
 
-type CredentialProfile = 'write' | 'elevated';
-type WriteClientConfig = Pick<TenantConfig, 'managerBaseUrl' | 'managerWriteToken' | 'managerElevatedToken' | 'managerTimeoutMs'>;
+type WriteClientConfig = Pick<TenantConfig, 'managerBaseUrl' | 'managerWriteToken' | 'managerTimeoutMs'>;
 type WriteRoute =
   | '/operations/plan'
   | `/plans/${string}`
@@ -23,15 +22,13 @@ type WriteRoute =
 
 export class ResearchManagerWriteClient {
   private readonly baseUrl: URL;
-  private readonly writeToken: string | null;
-  private readonly elevatedToken: string | null;
+  private readonly token: string | null;
   private readonly timeoutMs: number;
   private readonly fetchImpl: FetchLike;
 
   constructor(config: WriteClientConfig, fetchImpl: FetchLike = fetch) {
     this.baseUrl = config.managerBaseUrl;
-    this.writeToken = config.managerWriteToken;
-    this.elevatedToken = config.managerElevatedToken ?? null;
+    this.token = config.managerWriteToken;
     this.timeoutMs = config.managerTimeoutMs;
     this.fetchImpl = fetchImpl;
   }
@@ -98,7 +95,6 @@ export class ResearchManagerWriteClient {
       `/operations/${encodeURIComponent(request.operationId)}/rollback`,
       { confirm: true },
       'page-slots-rollback',
-      'elevated',
     );
   }
 
@@ -162,16 +158,11 @@ export class ResearchManagerWriteClient {
   }
 
   private get(route: WriteRoute, label: string): Promise<unknown> {
-    return this.request(route, 'GET', undefined, label, 'write');
+    return this.request(route, 'GET', undefined, label);
   }
 
-  private post(
-    route: WriteRoute,
-    body: unknown,
-    label: string,
-    credentialProfile: CredentialProfile = 'write',
-  ): Promise<unknown> {
-    return this.request(route, 'POST', body, label, credentialProfile);
+  private post(route: WriteRoute, body: unknown, label: string): Promise<unknown> {
+    return this.request(route, 'POST', body, label);
   }
 
   private async request(
@@ -179,18 +170,16 @@ export class ResearchManagerWriteClient {
     method: 'GET' | 'POST',
     body: unknown | undefined,
     label: string,
-    credentialProfile: CredentialProfile,
   ): Promise<unknown> {
-    const token = credentialProfile === 'elevated' ? this.elevatedToken : this.writeToken;
-    if (!token) {
-      throw new Error(`Research Manager ${credentialProfile} credential is not configured for this tenant`);
+    if (!this.token) {
+      throw new Error('Research Manager write credential is not configured for this tenant');
     }
 
     const endpoint = new URL(`/wp-json/research-manager/v1${route}`, this.baseUrl);
     const requestId = `mcp-${label}-${Date.now()}-${randomUUID()}`;
     const headers = new Headers({
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${this.token}`,
       'User-Agent': 'Site-Control-MCP/0.10.0 ResearchManagerAdapter',
       'X-Research-Manager-Request-Id': requestId,
       'X-Research-Manager-Nonce': randomBytes(16).toString('hex'),
