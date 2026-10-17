@@ -1,0 +1,17 @@
+services:
+  research-manager-mcp:
+    image: "${MCP_IMAGE:?set MCP_IMAGE}:${MCP_IMAGE_TAG:?set MCP_IMAGE_TAG}"
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - "127.0.0.1:${MCP_PUBLISH_PORT:-8787}:8787"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "10001:10001"
+    stop_grace_period: 15s
