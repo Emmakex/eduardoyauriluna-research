@@ -54,21 +54,22 @@ export class ResearchManagerWriteClient {
     );
   }
 
-  async applyPageSlots(request: SitePageSlotsApplyRequest): Promise<unknown> {
+  applyPageSlots(request: SitePageSlotsApplyRequest): Promise<unknown> {
     this.requirePlanId(request.planId);
     if (request.confirm !== true) {
       throw new Error('Page slot Apply requires explicit confirmation');
     }
-    const plan = await this.get(
+    return this.get(
       `/plans/${encodeURIComponent(request.planId)}`,
       'page-slots-apply-preflight',
-    );
-    this.requirePageSlotsOperation(plan, 'plan');
-    return this.post(
-      `/plans/${encodeURIComponent(request.planId)}/apply`,
-      { confirm: true },
-      'page-slots-apply',
-    );
+    ).then((plan) => {
+      this.requirePageSlotsOperation(plan, 'plan');
+      return this.post(
+        `/plans/${encodeURIComponent(request.planId)}/apply`,
+        { confirm: true },
+        'page-slots-apply',
+      );
+    });
   }
 
   verifyPageSlots(request: SitePageSlotsVerifyRequest): Promise<unknown> {
