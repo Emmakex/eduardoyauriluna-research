@@ -1,6 +1,6 @@
 services:
   research-manager-mcp:
-    image: "${MCP_IMAGE:?set MCP_IMAGE}:${MCP_IMAGE_TAG:?set MCP_IMAGE_TAG}"
+    image: "${MCP_IMAGE_REF:?set MCP_IMAGE_REF to an immutable MCP image tag or digest}"
     restart: unless-stopped
     env_file:
       - .env.production
