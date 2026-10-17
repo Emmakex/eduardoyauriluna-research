@@ -9,8 +9,35 @@ export interface SitePageSlotsPlanRequest {
 export interface SitePageSlotsApplyRequest { planId: string; confirm: true; }
 export interface SitePageSlotsVerifyRequest { operationId: string; rendered: true; }
 export interface SitePageSlotsRollbackRequest { operationId: string; confirm: true; }
+
 export interface SiteInsightListRequest { language?: string; }
 export interface SiteInsightInspectionRequest { postId: number; }
+export type SiteInsightStatus = 'draft' | 'publish';
+export interface SiteInsightCreateData {
+  title: string;
+  slug?: string | undefined;
+  excerpt?: string | undefined;
+  content?: string | undefined;
+  language: string;
+  insight_type: string;
+  status: SiteInsightStatus;
+}
+export interface SiteInsightCreatePlanRequest { data: SiteInsightCreateData; reason?: string; }
+export interface SiteInsightUpdateChanges {
+  slug?: string | undefined;
+  title?: string | undefined;
+  excerpt?: string | undefined;
+  content?: string | undefined;
+  language?: string | undefined;
+  insight_type?: string | undefined;
+  status?: SiteInsightStatus | undefined;
+  scheduled_at?: string | undefined;
+  line_ids?: number[] | undefined;
+}
+export interface SiteInsightUpdatePlanRequest { postId: number; changes: SiteInsightUpdateChanges; reason?: string; }
+export interface SiteInsightApplyRequest { planId: string; confirm: true; }
+export interface SiteInsightVerifyRequest { operationId: string; rendered: true; }
+export interface SiteInsightRollbackRequest { operationId: string; confirm: true; }
 
 export type ResearchObjectKind = 'output' | 'project' | 'software' | 'dataset';
 export interface SiteResearchObjectListRequest { kind?: ResearchObjectKind; language?: string; }
@@ -58,6 +85,11 @@ export interface SiteControlAdapter {
   rollbackPageSlots(request: SitePageSlotsRollbackRequest): Promise<unknown>;
   listInsights(request: SiteInsightListRequest): Promise<unknown>;
   inspectInsight(request: SiteInsightInspectionRequest): Promise<unknown>;
+  planInsightCreate(request: SiteInsightCreatePlanRequest): Promise<unknown>;
+  planInsightUpdate(request: SiteInsightUpdatePlanRequest): Promise<unknown>;
+  applyInsight(request: SiteInsightApplyRequest): Promise<unknown>;
+  verifyInsight(request: SiteInsightVerifyRequest): Promise<unknown>;
+  rollbackInsight(request: SiteInsightRollbackRequest): Promise<unknown>;
   listResearchObjects(request: SiteResearchObjectListRequest): Promise<unknown>;
   inspectResearchObject(request: SiteResearchObjectInspectionRequest): Promise<unknown>;
   listResearchLines(request: SiteResearchLineListRequest): Promise<unknown>;

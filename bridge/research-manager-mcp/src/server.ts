@@ -20,6 +20,31 @@ const pageSlotsSchema=z.record(pageSlotNameSchema,pageSlotValueSchema)
   .refine((slots)=>Object.keys(slots).length<=32,{message:'At most 32 Theme-owned slots may be planned at once'});
 const remotePlanIdSchema=z.string().regex(/^erm-remote-plan-[a-f0-9]{20}-[a-f0-9]{8}$/);
 const remoteOperationIdSchema=z.string().regex(/^erm-operation-[a-f0-9]{32}$/);
+const insightStatusSchema=z.enum(['draft','publish']);
+const insightTypeSchema=z.string().regex(/^[a-z0-9][a-z0-9_-]{0,62}$/);
+const insightCreateDataSchema=z.object({
+  title:z.string().min(1).max(1000),
+  slug:z.string().min(1).max(200).optional(),
+  excerpt:z.string().max(12000).optional(),
+  content:z.string().max(200000).optional(),
+  language:languageSchema,
+  insight_type:insightTypeSchema,
+  status:insightStatusSchema,
+});
+const insightUpdateChangesSchema=z.object({
+  slug:z.string().min(1).max(200).optional(),
+  title:z.string().min(1).max(1000).optional(),
+  excerpt:z.string().max(12000).optional(),
+  content:z.string().max(200000).optional(),
+  language:languageSchema.optional(),
+  insight_type:insightTypeSchema.optional(),
+  status:insightStatusSchema.optional(),
+  scheduled_at:z.string().min(1).max(64).optional(),
+  line_ids:z.array(postIdSchema).max(32).optional(),
+})
+  .refine((changes)=>Object.values(changes).some((value)=>value!==undefined),{message:'At least one bounded Insight change is required'})
+  .refine((changes)=>changes.status===undefined||Object.values(changes).filter((value)=>value!==undefined).length===1,{message:'Insight status must be changed in its own Preview'})
+  .refine((changes)=>changes.scheduled_at===undefined||Object.values(changes).filter((value)=>value!==undefined).length===1,{message:'Insight scheduling must be changed in its own Preview'});
 const seoResourceInputSchema=z.object({type:seoResourceTypeSchema,key:z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/).optional(),postId:postIdSchema.optional(),language:languageSchema.optional()});
 function seoRequest(type:SiteSeoResourceType,key:string|undefined,postId:number|undefined,language:string|undefined):SiteSeoResourceRequest{
   if(type==='page'){if(!key||!language||postId!==undefined)throw new Error('SEO Page inspection requires key + language and no postId');return{type,key,language};}
@@ -28,7 +53,7 @@ function seoRequest(type:SiteSeoResourceType,key:string|undefined,postId:number|
 }
 
 export function createBridgeServer(adapter:SiteControlAdapter):McpServer{
-  const server=new McpServer({name:'site-control-mcp',version:'0.10.0'},{instructions:`This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) through the ${adapter.kind} adapter. Use only registered bounded tools. Every tool invocation is subject to tenant and principal commercial entitlements in addition to backend scopes. Never infer or construct arbitrary WordPress, REST, database, filesystem or shell routes. The Page slots mutation surface exposes the complete bounded lifecycle: exact Preview/Plan, explicit Apply, rendered Verify and explicit Rollback.`,capabilities:{tools:{listChanged:false}},maxToolInputElements:32});
+  const server=new McpServer({name:'site-control-mcp',version:'0.10.0'},{instructions:`This MCP endpoint is bound to the registered tenant ${adapter.tenantId} (${adapter.tenantLabel}) through the ${adapter.kind} adapter. Use only registered bounded tools. Every tool invocation is subject to tenant and principal commercial entitlements in addition to backend scopes. Never infer or construct arbitrary WordPress, REST, database, filesystem or shell routes. The Page slots mutation surface exposes the complete bounded lifecycle: exact Preview/Plan, explicit Apply, rendered Verify and explicit Rollback. Additional bounded write surfaces preserve the same lifecycle where applicable.`,capabilities:{tools:{listChanged:false}},maxToolInputElements:32});
   server.registerTool('research_status',{title:'Site status',description:'Read authenticated tenant status.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>withCapability('site.read',()=>adapter.status()));
   server.registerTool('research_versions',{title:'Site versions',description:'Read active application/theme/runtime/API versions.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>withCapability('site.read',()=>adapter.versions()));
   server.registerTool('research_capabilities',{title:'Site capabilities',description:'Read bounded backend capability and scope inventory.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>withCapability('site.read',()=>adapter.capabilities()));
@@ -40,6 +65,11 @@ export function createBridgeServer(adapter:SiteControlAdapter):McpServer{
   server.registerTool('site_page_slots_rollback',{title:'Rollback applied Page slot operation',description:'Restore the snapshot for one bounded Page-slot operation. Exact operation ID and explicit confirmation are mandatory.',inputSchema:z.object({operationId:remoteOperationIdSchema,confirm:z.literal(true)}),annotations:{readOnlyHint:false,destructiveHint:true,idempotentHint:true,openWorldHint:false}},async({operationId,confirm})=>withCapability('operations.rollback',()=>adapter.rollbackPageSlots({operationId,confirm})));
   server.registerTool('site_insights_list',{title:'List managed insights',description:'List managed Research Insights.',inputSchema:z.object({language:languageSchema.optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async({language})=>withCapability('insights.read',()=>adapter.listInsights(language?{language}:{})));
   server.registerTool('site_insight_inspect',{title:'Inspect managed insight',description:'Inspect one managed Insight by positive post ID.',inputSchema:z.object({postId:postIdSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({postId})=>withCapability('insights.read',()=>adapter.inspectInsight({postId})));
+  server.registerTool('site_insight_create_plan',{title:'Plan Research Insight creation',description:'Create an exact stored Preview/Plan for one bounded Research Insight. This tool never applies the change.',inputSchema:z.object({data:insightCreateDataSchema,reason:z.string().max(256).optional()}),annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false}},async({data,reason})=>withCapability('insights.write',()=>adapter.planInsightCreate({data,...(reason?{reason}:{})})));
+  server.registerTool('site_insight_update_plan',{title:'Plan Research Insight update',description:'Create an exact stored Preview/Plan for bounded Insight editorial fields, verified Research-Line relations, publication state, or scheduling. Publication state and scheduling must each be planned separately.',inputSchema:z.object({postId:postIdSchema,changes:insightUpdateChangesSchema,reason:z.string().max(256).optional()}),annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false}},async({postId,changes,reason})=>withCapability('insights.write',()=>adapter.planInsightUpdate({postId,changes,...(reason?{reason}:{})})));
+  server.registerTool('site_insight_apply',{title:'Apply exact Insight plan',description:'Apply one previously stored insight-create or insight-update plan by exact plan ID. Explicit confirmation is mandatory and payload mutation at Apply time is impossible.',inputSchema:z.object({planId:remotePlanIdSchema,confirm:z.literal(true)}),annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:false}},async({planId,confirm})=>withCapability('insights.write',()=>adapter.applyInsight({planId,confirm})));
+  server.registerTool('site_insight_verify',{title:'Verify applied Insight operation',description:'Verify one applied Insight operation against stored semantic state and rendered output where applicable. Rendered verification is mandatory; non-public Insight states are safely classified by the Manager.',inputSchema:z.object({operationId:remoteOperationIdSchema,rendered:z.literal(true)}),annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:false}},async({operationId,rendered})=>withCapability('insights.write',()=>adapter.verifyInsight({operationId,rendered})));
+  server.registerTool('site_insight_rollback',{title:'Rollback applied Insight operation',description:'Restore the snapshot for one bounded Insight create/update operation. Exact operation ID and explicit confirmation are mandatory.',inputSchema:z.object({operationId:remoteOperationIdSchema,confirm:z.literal(true)}),annotations:{readOnlyHint:false,destructiveHint:true,idempotentHint:true,openWorldHint:false}},async({operationId,confirm})=>withCapability('operations.rollback',()=>adapter.rollbackInsight({operationId,confirm})));
   server.registerTool('site_research_objects_list',{title:'List research objects',description:'List managed Research Outputs, Projects, Software and Datasets.',inputSchema:z.object({kind:researchObjectKindSchema.optional(),language:languageSchema.optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async({kind,language})=>withCapability('research.read',()=>adapter.listResearchObjects({...(kind?{kind}:{}),...(language?{language}:{})})));
   server.registerTool('site_research_object_inspect',{title:'Inspect research object',description:'Inspect one managed Research Object by closed kind and positive ID.',inputSchema:z.object({kind:researchObjectKindSchema,postId:postIdSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({kind,postId})=>withCapability('research.read',()=>adapter.inspectResearchObject({kind,postId})));
   server.registerTool('site_research_lines_list',{title:'List research lines',description:'List first-class Research Lines.',inputSchema:z.object({language:languageSchema.optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async({language})=>withCapability('research.read',()=>adapter.listResearchLines(language?{language}:{})));
