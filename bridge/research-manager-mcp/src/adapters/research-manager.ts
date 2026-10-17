@@ -13,6 +13,7 @@ import type {
   SiteMediaInspectionRequest,
   SiteMediaListRequest,
   SitePageInspectionRequest,
+  SitePageSlotsApplyRequest,
   SitePageSlotsPlanRequest,
   SiteResearchLineInspectionRequest,
   SiteResearchLineListRequest,
@@ -43,6 +44,7 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   listPages():Promise<unknown>{return this.client.pages();}
   inspectPage(request:SitePageInspectionRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.client.page(request.key,request.language);}
   planPageSlots(request:SitePageSlotsPlanRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.writeClient.planPageSlots(request);}
+  applyPageSlots(request:SitePageSlotsApplyRequest):Promise<unknown>{return this.writeClient.applyPageSlots(request);}
   listInsights(request:SiteInsightListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Insight');return this.client.insights(language);}
   inspectInsight(request:SiteInsightInspectionRequest):Promise<unknown>{return this.client.insight(request.postId);}
   listResearchObjects(request:SiteResearchObjectListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Object');return this.client.researchObjects(request.kind,language);}
