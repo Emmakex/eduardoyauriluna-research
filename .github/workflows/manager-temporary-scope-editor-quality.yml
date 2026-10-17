@@ -1,0 +1,36 @@
+name: Manager Temporary Scope Editor Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-admin.php'
+      - 'scripts/manager-temporary-scope-editor-contract-test.php'
+      - '.github/workflows/manager-temporary-scope-editor-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-admin.php'
+      - 'scripts/manager-temporary-scope-editor-contract-test.php'
+      - '.github/workflows/manager-temporary-scope-editor-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Lint temporary scope editor PHP
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-admin.php
+          php -l scripts/manager-temporary-scope-editor-contract-test.php
+      - name: Run temporary scope editor contract
+        run: php scripts/manager-temporary-scope-editor-contract-test.php
