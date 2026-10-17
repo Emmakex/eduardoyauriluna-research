@@ -1,0 +1,77 @@
+name: Research Manager MCP Publish Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/research-manager-mcp/**'
+      - '.github/workflows/research-manager-mcp-publish-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: research-manager-mcp-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/emmakex/site-control-mcp
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Build exact commit image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker build \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.version=sha-${GITHUB_SHA}" \
+            -t "$IMAGE_TAG" \
+            bridge/research-manager-mcp
+
+      - name: Push immutable commit tag and resolve digest
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker push "$IMAGE_TAG"
+          docker pull "$IMAGE_TAG" >/dev/null
+          IMAGE_DIGEST_REF="$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_TAG")"
+          case "$IMAGE_DIGEST_REF" in
+            "${IMAGE_NAME}@sha256:"*) ;;
+            *) echo "unexpected image digest ref: $IMAGE_DIGEST_REF" >&2; exit 1 ;;
+          esac
+          printf '%s\n' "$IMAGE_DIGEST_REF" > image-ref.txt
+          echo "digest_ref=$IMAGE_DIGEST_REF" >> "$GITHUB_OUTPUT"
+          {
+            echo '### Research Manager MCP image'
+            echo
+            echo "- Commit tag: \`$IMAGE_TAG\`"
+            echo "- Digest ref: \`$IMAGE_DIGEST_REF\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable image reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-manager-mcp-image-ref-${{ github.sha }}
+          path: image-ref.txt
+          if-no-files-found: error
+          retention-days: 30
