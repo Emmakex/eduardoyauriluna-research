@@ -24,16 +24,23 @@ Phase 2B is complete:
 
 ### A1 — Insights
 
-- [ ] expose bounded Insight create/draft plan;
-- [ ] expose bounded Insight edit/update plan;
-- [ ] expose Research relationships;
-- [ ] expose EN/ES structured pairing where supported;
-- [ ] expose scheduling/status lifecycle;
-- [ ] exact Apply/Verify/Rollback;
-- [ ] least-privilege credential mapping;
-- [ ] local tests/CI;
+- [x] expose bounded Insight create/draft plan;
+- [x] expose bounded Insight edit/update plan;
+- [x] expose Research relationships;
+- [x] expose EN/ES structured pairing where supported;
+- [x] expose scheduling/status lifecycle;
+- [x] exact Apply/Verify/Rollback;
+- [x] least-privilege credential mapping;
+- [x] local tests/CI;
 - [ ] reversible production acceptance;
 - [ ] credential revocation proof.
+
+Implementation evidence:
+
+- base Insight lifecycle: PR #246 → `22b3874d1ad9a62296e629366e174b06501577a6`;
+- EN/ES pair/unpair lifecycle: PR #247 → `aea77cd02ff9791dceedef604dc5e915d5c7bfe8`;
+- current MCP bounded catalog after A1: 46 tools;
+- typecheck, unit tests, build, bounded-surface guard and WP-CLI fallback PASS on PR #247.
 
 ### A2 — Research objects
 
