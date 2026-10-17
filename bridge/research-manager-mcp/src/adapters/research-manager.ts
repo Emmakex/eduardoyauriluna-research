@@ -1,6 +1,24 @@
 import { ResearchManagerClient } from '../manager-client.js';
 import { ResearchManagerWriteClient } from '../write-manager-client.js';
+import { ResearchManagerA3WriteClient } from '../a3-write-client.js';
 import type { TenantConfig } from '../config.js';
+import type {
+  EvidenceApplyRequest,
+  EvidenceCreatePlanRequest,
+  EvidenceDeletePlanRequest,
+  EvidenceRollbackRequest,
+  EvidenceUpdatePlanRequest,
+  EvidenceVerifyRequest,
+  IdentityProfileApplyRequest,
+  IdentityProfilePlanRequest,
+  IdentityProfileRollbackRequest,
+  IdentityProfileVerifyRequest,
+  StructuredTranslationApplyRequest,
+  StructuredTranslationPairPlanRequest,
+  StructuredTranslationRollbackRequest,
+  StructuredTranslationUnpairPlanRequest,
+  StructuredTranslationVerifyRequest,
+} from '../a3-contracts.js';
 import type {
   SiteControlAdapter,
   SiteDesignReadinessRequest,
@@ -53,12 +71,14 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   private readonly languages:readonly string[];
   private readonly client:ResearchManagerClient;
   private readonly writeClient:ResearchManagerWriteClient;
+  private readonly a3WriteClient:ResearchManagerA3WriteClient;
   constructor(tenant:TenantConfig,fetchImpl:typeof fetch=fetch){
     this.tenantId=tenant.id;
     this.tenantLabel=tenant.label;
     this.languages=tenant.languages;
     this.client=new ResearchManagerClient(tenant,fetchImpl);
     this.writeClient=new ResearchManagerWriteClient(tenant,fetchImpl);
+    this.a3WriteClient=new ResearchManagerA3WriteClient(tenant,fetchImpl);
   }
   status():Promise<unknown>{return this.client.status();}
   versions():Promise<unknown>{return this.client.versions();}
@@ -97,10 +117,25 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   rollbackResearchLine(request:SiteResearchLineRollbackRequest):Promise<unknown>{return this.writeClient.rollbackResearchLine(request);}
   listTranslations(request:SiteTranslationListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Translation');return this.client.translations(request.postType,language);}
   inspectTranslation(request:SiteTranslationInspectionRequest):Promise<unknown>{return this.client.translation(request.postId);}
+  planStructuredTranslationPair(request:StructuredTranslationPairPlanRequest):Promise<unknown>{return this.a3WriteClient.planTranslationPair(request);}
+  planStructuredTranslationUnpair(request:StructuredTranslationUnpairPlanRequest):Promise<unknown>{return this.a3WriteClient.planTranslationUnpair(request);}
+  applyStructuredTranslation(request:StructuredTranslationApplyRequest):Promise<unknown>{return this.a3WriteClient.applyTranslation(request);}
+  verifyStructuredTranslation(request:StructuredTranslationVerifyRequest):Promise<unknown>{return this.a3WriteClient.verifyTranslation(request);}
+  rollbackStructuredTranslation(request:StructuredTranslationRollbackRequest):Promise<unknown>{return this.a3WriteClient.rollbackTranslation(request);}
   evidenceInventory():Promise<unknown>{return this.client.evidenceInventory();}
   evidenceIdentity():Promise<unknown>{return this.client.evidenceIdentity();}
   listEvidence(request:SiteEvidenceListRequest):Promise<unknown>{return this.client.evidenceRecords(request.group);}
   inspectEvidence(request:SiteEvidenceInspectionRequest):Promise<unknown>{return this.client.evidenceRecord(request.group,request.recordId);}
+  planEvidenceCreate(request:EvidenceCreatePlanRequest):Promise<unknown>{return this.a3WriteClient.planEvidenceCreate(request);}
+  planEvidenceUpdate(request:EvidenceUpdatePlanRequest):Promise<unknown>{return this.a3WriteClient.planEvidenceUpdate(request);}
+  planEvidenceDelete(request:EvidenceDeletePlanRequest):Promise<unknown>{return this.a3WriteClient.planEvidenceDelete(request);}
+  applyEvidence(request:EvidenceApplyRequest):Promise<unknown>{return this.a3WriteClient.applyEvidence(request);}
+  verifyEvidence(request:EvidenceVerifyRequest):Promise<unknown>{return this.a3WriteClient.verifyEvidence(request);}
+  rollbackEvidence(request:EvidenceRollbackRequest):Promise<unknown>{return this.a3WriteClient.rollbackEvidence(request);}
+  planIdentityProfileUpdate(request:IdentityProfilePlanRequest):Promise<unknown>{return this.a3WriteClient.planIdentityUpdate(request);}
+  applyIdentityProfile(request:IdentityProfileApplyRequest):Promise<unknown>{return this.a3WriteClient.applyIdentity(request);}
+  verifyIdentityProfile(request:IdentityProfileVerifyRequest):Promise<unknown>{return this.a3WriteClient.verifyIdentity(request);}
+  rollbackIdentityProfile(request:IdentityProfileRollbackRequest):Promise<unknown>{return this.a3WriteClient.rollbackIdentity(request);}
   inspectNavigation():Promise<unknown>{return this.client.navigation();}
   listMedia(request:SiteMediaListRequest):Promise<unknown>{return this.client.mediaInventory(request);}
   inspectMedia(request:SiteMediaInspectionRequest):Promise<unknown>{return this.client.mediaItem(request.attachmentId);}
