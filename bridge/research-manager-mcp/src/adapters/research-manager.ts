@@ -1,6 +1,7 @@
 import { ResearchManagerClient } from '../manager-client.js';
 import { ResearchManagerWriteClient } from '../write-manager-client.js';
 import { ResearchManagerA3WriteClient } from '../a3-write-client.js';
+import { ResearchManagerA4WriteClient } from '../a4-write-client.js';
 import type { TenantConfig } from '../config.js';
 import type {
   EvidenceApplyRequest,
@@ -19,6 +20,12 @@ import type {
   StructuredTranslationUnpairPlanRequest,
   StructuredTranslationVerifyRequest,
 } from '../a3-contracts.js';
+import type {
+  SeoGeoRemediationApplyRequest,
+  SeoGeoRemediationPlanRequest,
+  SeoGeoRemediationRollbackRequest,
+  SeoGeoRemediationVerifyRequest,
+} from '../a4-contracts.js';
 import type {
   SiteControlAdapter,
   SiteDesignReadinessRequest,
@@ -72,6 +79,7 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   private readonly client:ResearchManagerClient;
   private readonly writeClient:ResearchManagerWriteClient;
   private readonly a3WriteClient:ResearchManagerA3WriteClient;
+  private readonly a4WriteClient:ResearchManagerA4WriteClient;
   constructor(tenant:TenantConfig,fetchImpl:typeof fetch=fetch){
     this.tenantId=tenant.id;
     this.tenantLabel=tenant.label;
@@ -79,6 +87,7 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
     this.client=new ResearchManagerClient(tenant,fetchImpl);
     this.writeClient=new ResearchManagerWriteClient(tenant,fetchImpl);
     this.a3WriteClient=new ResearchManagerA3WriteClient(tenant,fetchImpl);
+    this.a4WriteClient=new ResearchManagerA4WriteClient(tenant,fetchImpl);
   }
   status():Promise<unknown>{return this.client.status();}
   versions():Promise<unknown>{return this.client.versions();}
@@ -148,6 +157,10 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   seoResourceIndexability(request:SiteSeoResourceRequest):Promise<unknown>{this.requireSeoLanguage(request);return this.client.seoResourceIndexability(request);}
   seoInternalLinks(request:SiteSeoInternalLinksRequest):Promise<unknown>{return this.client.seoInternalLinks(request.limit);}
   seoReadiness(request:SiteSeoReadinessRequest):Promise<unknown>{return this.client.seoReadiness(request.perTypeLimit);}
+  planSeoGeoRemediation(request:SeoGeoRemediationPlanRequest):Promise<unknown>{return this.a4WriteClient.plan(request);}
+  applySeoGeoRemediation(request:SeoGeoRemediationApplyRequest):Promise<unknown>{return this.a4WriteClient.apply(request);}
+  verifySeoGeoRemediation(request:SeoGeoRemediationVerifyRequest):Promise<unknown>{return this.a4WriteClient.verify(request);}
+  rollbackSeoGeoRemediation(request:SeoGeoRemediationRollbackRequest):Promise<unknown>{return this.a4WriteClient.rollback(request);}
   designInspect():Promise<unknown>{return this.client.design();}
   designVariants():Promise<unknown>{return this.client.designVariants();}
   designReadiness(request:SiteDesignReadinessRequest):Promise<unknown>{return this.client.designReadiness(request.rendered);}
