@@ -222,7 +222,7 @@ Implementation evidence:
 
 Implementation evidence:
 
-- repository-side HTTPS ingress contract: PR #256;
+- repository-side HTTPS ingress contract: PR #256 → `26bfe1adc1cd96c6d1dd1b5eee32982ad6e8417e`;
 - Caddy exposes only `/healthz`, `/mcp` and `/mcp/*`; the application remains on an internal-only Docker backend network;
 - ingress keeps separate egress for ACME certificate issuance/renewal and redirects HTTP to HTTPS;
 - CI proves private authentication forwarding through TLS and shared routing through the same ingress topology;
@@ -250,16 +250,23 @@ Implementation evidence:
 
 - [x] server-side secret references only;
 - [x] read/write/elevated backend credentials scoped per tenant;
-- [ ] persistent audit/usage telemetry;
-- [ ] secret rotation/revocation procedure;
-- [ ] tenant-safe logs and metrics.
+- [x] persistent audit/usage telemetry;
+- [x] secret rotation/revocation procedure;
+- [x] tenant-safe logs and metrics.
 
-Current boundary:
+Implementation evidence:
 
-- tenant/principal registry payloads contain secret references rather than secret values;
-- environment-backed secret resolution fails closed and can be replaced by another `SecretResolver` implementation;
-- access and entitlement logs are structured and exclude bearer material, but durable/tamper-resistant persistence is still required before external commercial launch;
-- usage accounting is currently process-local and must become durable for managed production.
+- persistent telemetry and operations contract: PR #257;
+- managed production can require append-only JSONL telemetry with `MCP_REQUIRE_PERSISTENT_TELEMETRY=true` and an absolute `MCP_TELEMETRY_PATH` on a dedicated persistent volume;
+- startup fails closed when required telemetry has no destination, and an allowed request is not dispatched if a required telemetry append fails;
+- every access decision records an outer `request_id`, principal ID, tenant ID, outcome, bounded request path and current principal × tenant usage snapshot;
+- entitlement denials retain the same request correlation plus capability and denial reason;
+- telemetry files are created `0600` and the production runtime keeps the root filesystem read-only while only the dedicated telemetry volume remains writable;
+- CI proves telemetry persists across a container restart and verifies that the outer bearer secret is absent from the JSONL records;
+- tenant/principal registry payloads contain secret references rather than values, while read/write/elevated Manager credentials remain separate profiles;
+- `OPERATIONS.md` documents Manager and outer-principal credential rotation/revocation, including proof that old credentials are rejected after the rolling replacement;
+- the current `EnvSecretResolver` is explicitly startup-resolved, so rotation requires container recreation rather than pretending to support hot reload;
+- local JSONL is the durable operational boundary; external SIEM/tamper-evident archival and retention remain deployment policy rather than an MCP API surface.
 
 ## Deployment modes
 
