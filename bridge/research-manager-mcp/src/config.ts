@@ -11,6 +11,7 @@ export interface TenantConfig {
   managerBaseUrl: URL;
   managerReadToken: string;
   managerWriteToken: string | null;
+  managerElevatedToken?: string | null;
   managerTimeoutMs: number;
   languages: readonly string[];
   entitlements: readonly CommercialCapability[];
@@ -36,6 +37,7 @@ interface TenantDefinition {
   baseUrl?: unknown;
   readTokenEnv?: unknown;
   writeTokenEnv?: unknown;
+  elevatedTokenEnv?: unknown;
   timeoutMs?: unknown;
   languages?: unknown;
   entitlements?: unknown;
@@ -129,6 +131,10 @@ function tenantFromDefinition(
     typeof definition.writeTokenEnv === 'string' && definition.writeTokenEnv.trim()
       ? definition.writeTokenEnv.trim()
       : null;
+  const elevatedTokenReference =
+    typeof definition.elevatedTokenEnv === 'string' && definition.elevatedTokenEnv.trim()
+      ? definition.elevatedTokenEnv.trim()
+      : null;
   const timeoutMs =
     typeof definition.timeoutMs === 'number' && Number.isInteger(definition.timeoutMs) && definition.timeoutMs > 0
       ? definition.timeoutMs
@@ -142,6 +148,9 @@ function tenantFromDefinition(
     managerReadToken: managerToken(resolver.resolve(readTokenReference), readTokenReference),
     managerWriteToken: writeTokenReference
       ? managerToken(resolver.resolve(writeTokenReference), writeTokenReference)
+      : null,
+    managerElevatedToken: elevatedTokenReference
+      ? managerToken(resolver.resolve(elevatedTokenReference), elevatedTokenReference)
       : null,
     managerTimeoutMs: timeoutMs,
     languages: languages(definition.languages, `${prefix}.languages`),
@@ -167,6 +176,7 @@ function configuredTenants(env: NodeJS.ProcessEnv, resolver: SecretResolver): re
 
   const managerBaseUrl = httpsUrl(required('ERM_BASE_URL', env), 'ERM_BASE_URL');
   const managerWriteToken = (env.ERM_WRITE_TOKEN ?? '').trim();
+  const managerElevatedToken = (env.ERM_ELEVATED_TOKEN ?? '').trim();
   return [
     {
       id: tenantId(env.MCP_TENANT_ID?.trim() || 'eduardo-research', 'MCP_TENANT_ID'),
@@ -176,6 +186,9 @@ function configuredTenants(env: NodeJS.ProcessEnv, resolver: SecretResolver): re
       managerReadToken: managerToken(resolver.resolve('ERM_READ_TOKEN'), 'ERM_READ_TOKEN'),
       managerWriteToken: managerWriteToken
         ? managerToken(resolver.resolve('ERM_WRITE_TOKEN'), 'ERM_WRITE_TOKEN')
+        : null,
+      managerElevatedToken: managerElevatedToken
+        ? managerToken(resolver.resolve('ERM_ELEVATED_TOKEN'), 'ERM_ELEVATED_TOKEN')
         : null,
       managerTimeoutMs: positiveInt('ERM_TIMEOUT_MS', env.ERM_TIMEOUT_MS, 20_000),
       languages: csv(env.MCP_TENANT_LANGUAGES || 'en,es'),

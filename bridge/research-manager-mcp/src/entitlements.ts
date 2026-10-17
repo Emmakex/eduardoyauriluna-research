@@ -32,12 +32,27 @@ export const COMMERCIAL_CAPABILITIES = [
 ] as const;
 
 export type CommercialCapability = (typeof COMMERCIAL_CAPABILITIES)[number];
+
+export const ELEVATED_COMMERCIAL_CAPABILITIES = [
+  'operations.rollback',
+  'identity.write',
+  'external_publish.execute',
+  'software_update.execute',
+  'destructive_delete.execute',
+] as const satisfies readonly CommercialCapability[];
+
+export type ElevatedCommercialCapability = (typeof ELEVATED_COMMERCIAL_CAPABILITIES)[number];
 export type EntitlementDenialReason = 'context_missing' | 'tenant_not_entitled' | 'principal_not_granted';
 
 const capabilitySet = new Set<string>(COMMERCIAL_CAPABILITIES);
+const elevatedCapabilitySet = new Set<string>(ELEVATED_COMMERCIAL_CAPABILITIES);
 
 export function isCommercialCapability(value: string): value is CommercialCapability {
   return capabilitySet.has(value);
+}
+
+export function isElevatedCommercialCapability(value: CommercialCapability): value is ElevatedCommercialCapability {
+  return elevatedCapabilitySet.has(value);
 }
 
 export function parseCapabilityList(
