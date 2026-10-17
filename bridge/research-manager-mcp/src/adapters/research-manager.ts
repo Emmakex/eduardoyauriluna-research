@@ -15,6 +15,7 @@ import type {
   SitePageInspectionRequest,
   SitePageSlotsApplyRequest,
   SitePageSlotsPlanRequest,
+  SitePageSlotsRollbackRequest,
   SitePageSlotsVerifyRequest,
   SiteResearchLineInspectionRequest,
   SiteResearchLineListRequest,
@@ -46,7 +47,8 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   inspectPage(request:SitePageInspectionRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.client.page(request.key,request.language);}
   planPageSlots(request:SitePageSlotsPlanRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.writeClient.planPageSlots(request);}
   applyPageSlots(request:SitePageSlotsApplyRequest):Promise<unknown>{return this.writeClient.applyPageSlots(request);}
-  async verifyPageSlots(request:SitePageSlotsVerifyRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requirePageSlotsOperation(operation);return this.writeClient.verifyPageSlots(request);}
+  async verifyPageSlots(request:SitePageSlotsVerifyRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requirePageSlotsOperation(operation,'Verify');return this.writeClient.verifyPageSlots(request);}
+  async rollbackPageSlots(request:SitePageSlotsRollbackRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requirePageSlotsOperation(operation,'Rollback');return this.writeClient.rollbackPageSlots(request);}
   listInsights(request:SiteInsightListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Insight');return this.client.insights(language);}
   inspectInsight(request:SiteInsightInspectionRequest):Promise<unknown>{return this.client.insight(request.postId);}
   listResearchObjects(request:SiteResearchObjectListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Object');return this.client.researchObjects(request.kind,language);}
@@ -75,6 +77,6 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   designVariants():Promise<unknown>{return this.client.designVariants();}
   designReadiness(request:SiteDesignReadinessRequest):Promise<unknown>{return this.client.designReadiness(request.rendered);}
   private requireLanguage(language:string,label:string):void{if(!this.languages.includes(language))throw new Error(`${label} language is not enabled for tenant ${this.tenantId}`);}
-  private requirePageSlotsOperation(value:unknown):void{if(typeof value!=='object'||value===null||Array.isArray(value)||(value as Record<string,unknown>).operation!=='page-slots-update')throw new Error('Page slot Verify operation does not reference a page-slots-update operation');}
+  private requirePageSlotsOperation(value:unknown,label:string):void{if(typeof value!=='object'||value===null||Array.isArray(value)||(value as Record<string,unknown>).operation!=='page-slots-update')throw new Error(`Page slot ${label} operation does not reference a page-slots-update operation`);}
   private requireSeoLanguage(request:SiteSeoResourceRequest):void{if(request.type==='page')this.requireLanguage(request.language,'SEO Page');}
 }
