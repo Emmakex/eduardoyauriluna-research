@@ -17,8 +17,14 @@ export const TOOL_AUTHORIZATION = {
   site_page_slots_apply: { commercialCapability:'pages.write', backendScopes:['operations.apply'], readOnly:false },
   site_page_slots_verify: { commercialCapability:'pages.write', backendScopes:['site.read','site.diagnostics'], readOnly:false },
   site_page_slots_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback'], readOnly:false },
+
   site_insights_list: { commercialCapability:'insights.read', backendScopes:['site.read'], readOnly:true },
   site_insight_inspect: { commercialCapability:'insights.read', backendScopes:['site.read'], readOnly:true },
+  site_insight_create_plan: { commercialCapability:'insights.write', backendScopes:['operations.apply'], readOnly:false },
+  site_insight_update_plan: { commercialCapability:'insights.write', backendScopes:['operations.apply'], readOnly:false },
+  site_insight_apply: { commercialCapability:'insights.write', backendScopes:['operations.apply'], readOnly:false },
+  site_insight_verify: { commercialCapability:'insights.write', backendScopes:['site.read','site.diagnostics'], readOnly:false },
+  site_insight_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback'], readOnly:false },
 
   site_research_objects_list: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
   site_research_object_inspect: { commercialCapability:'research.read', backendScopes:['research.read'], readOnly:true },
