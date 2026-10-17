@@ -6,8 +6,13 @@ import type {
   SiteDesignReadinessRequest,
   SiteEvidenceInspectionRequest,
   SiteEvidenceListRequest,
+  SiteInsightApplyRequest,
+  SiteInsightCreatePlanRequest,
   SiteInsightInspectionRequest,
   SiteInsightListRequest,
+  SiteInsightRollbackRequest,
+  SiteInsightUpdatePlanRequest,
+  SiteInsightVerifyRequest,
   SiteMediaDiagnosticInspectionRequest,
   SiteMediaDiagnosticsRequest,
   SiteMediaInspectionRequest,
@@ -47,10 +52,15 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   inspectPage(request:SitePageInspectionRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.client.page(request.key,request.language);}
   planPageSlots(request:SitePageSlotsPlanRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.writeClient.planPageSlots(request);}
   applyPageSlots(request:SitePageSlotsApplyRequest):Promise<unknown>{return this.writeClient.applyPageSlots(request);}
-  async verifyPageSlots(request:SitePageSlotsVerifyRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requirePageSlotsOperation(operation,'Verify');return this.writeClient.verifyPageSlots(request);}
-  async rollbackPageSlots(request:SitePageSlotsRollbackRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requirePageSlotsOperation(operation,'Rollback');return this.writeClient.rollbackPageSlots(request);}
+  async verifyPageSlots(request:SitePageSlotsVerifyRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requireOperation(operation,['page-slots-update'],'Page slot Verify');return this.writeClient.verifyPageSlots(request);}
+  async rollbackPageSlots(request:SitePageSlotsRollbackRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requireOperation(operation,['page-slots-update'],'Page slot Rollback');return this.writeClient.rollbackPageSlots(request);}
   listInsights(request:SiteInsightListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Insight');return this.client.insights(language);}
   inspectInsight(request:SiteInsightInspectionRequest):Promise<unknown>{return this.client.insight(request.postId);}
+  planInsightCreate(request:SiteInsightCreatePlanRequest):Promise<unknown>{this.requireLanguage(request.data.language,'Insight');return this.writeClient.planInsightCreate(request);}
+  planInsightUpdate(request:SiteInsightUpdatePlanRequest):Promise<unknown>{if(request.changes.language)this.requireLanguage(request.changes.language,'Insight');return this.writeClient.planInsightUpdate(request);}
+  applyInsight(request:SiteInsightApplyRequest):Promise<unknown>{return this.writeClient.applyInsight(request);}
+  async verifyInsight(request:SiteInsightVerifyRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requireOperation(operation,['insight-create','insight-update'],'Insight Verify');return this.writeClient.verifyInsight(request);}
+  async rollbackInsight(request:SiteInsightRollbackRequest):Promise<unknown>{const operation=await this.client.operation(request.operationId);this.requireOperation(operation,['insight-create','insight-update'],'Insight Rollback');return this.writeClient.rollbackInsight(request);}
   listResearchObjects(request:SiteResearchObjectListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Object');return this.client.researchObjects(request.kind,language);}
   inspectResearchObject(request:SiteResearchObjectInspectionRequest):Promise<unknown>{return this.client.researchObject(request.kind,request.postId);}
   listResearchLines(request:SiteResearchLineListRequest):Promise<unknown>{const language=request.language??'';if(language)this.requireLanguage(language,'Research Line');return this.client.researchLines(language);}
@@ -77,6 +87,6 @@ export class ResearchManagerAdapter implements SiteControlAdapter {
   designVariants():Promise<unknown>{return this.client.designVariants();}
   designReadiness(request:SiteDesignReadinessRequest):Promise<unknown>{return this.client.designReadiness(request.rendered);}
   private requireLanguage(language:string,label:string):void{if(!this.languages.includes(language))throw new Error(`${label} language is not enabled for tenant ${this.tenantId}`);}
-  private requirePageSlotsOperation(value:unknown,label:string):void{if(typeof value!=='object'||value===null||Array.isArray(value)||(value as Record<string,unknown>).operation!=='page-slots-update')throw new Error(`Page slot ${label} operation does not reference a page-slots-update operation`);}
+  private requireOperation(value:unknown,allowed:readonly string[],label:string):void{if(typeof value!=='object'||value===null||Array.isArray(value)||typeof (value as Record<string,unknown>).operation!=='string'||!allowed.includes((value as Record<string,unknown>).operation as string))throw new Error(`${label} operation is outside the bounded domain`);}
   private requireSeoLanguage(request:SiteSeoResourceRequest):void{if(request.type==='page')this.requireLanguage(request.language,'SEO Page');}
 }
