@@ -106,6 +106,14 @@ export const TOOL_AUTHORIZATION = {
   site_design_inspect: { commercialCapability:'design.read', backendScopes:['design.read'], readOnly:true },
   site_design_variants: { commercialCapability:'design.read', backendScopes:['design.read'], readOnly:true },
   site_design_readiness: { commercialCapability:'design.read', backendScopes:['design.read'], readOnly:true },
+  site_design_preset_update_plan: { commercialCapability:'design.write', backendScopes:['operations.apply','design.write'], readOnly:false },
+  site_design_preset_apply: { commercialCapability:'design.write', backendScopes:['design.read','operations.apply','design.write'], readOnly:false },
+  site_design_preset_verify: { commercialCapability:'design.write', backendScopes:['design.read'], readOnly:false },
+  site_design_preset_rollback: { commercialCapability:'operations.rollback', backendScopes:['design.read','operations.rollback','design.write'], readOnly:false },
+  site_design_variant_update_plan: { commercialCapability:'design.write', backendScopes:['operations.apply','design.write'], readOnly:false },
+  site_design_variant_apply: { commercialCapability:'design.write', backendScopes:['design.read','operations.apply','design.write'], readOnly:false },
+  site_design_variant_verify: { commercialCapability:'design.write', backendScopes:['design.read'], readOnly:false },
+  site_design_variant_rollback: { commercialCapability:'operations.rollback', backendScopes:['design.read','operations.rollback','design.write'], readOnly:false },
 } as const satisfies Record<string, ToolAuthorizationContract>;
 
 export type SiteControlToolName = keyof typeof TOOL_AUTHORIZATION;
