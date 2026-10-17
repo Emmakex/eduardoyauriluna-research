@@ -4,6 +4,7 @@ import { ResearchManagerError } from './manager-client.js';
 import type {
   SitePageSlotsApplyRequest,
   SitePageSlotsPlanRequest,
+  SitePageSlotsRollbackRequest,
   SitePageSlotsVerifyRequest,
   SitePageSlotValue,
 } from './adapters/site-control.js';
@@ -16,7 +17,8 @@ type WriteRoute =
   | '/operations/plan'
   | `/plans/${string}`
   | `/plans/${string}/apply`
-  | `/operations/${string}/verify`;
+  | `/operations/${string}/verify`
+  | `/operations/${string}/rollback`;
 
 export class ResearchManagerWriteClient {
   private readonly baseUrl: URL;
@@ -81,6 +83,18 @@ export class ResearchManagerWriteClient {
       `/operations/${encodeURIComponent(request.operationId)}/verify`,
       { rendered: true },
       'page-slots-verify',
+    );
+  }
+
+  rollbackPageSlots(request: SitePageSlotsRollbackRequest): Promise<unknown> {
+    this.requireOperationId(request.operationId);
+    if (request.confirm !== true) {
+      throw new Error('Page slot Rollback requires explicit confirmation');
+    }
+    return this.post(
+      `/operations/${encodeURIComponent(request.operationId)}/rollback`,
+      { confirm: true },
+      'page-slots-rollback',
     );
   }
 

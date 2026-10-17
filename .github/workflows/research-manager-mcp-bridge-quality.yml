@@ -47,13 +47,16 @@ jobs:
           grep -F "'site_seo_geo_site'" src/server.ts
           grep -F "'site_design_readiness'" src/server.ts
           grep -F "'site_page_slots_verify'" src/server.ts
+          grep -F "'site_page_slots_rollback'" src/server.ts
           grep -F "withCapability('seo.read'" src/server.ts
           grep -F "withCapability('design.read'" src/server.ts
+          grep -F "withCapability('operations.rollback'" src/server.ts
           grep -F "TOOL_AUTHORIZATION" src/tool-authorization.ts
           grep -F "backendScopes:['site.diagnostics','seo.read']" src/tool-authorization.ts
           grep -F "site_navigation_inspect: { commercialCapability:'navigation.read', backendScopes:['pages.read']" src/tool-authorization.ts
           grep -F "site_page_slots_verify: { commercialCapability:'pages.write', backendScopes:['site.read','site.diagnostics']" src/tool-authorization.ts
-          grep -F "catalogEntries.length,35" test/tool-authorization.test.ts
+          grep -F "site_page_slots_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback']" src/tool-authorization.ts
+          grep -F "catalogEntries.length,36" test/tool-authorization.test.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
-          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 35
+          test "$(grep -c "server.registerTool(" src/server.ts)" -eq 36

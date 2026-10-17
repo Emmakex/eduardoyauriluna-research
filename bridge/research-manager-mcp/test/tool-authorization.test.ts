@@ -14,10 +14,10 @@ function serverMappings(): Map<string,string> {
 test('every registered MCP tool has exactly one authoritative commercial capability mapping',()=>{
   const actual=serverMappings();
   const catalogEntries=Object.entries(TOOL_AUTHORIZATION);
-  assert.equal(catalogEntries.length,35);
-  assert.equal(actual.size,35);
+  assert.equal(catalogEntries.length,36);
+  assert.equal(actual.size,36);
   assert.deepEqual([...actual.keys()].sort(),catalogEntries.map(([name])=>name).sort());
-  const writeTools=new Set(['site_page_slots_plan','site_page_slots_apply','site_page_slots_verify']);
+  const writeTools=new Set(['site_page_slots_plan','site_page_slots_apply','site_page_slots_verify','site_page_slots_rollback']);
   for(const [name,contract] of catalogEntries){
     assert.equal(actual.get(name),contract.commercialCapability,`${name} commercial capability drifted`);
     assert.equal(contract.readOnly,!writeTools.has(name),`${name} read-only classification drifted`);
@@ -36,6 +36,9 @@ test('backend scope contracts preserve adapter security boundaries',()=>{
   assert.equal(TOOL_AUTHORIZATION.site_page_slots_verify.commercialCapability,'pages.write');
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_verify.backendScopes,['site.read','site.diagnostics']);
   assert.equal(TOOL_AUTHORIZATION.site_page_slots_verify.readOnly,false);
+  assert.equal(TOOL_AUTHORIZATION.site_page_slots_rollback.commercialCapability,'operations.rollback');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_rollback.backendScopes,['site.read','operations.rollback']);
+  assert.equal(TOOL_AUTHORIZATION.site_page_slots_rollback.readOnly,false);
   assert.deepEqual(TOOL_AUTHORIZATION.site_insights_list.backendScopes,['site.read']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_inspect.backendScopes,['pages.read']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_research_objects_list.backendScopes,['research.read']);

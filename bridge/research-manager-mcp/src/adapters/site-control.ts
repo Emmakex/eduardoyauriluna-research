@@ -8,6 +8,7 @@ export interface SitePageSlotsPlanRequest {
 }
 export interface SitePageSlotsApplyRequest { planId: string; confirm: true; }
 export interface SitePageSlotsVerifyRequest { operationId: string; rendered: true; }
+export interface SitePageSlotsRollbackRequest { operationId: string; confirm: true; }
 export interface SiteInsightListRequest { language?: string; }
 export interface SiteInsightInspectionRequest { postId: number; }
 
@@ -54,6 +55,7 @@ export interface SiteControlAdapter {
   planPageSlots(request: SitePageSlotsPlanRequest): Promise<unknown>;
   applyPageSlots(request: SitePageSlotsApplyRequest): Promise<unknown>;
   verifyPageSlots(request: SitePageSlotsVerifyRequest): Promise<unknown>;
+  rollbackPageSlots(request: SitePageSlotsRollbackRequest): Promise<unknown>;
   listInsights(request: SiteInsightListRequest): Promise<unknown>;
   inspectInsight(request: SiteInsightInspectionRequest): Promise<unknown>;
   listResearchObjects(request: SiteResearchObjectListRequest): Promise<unknown>;
