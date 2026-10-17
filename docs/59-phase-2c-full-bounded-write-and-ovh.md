@@ -88,21 +88,44 @@ Implementation evidence:
 
 ### A4 — SEO/GEO writes
 
-- [ ] expose deterministic bounded remediation plans;
-- [ ] refuse fabricated/non-legitimate remediation targets;
-- [ ] Apply only exact stored remediation plans;
-- [ ] stored/rendered Verify;
-- [ ] safe Rollback where Manager supports it;
-- [ ] local tests/CI;
+- [x] expose deterministic bounded remediation plans;
+- [x] refuse fabricated/non-legitimate remediation targets;
+- [x] Apply only exact stored remediation plans;
+- [x] stored/rendered Verify;
+- [x] safe Rollback where Manager supports it;
+- [x] local tests/CI;
 - [ ] production acceptance only against a legitimate diagnostic target.
+
+Implementation evidence:
+
+- bounded SEO/GEO remediation lifecycle: PR #250 → `136155c38dd32f3fa155a16b3933d9e495f9040d`;
+- only current Manager diagnostics classified `auto_remediable` may be planned;
+- generic `seo-remediate` and specialized `search-indexability` ID domains are preserved;
+- exact stored-plan Apply plus operation-domain preflight prevent payload/domain substitution;
+- no arbitrary SEO metadata, HTML, WordPress option or URL mutation surface is exposed;
+- MCP bounded catalog after A4: 75 tools;
+- typecheck, unit tests, build, bounded-surface guard and WP-CLI fallback PASS on PR #250.
 
 ### A5 — Media
 
-- [ ] expose bounded Media ingest/update planning;
-- [ ] exact Apply/Verify/Rollback;
-- [ ] checksum/provenance preservation;
-- [ ] local tests/CI;
+- [x] expose bounded Media ingest/update planning;
+- [x] exact Apply/Verify/Rollback;
+- [x] checksum/provenance preservation;
+- [x] local tests/CI;
 - [ ] reversible production acceptance.
+
+Implementation evidence:
+
+- bounded Media ingest + metadata lifecycle: PR #251 → `4276966569c11535be9d74af3aaf5e6956c53695`;
+- ingest accepts only bounded JPEG, PNG, WebP or PDF payloads and preserves the Manager 10 MB limit;
+- image alt text is mandatory before transport; the Manager remains authoritative for MIME, SHA-256 and provenance verification;
+- private staged ingest can be cancelled before Apply, and exact stored-plan Apply prevents payload substitution;
+- ingest Rollback remains constrained to unchanged Manager provenance and unused Manager-owned attachments;
+- metadata writes are limited to title, alt text, caption and description with exact plan/operation-domain preflight;
+- no arbitrary URL or filesystem-path ingest surface is exposed;
+- Media assignment remains on its dedicated Theme-owned target/slot lifecycle and is not conflated with ingest/metadata;
+- MCP bounded catalog after A5: 84 tools;
+- typecheck, unit tests, build, 84-tool bounded-surface guard and WP-CLI fallback PASS on PR #251.
 
 ### A6 — Navigation
 
