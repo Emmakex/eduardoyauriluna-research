@@ -42,7 +42,7 @@ export class ResearchManagerWriteClient {
 
   planPageSlots(request: SitePageSlotsPlanRequest): Promise<unknown> {
     this.requireKey(request.key);
-    this.requireLanguage(request.language);
+    this.requireLanguage(request.language, 'Page language');
     this.requireSlots(request.slots);
     this.requireReason(request.reason, 'Page plan');
 
@@ -70,7 +70,7 @@ export class ResearchManagerWriteClient {
       `/plans/${encodeURIComponent(request.planId)}`,
       'page-slots-apply-preflight',
     ).then((plan) => {
-      this.requireOperationType(plan, ['page-slots-update'], 'Page slot plan');
+      this.requireOperationType(plan, ['page-slots-update'], 'Page slot plan', 'a page-slots-update operation');
       return this.post(
         `/plans/${encodeURIComponent(request.planId)}/apply`,
         { confirm: true },
@@ -144,7 +144,7 @@ export class ResearchManagerWriteClient {
       `/plans/${encodeURIComponent(request.planId)}`,
       'insight-apply-preflight',
     ).then((plan) => {
-      this.requireOperationType(plan, ['insight-create', 'insight-update'], 'Insight plan');
+      this.requireOperationType(plan, ['insight-create', 'insight-update'], 'Insight plan', 'an allowed operation');
       return this.post(
         `/plans/${encodeURIComponent(request.planId)}/apply`,
         { confirm: true },
@@ -179,9 +179,9 @@ export class ResearchManagerWriteClient {
     }
   }
 
-  private requireLanguage(language: string): void {
+  private requireLanguage(language: string, label: string): void {
     if (!/^[a-z][a-z0-9-]{1,15}$/.test(language)) {
-      throw new Error('Language must be a lowercase language code');
+      throw new Error(`${label} must be a lowercase language code`);
     }
   }
 
@@ -201,7 +201,7 @@ export class ResearchManagerWriteClient {
     }
   }
 
-  private requireOperationType(value: unknown, allowed: readonly string[], label: string): void {
+  private requireOperationType(value: unknown, allowed: readonly string[], label: string, expectedDescription: string): void {
     if (
       typeof value !== 'object'
       || value === null
@@ -209,7 +209,7 @@ export class ResearchManagerWriteClient {
       || typeof (value as Record<string, unknown>).operation !== 'string'
       || !allowed.includes((value as Record<string, unknown>).operation as string)
     ) {
-      throw new Error(`${label} does not reference an allowed operation`);
+      throw new Error(`${label} does not reference ${expectedDescription}`);
     }
   }
 
@@ -222,7 +222,7 @@ export class ResearchManagerWriteClient {
     if (data.slug !== undefined) this.requireBoundedText(data.slug, 1, 200, 'Insight slug');
     if (data.excerpt !== undefined) this.requireBoundedText(data.excerpt, 0, 12_000, 'Insight excerpt');
     if (data.content !== undefined) this.requireBoundedText(data.content, 0, 200_000, 'Insight content');
-    this.requireLanguage(data.language);
+    this.requireLanguage(data.language, 'Insight language');
     if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(data.insight_type)) throw new Error('Insight type must be a bounded lowercase key');
     if (!['draft', 'publish'].includes(data.status)) throw new Error('Insight create status must be draft or publish');
   }
@@ -238,7 +238,7 @@ export class ResearchManagerWriteClient {
     if (changes.title !== undefined) this.requireBoundedText(changes.title, 1, 1_000, 'Insight title');
     if (changes.excerpt !== undefined) this.requireBoundedText(changes.excerpt, 0, 12_000, 'Insight excerpt');
     if (changes.content !== undefined) this.requireBoundedText(changes.content, 0, 200_000, 'Insight content');
-    if (changes.language !== undefined) this.requireLanguage(changes.language);
+    if (changes.language !== undefined) this.requireLanguage(changes.language, 'Insight language');
     if (changes.insight_type !== undefined && !/^[a-z0-9][a-z0-9_-]{0,62}$/.test(changes.insight_type)) throw new Error('Insight type must be a bounded lowercase key');
     if (changes.status !== undefined && !['draft', 'publish'].includes(changes.status)) throw new Error('Insight status must be draft or publish');
     if (changes.scheduled_at !== undefined) this.requireBoundedText(changes.scheduled_at, 1, 64, 'Insight scheduled_at');
