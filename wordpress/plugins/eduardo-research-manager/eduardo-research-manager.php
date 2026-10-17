@@ -159,7 +159,7 @@ add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_Remote_SEO_GEO_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_Remote_Design_Variants_REST(Eduardo_Research_Manager::remote_rest()))->register();
-    (new Eduardo_Research_Manager_Design_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
+    (new Eduardo_Research_Manager_Remote_Design_Readiness_REST(Eduardo_Research_Manager::remote_rest()))->register();
     (new Eduardo_Research_Manager_V1_Capabilities())->register();
 }, 11);
 
