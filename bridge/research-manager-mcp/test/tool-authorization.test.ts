@@ -10,6 +10,7 @@ function serverMappings(): Map<string,string> {
     readFileSync(new URL('../src/a3-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a4-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a5-write-tools.ts',import.meta.url),'utf8'),
+    readFileSync(new URL('../src/a6-write-tools.ts',import.meta.url),'utf8'),
   ];
   const mappings=new Map<string,string>();
   for(const source of sources){
@@ -29,8 +30,8 @@ function serverMappings(): Map<string,string> {
 test('every registered MCP tool has an authoritative primary commercial capability mapping',()=>{
   const actual=serverMappings();
   const catalogEntries=Object.entries(TOOL_AUTHORIZATION);
-  assert.equal(catalogEntries.length,84);
-  assert.equal(actual.size,84);
+  assert.equal(catalogEntries.length,88);
+  assert.equal(actual.size,88);
   assert.deepEqual([...actual.keys()].sort(),catalogEntries.map(([name])=>name).sort());
   const writeTools=new Set([
     'site_page_slots_plan','site_page_slots_apply','site_page_slots_verify','site_page_slots_rollback',
@@ -44,6 +45,7 @@ test('every registered MCP tool has an authoritative primary commercial capabili
     'site_seo_geo_remediation_plan','site_seo_geo_remediation_apply','site_seo_geo_remediation_verify','site_seo_geo_remediation_rollback',
     'site_media_ingest_plan','site_media_ingest_cancel','site_media_ingest_apply','site_media_ingest_verify','site_media_ingest_rollback',
     'site_media_metadata_update_plan','site_media_metadata_apply','site_media_metadata_verify','site_media_metadata_rollback',
+    'site_navigation_update_plan','site_navigation_apply','site_navigation_verify','site_navigation_rollback',
   ]);
   for(const [name,contract] of catalogEntries){
     assert.equal(actual.get(name),contract.commercialCapability,`${name} primary commercial capability drifted`);
@@ -89,6 +91,14 @@ test('backend scope contracts preserve adapter security boundaries',()=>{
   assert.deepEqual(TOOL_AUTHORIZATION.site_identity_profile_rollback.backendScopes,['evidence.read','operations.rollback','evidence.write','identity.write']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_identity_profile_rollback.additionalCommercialCapabilities,['operations.rollback']);
 
+  assert.equal(TOOL_AUTHORIZATION.site_navigation_update_plan.commercialCapability,'navigation.write');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_inspect.backendScopes,['pages.read']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_update_plan.backendScopes,['operations.apply','pages.write']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_apply.backendScopes,['pages.read','operations.apply','pages.write']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_verify.backendScopes,['pages.read','site.diagnostics']);
+  assert.equal(TOOL_AUTHORIZATION.site_navigation_rollback.commercialCapability,'operations.rollback');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_rollback.backendScopes,['pages.read','operations.rollback','pages.write']);
+
   assert.equal(TOOL_AUTHORIZATION.site_media_ingest_plan.commercialCapability,'media.write');
   assert.deepEqual(TOOL_AUTHORIZATION.site_media_ingest_plan.backendScopes,['operations.apply','media.write']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_media_ingest_cancel.backendScopes,['media.read','media.write']);
@@ -108,7 +118,6 @@ test('backend scope contracts preserve adapter security boundaries',()=>{
   assert.equal(TOOL_AUTHORIZATION.site_seo_geo_remediation_rollback.commercialCapability,'operations.rollback');
   assert.deepEqual(TOOL_AUTHORIZATION.site_seo_geo_remediation_rollback.backendScopes,['seo.read','operations.rollback','seo.write']);
 
-  assert.deepEqual(TOOL_AUTHORIZATION.site_navigation_inspect.backendScopes,['pages.read']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_media_diagnostics.backendScopes,['media.read']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_seo_geo_site.backendScopes,['site.diagnostics','seo.read']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_design_readiness.backendScopes,['design.read']);
