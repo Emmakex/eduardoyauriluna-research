@@ -1,3 +1,5 @@
+import type { AccessTelemetryEvent } from './telemetry.js';
+
 export type AccessOutcome = 'allowed' | 'denied' | 'rate_limited';
 
 export interface UsageKey {
@@ -72,18 +74,54 @@ export class UsageBoundary {
   }
 }
 
-export function accessAuditEvent(input: {
+export function accessAuditRecord(input: {
+  requestId: string;
   principalId: string;
   tenantId: string;
   outcome: AccessOutcome;
   requestPath: string;
-}): string {
-  return JSON.stringify({
+  usage: UsageSnapshot;
+  timestamp?: string;
+}): AccessTelemetryEvent {
+  return {
     event: 'mcp_access',
-    timestamp: new Date().toISOString(),
+    timestamp: input.timestamp ?? new Date().toISOString(),
+    request_id: input.requestId,
     principal_id: input.principalId,
     tenant_id: input.tenantId,
     outcome: input.outcome,
     request_path: input.requestPath,
-  });
+    usage: {
+      window_started_at: input.usage.windowStartedAt,
+      allowed: input.usage.allowed,
+      denied: input.usage.denied,
+      rate_limited: input.usage.rateLimited,
+    },
+  };
+}
+
+export function accessAuditEvent(input: {
+  requestId?: string;
+  principalId: string;
+  tenantId: string;
+  outcome: AccessOutcome;
+  requestPath: string;
+  usage?: UsageSnapshot;
+}): string {
+  const usage = input.usage ?? {
+    principalId: input.principalId,
+    tenantId: input.tenantId,
+    windowStartedAt: 0,
+    allowed: 0,
+    denied: 0,
+    rateLimited: 0,
+  };
+  return JSON.stringify(accessAuditRecord({
+    requestId: input.requestId ?? 'legacy-unscoped',
+    principalId: input.principalId,
+    tenantId: input.tenantId,
+    outcome: input.outcome,
+    requestPath: input.requestPath,
+    usage,
+  }));
 }
