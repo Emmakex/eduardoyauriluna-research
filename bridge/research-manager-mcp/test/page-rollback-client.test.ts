@@ -10,14 +10,14 @@ const writeToken = 'ermt1_page-rollback-write-token';
 const elevatedToken = 'ermt1_page-rollback-elevated-token';
 const operationId = 'erm-operation-0123456789abcdef0123456789abcdef';
 
-function tenant(elevatedCredential: string | null = elevatedToken): TenantConfig {
+function tenant(writeCredential: string | null = writeToken, elevatedCredential: string | null = elevatedToken): TenantConfig {
   return {
     id: 'rollback-tenant',
     label: 'Rollback Tenant',
     adapter: 'research-manager',
     managerBaseUrl: new URL('https://example.test'),
     managerReadToken: readToken,
-    managerWriteToken: writeToken,
+    managerWriteToken: writeCredential,
     managerElevatedToken: elevatedCredential,
     managerTimeoutMs: 2_000,
     languages: ['en', 'es'],
@@ -25,7 +25,7 @@ function tenant(elevatedCredential: string | null = elevatedToken): TenantConfig
   };
 }
 
-test('Page Rollback preflights operation domain with read credential then rolls back with elevated credential and confirm=true', async () => {
+test('Page Rollback preflights with read credential then preserves the originating write connection for rollback', async () => {
   const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
   const fetchImpl = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = input instanceof Request ? input.url : input.toString();
@@ -57,8 +57,8 @@ test('Page Rollback preflights operation domain with read credential then rolls 
 
   assert.equal(new URL(calls[1]!.url).pathname, `/wp-json/research-manager/v1/operations/${operationId}/rollback`);
   assert.equal(calls[1]!.init?.method, 'POST');
-  assert.equal(new Headers(calls[1]!.init?.headers).get('authorization'), `Bearer ${elevatedToken}`);
-  assert.notEqual(new Headers(calls[1]!.init?.headers).get('authorization'), `Bearer ${writeToken}`);
+  assert.equal(new Headers(calls[1]!.init?.headers).get('authorization'), `Bearer ${writeToken}`);
+  assert.notEqual(new Headers(calls[1]!.init?.headers).get('authorization'), `Bearer ${elevatedToken}`);
   assert.match(new Headers(calls[1]!.init?.headers).get('x-research-manager-request-id') ?? '', /^mcp-page-slots-rollback-/);
   assert.deepEqual(JSON.parse(String(calls[1]!.init?.body)), { confirm: true });
   assert.deepEqual(result, {
@@ -69,7 +69,7 @@ test('Page Rollback preflights operation domain with read credential then rolls 
   });
 });
 
-test('Page Rollback refuses an operation from another commercial mutation domain before elevated transport', async () => {
+test('Page Rollback refuses an operation from another commercial mutation domain before write transport', async () => {
   let calls = 0;
   const fetchImpl = async (): Promise<Response> => {
     calls += 1;
@@ -87,7 +87,7 @@ test('Page Rollback refuses an operation from another commercial mutation domain
   assert.equal(calls, 1);
 });
 
-test('Page Rollback rejects invalid operation IDs and missing explicit confirmation before elevated transport', () => {
+test('Page Rollback rejects invalid operation IDs and missing explicit confirmation before write transport', () => {
   let calls = 0;
   const client = new ResearchManagerWriteClient(tenant(), async () => {
     calls += 1;
@@ -105,16 +105,16 @@ test('Page Rollback rejects invalid operation IDs and missing explicit confirmat
   assert.equal(calls, 0);
 });
 
-test('Page Rollback fails closed when elevated credential is absent even if normal write credential exists', async () => {
+test('Page Rollback fails closed when the originating write credential is absent even if elevated credential exists', async () => {
   let calls = 0;
-  const client = new ResearchManagerWriteClient(tenant(null), async () => {
+  const client = new ResearchManagerWriteClient(tenant(null, elevatedToken), async () => {
     calls += 1;
     return new Response(JSON.stringify({ ok: true, data: {} }), { status: 200 });
   });
 
   await assert.rejects(
     () => client.rollbackPageSlots({ operationId, confirm: true }),
-    /elevated credential is not configured/,
+    /write credential is not configured/,
   );
   assert.equal(calls, 0);
 });

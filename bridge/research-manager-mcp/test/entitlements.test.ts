@@ -20,17 +20,17 @@ test('effective commercial capabilities are the tenant/principal intersection', 
   );
 });
 
-test('elevated commercial capabilities stay explicitly classified away from normal write modules', () => {
+test('elevated commercial capabilities stay explicitly classified away from the reversible write lifecycle', () => {
   assert.deepEqual(ELEVATED_COMMERCIAL_CAPABILITIES, [
-    'operations.rollback',
     'identity.write',
     'external_publish.execute',
     'software_update.execute',
     'destructive_delete.execute',
   ]);
-  assert.equal(isElevatedCommercialCapability('operations.rollback'), true);
+  assert.equal(isElevatedCommercialCapability('operations.rollback'), false);
   assert.equal(isElevatedCommercialCapability('identity.write'), true);
   assert.equal(isElevatedCommercialCapability('external_publish.execute'), true);
+  assert.equal(isElevatedCommercialCapability('software_update.execute'), true);
   assert.equal(isElevatedCommercialCapability('destructive_delete.execute'), true);
   assert.equal(isElevatedCommercialCapability('pages.write'), false);
 });
