@@ -81,15 +81,15 @@ jobs:
 
           EVENTS="$RUNNER_TEMP/mcp-telemetry/events.jsonl"
           test -s "$EVENTS"
-          grep -F '"event":"mcp_access"' "$EVENTS"
-          grep -F "\"request_id\":\"$REQUEST_ID\"" "$EVENTS"
-          grep -F '"principal_id":"anonymous"' "$EVENTS"
-          grep -F '"outcome":"allowed"' "$EVENTS"
-          grep -F '"usage":{' "$EVENTS"
-          ! grep -F 'ci-outer-secret' "$EVENTS"
+          sudo grep -qF '"event":"mcp_access"' "$EVENTS"
+          sudo grep -qF "\"request_id\":\"$REQUEST_ID\"" "$EVENTS"
+          sudo grep -qF '"principal_id":"anonymous"' "$EVENTS"
+          sudo grep -qF '"outcome":"allowed"' "$EVENTS"
+          sudo grep -qF '"usage":{' "$EVENTS"
+          ! sudo grep -qF 'ci-outer-secret' "$EVENTS"
           test "$(stat -c '%a' "$EVENTS")" = "600"
 
-          LINES_BEFORE="$(wc -l < "$EVENTS")"
+          LINES_BEFORE="$(sudo wc -l "$EVENTS" | awk '{print $1}')"
           docker rm -f mcp-telemetry >/dev/null
           trap - EXIT
 
@@ -109,5 +109,5 @@ jobs:
             sleep 1
           done
           test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18789/mcp)" = "401"
-          LINES_AFTER="$(wc -l < "$EVENTS")"
+          LINES_AFTER="$(sudo wc -l "$EVENTS" | awk '{print $1}')"
           test "$LINES_AFTER" -gt "$LINES_BEFORE"
