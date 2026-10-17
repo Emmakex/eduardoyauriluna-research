@@ -74,6 +74,7 @@ test('Research Manager adapter rejects Insight languages outside the tenant cont
     adapter: 'research-manager',
     managerBaseUrl: new URL('https://example.test'),
     managerReadToken: token,
+    managerWriteToken: null,
     managerTimeoutMs: 2_000,
     languages: ['en', 'es'],
     entitlements: ['site.read', 'insights.read'],

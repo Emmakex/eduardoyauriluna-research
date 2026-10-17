@@ -63,7 +63,7 @@ test('Research adapter enforces tenant language contract before transport', () =
   let calls = 0;
   const tenant: TenantConfig = {
     id: 'client-one', label: 'Client One', adapter: 'research-manager', managerBaseUrl: new URL('https://example.test'),
-    managerReadToken: token, managerTimeoutMs: 2000, languages: ['en', 'es'], entitlements: ['site.read', 'research.read'],
+    managerReadToken: token, managerWriteToken: null, managerTimeoutMs: 2000, languages: ['en', 'es'], entitlements: ['site.read', 'research.read'],
   };
   const adapter = new ResearchManagerAdapter(tenant, async () => { calls += 1; return new Response(JSON.stringify({ ok: true, data: {} }), { status: 200 }); });
   assert.throws(() => adapter.listResearchObjects({ kind: 'output', language: 'fr' }), /not enabled for tenant/);
