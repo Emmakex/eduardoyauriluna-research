@@ -1,12 +1,17 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TenantConfig } from './config.js';
 import { ResearchManagerError } from './manager-client.js';
-import type { SitePageSlotsPlanRequest, SitePageSlotValue } from './adapters/site-control.js';
+import type {
+  SitePageSlotsApplyRequest,
+  SitePageSlotsPlanRequest,
+  SitePageSlotValue,
+} from './adapters/site-control.js';
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 interface ManagerEnvelope { ok?: boolean; code?: string; message?: string; data?: unknown; }
 
 type WriteClientConfig = Pick<TenantConfig, 'managerBaseUrl' | 'managerWriteToken' | 'managerTimeoutMs'>;
+type WriteRoute = '/operations/plan' | `/plans/${string}/apply`;
 
 export class ResearchManagerWriteClient {
   private readonly baseUrl: URL;
@@ -44,6 +49,18 @@ export class ResearchManagerWriteClient {
     );
   }
 
+  applyPageSlots(request: SitePageSlotsApplyRequest): Promise<unknown> {
+    this.requirePlanId(request.planId);
+    if (request.confirm !== true) {
+      throw new Error('Page slot Apply requires explicit confirmation');
+    }
+    return this.post(
+      `/plans/${encodeURIComponent(request.planId)}/apply`,
+      { confirm: true },
+      'page-slots-apply',
+    );
+  }
+
   private requireKey(key: string): void {
     if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(key)) {
       throw new Error('Page key must be a lowercase registered key');
@@ -53,6 +70,12 @@ export class ResearchManagerWriteClient {
   private requireLanguage(language: string): void {
     if (!/^[a-z][a-z0-9-]{1,15}$/.test(language)) {
       throw new Error('Page language must be a lowercase language code');
+    }
+  }
+
+  private requirePlanId(planId: string): void {
+    if (!/^erm-remote-plan-[a-f0-9]{20}-[a-f0-9]{8}$/.test(planId)) {
+      throw new Error('Page slot plan ID has an invalid format');
     }
   }
 
@@ -80,7 +103,7 @@ export class ResearchManagerWriteClient {
     }
   }
 
-  private async post(route: '/operations/plan', body: unknown, label: string): Promise<unknown> {
+  private async post(route: WriteRoute, body: unknown, label: string): Promise<unknown> {
     if (!this.token) {
       throw new Error('Research Manager write credential is not configured for this tenant');
     }
