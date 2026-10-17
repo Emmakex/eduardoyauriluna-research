@@ -67,12 +67,24 @@ Implementation evidence:
 
 ### A3 — Translations + Evidence
 
-- [ ] structured translation pair/unpair lifecycle;
-- [ ] bounded evidence create/update/delete where permitted;
-- [ ] evidence/provenance preconditions preserved;
-- [ ] identity-sensitive actions remain elevated and separately permissioned;
-- [ ] local tests/CI;
+- [x] structured translation pair/unpair lifecycle;
+- [x] bounded evidence create/update/delete where permitted;
+- [x] evidence/provenance preconditions preserved;
+- [x] identity-sensitive actions remain elevated and separately permissioned;
+- [x] local tests/CI;
 - [ ] reversible production acceptance.
+
+Implementation evidence:
+
+- Translations + Evidence + canonical Identity Profile lifecycle: PR #249 → `e124a0e4bbfa777249059f704202d425d71bbb2c`;
+- structured Research translations use the dedicated `/research-translations/*` gateway while Insight pairing remains on its A1 gateway;
+- ordinary Evidence exposes create/update/delete only and rejects identity mutations during domain preflight;
+- canonical identity changes use only the dedicated `/identity-profile/*` gateway and the elevated `identity.write` capability;
+- Identity rollback requires both `identity.write` and `operations.rollback` commercially;
+- translation/evidence/identity plan and operation ID domains remain distinct;
+- evidence confirmation/reference and provenance boundaries are preserved;
+- MCP bounded catalog after A3: 71 tools;
+- typecheck, 100/100 unit tests, build, bounded-surface guard and WP-CLI fallback PASS on PR #249.
 
 ### A4 — SEO/GEO writes
 
