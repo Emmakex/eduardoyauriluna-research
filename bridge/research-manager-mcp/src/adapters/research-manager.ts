@@ -4,11 +4,13 @@ import { ResearchManagerA3WriteClient } from '../a3-write-client.js';
 import { ResearchManagerA4WriteClient } from '../a4-write-client.js';
 import { ResearchManagerA5WriteClient } from '../a5-write-client.js';
 import { ResearchManagerA6WriteClient } from '../a6-write-client.js';
+import { ResearchManagerA7WriteClient } from '../a7-write-client.js';
 import type { TenantConfig } from '../config.js';
 import type * as A3 from '../a3-contracts.js';
 import type * as A4 from '../a4-contracts.js';
 import type * as A5 from '../a5-contracts.js';
 import type * as A6 from '../a6-contracts.js';
+import type * as A7 from '../a7-contracts.js';
 import type * as Site from './site-control.js';
 
 export class ResearchManagerAdapter implements Site.SiteControlAdapter {
@@ -20,6 +22,7 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
   private readonly a4WriteClient:ResearchManagerA4WriteClient;
   private readonly a5WriteClient:ResearchManagerA5WriteClient;
   private readonly a6WriteClient:ResearchManagerA6WriteClient;
+  private readonly a7WriteClient:ResearchManagerA7WriteClient;
   constructor(tenant:TenantConfig,fetchImpl:typeof fetch=fetch){
     this.tenantId=tenant.id; this.tenantLabel=tenant.label; this.languages=tenant.languages;
     this.client=new ResearchManagerClient(tenant,fetchImpl);
@@ -28,6 +31,7 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
     this.a4WriteClient=new ResearchManagerA4WriteClient(tenant,fetchImpl);
     this.a5WriteClient=new ResearchManagerA5WriteClient(tenant,fetchImpl);
     this.a6WriteClient=new ResearchManagerA6WriteClient(tenant,fetchImpl);
+    this.a7WriteClient=new ResearchManagerA7WriteClient(tenant,fetchImpl);
   }
   status():Promise<unknown>{return this.client.status();}
   versions():Promise<unknown>{return this.client.versions();}
@@ -117,6 +121,14 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
   designInspect():Promise<unknown>{return this.client.design();}
   designVariants():Promise<unknown>{return this.client.designVariants();}
   designReadiness(request:Site.SiteDesignReadinessRequest):Promise<unknown>{return this.client.designReadiness(request.rendered);}
+  planDesignPresetUpdate(request:A7.DesignPresetPlanRequest):Promise<unknown>{return this.a7WriteClient.planPreset(request);}
+  applyDesignPreset(request:A7.DesignPresetApplyRequest):Promise<unknown>{return this.a7WriteClient.applyPreset(request);}
+  verifyDesignPreset(request:A7.DesignPresetVerifyRequest):Promise<unknown>{return this.a7WriteClient.verifyPreset(request);}
+  rollbackDesignPreset(request:A7.DesignPresetRollbackRequest):Promise<unknown>{return this.a7WriteClient.rollbackPreset(request);}
+  planDesignVariantUpdate(request:A7.DesignVariantPlanRequest):Promise<unknown>{return this.a7WriteClient.planVariant(request);}
+  applyDesignVariant(request:A7.DesignVariantApplyRequest):Promise<unknown>{return this.a7WriteClient.applyVariant(request);}
+  verifyDesignVariant(request:A7.DesignVariantVerifyRequest):Promise<unknown>{return this.a7WriteClient.verifyVariant(request);}
+  rollbackDesignVariant(request:A7.DesignVariantRollbackRequest):Promise<unknown>{return this.a7WriteClient.rollbackVariant(request);}
   private requireLanguage(language:string,label:string):void{if(!this.languages.includes(language))throw new Error(`${label} language is not enabled for tenant ${this.tenantId}`);}
   private requireOperation(value:unknown,allowed:readonly string[],label:string,expectedDescription:string):void{if(typeof value!=='object'||value===null||Array.isArray(value)||typeof (value as Record<string,unknown>).operation!=='string'||!allowed.includes((value as Record<string,unknown>).operation as string))throw new Error(`${label} does not reference ${expectedDescription}`);}
   private requireSeoLanguage(request:Site.SiteSeoResourceRequest):void{if(request.type==='page')this.requireLanguage(request.language,'SEO Page');}
