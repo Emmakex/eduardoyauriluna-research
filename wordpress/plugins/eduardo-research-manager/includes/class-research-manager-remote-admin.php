@@ -161,37 +161,35 @@ final class Eduardo_Research_Manager_Remote_Admin {
                     <td><code><?php echo esc_html((string) ($temporary['connection_id'] ?? '')); ?></code></td>
                     <td><?php echo ! empty($temporary['enabled']) ? '<strong>ENABLED</strong>' : esc_html__('REVOKED', 'eduardo-research-manager'); ?></td>
                     <td><?php if (! empty($temporary['token_prefix'])) : ?><code><?php echo esc_html((string) $temporary['token_prefix']); ?>…</code><?php else : ?>—<?php endif; ?></td>
-                    <td>
-                      <code style="white-space:normal"><?php echo esc_html(implode(', ', (array) ($temporary['scopes'] ?? array()))); ?></code>
+                    <td><code style="white-space:normal"><?php echo esc_html(implode(', ', (array) ($temporary['scopes'] ?? array()))); ?></code></td>
+                    <td><?php echo esc_html((string) ($temporary['last_used_at'] ?? '')); ?></td>
+                    <td style="min-width:280px">
                       <?php if (! empty($temporary['credential_present']) && ! empty($temporary['enabled'])) : ?>
-                        <details style="margin-top:8px">
-                          <summary class="button" style="display:inline-block"><?php echo esc_html__('Edit scopes', 'eduardo-research-manager'); ?></summary>
-                          <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="min-width:430px;padding:12px 0">
+                        <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+                          <details>
+                            <summary class="button" style="display:inline-block"><?php echo esc_html__('Edit scopes', 'eduardo-research-manager'); ?></summary>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="min-width:430px;padding:12px 0">
+                              <input type="hidden" name="action" value="eduardo_research_manager_remote">
+                              <input type="hidden" name="remote_action" value="save_temporary_scopes">
+                              <input type="hidden" name="temporary_connection_id" value="<?php echo esc_attr((string) ($temporary['connection_id'] ?? '')); ?>">
+                              <?php wp_nonce_field('erm_remote_connection'); ?>
+                              <fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:6px 12px;margin:8px 0 12px">
+                                <?php foreach ($supported as $scope) : ?>
+                                  <label><input type="checkbox" name="temporary_scopes[]" value="<?php echo esc_attr($scope); ?>" <?php checked(in_array($scope, (array) ($temporary['scopes'] ?? array()), true)); ?>> <code><?php echo esc_html($scope); ?></code></label>
+                                <?php endforeach; ?>
+                              </fieldset>
+                              <p class="description"><?php echo esc_html__('Changes take effect immediately. The existing temporary token is not rotated.', 'eduardo-research-manager'); ?></p>
+                              <?php submit_button(__('Save temporary scopes', 'eduardo-research-manager'), 'secondary', 'submit', false); ?>
+                            </form>
+                          </details>
+                          <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="eduardo_research_manager_remote">
-                            <input type="hidden" name="remote_action" value="save_temporary_scopes">
+                            <input type="hidden" name="remote_action" value="revoke_temporary">
                             <input type="hidden" name="temporary_connection_id" value="<?php echo esc_attr((string) ($temporary['connection_id'] ?? '')); ?>">
                             <?php wp_nonce_field('erm_remote_connection'); ?>
-                            <fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:6px 12px;margin:8px 0 12px">
-                              <?php foreach ($supported as $scope) : ?>
-                                <label><input type="checkbox" name="temporary_scopes[]" value="<?php echo esc_attr($scope); ?>" <?php checked(in_array($scope, (array) ($temporary['scopes'] ?? array()), true)); ?>> <code><?php echo esc_html($scope); ?></code></label>
-                              <?php endforeach; ?>
-                            </fieldset>
-                            <p class="description"><?php echo esc_html__('Changes take effect immediately. The existing temporary token is not rotated.', 'eduardo-research-manager'); ?></p>
-                            <?php submit_button(__('Save temporary scopes', 'eduardo-research-manager'), 'secondary', 'submit', false); ?>
+                            <button class="button" type="submit"><?php echo esc_html__('Revoke temporary', 'eduardo-research-manager'); ?></button>
                           </form>
-                        </details>
-                      <?php endif; ?>
-                    </td>
-                    <td><?php echo esc_html((string) ($temporary['last_used_at'] ?? '')); ?></td>
-                    <td>
-                      <?php if (! empty($temporary['credential_present']) && ! empty($temporary['enabled'])) : ?>
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                          <input type="hidden" name="action" value="eduardo_research_manager_remote">
-                          <input type="hidden" name="remote_action" value="revoke_temporary">
-                          <input type="hidden" name="temporary_connection_id" value="<?php echo esc_attr((string) ($temporary['connection_id'] ?? '')); ?>">
-                          <?php wp_nonce_field('erm_remote_connection'); ?>
-                          <button class="button" type="submit"><?php echo esc_html__('Revoke temporary', 'eduardo-research-manager'); ?></button>
-                        </form>
+                        </div>
                       <?php else : ?>
                         —
                       <?php endif; ?>
