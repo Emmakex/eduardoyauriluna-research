@@ -2,6 +2,7 @@ import type { CommercialCapability } from './entitlements.js';
 
 export interface ToolAuthorizationContract {
   commercialCapability: CommercialCapability;
+  additionalCommercialCapabilities?: readonly CommercialCapability[];
   backendScopes: readonly string[];
   readOnly: boolean;
 }
@@ -48,11 +49,27 @@ export const TOOL_AUTHORIZATION = {
 
   site_translations_list: { commercialCapability:'translations.read', backendScopes:['translations.read'], readOnly:true },
   site_translation_inspect: { commercialCapability:'translations.read', backendScopes:['translations.read'], readOnly:true },
+  site_translation_pair_plan: { commercialCapability:'translations.write', backendScopes:['operations.apply','translations.write'], readOnly:false },
+  site_translation_unpair_plan: { commercialCapability:'translations.write', backendScopes:['operations.apply','translations.write'], readOnly:false },
+  site_translation_apply: { commercialCapability:'translations.write', backendScopes:['translations.read','operations.apply','translations.write'], readOnly:false },
+  site_translation_verify: { commercialCapability:'translations.write', backendScopes:['translations.read','site.diagnostics'], readOnly:false },
+  site_translation_rollback: { commercialCapability:'operations.rollback', backendScopes:['translations.read','operations.rollback','translations.write'], readOnly:false },
 
   site_evidence_inventory: { commercialCapability:'evidence.read', backendScopes:['evidence.read'], readOnly:true },
   site_evidence_identity: { commercialCapability:'evidence.read', backendScopes:['evidence.read'], readOnly:true },
   site_evidence_list: { commercialCapability:'evidence.read', backendScopes:['evidence.read'], readOnly:true },
   site_evidence_inspect: { commercialCapability:'evidence.read', backendScopes:['evidence.read'], readOnly:true },
+  site_evidence_create_plan: { commercialCapability:'evidence.write', backendScopes:['operations.apply','evidence.write'], readOnly:false },
+  site_evidence_update_plan: { commercialCapability:'evidence.write', backendScopes:['operations.apply','evidence.write'], readOnly:false },
+  site_evidence_delete_plan: { commercialCapability:'evidence.write', backendScopes:['operations.apply','evidence.write'], readOnly:false },
+  site_evidence_apply: { commercialCapability:'evidence.write', backendScopes:['evidence.read','operations.apply','evidence.write'], readOnly:false },
+  site_evidence_verify: { commercialCapability:'evidence.write', backendScopes:['evidence.read','site.diagnostics'], readOnly:false },
+  site_evidence_rollback: { commercialCapability:'operations.rollback', backendScopes:['evidence.read','operations.rollback','evidence.write'], readOnly:false },
+
+  site_identity_profile_update_plan: { commercialCapability:'identity.write', backendScopes:['operations.apply','evidence.write','identity.write'], readOnly:false },
+  site_identity_profile_apply: { commercialCapability:'identity.write', backendScopes:['evidence.read','operations.apply','evidence.write','identity.write'], readOnly:false },
+  site_identity_profile_verify: { commercialCapability:'identity.write', backendScopes:['evidence.read','site.diagnostics'], readOnly:false },
+  site_identity_profile_rollback: { commercialCapability:'identity.write', additionalCommercialCapabilities:['operations.rollback'], backendScopes:['evidence.read','operations.rollback','evidence.write','identity.write'], readOnly:false },
 
   site_navigation_inspect: { commercialCapability:'navigation.read', backendScopes:['pages.read'], readOnly:true },
 
