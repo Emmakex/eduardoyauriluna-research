@@ -289,8 +289,8 @@ try:
     media_title = f"Phase 2C acceptance pixel {RUN_ID}"
     before_ids = ids(call("site_media_list", {"search": media_title, "page": 1, "perPage": 100}), ("attachment_id", "post_id", "id"))
     png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-    plan = call("site_media_ingest_plan", {"filename": f"phase2c-acceptance-{RUN_ID}.png", "mimeType": "image/png", "contentBase64": png, "altText": "Phase 2C acceptance pixel", "title": media_title})
-    plan_id = regex_string(plan, r"erm-media-ingest-plan-[a-f0-9]{18}-[a-f0-9]{8}")
+    plan = call("site_media_ingest_plan", {"fileName": f"phase2c-acceptance-{RUN_ID}.png", "mimeType": "image/png", "contentBase64": png, "altText": "Phase 2C acceptance pixel", "title": media_title})
+    plan_id = regex_string(plan, r"erm-media-ingest-plan-[a-f0-9]{20}-[a-f0-9]{8}")
     applied = call("site_media_ingest_apply", {"planId": plan_id, "confirm": True})
     op_id = regex_string(applied, r"erm-media-ingest-op-[a-f0-9]{32}")
     add_pending("Media", "site_media_ingest_rollback", op_id)
