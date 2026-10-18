@@ -20,6 +20,7 @@ SERVER = os.environ.get("MCP_SERVER_URL", "").strip()
 TOKEN = os.environ.get("MCP_TOKEN", "").strip()
 EVIDENCE = Path(os.environ.get("MCP_EVIDENCE_DIR", "").strip() or ".phase2c-write-evidence")
 RUN_ID = os.environ.get("GITHUB_RUN_ID", str(int(time.time())))
+EVIDENCE_REFERENCE = f"Phase 2C production MCP reversible acceptance fixture run {RUN_ID}; exact rollback required."
 
 if not SERVER or not TOKEN:
     raise SystemExit("MCP_SERVER_URL and MCP_TOKEN are required")
@@ -218,9 +219,9 @@ try:
         raise RuntimeError("Insights: baseline ID inventory was not restored")
     record("Insights", "PASS", plan_id=plan_id, operation_id=op_id, baseline_restored=True)
 
-    # Research Objects: temporary draft Output, then exact rollback.
+    # Research Objects: evidence-gated temporary draft Output, then exact rollback.
     before_ids = ids(call("site_research_objects_list", {"kind": "output", "language": "en"}), ("post_id",))
-    plan = call("site_research_object_create_plan", {"kind": "output", "data": {"title": marker, "excerpt": "Temporary reversible production acceptance object.", "content": "Temporary reversible production acceptance object.", "language": "en", "status": "draft"}})
+    plan = call("site_research_object_create_plan", {"kind": "output", "data": {"title": marker, "excerpt": "Temporary reversible production acceptance object.", "content": "Temporary reversible production acceptance object.", "language": "en", "status": "draft"}, "evidenceConfirmed": True, "evidenceReference": EVIDENCE_REFERENCE})
     plan_id = regex_string(plan, r"erm-object-plan-[a-f0-9]{18}-[a-f0-9]{8}")
     applied = call("site_research_object_apply", {"planId": plan_id, "confirm": True})
     op_id = regex_string(applied, r"erm-object-op-[a-f0-9]{32}")
@@ -253,7 +254,7 @@ try:
     post_id = int(paired["post_id"])
     translation_before = call("site_translation_inspect", {"postId": post_id})
     translation_fp = pairing_fingerprint(translation_before)
-    plan = call("site_translation_unpair_plan", {"postId": post_id})
+    plan = call("site_translation_unpair_plan", {"postId": post_id, "evidenceConfirmed": True, "evidenceReference": EVIDENCE_REFERENCE})
     plan_id = regex_string(plan, r"erm-translation-plan-[a-f0-9]{18}-[a-f0-9]{8}")
     applied = call("site_translation_apply", {"planId": plan_id, "confirm": True})
     op_id = regex_string(applied, r"erm-translation-op-[a-f0-9]{32}")
@@ -267,9 +268,9 @@ try:
         raise RuntimeError("Translations: exact pairing baseline was not restored")
     record("Translations", "PASS", plan_id=plan_id, operation_id=op_id, baseline_restored=True)
 
-    # Evidence: create an ordinary non-identity record, verify provenance readback, rollback.
+    # Evidence: create one evidence-gated non-identity record, verify, rollback.
     before_ids = ids(call("site_evidence_list", {"group": "methods"}), ("record_id", "id"))
-    plan = call("site_evidence_create_plan", {"group": "methods", "data": {"title": marker, "summary": "Temporary reversible Phase 2C production acceptance evidence record.", "status": "unverified"}})
+    plan = call("site_evidence_create_plan", {"group": "methods", "data": {"title": marker, "summary": "Temporary reversible Phase 2C production acceptance evidence record.", "status": "unverified"}, "evidenceConfirmed": True, "evidenceReference": EVIDENCE_REFERENCE})
     plan_id = regex_string(plan, r"erm-evidence-plan-[a-f0-9]{18}-[a-f0-9]{8}")
     applied = call("site_evidence_apply", {"planId": plan_id, "confirm": True})
     op_id = regex_string(applied, r"erm-evidence-op-[a-f0-9]{32}")
