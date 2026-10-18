@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - scripts/phase2c-mcp-seo-acceptance.py
+      - scripts/phase2c-mcp-seo-scope-diagnostic.py
 
 permissions:
   contents: read
@@ -49,6 +50,14 @@ jobs:
             sleep 2
           done
           exit 1
+
+      - name: Inspect actual Manager READ credential scopes
+        shell: bash
+        env:
+          MCP_SERVER_URL: https://mcp.kairoseth.com/mcp/eduardo-research
+          MCP_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
+          MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-seo-acceptance
+        run: python3 scripts/phase2c-mcp-seo-scope-diagnostic.py
 
       - name: Run SEO/GEO-only reversible MCP acceptance
         shell: bash
