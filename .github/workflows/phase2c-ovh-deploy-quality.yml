@@ -6,7 +6,6 @@ on:
       - 'scripts/phase2c-ovh-deploy.sh'
       - 'bridge/research-manager-mcp/compose.ingress.example.yml'
       - 'bridge/research-manager-mcp/compose.production.example.yml'
-      - 'bridge/research-manager-mcp/ingress/Caddyfile'
       - 'deploy/phase2c-release.json'
       - 'docs/60-phase-2c-live-ovh-handoff.md'
       - '.github/workflows/phase2c-ovh-deploy.yml'
@@ -18,7 +17,6 @@ on:
       - 'scripts/phase2c-ovh-deploy.sh'
       - 'bridge/research-manager-mcp/compose.ingress.example.yml'
       - 'bridge/research-manager-mcp/compose.production.example.yml'
-      - 'bridge/research-manager-mcp/ingress/Caddyfile'
       - 'deploy/phase2c-release.json'
       - 'docs/60-phase-2c-live-ovh-handoff.md'
       - '.github/workflows/phase2c-ovh-deploy.yml'
@@ -43,12 +41,16 @@ jobs:
           grep -F 'ghcr\.io/emmakex/site-control-mcp@sha256:' scripts/phase2c-ovh-deploy.sh
           grep -F 'MCP_IMAGE_REF' bridge/research-manager-mcp/compose.ingress.example.yml
           grep -F 'MCP_IMAGE_REF' bridge/research-manager-mcp/compose.production.example.yml
+          grep -F 'kairoseth-public-edge' bridge/research-manager-mcp/compose.ingress.example.yml
+          grep -F 'kairoseth-mcp-runtime' bridge/research-manager-mcp/compose.ingress.example.yml
+          ! grep -F 'MCP_INGRESS_IMAGE' scripts/phase2c-ovh-deploy.sh
+          ! grep -F 'MCP_INGRESS_IMAGE' .github/workflows/phase2c-ovh-deploy.yml
           ! grep -Eq 'site-control-mcp:(latest|main)' \
             bridge/research-manager-mcp/compose.ingress.example.yml \
             bridge/research-manager-mcp/compose.production.example.yml \
             .github/workflows/research-manager-mcp-publish-image.yml
 
-      - name: Validate live release bundle matches immutable workflow defaults
+      - name: Validate frozen release provenance and shared-edge handoff
         shell: bash
         run: |
           set -euo pipefail
@@ -59,11 +61,12 @@ jobs:
           INGRESS_REF="$(jq -r '.ingress.image' "$RELEASE")"
           [[ "$MCP_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]
           [[ "$INGRESS_REF" =~ ^caddy@sha256:[0-9a-f]{64}$ ]]
-          grep -F "default: $INGRESS_REF" .github/workflows/phase2c-ovh-deploy.yml
           grep -F "$MCP_REF" docs/60-phase-2c-live-ovh-handoff.md
           grep -F "$INGRESS_REF" docs/60-phase-2c-live-ovh-handoff.md
+          grep -F 'mcp.kairoseth.com' docs/60-phase-2c-live-ovh-handoff.md
+          grep -F 'kairoseth-public-edge' docs/60-phase-2c-live-ovh-handoff.md
 
-      - name: Prove deploy, previous digest recording and rollback without new image ref
+      - name: Prove deploy, previous digest recording and rollback without service-specific ingress
         shell: bash
         run: |
           set -euo pipefail
@@ -75,13 +78,16 @@ jobs:
           cat > "$BIN_DIR/docker" <<'DOCKER'
           #!/usr/bin/env bash
           set -euo pipefail
+          if [ "${1:-}" = network ] && [ "${2:-}" = inspect ]; then
+            [ "${3:-}" = kairoseth-public-edge ]
+            exit $?
+          fi
           if [ "${1:-}" = compose ]; then
             shift
             if [ "${1:-}" = version ]; then exit 0; fi
             args=" $* "
             case "$args" in
               *' ps -q research-manager-mcp '*) printf 'cid-mcp\n' ;;
-              *' ps -q ingress '*) printf 'cid-ingress\n' ;;
               *) exit 0 ;;
             esac
             exit 0
@@ -90,7 +96,6 @@ jobs:
             cid="${@: -1}"
             case "$cid" in
               cid-mcp) printf 'healthy\n' ;;
-              cid-ingress) printf 'running\n' ;;
               *) exit 1 ;;
             esac
             exit 0
@@ -112,40 +117,38 @@ jobs:
 
           A="ghcr.io/emmakex/site-control-mcp@sha256:$(printf 'a%.0s' {1..64})"
           B="ghcr.io/emmakex/site-control-mcp@sha256:$(printf 'b%.0s' {1..64})"
-          CADDY="caddy@sha256:$(printf 'c%.0s' {1..64})"
 
           MCP_DEPLOY_ACTION=deploy \
           MCP_DEPLOY_DIR="$DEPLOY_DIR" \
           MCP_RELEASE_SOURCE_DIR="$GITHUB_WORKSPACE/bridge/research-manager-mcp" \
-          MCP_IMAGE_REF="$A" MCP_INGRESS_IMAGE="$CADDY" MCP_PUBLIC_HOST=mcp.example.test \
+          MCP_IMAGE_REF="$A" MCP_PUBLIC_HOST=mcp.example.test \
             bash scripts/phase2c-ovh-deploy.sh
           test "$(cat "$DEPLOY_DIR/.current-image-ref")" = "$A"
 
           MCP_DEPLOY_ACTION=deploy \
           MCP_DEPLOY_DIR="$DEPLOY_DIR" \
           MCP_RELEASE_SOURCE_DIR="$GITHUB_WORKSPACE/bridge/research-manager-mcp" \
-          MCP_IMAGE_REF="$B" MCP_INGRESS_IMAGE="$CADDY" MCP_PUBLIC_HOST=mcp.example.test \
+          MCP_IMAGE_REF="$B" MCP_PUBLIC_HOST=mcp.example.test \
             bash scripts/phase2c-ovh-deploy.sh
           test "$(cat "$DEPLOY_DIR/.current-image-ref")" = "$B"
           test "$(cat "$DEPLOY_DIR/.previous-image-ref")" = "$A"
 
           MCP_DEPLOY_ACTION=rollback \
           MCP_DEPLOY_DIR="$DEPLOY_DIR" \
-          MCP_INGRESS_IMAGE="$CADDY" MCP_PUBLIC_HOST=mcp.example.test \
+          MCP_PUBLIC_HOST=mcp.example.test \
             bash scripts/phase2c-ovh-deploy.sh
           test "$(cat "$DEPLOY_DIR/.current-image-ref")" = "$A"
           test "$(cat "$DEPLOY_DIR/.previous-image-ref")" = "$B"
 
-      - name: Reject mutable image refs and weak production env permissions
+      - name: Reject mutable image refs, missing shared edge and weak production env permissions
         shell: bash
         run: |
           set -euo pipefail
           ROOT="$RUNNER_TEMP/phase2c-negative-contract"
           DEPLOY_DIR="$ROOT/deploy"
           BIN_DIR="$ROOT/bin"
-          mkdir -p "$DEPLOY_DIR/ingress" "$BIN_DIR"
+          mkdir -p "$DEPLOY_DIR" "$BIN_DIR"
           cp bridge/research-manager-mcp/compose.ingress.example.yml "$DEPLOY_DIR/compose.ingress.yml"
-          cp bridge/research-manager-mcp/ingress/Caddyfile "$DEPLOY_DIR/ingress/Caddyfile"
           cat > "$DEPLOY_DIR/.env.production" <<'ENV'
           MCP_SHARED_ROUTING=true
           MCP_REQUIRE_PERSISTENT_TELEMETRY=true
@@ -155,10 +158,19 @@ jobs:
           MCP_PRINCIPALS_JSON={"acceptance":{}}
           ENV
           chmod 0600 "$DEPLOY_DIR/.env.production"
-          CADDY="caddy@sha256:$(printf 'c%.0s' {1..64})"
+
+          cat > "$BIN_DIR/docker" <<'DOCKER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ "${1:-}" = network ] && [ "${2:-}" = inspect ]; then exit 0; fi
+          if [ "${1:-}" = compose ] && [ "${2:-}" = version ]; then exit 0; fi
+          exit 0
+          DOCKER
+          chmod 0755 "$BIN_DIR/docker"
+          export PATH="$BIN_DIR:$PATH"
 
           if MCP_DEPLOY_ACTION=deploy MCP_DEPLOY_DIR="$DEPLOY_DIR" MCP_RELEASE_SOURCE_DIR="$GITHUB_WORKSPACE/bridge/research-manager-mcp" \
-            MCP_IMAGE_REF='ghcr.io/emmakex/site-control-mcp:latest' MCP_INGRESS_IMAGE="$CADDY" MCP_PUBLIC_HOST=mcp.example.test \
+            MCP_IMAGE_REF='ghcr.io/emmakex/site-control-mcp:latest' MCP_PUBLIC_HOST=mcp.example.test \
             bash scripts/phase2c-ovh-deploy.sh; then
             echo 'mutable image ref was unexpectedly accepted' >&2
             exit 1
@@ -167,8 +179,24 @@ jobs:
           chmod 0644 "$DEPLOY_DIR/.env.production"
           VALID="ghcr.io/emmakex/site-control-mcp@sha256:$(printf 'd%.0s' {1..64})"
           if MCP_DEPLOY_ACTION=deploy MCP_DEPLOY_DIR="$DEPLOY_DIR" MCP_RELEASE_SOURCE_DIR="$GITHUB_WORKSPACE/bridge/research-manager-mcp" \
-            MCP_IMAGE_REF="$VALID" MCP_INGRESS_IMAGE="$CADDY" MCP_PUBLIC_HOST=mcp.example.test \
+            MCP_IMAGE_REF="$VALID" MCP_PUBLIC_HOST=mcp.example.test \
             bash scripts/phase2c-ovh-deploy.sh; then
             echo 'weak .env.production permissions were unexpectedly accepted' >&2
+            exit 1
+          fi
+
+          chmod 0600 "$DEPLOY_DIR/.env.production"
+          cat > "$BIN_DIR/docker" <<'DOCKER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ "${1:-}" = network ] && [ "${2:-}" = inspect ]; then exit 1; fi
+          if [ "${1:-}" = compose ] && [ "${2:-}" = version ]; then exit 0; fi
+          exit 0
+          DOCKER
+          chmod 0755 "$BIN_DIR/docker"
+          if MCP_DEPLOY_ACTION=deploy MCP_DEPLOY_DIR="$DEPLOY_DIR" MCP_RELEASE_SOURCE_DIR="$GITHUB_WORKSPACE/bridge/research-manager-mcp" \
+            MCP_IMAGE_REF="$VALID" MCP_PUBLIC_HOST=mcp.example.test \
+            bash scripts/phase2c-ovh-deploy.sh; then
+            echo 'missing shared edge network was unexpectedly accepted' >&2
             exit 1
           fi

@@ -17,41 +17,18 @@ services:
       - no-new-privileges:true
     user: "10001:10001"
     networks:
-      - mcp_backend
+      mcp_backend: {}
+      public-edge:
+        aliases:
+          - kairoseth-mcp-runtime
     stop_grace_period: 15s
-
-  ingress:
-    image: "${MCP_INGRESS_IMAGE:?set MCP_INGRESS_IMAGE to an immutable Caddy tag or digest}"
-    restart: unless-stopped
-    depends_on:
-      research-manager-mcp:
-        condition: service_healthy
-    environment:
-      MCP_PUBLIC_HOST: "${MCP_PUBLIC_HOST:?set MCP_PUBLIC_HOST}"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./ingress/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - mcp_backend
-      - ingress_egress
 
 networks:
   mcp_backend:
     internal: true
-  ingress_egress:
+  public-edge:
+    name: kairoseth-public-edge
+    external: true
 
 volumes:
   mcp_telemetry:
-  caddy_data:
-  caddy_config:

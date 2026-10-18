@@ -15,14 +15,10 @@ on:
         description: Full MCP digest ref from Research Manager MCP Publish Image (required for deploy)
         required: false
         type: string
-      ingress_image_ref:
-        description: Immutable Caddy 2.11.7-alpine multi-platform digest; change only through reviewed upgrade
-        required: true
-        default: caddy@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
-        type: string
       public_host:
         description: Public HTTPS MCP hostname only, without scheme/path
         required: true
+        default: mcp.kairoseth.com
         type: string
       reference_tenant_id:
         description: Reference tenant used for remote acceptance
@@ -52,7 +48,6 @@ jobs:
       MCP_ACCEPTANCE_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
       DEPLOY_ACTION: ${{ inputs.action }}
       MCP_IMAGE_REF: ${{ inputs.image_ref }}
-      MCP_INGRESS_IMAGE: ${{ inputs.ingress_image_ref }}
       MCP_PUBLIC_HOST: ${{ inputs.public_host }}
       MCP_REFERENCE_TENANT_ID: ${{ inputs.reference_tenant_id }}
       MCP_DENIED_TENANT_ID: ${{ inputs.denied_tenant_id }}
@@ -68,7 +63,6 @@ jobs:
           : "${OVH_MCP_USER:?OVH_MCP_USER production secret is required}"
           case "$DEPLOY_ACTION" in deploy|rollback) ;; *) exit 2 ;; esac
           [[ "$MCP_PUBLIC_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]
-          [[ "$MCP_INGRESS_IMAGE" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]
           [[ "$MCP_REFERENCE_TENANT_ID" =~ ^[a-z0-9][a-z0-9-]{1,62}$ ]]
           if [ "$DEPLOY_ACTION" = deploy ]; then
             [[ "$MCP_IMAGE_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]
@@ -101,9 +95,8 @@ jobs:
           SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
           SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
-          "${SSH[@]}" "$SSH_TARGET" "umask 077; rm -rf '$REMOTE_TMP'; mkdir -p '$REMOTE_TMP/ingress'"
+          "${SSH[@]}" "$SSH_TARGET" "umask 077; rm -rf '$REMOTE_TMP'; mkdir -p '$REMOTE_TMP'"
           "${SCP[@]}" bridge/research-manager-mcp/compose.ingress.example.yml "$SSH_TARGET:$REMOTE_TMP/compose.ingress.example.yml"
-          "${SCP[@]}" bridge/research-manager-mcp/ingress/Caddyfile "$SSH_TARGET:$REMOTE_TMP/ingress/Caddyfile"
           "${SCP[@]}" scripts/phase2c-ovh-deploy.sh "$SSH_TARGET:$REMOTE_TMP/phase2c-ovh-deploy.sh"
 
       - name: Deploy or roll back on OVH
@@ -115,11 +108,11 @@ jobs:
           SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
           SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           if [ "$DEPLOY_ACTION" = deploy ]; then
-            printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=deploy MCP_IMAGE_REF=%q MCP_INGRESS_IMAGE=%q MCP_PUBLIC_HOST=%q MCP_RELEASE_SOURCE_DIR=%q bash %q' \
-              "$MCP_IMAGE_REF" "$MCP_INGRESS_IMAGE" "$MCP_PUBLIC_HOST" "$REMOTE_TMP" "$REMOTE_TMP/phase2c-ovh-deploy.sh"
+            printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=deploy MCP_IMAGE_REF=%q MCP_PUBLIC_HOST=%q MCP_RELEASE_SOURCE_DIR=%q bash %q' \
+              "$MCP_IMAGE_REF" "$MCP_PUBLIC_HOST" "$REMOTE_TMP" "$REMOTE_TMP/phase2c-ovh-deploy.sh"
           else
-            printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=rollback MCP_INGRESS_IMAGE=%q MCP_PUBLIC_HOST=%q bash %q' \
-              "$MCP_INGRESS_IMAGE" "$MCP_PUBLIC_HOST" '/opt/site-control-mcp/phase2c-ovh-deploy.sh'
+            printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=rollback MCP_PUBLIC_HOST=%q bash %q' \
+              "$MCP_PUBLIC_HOST" '/opt/site-control-mcp/phase2c-ovh-deploy.sh'
           fi
           "${SSH[@]}" "$SSH_TARGET" "$REMOTE_CMD"
           if [ "$DEPLOY_ACTION" = deploy ]; then
@@ -162,8 +155,8 @@ jobs:
           set -euo pipefail
           SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
           SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
-          printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=rollback MCP_INGRESS_IMAGE=%q MCP_PUBLIC_HOST=%q bash %q' \
-            "$MCP_INGRESS_IMAGE" "$MCP_PUBLIC_HOST" '/opt/site-control-mcp/phase2c-ovh-deploy.sh'
+          printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=rollback MCP_PUBLIC_HOST=%q bash %q' \
+            "$MCP_PUBLIC_HOST" '/opt/site-control-mcp/phase2c-ovh-deploy.sh'
           "${SSH[@]}" "$SSH_TARGET" "$REMOTE_CMD"
 
       - name: Upload sanitized acceptance evidence

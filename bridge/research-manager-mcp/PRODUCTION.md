@@ -41,26 +41,40 @@ See `OPERATIONS.md` for retention, credential rotation and revocation procedures
 
 ## Reverse proxy boundary
 
-The direct production Compose example publishes the container only on host loopback (`127.0.0.1`). For the public managed topology prefer `compose.ingress.example.yml`, which keeps the application container on the internal Docker network and exposes only the HTTPS ingress.
+The direct production Compose example publishes the container only on host loopback (`127.0.0.1`) and remains useful for isolated/local operation.
+
+For the Kairoseth managed OVH topology use `compose.ingress.example.yml`. Despite the historical filename, this file now deploys **only the MCP runtime** and joins it to the external Docker network `kairoseth-public-edge` with stable alias `kairoseth-mcp-runtime`. It does not publish host ports and does not deploy its own Caddy container.
+
+Public TLS and routing are owned centrally by the Kairoseth shared edge. The public contract for `mcp.kairoseth.com` exposes only:
+
+```text
+GET /healthz
+*   /mcp
+*   /mcp/*
+```
+
+All other paths return `404` at the shared edge.
 
 Configure `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGIN_HOSTS` for the public bridge hostname before exposing the service.
 
 `GET /healthz` is intentionally unauthenticated and contains no Manager credential. It reports whether persistent telemetry is active and is used by the container healthcheck and deployment smoke tests.
 
+The external network must exist before deploying:
+
+```bash
+docker network inspect kairoseth-public-edge >/dev/null
+```
+
 ## Deployment and rollback
 
 Use immutable image tags or digests. `compose.production.example.yml` and `compose.ingress.example.yml` require explicit accepted image inputs so a deployment is reproducible.
 
-Deploy:
+The Phase 2C OVH deployment workflow and `scripts/phase2c-ovh-deploy.sh` preserve immutable-digest deployment, health validation and automatic rollback. They no longer create or manage a service-specific public ingress; the Kairoseth shared edge must already be running.
+
+For direct/local deployment:
 
 ```bash
-MCP_IMAGE=<registry/image> MCP_IMAGE_TAG=<new-tag> docker compose -f compose.production.example.yml up -d
+MCP_IMAGE_REF=<registry/image@sha256:digest> docker compose -f compose.production.example.yml up -d
 ```
 
-Rollback is the same operation with the previously accepted immutable tag:
-
-```bash
-MCP_IMAGE=<registry/image> MCP_IMAGE_TAG=<previous-tag> docker compose -f compose.production.example.yml up -d
-```
-
-Do not rebuild an old tag during rollback. Keep the previous accepted image available until the new deployment has passed health, telemetry and MCP acceptance checks. Preserve the telemetry volume across application image rollback unless the incident procedure explicitly requires otherwise.
+Rollback is the same operation with the previously accepted immutable digest. Do not rebuild an old tag during rollback. Keep the previous accepted image available until the new deployment has passed health, telemetry and MCP acceptance checks. Preserve the telemetry volume across application image rollback unless the incident procedure explicitly requires otherwise.
