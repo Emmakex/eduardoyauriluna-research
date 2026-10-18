@@ -1,0 +1,82 @@
+name: Phase 2C MCP SEO Acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/phase2c-mcp-seo-acceptance.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  seo-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      MCP_PUBLIC_HOST: mcp.kairoseth.com
+      MCP_REFERENCE_TENANT_ID: eduardo-research
+      MCP_ACCEPTANCE_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${MCP_ACCEPTANCE_TOKEN:?MCP_ACCEPTANCE_TOKEN production secret is required}"
+          [[ "$MCP_PUBLIC_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]
+          [[ "$MCP_REFERENCE_TENANT_ID" =~ ^[a-z0-9][a-z0-9-]{1,62}$ ]]
+
+      - name: Wait for public Phase 2C health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 30); do
+            if curl --fail --silent --show-error "https://${MCP_PUBLIC_HOST}/healthz" > /tmp/phase2c-health.json; then
+              jq -e '.ok == true and .phase == "phase2c" and .routing == "shared" and .persistent_telemetry == true' /tmp/phase2c-health.json >/dev/null
+              echo 'public health: OK'
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Run SEO/GEO-only reversible MCP acceptance
+        shell: bash
+        env:
+          MCP_SERVER_URL: https://mcp.kairoseth.com/mcp/eduardo-research
+          MCP_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
+          MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-seo-acceptance
+        run: python3 scripts/phase2c-mcp-seo-acceptance.py
+
+      - name: Verify sanitized SEO/GEO evidence
+        shell: bash
+        env:
+          MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-seo-acceptance
+        run: |
+          set -euo pipefail
+          test -s "$MCP_EVIDENCE_DIR/summary.json"
+          jq -e '.ok == true and .phase == "phase2c" and (.domains | length) == 1' "$MCP_EVIDENCE_DIR/summary.json" >/dev/null
+          jq -e '.domains[0].domain == "SEO/GEO" and (.domains[0].status == "PASS" or .domains[0].status == "SKIP_LEGITIMATE")' "$MCP_EVIDENCE_DIR/summary.json" >/dev/null
+          if grep -REq 'ermt1_|erm1_|Bearer[[:space:]]|PRINCIPAL_PHASE2C_TOKEN|TENANT_EDUARDO' "$MCP_EVIDENCE_DIR"; then
+            echo 'secret-like material detected in acceptance evidence' >&2
+            exit 1
+          fi
+
+      - name: Upload sanitized SEO/GEO evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2c-mcp-seo-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/phase2c-seo-acceptance
+          if-no-files-found: warn
+          retention-days: 30
