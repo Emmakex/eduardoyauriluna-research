@@ -9,12 +9,14 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php'
       - '.github/scripts/test-remote-m5-evidence.php'
+      - '.github/scripts/test-remote-m5-evidence-route-regression.php'
       - '.github/workflows/research-manager-remote-m5-evidence-quality.yml'
   push:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/test-remote-m5-evidence.php'
+      - '.github/scripts/test-remote-m5-evidence-route-regression.php'
       - '.github/workflows/research-manager-remote-m5-evidence-quality.yml'
 
 permissions:
@@ -56,6 +58,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-credentials.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-m5-evidence.php
+          php -l .github/scripts/test-remote-m5-evidence-route-regression.php
       - name: Install clean Research WordPress
         run: |
           rm -rf /tmp/research-manager-remote-m5-evidence
@@ -76,3 +79,7 @@ jobs:
         run: |
           cd /tmp/research-manager-remote-m5-evidence
           wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-m5-evidence.php" --allow-root
+      - name: Verify Evidence plan preflight route regression
+        run: |
+          cd /tmp/research-manager-remote-m5-evidence
+          wp eval-file "$GITHUB_WORKSPACE/.github/scripts/test-remote-m5-evidence-route-regression.php" --allow-root
