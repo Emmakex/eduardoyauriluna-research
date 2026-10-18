@@ -1,8 +1,10 @@
 # Phase 2C — live OVH deployment handoff
 
+> **Status: COMPLETED — 2026-10-18.** The procedure below is retained as the production handoff record. Final acceptance and credential-hygiene evidence is recorded in `docs/61-phase-2c-production-closeout.md`.
+
 ## Purpose
 
-This is the final production handoff for the commercial Research Manager MCP. Repository implementation, container hardening, persistent telemetry, remote acceptance runner, immutable publication and rollback automation are complete. Public HTTPS ingress is now owned by the shared Kairoseth edge on `kairoseth-devops-01`; this MCP stack does not publish host ports 80/443 and does not deploy its own Caddy container.
+This is the final production handoff for the commercial Research Manager MCP. Repository implementation, container hardening, persistent telemetry, remote acceptance runner, immutable publication and rollback automation are complete. Public HTTPS ingress is owned by the shared Kairoseth edge on `kairoseth-devops-01`; this MCP stack does not publish host ports 80/443 and does not deploy its own Caddy container.
 
 Do not place raw Manager credentials, outer MCP bearer tokens, SSH private keys or tenant secret values in Git, issues, workflow inputs, Compose files or acceptance artifacts.
 
@@ -19,7 +21,7 @@ The original Phase 2C release contract remains machine-readable in `deploy/phase
 - Reference tenant: `eduardo-research`
 - Expected MCP catalog: `96` tools
 
-The Caddy digest remains useful provenance and is also the pinned baseline selected for the shared Kairoseth edge. Caddy lifecycle is now owned centrally by `kairoseth-platform`, not by this deployment workflow.
+The Caddy digest remains useful provenance and is also the pinned baseline selected for the shared Kairoseth edge. Caddy lifecycle is owned centrally by `kairoseth-platform`, not by this deployment workflow.
 
 ## 1. Public hostname and DNS
 
@@ -29,25 +31,21 @@ Production hostname:
 mcp.kairoseth.com
 ```
 
-Create an explicit DNS record pointing this hostname to the OVH ingress host. The production workflow defaults `public_host` to this exact hostname, and `MCP_ALLOWED_HOSTS` in the server-side environment file must match it.
+The production hostname is live through the shared OVH/Kairoseth edge. `MCP_ALLOWED_HOSTS` matches the hostname.
 
 The shared Kairoseth edge publishes only `/healthz`, `/mcp`, and `/mcp/*` for this hostname. All other paths return `404`.
 
 ## 2. GitHub `production` environment secrets
 
-Provision these values in the repository's protected `production` environment. Do not pass them as workflow inputs.
+Deployment SSH secrets remain in the protected `production` environment as required by the deploy workflow.
 
-- `OVH_MCP_HOST` — SSH host/IP used only by the deployment runner.
-- `OVH_MCP_USER` — restricted deployment user.
-- `OVH_MCP_SSH_KEY` — private key for that deployment user.
-- `OVH_MCP_SSH_KNOWN_HOSTS` — pinned known-host entry used with `StrictHostKeyChecking=yes`.
-- `MCP_ACCEPTANCE_TOKEN` — temporary outer principal bearer used by the remote acceptance runner.
+The temporary `MCP_ACCEPTANCE_TOKEN` used by Phase 2C acceptance has been removed after successful credential cutover and revocation proof. It must not be recreated as a normal production credential.
 
-The workflow never disables SSH host verification and never writes these values into acceptance evidence.
+The workflow never disables SSH host verification and never writes secret values into acceptance evidence.
 
 ## 3. Server-side `/opt/site-control-mcp/.env.production`
 
-Create this file directly on the OVH host with mode `0600`. It must remain outside Git. The deploy script fails closed if group/world permissions exist.
+The file exists directly on the OVH host with private permissions and remains outside Git.
 
 Required non-secret posture:
 
@@ -60,84 +58,104 @@ MCP_TENANTS_JSON=<tenant registry containing secret references, never secret val
 MCP_PRINCIPALS_JSON=<principal registry containing bearer secret references, never bearer values>
 ```
 
-The same environment file also provides the referenced secret variables themselves. For the Eduardo reference tenant, keep Manager read/write/elevated credentials as separate variables and preserve least privilege. The acceptance principal must be explicitly allowed only for the intended tenant(s) and capabilities.
+The same environment file provides the referenced secret variables themselves. The Eduardo reference tenant keeps normal Manager read/write credentials separate and least privilege.
 
-The live shared acceptance additionally requires a real second tenant ID that exists in the registry but is **not** granted to the acceptance principal. This is used only to prove deny-by-default isolation and non-enumeration.
+The temporary Phase 2C isolation tenant and acceptance principal were removed after acceptance. Normal production outer access now uses the dedicated `research-ops` principal.
 
 ## 4. Host prerequisites
 
-Before dispatching production deployment, the OVH host must have:
+The accepted OVH host provides:
 
-- Docker Engine and `docker compose` available to the deployment user;
-- `/opt/site-control-mcp` writable by the deployment path but not broadly writable;
-- outbound access for GHCR image pulls;
-- the external Docker network `kairoseth-public-edge` already created;
-- the shared `kairoseth-edge-caddy` service already owning host ports 80/443;
-- a shared-edge route `mcp.kairoseth.com -> kairoseth-mcp-runtime:8787`;
-- the private `.env.production` described above.
+- Docker Engine and `docker compose`;
+- `/opt/site-control-mcp` deployment directory;
+- outbound access required for GHCR pulls;
+- external Docker network `kairoseth-public-edge`;
+- shared `kairoseth-edge-caddy` owning host ports 80/443;
+- shared-edge route `mcp.kairoseth.com -> kairoseth-mcp-runtime:8787`;
+- private `.env.production`.
 
-GHCR access, when needed, must be configured on the host itself. Registry credentials must never be embedded in Compose or workflow inputs.
+The MCP runtime joins `kairoseth-public-edge` with stable alias `kairoseth-mcp-runtime` and does not expose a host port.
 
-The MCP runtime joins `kairoseth-public-edge` with stable alias `kairoseth-mcp-runtime`. It does not expose any host port.
+## 5. Deployment contract
 
-## 5. Dispatch contract
+The accepted deployment used the exact immutable MCP image:
 
-Run the `Phase 2C OVH Deploy` workflow with:
+`ghcr.io/emmakex/site-control-mcp@sha256:e55f801dd6ee0c41a38c66e164e7206738f235dd2632cb15f5c24f05bf241144`
 
-- `action`: `deploy`
-- `image_ref`: `ghcr.io/emmakex/site-control-mcp@sha256:e55f801dd6ee0c41a38c66e164e7206738f235dd2632cb15f5c24f05bf241144`
-- `public_host`: `mcp.kairoseth.com`
-- `reference_tenant_id`: `eduardo-research`
-- `denied_tenant_id`: the real second tenant not granted to the acceptance principal
-
-There is no longer an `ingress_image_ref` workflow input. Public Caddy is versioned and deployed by the shared Kairoseth edge infrastructure.
+Reference tenant: `eduardo-research`.
 
 The workflow stages only the non-secret MCP deployment contract. The host keeps `.env.production` and all referenced secrets server-side.
 
-## 6. Automatic production gates
+## 6. Automatic production gates — accepted
 
-A successful deploy must pass all of these before it is accepted:
+Production acceptance proved:
 
 1. immutable MCP digest validation;
-2. existence of the shared `kairoseth-public-edge` Docker network;
+2. shared `kairoseth-public-edge` Docker network;
 3. server-side production posture and private `.env.production` permissions;
-4. MCP container health on the OVH host;
-5. public HTTPS `/healthz` through the shared edge with Phase 2C, shared routing and persistent telemetry;
+4. MCP container health on OVH;
+5. public HTTPS `/healthz` with Phase 2C, shared routing and persistent telemetry;
 6. outer authentication requirement;
 7. MCP protocol handshake;
 8. exact bounded catalog `96/96` plus critical A1–A7 tools;
 9. safe Eduardo reference-tenant reads through the commercial MCP layer;
 10. anonymous tenant non-enumeration;
-11. authenticated denial for a real second tenant, indistinguishable from an unknown tenant;
-12. no configured outer bearer or Manager credential pattern in emitted acceptance evidence.
+11. authenticated denial for the temporary second tenant, indistinguishable from an unknown tenant;
+12. sanitized acceptance evidence without bearer/Manager secret material.
 
-If public health or remote acceptance fails, the workflow invokes the recorded previous MCP digest and then fails the deployment run. A failed acceptance must not be re-labelled as a successful deploy.
+Primary read/isolation evidence:
 
-## 7. Reversible write acceptance
+- workflow run `39151784425`;
+- artifact `phase2c-ovh-acceptance-39151784425`;
+- artifact ID `12145835766`;
+- ZIP SHA-256 `d7d61f8afc694d2ecfeda8d6dfd6d57711171ccb0e17678afe069031972b0b33`.
 
-After the live read/isolation gate passes, run representative reversible writes **through the deployed MCP**, not directly against Research Manager. Issue #201 is already the accepted Manager backend baseline and must not be repeated as Manager-only tests.
+## 7. Reversible write acceptance — accepted
 
-For each representative mutation:
+Representative and per-domain reversible writes were executed through the deployed MCP rather than repeating the accepted Manager-only baseline from issue #201.
 
-1. inspect/read baseline through MCP;
-2. create the bounded plan;
-3. apply the exact stored plan with explicit confirmation;
-4. verify stored/rendered state as required by the domain;
-5. rollback the exact operation;
-6. verify baseline restoration;
-7. retain sanitized operation/request correlation evidence only.
+Accepted production domains:
 
-SEO/GEO mutation remains conditional: do not manufacture a production defect merely to exercise remediation.
+- Insights — PASS;
+- Research Objects — PASS;
+- Translations — PASS;
+- Evidence — PASS;
+- Media — PASS;
+- Navigation — PASS with exact baseline restoration;
+- Design — PASS;
+- SEO/GEO — `SKIP_LEGITIMATE`, because production exposed no naturally auto-remediable finding and no defect was fabricated for acceptance.
 
-## 8. Credential revocation closeout
+Navigation proof retained exact baseline restoration:
 
-When remote read/isolation and reversible write acceptance are complete:
+- plan `erm-nav-plan-b1b4b2dfba8f6b3d75-03f95ff7`;
+- operation `erm-nav-op-f00674dbd54643338b408794eef7a8df`;
+- baseline and final revision `fcec9b6e5c65894525e368c699730b6b14407b26e97039a0069dfd3e090e14ff`;
+- `baseline_restored=true`.
 
-1. revoke the temporary outer `MCP_ACCEPTANCE_TOKEN` principal secret;
-2. revoke any temporary Manager acceptance credentials created for the live gate;
-3. recreate/restart the service because the current environment secret resolver is startup-resolved;
-4. prove the old credentials are rejected;
-5. record the sanitized revocation result in issue #245;
-6. keep normal production credentials separate and least-privilege.
+SEO/GEO conditional gate:
 
-Only after these steps should the remaining Phase 2C production boxes be checked and issue #245 be closed.
+- workflow run `39158535685`, attempt 2;
+- job `117767394769`;
+- artifact ID `12147901823`;
+- result `SKIP_LEGITIMATE`.
+
+## 8. Credential revocation closeout — accepted
+
+The closeout procedure completed successfully:
+
+1. normal production Manager READ and WRITE credentials were validated before cutover;
+2. temporary outer `phase2c-acceptance` was replaced by `research-ops`;
+3. the startup-resolved runtime was recreated using the accepted immutable image;
+4. old outer bearer was rejected with HTTP `401`;
+5. old Manager READ and WRITE credentials were revoked and rejected with HTTP `401`;
+6. `research-ops` continued to initialize `eduardo-research` with HTTP `200`;
+7. temporary `phase2c-isolation` tenant was removed and the removed tenant failed closed with HTTP `403`;
+8. acceptance/isolation secret references were removed;
+9. secret-bearing closeout backups were removed;
+10. GitHub `production` `MCP_ACCEPTANCE_TOKEN` was deleted; no repository-level copy remained.
+
+## 9. Final status
+
+Phase 2C is complete. Normal production access is now separated from temporary acceptance credentials, the immutable runtime remains healthy, and all acceptance-only credentials/configuration have been retired.
+
+Authoritative final record: `docs/61-phase-2c-production-closeout.md`.
