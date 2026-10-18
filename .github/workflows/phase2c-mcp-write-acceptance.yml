@@ -1,0 +1,147 @@
+name: Phase 2C MCP Write Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_host:
+        description: Public HTTPS MCP hostname
+        required: true
+        default: mcp.kairoseth.com
+        type: string
+      reference_tenant_id:
+        description: Reference tenant for production write acceptance
+        required: true
+        default: eduardo-research
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+      OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+      MCP_ACCEPTANCE_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
+      MCP_PUBLIC_HOST: ${{ inputs.public_host }}
+      MCP_REFERENCE_TENANT_ID: ${{ inputs.reference_tenant_id }}
+      MCP_IMAGE_REF: ghcr.io/emmakex/site-control-mcp@sha256:e55f801dd6ee0c41a38c66e164e7206738f235dd2632cb15f5c24f05bf241144
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?OVH_MCP_HOST production secret is required}"
+          : "${OVH_MCP_USER:?OVH_MCP_USER production secret is required}"
+          : "${MCP_ACCEPTANCE_TOKEN:?MCP_ACCEPTANCE_TOKEN production secret is required}"
+          [[ "$MCP_PUBLIC_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]
+          [[ "$MCP_REFERENCE_TENANT_ID" =~ ^[a-z0-9][a-z0-9-]{1,62}$ ]]
+          [[ "$MCP_IMAGE_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]
+
+      - name: Configure strict SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?OVH_MCP_SSH_KEY production secret is required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?OVH_MCP_SSH_KNOWN_HOSTS production secret is required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Enable bounded acceptance capabilities and recreate runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          REMOTE_SCRIPT="/tmp/phase2c-enable-write-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.py"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+
+          "${SCP[@]}" scripts/phase2c-enable-write-acceptance.py "$SSH_TARGET:$REMOTE_SCRIPT"
+          printf -v ENABLE_CMD 'python3 %q --env-file %q --tenant %q --principal %q' \
+            "$REMOTE_SCRIPT" '/opt/site-control-mcp/.env.production' "$MCP_REFERENCE_TENANT_ID" 'phase2c-acceptance'
+          "${SSH[@]}" "$SSH_TARGET" "$ENABLE_CMD"
+
+          printf -v RECREATE_CMD 'cd %q && MCP_IMAGE_REF=%q docker compose --project-directory %q -f %q up -d --force-recreate research-manager-mcp' \
+            '/opt/site-control-mcp' "$MCP_IMAGE_REF" '/opt/site-control-mcp' 'compose.ingress.yml'
+          "${SSH[@]}" "$SSH_TARGET" "$RECREATE_CMD"
+
+          "${SSH[@]}" "$SSH_TARGET" '
+            set -e
+            for _ in $(seq 1 45); do
+              status=$(docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" site-control-mcp-research-manager-mcp-1 2>/dev/null || true)
+              echo "runtime: $status"
+              [ "$status" = healthy ] && exit 0
+              sleep 2
+            done
+            docker logs --tail 80 site-control-mcp-research-manager-mcp-1 >&2 || true
+            exit 1
+          '
+
+      - name: Wait for public Phase 2C health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 30); do
+            if curl --fail --silent --show-error "https://${MCP_PUBLIC_HOST}/healthz" > /tmp/phase2c-health.json; then
+              jq -e '.ok == true and .phase == "phase2c" and .routing == "shared" and .persistent_telemetry == true' /tmp/phase2c-health.json >/dev/null
+              echo 'public health: OK'
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Run remaining reversible MCP write acceptance
+        shell: bash
+        env:
+          MCP_SERVER_URL: https://${{ inputs.public_host }}/mcp/${{ inputs.reference_tenant_id }}
+          MCP_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
+          MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-write-acceptance
+        run: python3 scripts/phase2c-mcp-write-acceptance.py
+
+      - name: Verify sanitized evidence
+        shell: bash
+        env:
+          MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-write-acceptance
+        run: |
+          set -euo pipefail
+          test -s "$MCP_EVIDENCE_DIR/summary.json"
+          jq -e '.ok == true and .phase == "phase2c" and (.domains | length) >= 6' "$MCP_EVIDENCE_DIR/summary.json" >/dev/null
+          if grep -REq 'ermt1_|erm1_|Bearer[[:space:]]|PRINCIPAL_PHASE2C_TOKEN|TENANT_EDUARDO' "$MCP_EVIDENCE_DIR"; then
+            echo 'secret-like material detected in acceptance evidence' >&2
+            exit 1
+          fi
+
+      - name: Upload sanitized write acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2c-mcp-write-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/phase2c-write-acceptance
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Clean remote acceptance helper
+        if: always()
+        shell: bash
+        run: |
+          SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          REMOTE_SCRIPT="/tmp/phase2c-enable-write-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.py"
+          if [ -f "$HOME/.ssh/id_ed25519" ]; then
+            ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              "$SSH_TARGET" "rm -f '$REMOTE_SCRIPT'" || true
+          fi
