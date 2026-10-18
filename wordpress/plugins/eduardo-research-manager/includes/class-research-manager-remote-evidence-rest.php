@@ -5,6 +5,8 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Remote_Evidence_REST {
+    private const GROUP_ROUTE = '(?P<group>profile|affiliations|identifiers|research_questions|methods|experience|education|awards|contact)';
+
     private Eduardo_Research_Manager_Remote_REST $auth;
     private Eduardo_Research_Manager_Remote_Evidence_Operations $operations;
 
@@ -34,12 +36,12 @@ final class Eduardo_Research_Manager_Remote_Evidence_REST {
             'callback'=>array($this, 'identity'),
             'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'evidence.read'),
         ));
-        register_rest_route($namespace, '/research-evidence/(?P<group>[a-z_]+)', array(
+        register_rest_route($namespace, '/research-evidence/' . self::GROUP_ROUTE, array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'records'),
             'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'evidence.read'),
         ));
-        register_rest_route($namespace, '/research-evidence/(?P<group>[a-z_]+)/(?P<record_id>[A-Za-z0-9._:-]+)', array(
+        register_rest_route($namespace, '/research-evidence/' . self::GROUP_ROUTE . '/(?P<record_id>[A-Za-z0-9._:-]+)', array(
             'methods'=>WP_REST_Server::READABLE,
             'callback'=>array($this, 'inspect_record'),
             'permission_callback'=>fn(WP_REST_Request $request) => $this->permission($request, 'evidence.read'),
