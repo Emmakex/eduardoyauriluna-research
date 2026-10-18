@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${MCP_INGRESS_IMAGE:?set MCP_INGRESS_IMAGE to an immutable ingress digest reference}"
 : "${MCP_PUBLIC_HOST:?set MCP_PUBLIC_HOST to the public MCP hostname}"
 
 ACTION="${MCP_DEPLOY_ACTION:-deploy}"
@@ -11,6 +10,7 @@ ENV_FILE="$DEPLOY_DIR/.env.production"
 COMPOSE_FILE="$DEPLOY_DIR/compose.ingress.yml"
 CURRENT_REF_FILE="$DEPLOY_DIR/.current-image-ref"
 PREVIOUS_REF_FILE="$DEPLOY_DIR/.previous-image-ref"
+PUBLIC_EDGE_NETWORK="${KAIROSETH_PUBLIC_EDGE_NETWORK:-kairoseth-public-edge}"
 
 case "$ACTION" in
   deploy|rollback) ;;
@@ -21,10 +21,6 @@ if ! [[ "$MCP_PUBLIC_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]; then
   echo 'MCP_PUBLIC_HOST is not a valid bounded hostname' >&2
   exit 2
 fi
-if ! [[ "$MCP_INGRESS_IMAGE" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]; then
-  echo 'MCP_INGRESS_IMAGE must be an immutable digest reference' >&2
-  exit 2
-fi
 if [ "$ACTION" = 'deploy' ]; then
   : "${MCP_IMAGE_REF:?set MCP_IMAGE_REF to the immutable MCP digest reference}"
   if ! [[ "$MCP_IMAGE_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]; then
@@ -33,19 +29,22 @@ if [ "$ACTION" = 'deploy' ]; then
   fi
 fi
 
-mkdir -p "$DEPLOY_DIR/ingress"
+mkdir -p "$DEPLOY_DIR"
 
 if [ "$ACTION" = 'deploy' ]; then
   : "${SOURCE_DIR:?set MCP_RELEASE_SOURCE_DIR for deploy}"
   test -f "$SOURCE_DIR/compose.ingress.example.yml"
-  test -f "$SOURCE_DIR/ingress/Caddyfile"
   install -m 0644 "$SOURCE_DIR/compose.ingress.example.yml" "$COMPOSE_FILE"
-  install -m 0644 "$SOURCE_DIR/ingress/Caddyfile" "$DEPLOY_DIR/ingress/Caddyfile"
 fi
 
 test -f "$COMPOSE_FILE"
-test -f "$DEPLOY_DIR/ingress/Caddyfile"
 test -f "$ENV_FILE" || { echo "$ENV_FILE must be pre-provisioned server-side" >&2; exit 1; }
+
+# The public ingress is owned by the shared Kairoseth edge, not by this stack.
+docker network inspect "$PUBLIC_EDGE_NETWORK" >/dev/null 2>&1 || {
+  echo "$PUBLIC_EDGE_NETWORK must exist before deploying the MCP runtime" >&2
+  exit 1
+}
 
 # Production secret/config file must not be readable by group or world.
 if [ -n "$(find "$ENV_FILE" -maxdepth 0 -perm /077 -print -quit)" ]; then
@@ -66,21 +65,18 @@ docker compose version >/dev/null
 
 compose() {
   MCP_IMAGE_REF="$1" \
-  MCP_INGRESS_IMAGE="$MCP_INGRESS_IMAGE" \
   MCP_PUBLIC_HOST="$MCP_PUBLIC_HOST" \
   docker compose --project-directory "$DEPLOY_DIR" -f "$COMPOSE_FILE" "${@:2}"
 }
 
 wait_healthy() {
   local image_ref="$1"
-  local cid ingress_cid status ingress_status
+  local cid status
   for _ in $(seq 1 60); do
     cid="$(compose "$image_ref" ps -q research-manager-mcp 2>/dev/null || true)"
-    ingress_cid="$(compose "$image_ref" ps -q ingress 2>/dev/null || true)"
-    if [ -n "$cid" ] && [ -n "$ingress_cid" ]; then
+    if [ -n "$cid" ]; then
       status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || true)"
-      ingress_status="$(docker inspect --format '{{.State.Status}}' "$ingress_cid" 2>/dev/null || true)"
-      if [ "$status" = 'healthy' ] && [ "$ingress_status" = 'running' ]; then
+      if [ "$status" = 'healthy' ] || [ "$status" = 'running' ]; then
         return 0
       fi
     fi
@@ -136,4 +132,4 @@ if [ -n "$current_ref" ] && [ "$current_ref" != "$MCP_IMAGE_REF" ]; then
 fi
 printf '%s\n' "$MCP_IMAGE_REF" > "$CURRENT_REF_FILE"
 chmod 0600 "$CURRENT_REF_FILE"
-echo "deployment healthy: $MCP_IMAGE_REF"
+echo "deployment healthy on shared Kairoseth edge: $MCP_IMAGE_REF"
