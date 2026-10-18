@@ -32,8 +32,8 @@ Phase 2B is complete:
 - [x] exact Apply/Verify/Rollback;
 - [x] least-privilege credential mapping;
 - [x] local tests/CI;
-- [ ] reversible production acceptance;
-- [ ] credential revocation proof.
+- [x] reversible production acceptance;
+- [x] credential revocation proof.
 
 Implementation evidence:
 
@@ -52,7 +52,7 @@ Implementation evidence:
 - [x] relationships and verified Research-Line constraints;
 - [x] exact Apply/Verify/Rollback;
 - [x] local tests/CI;
-- [ ] representative reversible production acceptance.
+- [x] representative reversible production acceptance.
 
 Implementation evidence:
 
@@ -72,7 +72,7 @@ Implementation evidence:
 - [x] evidence/provenance preconditions preserved;
 - [x] identity-sensitive actions remain elevated and separately permissioned;
 - [x] local tests/CI;
-- [ ] reversible production acceptance.
+- [x] reversible production acceptance.
 
 Implementation evidence:
 
@@ -94,7 +94,7 @@ Implementation evidence:
 - [x] stored/rendered Verify;
 - [x] safe Rollback where Manager supports it;
 - [x] local tests/CI;
-- [ ] production acceptance only against a legitimate diagnostic target.
+- [x] production acceptance completed conditionally: `SKIP_LEGITIMATE` because production exposed no naturally auto-remediable target.
 
 Implementation evidence:
 
@@ -112,7 +112,7 @@ Implementation evidence:
 - [x] exact Apply/Verify/Rollback;
 - [x] checksum/provenance preservation;
 - [x] local tests/CI;
-- [ ] reversible production acceptance.
+- [x] reversible production acceptance.
 
 Implementation evidence:
 
@@ -134,7 +134,7 @@ Implementation evidence:
 - [x] rendered Verify;
 - [x] Rollback/exact restoration;
 - [x] local tests/CI;
-- [ ] reversible production acceptance.
+- [x] reversible production acceptance.
 
 Implementation evidence:
 
@@ -156,7 +156,7 @@ Implementation evidence:
 - [x] responsive/accessibility/readiness Verify;
 - [x] Rollback/exact restoration;
 - [x] local tests/CI;
-- [ ] reversible production acceptance.
+- [x] reversible production acceptance.
 
 Implementation evidence:
 
@@ -214,7 +214,7 @@ Implementation evidence:
 
 ### C2 — HTTPS ingress
 
-- [ ] deploy behind HTTPS reverse proxy/ingress in OVH;
+- [x] deployed behind the shared Kairoseth HTTPS edge in OVH at `mcp.kairoseth.com`;
 - [x] private mode authenticated `/mcp` endpoint;
 - [x] shared mode authenticated `/mcp/{tenant-id}` endpoints;
 - [x] no public tenant enumeration;
@@ -228,7 +228,7 @@ Implementation evidence:
 - CI proves private authentication forwarding through TLS and shared routing through the same ingress topology;
 - anonymous existing/nonexistent tenant paths return the same `401`; authenticated ungranted/nonexistent tenant paths return the same `403`;
 - shared `/healthz` exposes routing state but no tenant IDs;
-- live OVH hostname/DNS/public certificate and remote acceptance remain intentionally open.
+- live OVH public acceptance completed on 2026-10-18.
 
 ### C3 — outer authentication
 
@@ -252,7 +252,18 @@ Implementation evidence:
 - [x] read/write/elevated backend credentials scoped per tenant;
 - [x] persistent audit/usage telemetry;
 - [x] secret rotation/revocation procedure;
-- [x] tenant-safe logs and metrics.
+- [x] tenant-safe logs and metrics;
+
+Final production closeout additionally proved:
+
+- normal `research-ops` outer principal active;
+- old acceptance outer bearer rejected with HTTP `401`;
+- old Manager READ and WRITE credentials rejected with HTTP `401`;
+- startup-resolved runtime recreated successfully after credential cutover and isolation cleanup;
+- removed `phase2c-isolation` tenant fails closed with HTTP `403`;
+- `phase2c-acceptance` principal and acceptance/isolation secret references absent;
+- secret-bearing closeout backups removed;
+- GitHub `production` `MCP_ACCEPTANCE_TOKEN` removed.
 
 Implementation evidence:
 
@@ -284,6 +295,8 @@ The same image and adapter contracts may run in customer infrastructure when req
 
 ## Definition of Done
 
-Phase 2C is complete when the normal accepted Research Manager operating surface needed for routine site management is available through typed MCP tools with the correct Plan/Apply/Verify/Rollback or domain-equivalent bounded lifecycle, and every implemented write domain has passed local/CI and appropriate production acceptance without weakening the Research Manager boundary.
+Phase 2C is **complete**. The normal accepted Research Manager operating surface needed for routine site management is available through typed MCP tools with the correct Plan/Apply/Verify/Rollback or domain-equivalent bounded lifecycle, every implemented write domain passed local/CI and appropriate production acceptance without weakening the Research Manager boundary, and production credential revocation/hygiene was proven live.
 
-OVH production readiness is complete when the same product image can be deployed either as shared multi-tenant or private single-tenant, through authenticated HTTPS, with server-side secrets, principal/tenant isolation, persistent audit, and remote acceptance from an approved MCP client.
+OVH production readiness is **complete** for the shared managed reference deployment: the accepted immutable image is running behind authenticated HTTPS with server-side secrets, principal/tenant isolation, persistent audit, normal production credentials and successful remote acceptance.
+
+Authoritative final closeout record: `docs/61-phase-2c-production-closeout.md`.
