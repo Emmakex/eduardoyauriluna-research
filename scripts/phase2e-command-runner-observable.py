@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Dispatch the observable production command runner across accepted Phase 2E actions.
+
+Existing commands still execute in the original Phase 2D runner. The bounded
+Research Software command executes in its dedicated runner. Both retain the same
+sanitized MCP tool-error capture used for production diagnosis.
+"""
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+BASE_RUNNER = HERE / "phase2d-command-runner.py"
+RESEARCH_RUNNER = HERE / "phase2e-research-object-runner.py"
+RESEARCH_ACTION = "research.object.create"
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"unable to load {path.name}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def selected_runner_path() -> Path:
+    if len(sys.argv) < 2 or sys.argv[1].startswith("-"):
+        return BASE_RUNNER
+    path = Path(sys.argv[1])
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # Let the selected runner report normal validation errors.
+        return BASE_RUNNER
+    if isinstance(value, dict) and value.get("action") == RESEARCH_ACTION:
+        return RESEARCH_RUNNER
+    return BASE_RUNNER
+
+
+path = selected_runner_path()
+module = load_module(
+    "phase2e_selected_command_runner" if path == RESEARCH_RUNNER else "phase2d_command_runner",
+    path,
+)
+
+_real_run = subprocess.run
+_real_write_result = module.write_result
+_last_diagnostic: str | None = None
+
+
+def observable_run(*args, **kwargs):
+    global _last_diagnostic
+    completed = _real_run(*args, **kwargs)
+    if completed.returncode != 0 and isinstance(completed.stdout, str) and completed.stdout.strip():
+        stderr = completed.stderr if isinstance(completed.stderr, str) else ""
+        payload = completed.stdout.strip()
+        combined = f"{stderr.rstrip()}\nMCP tool payload: {payload}".strip()
+        token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
+        _last_diagnostic = module.sanitized_message(combined, token)
+        completed = subprocess.CompletedProcess(
+            completed.args,
+            completed.returncode,
+            completed.stdout,
+            combined,
+        )
+    return completed
+
+
+def observable_write_result(result_dir, command_id, result):
+    if result.get("status") == "failed" and _last_diagnostic:
+        result = dict(result)
+        error = result.get("error")
+        if isinstance(error, dict):
+            result["error"] = {**error, "diagnostic": _last_diagnostic}
+    return _real_write_result(result_dir, command_id, result)
+
+
+module.subprocess.run = observable_run
+module.write_result = observable_write_result
+if hasattr(module, "base"):
+    module.base.subprocess.run = observable_run
+raise SystemExit(module.main())
