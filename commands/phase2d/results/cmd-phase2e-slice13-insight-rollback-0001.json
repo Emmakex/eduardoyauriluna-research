@@ -1,0 +1,24 @@
+{
+  "action": "slice13.acceptance.rollback",
+  "command_id": "cmd-phase2e-slice13-insight-rollback-0001",
+  "command_sha256": "e1d130eacc5c0440dcbad15e94bbc9727b03b336c498ec496e4ca611ba8b22ac",
+  "correlation": {
+    "operation_id": "erm-operation-882f69d4e63344bfbda9b80fe79cdea9"
+  },
+  "resource": {
+    "post_id": 107,
+    "target": "temporary-insight-fixture",
+    "temporary": true
+  },
+  "rollback": {
+    "attempted": true,
+    "deleted": false,
+    "restored_baseline": false,
+    "status": "rolled-back",
+    "verified": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
