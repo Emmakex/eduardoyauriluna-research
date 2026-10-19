@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-slice13-baseline-empty-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.research-lines.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 107,
+    "line_ids": []
+  }
+}
