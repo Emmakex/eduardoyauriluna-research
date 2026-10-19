@@ -1,0 +1,20 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-hola-mundo-0001",
+  "correlation": {
+    "operation_id": null,
+    "plan_id": null
+  },
+  "error": {
+    "code": "execution_failed",
+    "message": "The bounded MCP lifecycle did not complete successfully."
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
