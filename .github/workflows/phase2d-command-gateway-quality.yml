@@ -5,6 +5,7 @@ on:
     paths:
       - 'schemas/phase2d-command-v1.schema.json'
       - 'config/phase2d-command-registry.json'
+      - 'config/phase2e-gateway-capabilities.json'
       - 'scripts/phase2d-command-runner.py'
       - 'scripts/phase2d-command-runner-observable.py'
       - 'scripts/phase2d-command-guard.py'
@@ -24,6 +25,7 @@ on:
     paths:
       - 'schemas/phase2d-command-v1.schema.json'
       - 'config/phase2d-command-registry.json'
+      - 'config/phase2e-gateway-capabilities.json'
       - 'scripts/phase2d-command-runner.py'
       - 'scripts/phase2d-command-runner-observable.py'
       - 'scripts/phase2d-command-guard.py'
@@ -79,6 +81,7 @@ jobs:
           for path in [
               Path('schemas/phase2d-command-v1.schema.json'),
               Path('config/phase2d-command-registry.json'),
+              Path('config/phase2e-gateway-capabilities.json'),
               Path('commands/phase2d/examples/hola-mundo.json'),
               Path('commands/phase2d/examples/insight-update.json'),
               Path('commands/phase2d/examples/page-slot-update.json'),
@@ -135,7 +138,12 @@ jobs:
           grep -F 'PAGE_KEY = "contact"' scripts/phase2d-command-runner.py
           grep -F 'PAGE_LANGUAGE = "en"' scripts/phase2d-command-runner.py
           grep -F 'PAGE_SLOT = "eyebrow"' scripts/phase2d-command-runner.py
-          grep -F 'CAPABILITIES = ["site.read", "insights.write", "operations.rollback"]' scripts/phase2d-provision-github-principal.py
+          grep -F 'DEFAULT_MANIFEST_PATH = ' scripts/phase2d-provision-github-principal.py
+          grep -F 'load_capability_manifest' scripts/phase2d-provision-github-principal.py
+          grep -F 'presented_gateway_bearer' scripts/phase2d-provision-github-principal.py
+          grep -F 'live principal has capabilities absent from the canonical manifest' scripts/phase2d-provision-github-principal.py
+          grep -F '"principal": "phase2d-github"' config/phase2e-gateway-capabilities.json
+          grep -F '"media.write"' config/phase2e-gateway-capabilities.json
           grep -F 'PRINCIPAL_ID = "phase2d-github"' scripts/phase2d-provision-github-principal.py
           grep -F 'TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"' scripts/phase2d-provision-github-principal.py
           grep -F 'APPROVED_CAPABILITIES = ["pages.write", "translations.write"]' scripts/phase2e-expand-gateway-capabilities.py
@@ -174,6 +182,7 @@ jobs:
           files=(
             schemas/phase2d-command-v1.schema.json
             config/phase2d-command-registry.json
+            config/phase2e-gateway-capabilities.json
             scripts/phase2d-command-runner.py
             scripts/phase2d-command-runner-observable.py
             scripts/phase2d-command-guard.py

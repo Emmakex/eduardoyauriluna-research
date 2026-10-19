@@ -1,0 +1,106 @@
+name: Phase 2D Gateway Capability Manifest Quality
+
+on:
+  pull_request:
+    paths:
+      - 'config/phase2e-gateway-capabilities.json'
+      - 'ops/phase2e/gateway*capabilit*.json'
+      - 'scripts/phase2d-provision-github-principal.py'
+      - '.github/workflows/phase2d-gateway-capability-manifest-quality.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/phase2e-gateway-capabilities.json'
+      - 'ops/phase2e/gateway*capabilit*.json'
+      - 'scripts/phase2d-provision-github-principal.py'
+      - '.github/workflows/phase2d-gateway-capability-manifest-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile provisioner
+        run: python3 -m py_compile scripts/phase2d-provision-github-principal.py
+
+      - name: Self-test manifest-bound provisioning
+        run: python3 scripts/phase2d-provision-github-principal.py --self-test
+
+      - name: Verify accepted capability evidence is covered exactly
+        run: |
+          python3 - <<'PY'
+          import glob
+          import json
+          from pathlib import Path
+
+          manifest_path = Path('config/phase2e-gateway-capabilities.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          actual = set(manifest['capabilities'])
+          baseline = {'site.read', 'insights.write', 'operations.rollback'}
+          reviewed = set(baseline)
+          evidence_paths = sorted(glob.glob('ops/phase2e/gateway*capabilit*.json'))
+          if not evidence_paths:
+              raise SystemExit('no Phase 2E gateway capability evidence files found')
+          for raw_path in evidence_paths:
+              path = Path(raw_path)
+              data = json.loads(path.read_text(encoding='utf-8'))
+              additions = data.get('add_capabilities', [])
+              if not isinstance(additions, list) or not all(isinstance(item, str) and item for item in additions):
+                  raise SystemExit(f'invalid add_capabilities in {path}')
+              reviewed.update(additions)
+          missing = sorted(reviewed - actual)
+          extra = sorted(actual - reviewed)
+          if missing or extra:
+              raise SystemExit(f'canonical manifest drift: missing={missing}, extra={extra}')
+          print('Canonical capability manifest matches reviewed evidence:', ', '.join(sorted(actual)))
+          PY
+
+      - name: Verify missing manifest fails closed
+        run: |
+          if PHASE2D_CAPABILITY_MANIFEST="$RUNNER_TEMP/does-not-exist.json" \
+            python3 scripts/phase2d-provision-github-principal.py --self-test; then
+            echo 'Provisioner unexpectedly accepted a missing manifest' >&2
+            exit 1
+          fi
+
+      - name: Verify malformed manifest fails closed
+        run: |
+          cat > "$RUNNER_TEMP/bad-manifest.json" <<'JSON'
+          {"version":"1","tenant":"eduardo-research","principal":"phase2d-github","bearer_token_env":"PRINCIPAL_PHASE2D_GITHUB_TOKEN","capabilities":["site.read"]}
+          JSON
+          if PHASE2D_CAPABILITY_MANIFEST="$RUNNER_TEMP/bad-manifest.json" \
+            python3 scripts/phase2d-provision-github-principal.py --self-test; then
+            echo 'Provisioner unexpectedly accepted an incomplete manifest' >&2
+            exit 1
+          fi
+
+      - name: Verify provisioning source has no legacy static capability list
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('scripts/phase2d-provision-github-principal.py').read_text(encoding='utf-8')
+          forbidden = [
+              'CAPABILITIES = [',
+              '"pages.write", "translations.write"',
+          ]
+          hits = [needle for needle in forbidden if needle in source]
+          if hits:
+              raise SystemExit(f'legacy static capability source remains: {hits}')
+          required = [
+              'load_capability_manifest',
+              'live principal has capabilities absent from the canonical manifest',
+              'presented_gateway_bearer',
+              'MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION',
+          ]
+          missing = [needle for needle in required if needle not in source]
+          if missing:
+              raise SystemExit(f'expected hardening contract missing: {missing}')
+          print('Provisioning source-of-truth and generation checks: OK')
+          PY
