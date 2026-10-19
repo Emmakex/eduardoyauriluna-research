@@ -1,0 +1,21 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-navigation-update-0001",
+  "tenant": "eduardo-research",
+  "action": "navigation.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "location": "primary",
+    "items": [
+      "research",
+      "about",
+      "publications",
+      "projects",
+      "software",
+      "datasets",
+      "cv",
+      "insights",
+      "contact"
+    ]
+  }
+}
