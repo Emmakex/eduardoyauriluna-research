@@ -1,16 +1,11 @@
 {
   "version": "1",
   "tenants": {
-    "eduardo-research": {
-      "enabled": true
-    }
+    "eduardo-research": {"enabled": true}
   },
   "actions": {
     "insight.create": {
-      "required_capabilities": [
-        "insights.write",
-        "operations.rollback"
-      ],
+      "required_capabilities": ["insights.write", "operations.rollback"],
       "tools": {
         "capabilities": "research_capabilities",
         "plan": "site_insight_create_plan",
@@ -19,15 +14,10 @@
         "rollback": "site_insight_rollback"
       },
       "verify_rendered": true,
-      "allowed_statuses": [
-        "draft"
-      ]
+      "allowed_statuses": ["draft"]
     },
     "insight.update": {
-      "required_capabilities": [
-        "insights.write",
-        "operations.rollback"
-      ],
+      "required_capabilities": ["insights.write", "operations.rollback"],
       "tools": {
         "capabilities": "research_capabilities",
         "plan": "site_insight_update_plan",
@@ -36,12 +26,20 @@
         "rollback": "site_insight_rollback"
       },
       "verify_rendered": true,
-      "allowed_change_fields": [
-        "title",
-        "excerpt",
-        "content",
-        "language",
-        "insight_type"
+      "allowed_change_fields": ["title", "excerpt", "content", "language", "insight_type"]
+    },
+    "page.slot.update": {
+      "required_capabilities": ["pages.write", "operations.rollback"],
+      "tools": {
+        "capabilities": "research_capabilities",
+        "plan": "site_page_slots_plan",
+        "apply": "site_page_slots_apply",
+        "verify": "site_page_slots_verify",
+        "rollback": "site_page_slots_rollback"
+      },
+      "verify_rendered": true,
+      "allowed_targets": [
+        {"key": "contact", "language": "en", "slots": ["eyebrow"]}
       ]
     }
   }

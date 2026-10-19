@@ -13,72 +13,58 @@
     "payload"
   ],
   "properties": {
-    "version": {
-      "const": "1"
-    },
-    "command_id": {
-      "type": "string",
-      "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"
-    },
-    "tenant": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"
-    },
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"},
     "action": {
       "enum": [
         "insight.create",
-        "insight.update"
+        "insight.update",
+        "page.slot.update"
       ]
     },
-    "requested_by": {
-      "const": "chatgpt"
-    },
-    "payload": {
-      "type": "object"
-    }
+    "requested_by": {"const": "chatgpt"},
+    "payload": {"type": "object"}
   },
   "oneOf": [
     {
       "properties": {
-        "action": {
-          "const": "insight.create"
-        },
+        "action": {"const": "insight.create"},
         "payload": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "title",
-            "language",
-            "status",
-            "content"
-          ],
+          "required": ["title", "language", "status", "content"],
           "properties": {
-            "title": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            },
-            "language": {
-              "enum": [
-                "es",
-                "en"
-              ]
-            },
-            "status": {
-              "const": "draft"
-            },
-            "content": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 50000
-            },
-            "excerpt": {
-              "type": "string",
-              "maxLength": 1000
-            },
-            "insight_type": {
-              "type": "string",
-              "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "language": {"enum": ["es", "en"]},
+            "status": {"const": "draft"},
+            "content": {"type": "string", "minLength": 1, "maxLength": 50000},
+            "excerpt": {"type": "string", "maxLength": 1000},
+            "insight_type": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"}
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {"const": "insight.update"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["post_id", "changes"],
+          "properties": {
+            "post_id": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+            "changes": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "properties": {
+                "title": {"type": "string", "minLength": 1, "maxLength": 200},
+                "excerpt": {"type": "string", "maxLength": 1000},
+                "content": {"type": "string", "minLength": 1, "maxLength": 50000},
+                "language": {"enum": ["es", "en"]},
+                "insight_type": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"}
+              }
             }
           }
         }
@@ -86,52 +72,20 @@
     },
     {
       "properties": {
-        "action": {
-          "const": "insight.update"
-        },
+        "action": {"const": "page.slot.update"},
         "payload": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "post_id",
-            "changes"
-          ],
+          "required": ["key", "language", "slot", "value"],
           "properties": {
-            "post_id": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "changes": {
-              "type": "object",
-              "additionalProperties": false,
-              "minProperties": 1,
-              "properties": {
-                "title": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200
-                },
-                "excerpt": {
-                  "type": "string",
-                  "maxLength": 1000
-                },
-                "content": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 50000
-                },
-                "language": {
-                  "enum": [
-                    "es",
-                    "en"
-                  ]
-                },
-                "insight_type": {
-                  "type": "string",
-                  "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
-                }
-              }
+            "key": {"const": "contact"},
+            "language": {"const": "en"},
+            "slot": {"const": "eyebrow"},
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^<>]+$"
             }
           }
         }
