@@ -2,9 +2,10 @@
 """Dispatch the proven Phase 2D replay/isolation guard across Phase 2E actions.
 
 Existing actions keep the original validator unchanged. Bounded Page, Navigation,
-Media metadata, Design, Research Object and Research Line actions use dedicated
-strict validators, then reuse the same fingerprinting, replay semantics, result
-stamping and tenant-isolation probe. Binary Media ingest stays outside Git persistence.
+Media metadata, Design, Insight Research-Line relation, Research Object and Research
+Line actions use dedicated strict validators, then reuse the same fingerprinting,
+replay semantics, result stamping and tenant-isolation probe. Binary Media ingest
+stays outside Git persistence.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ PAGE_TEXT_SLOT_RUNNER = HERE / "phase2e-page-text-slot-runner.py"
 NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
 MEDIA_METADATA_RUNNER = HERE / "phase2e-media-metadata-runner.py"
 DESIGN_RUNNER = HERE / "phase2e-design-runner.py"
+INSIGHT_RESEARCH_LINES_RUNNER = HERE / "phase2e-insight-research-lines-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
@@ -37,6 +39,7 @@ page_text_slot = load_module("phase2e_page_text_slot_guard", PAGE_TEXT_SLOT_RUNN
 navigation = load_module("phase2e_navigation_guard", NAVIGATION_RUNNER)
 media_metadata = load_module("phase2e_media_metadata_guard", MEDIA_METADATA_RUNNER)
 design = load_module("phase2e_design_guard", DESIGN_RUNNER)
+insight_research_lines = load_module("phase2e_insight_research_lines_guard", INSIGHT_RESEARCH_LINES_RUNNER)
 research_create = load_module("phase2e_research_object_create_guard", RESEARCH_CREATE_RUNNER)
 research_update = load_module("phase2e_research_object_update_guard", RESEARCH_UPDATE_RUNNER)
 research_line_create = load_module("phase2e_research_line_create_guard", RESEARCH_LINE_CREATE_RUNNER)
@@ -49,6 +52,7 @@ PHASE2E_VALIDATORS = {
     media_metadata.ACTION: media_metadata,
     design.PRESET_ACTION: design,
     design.VARIANT_ACTION: design,
+    insight_research_lines.ACTION: insight_research_lines,
     research_create.ACTION: research_create,
     research_update.ACTION: research_update,
     research_line_create.ACTION: research_line_create,
