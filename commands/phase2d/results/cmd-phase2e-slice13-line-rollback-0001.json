@@ -1,0 +1,24 @@
+{
+  "action": "slice13.acceptance.rollback",
+  "command_id": "cmd-phase2e-slice13-line-rollback-0001",
+  "command_sha256": "0adb68feafa6f743c2c6be8b0f8489b4342a8ca8f389cec198049d930e45d276",
+  "correlation": {
+    "operation_id": "erm-line-op-8916fbfc086c43a79ce2528f5fbef192"
+  },
+  "resource": {
+    "post_id": 106,
+    "target": "temporary-research-line-fixture",
+    "temporary": true
+  },
+  "rollback": {
+    "attempted": true,
+    "deleted": false,
+    "restored_baseline": false,
+    "status": "rolled-back",
+    "verified": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
