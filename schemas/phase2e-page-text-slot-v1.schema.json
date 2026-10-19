@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kairoseth.com/schemas/phase2e-page-text-slot-v1.schema.json",
+  "title": "Kairoseth Phase 2E Page Text Slot Update v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "command_id", "tenant", "action", "requested_by", "payload"],
+  "properties": {
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"const": "eduardo-research"},
+    "action": {"const": "page.slot.update"},
+    "requested_by": {"const": "chatgpt"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "language", "slot", "value"],
+      "properties": {
+        "key": {
+          "enum": ["about", "research", "publications", "projects", "software", "datasets", "cv", "insights", "contact", "privacy-policy", "legal-notice"]
+        },
+        "language": {"enum": ["en", "es"]},
+        "slot": {"enum": ["eyebrow", "lead"]},
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[^<>\\r\\n]+$"
+        }
+      }
+    }
+  }
+}
