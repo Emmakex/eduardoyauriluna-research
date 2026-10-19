@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   harden:
-    if: github.actor == 'Emmakex'
+    if: github.actor == 'Emmakex' || github.actor == 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
