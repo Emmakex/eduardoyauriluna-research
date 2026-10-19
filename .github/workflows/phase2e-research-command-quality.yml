@@ -31,12 +31,13 @@ jobs:
           print('RESEARCH_COMMAND_QUALITY_REQUEST_OK')
           PY
 
-      - name: Compile dispatchers and Research runner
+      - name: Compile dispatchers and Research runners
         shell: bash
         run: |
           set -euo pipefail
           python3 -m py_compile \
             scripts/phase2e-research-object-runner.py \
+            scripts/phase2e-research-object-update-runner.py \
             scripts/phase2e-command-guard.py \
             scripts/phase2e-command-runner-observable.py
 
@@ -46,11 +47,17 @@ jobs:
           set -euo pipefail
           python3 scripts/phase2d-command-runner.py --self-test
 
-      - name: Verify bounded Research runner
+      - name: Verify bounded Research create runner
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/phase2e-research-object-runner.py --self-test
+
+      - name: Verify bounded Research update runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-research-object-update-runner.py --self-test
 
       - name: Verify dispatched replay guard
         shell: bash
