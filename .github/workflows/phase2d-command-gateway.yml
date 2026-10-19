@@ -47,11 +47,18 @@ jobs:
             command_path='${{ inputs.command_path }}'
             files=("$command_path")
           else
-            mapfile -t files < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            mapfile -t files < <(git diff-tree --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            mapfile -t deleted < <(git diff-tree --no-commit-id --name-only --diff-filter=D -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            if [[ ${#files[@]} -eq 0 && ${#deleted[@]} -gt 0 ]]; then
+              echo "mode=cleanup" >> "$GITHUB_OUTPUT"
+              echo "cleanup_count=${#deleted[@]}" >> "$GITHUB_OUTPUT"
+              echo "Cleanup-only pending command deletion detected; no command will execute"
+              exit 0
+            fi
           fi
 
           if [[ ${#files[@]} -ne 1 ]]; then
-            echo "Expected exactly one Phase 2D pending command; found ${#files[@]}" >&2
+            echo "Expected exactly one added/modified Phase 2D pending command; found ${#files[@]}" >&2
             exit 1
           fi
 
@@ -74,11 +81,13 @@ jobs:
           print(command_id)
           PY
           )"
+          echo "mode=execute" >> "$GITHUB_OUTPUT"
           echo "path=$command_path" >> "$GITHUB_OUTPUT"
           echo "id=$command_id" >> "$GITHUB_OUTPUT"
 
       - name: Guard command identity and replay
         id: guard
+        if: ${{ steps.command.outputs.mode == 'execute' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -88,6 +97,7 @@ jobs:
 
       - name: Verify dedicated principal tenant isolation
         id: isolation
+        if: ${{ steps.command.outputs.mode == 'execute' }}
         shell: bash
         env:
           PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
@@ -98,7 +108,7 @@ jobs:
 
       - name: Execute bounded MCP lifecycle
         id: execute
-        if: ${{ steps.guard.outputs.decision == 'new' }}
+        if: ${{ steps.command.outputs.mode == 'execute' && steps.guard.outputs.decision == 'new' }}
         shell: bash
         env:
           PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
@@ -113,7 +123,7 @@ jobs:
 
       - name: Fingerprint sanitized execution result
         id: stamp
-        if: ${{ always() && steps.guard.outcome == 'success' && steps.guard.outputs.decision == 'new' && steps.execute.outcome == 'success' }}
+        if: ${{ always() && steps.command.outputs.mode == 'execute' && steps.guard.outcome == 'success' && steps.guard.outputs.decision == 'new' && steps.execute.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -122,7 +132,7 @@ jobs:
             --result-dir commands/phase2d/results
 
       - name: Upload sanitized execution result
-        if: ${{ always() && steps.guard.outcome == 'success' }}
+        if: ${{ always() && steps.command.outputs.mode == 'execute' && steps.guard.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: phase2d-command-${{ steps.command.outputs.id }}
@@ -131,7 +141,7 @@ jobs:
           retention-days: 30
 
       - name: Persist sanitized result for ChatGPT readback
-        if: ${{ always() && steps.guard.outcome == 'success' }}
+        if: ${{ always() && steps.command.outputs.mode == 'execute' && steps.guard.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -162,6 +172,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          mode='${{ steps.command.outputs.mode }}'
+          if [[ "$mode" == 'cleanup' ]]; then
+            [[ '${{ steps.guard.outcome }}' == 'skipped' ]]
+            [[ '${{ steps.isolation.outcome }}' == 'skipped' ]]
+            [[ '${{ steps.execute.outcome }}' == 'skipped' ]]
+            echo 'Cleanup-only pending command deletion accepted without MCP mutation'
+            exit 0
+          fi
+          if [[ "$mode" != 'execute' ]]; then
+            echo "Unsupported command resolution mode: $mode" >&2
+            exit 1
+          fi
 
           if [[ '${{ steps.guard.outcome }}' != 'success' ]]; then
             echo 'Command replay/idempotency guard failed closed' >&2
