@@ -81,16 +81,6 @@ def prepare(evidence_path: Path) -> int:
     operation_id: str | None = None
     try:
         client.initialize()
-        capabilities = client.call("research_capabilities")
-        scopes = []
-        for obj in runner.objects(capabilities):
-            candidate = obj.get("granted_scopes")
-            if isinstance(candidate, list):
-                scopes = [item for item in candidate if isinstance(item, str)]
-                break
-        if scopes and not {"insights.write", "operations.rollback"}.issubset(set(scopes)):
-            raise FixtureStatusError("live principal lacks required Insight status capabilities")
-
         plan = client.call(
             "site_insight_update_plan",
             {
