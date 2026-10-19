@@ -92,7 +92,11 @@ def observable_write_result(result_dir, command_id, result):
     return _real_write_result(result_dir, command_id, result)
 
 
-module.subprocess.run = observable_run
+# Dedicated Phase 2E runners are allowed to delegate subprocess use exclusively
+# through their imported Phase 2D `base` module. Do not require every runner to
+# re-export a `subprocess` attribute merely for observability instrumentation.
+if hasattr(module, "subprocess"):
+    module.subprocess.run = observable_run
 module.write_result = observable_write_result
 if hasattr(module, "base"):
     module.base.subprocess.run = observable_run
