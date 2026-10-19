@@ -1,0 +1,19 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-phase2e-pair-en-0001",
+  "command_sha256": "3ee75694bf885c7a4e41c533c10eec0386ae66bb31bf3962b4ac854b66d2ea74",
+  "correlation": {
+    "operation_id": "erm-operation-636bfb7be24b48b4a3385c8164895cf1",
+    "plan_id": "erm-remote-plan-c69a637e1088d12f7d13-d8121c58"
+  },
+  "resource": {
+    "language": "en",
+    "post_id": 97,
+    "state": "draft",
+    "title": "Hello world"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
