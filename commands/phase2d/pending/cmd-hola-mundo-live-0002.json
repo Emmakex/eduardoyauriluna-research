@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-hola-mundo-live-0002",
+  "tenant": "eduardo-research",
+  "action": "insight.create",
+  "requested_by": "chatgpt",
+  "payload": {
+    "title": "Hola mundo — prueba ChatGPT 20261019",
+    "language": "es",
+    "status": "draft",
+    "content": "Hola mundo. Esta es la primera entrada creada y gestionada desde ChatGPT mediante Research Manager MCP."
+  }
+}
