@@ -1,0 +1,14 @@
+{
+  "action": "page.slot.acceptance_restore",
+  "command_id": "cmd-phase2e-page-slot-0001",
+  "operation_id": "erm-operation-47eaeb0701d646a8ac0b81b006c57206",
+  "resource": {
+    "key": "contact",
+    "language": "en",
+    "slot": "eyebrow"
+  },
+  "rollback_verified": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
