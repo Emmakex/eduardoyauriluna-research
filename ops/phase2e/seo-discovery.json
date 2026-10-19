@@ -1,1 +1,6 @@
-{"action":"discover-safe-remediations","read_only":true,"tenant":"eduardo-research","version":"1"}
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "action": "discover-safe-remediations",
+  "read_only": true
+}
