@@ -1,0 +1,21 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-hola-mundo-0004",
+  "correlation": {
+    "operation_id": null,
+    "plan_id": null
+  },
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_insight_create_plan' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /operations/plan with HTTP 403: scope_denied\"}],\"isError\":true}}",
+    "message": "The bounded MCP lifecycle did not complete successfully."
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
