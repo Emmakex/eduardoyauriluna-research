@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Dispatch the observable production command runner across accepted Phase 2E actions.
 
-Existing commands still execute in the original Phase 2D runner. The bounded
-Research Software command executes in its dedicated runner. Both retain the same
+Existing commands still execute in the original Phase 2D runner. Bounded Research
+create/update commands execute in dedicated runners. All paths retain the same
 sanitized MCP tool-error capture used for production diagnosis.
 """
 from __future__ import annotations
@@ -16,8 +16,12 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BASE_RUNNER = HERE / "phase2d-command-runner.py"
-RESEARCH_RUNNER = HERE / "phase2e-research-object-runner.py"
-RESEARCH_ACTION = "research.object.create"
+RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
+RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
+RUNNERS = {
+    "research.object.create": RESEARCH_CREATE_RUNNER,
+    "research.object.update": RESEARCH_UPDATE_RUNNER,
+}
 
 
 def load_module(name: str, path: Path):
@@ -37,14 +41,14 @@ def selected_runner_path() -> Path:
         value = json.loads(path.read_text(encoding="utf-8"))
     except Exception:  # Let the selected runner report normal validation errors.
         return BASE_RUNNER
-    if isinstance(value, dict) and value.get("action") == RESEARCH_ACTION:
-        return RESEARCH_RUNNER
+    if isinstance(value, dict):
+        return RUNNERS.get(value.get("action"), BASE_RUNNER)
     return BASE_RUNNER
 
 
 path = selected_runner_path()
 module = load_module(
-    "phase2e_selected_command_runner" if path == RESEARCH_RUNNER else "phase2d_command_runner",
+    "phase2e_selected_command_runner" if path != BASE_RUNNER else "phase2d_command_runner",
     path,
 )
 
