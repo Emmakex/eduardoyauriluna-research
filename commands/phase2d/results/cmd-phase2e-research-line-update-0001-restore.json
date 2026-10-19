@@ -1,0 +1,17 @@
+{
+  "action": "research.line.update.acceptance.restore",
+  "operation_id": "erm-line-op-067e2ca831984999ac4a9a4dda10613a",
+  "resource": {
+    "kind": "line",
+    "post_id": 102,
+    "restored": "snapshot-baseline",
+    "restored_fields": [
+      "title"
+    ]
+  },
+  "rollback_verified": true,
+  "source_command_id": "cmd-phase2e-research-line-update-0001",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
