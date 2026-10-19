@@ -9,9 +9,11 @@ on:
       - 'scripts/phase2d-command-runner-observable.py'
       - 'scripts/phase2d-command-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
+      - 'scripts/phase2e-expand-gateway-capabilities.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
+      - '.github/workflows/phase2e-expand-gateway-capabilities.yml'
   push:
     branches: [main]
     paths:
@@ -21,9 +23,11 @@ on:
       - 'scripts/phase2d-command-runner-observable.py'
       - 'scripts/phase2d-command-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
+      - 'scripts/phase2e-expand-gateway-capabilities.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
+      - '.github/workflows/phase2e-expand-gateway-capabilities.yml'
 
 permissions:
   contents: read
@@ -40,12 +44,14 @@ jobs:
           python3 -m py_compile scripts/phase2d-command-runner-observable.py
           python3 -m py_compile scripts/phase2d-command-guard.py
           python3 -m py_compile scripts/phase2d-provision-github-principal.py
+          python3 -m py_compile scripts/phase2e-expand-gateway-capabilities.py
 
       - name: Run fail-closed self-tests
         run: |
           python3 scripts/phase2d-command-runner.py --self-test
           python3 scripts/phase2d-command-guard.py self-test
           python3 scripts/phase2d-provision-github-principal.py --self-test
+          python3 scripts/phase2e-expand-gateway-capabilities.py --self-test
 
       - name: Validate JSON contracts
         shell: bash
@@ -92,6 +98,11 @@ jobs:
           grep -F 'CAPABILITIES = ["site.read", "insights.write", "operations.rollback"]' scripts/phase2d-provision-github-principal.py
           grep -F 'PRINCIPAL_ID = "phase2d-github"' scripts/phase2d-provision-github-principal.py
           grep -F 'TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"' scripts/phase2d-provision-github-principal.py
+          grep -F 'CAPABILITY = "pages.write"' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'phase2d-github tenant allowlist is not the accepted single-tenant contract' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F "'add_capabilities': ['pages.write']" .github/workflows/phase2e-expand-gateway-capabilities.yml
+          grep -F 'concurrency:' .github/workflows/phase2e-expand-gateway-capabilities.yml
+          grep -F 'group: phase2c-ovh-production' .github/workflows/phase2e-expand-gateway-capabilities.yml
 
       - name: Reject committed credential material
         shell: bash
@@ -104,8 +115,10 @@ jobs:
             scripts/phase2d-command-runner-observable.py
             scripts/phase2d-command-guard.py
             scripts/phase2d-provision-github-principal.py
+            scripts/phase2e-expand-gateway-capabilities.py
             commands/phase2d/examples/hola-mundo.json
             commands/phase2d/examples/insight-update.json
             .github/workflows/phase2d-command-gateway.yml
+            .github/workflows/phase2e-expand-gateway-capabilities.yml
           )
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
