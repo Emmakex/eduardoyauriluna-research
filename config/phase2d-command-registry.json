@@ -63,7 +63,7 @@
         "verify": "site_insight_pairing_verify",
         "rollback": "site_insight_pairing_rollback"
       },
-      "verify_rendered": true
+      "verify_rendered": false
     },
     "insight.translation.unpair": {
       "required_capabilities": ["translations.write", "operations.rollback"],
