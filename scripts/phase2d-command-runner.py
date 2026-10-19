@@ -32,6 +32,7 @@ MAX_SAFE_INTEGER = 9007199254740991
 SUPPORTED_ACTIONS = {
     "insight.create",
     "insight.update",
+    "insight.status.set",
     "page.slot.update",
     "insight.translation.pair",
     "insight.translation.unpair",
@@ -189,6 +190,15 @@ def validate_update_payload(payload: dict[str, Any]) -> None:
     validate_insight_type(changes.get("insight_type"), "payload.changes.insight_type")
 
 
+def validate_status_payload(payload: dict[str, Any]) -> None:
+    if set(payload) != {"post_id", "status"}:
+        raise CommandError("insight.status.set payload must contain only post_id and status")
+    if not valid_post_id(payload.get("post_id")):
+        raise CommandError("payload.post_id must be a positive safe integer")
+    if payload.get("status") not in {"draft", "publish"}:
+        raise CommandError("payload.status must be draft or publish")
+
+
 def validate_page_slot_payload(payload: dict[str, Any]) -> None:
     if set(payload) != {"key", "language", "slot", "value"}:
         raise CommandError("page.slot.update payload must contain only key, language, slot and value")
@@ -263,6 +273,8 @@ def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
         validate_create_payload(payload)
     elif action == "insight.update":
         validate_update_payload(payload)
+    elif action == "insight.status.set":
+        validate_status_payload(payload)
     elif action == "page.slot.update":
         validate_page_slot_payload(payload)
     elif action == "insight.translation.pair":
@@ -289,6 +301,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
     for name, plan_tool in {
         "insight.create": "site_insight_create_plan",
         "insight.update": "site_insight_update_plan",
+        "insight.status.set": "site_insight_update_plan",
     }.items():
         action = actions.get(name)
         if not isinstance(action, dict):
@@ -305,6 +318,8 @@ def validate_registry(registry: dict[str, Any]) -> None:
     allowed_change_fields = actions["insight.update"].get("allowed_change_fields")
     if not isinstance(allowed_change_fields, list) or set(allowed_change_fields) != UPDATE_FIELDS:
         raise CommandError("insight.update registry fields do not match the bounded update surface")
+    if actions["insight.status.set"].get("allowed_statuses") != ["draft", "publish"]:
+        raise CommandError("insight.status.set registry must remain limited to draft/publish")
 
     page = actions.get("page.slot.update")
     if not isinstance(page, dict):
@@ -513,6 +528,15 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 resource["title"] = changes["title"]
             if "language" in changes:
                 resource["language"] = changes["language"]
+        elif action_name == "insight.status.set":
+            target_post_id = int(payload["post_id"])
+            target_status = str(payload["status"])
+            plan_args = {
+                "postId": target_post_id,
+                "changes": {"status": target_status},
+                "reason": reason,
+            }
+            resource = {"post_id": target_post_id, "state": target_status}
         elif action_name == "page.slot.update":
             plan_args = {
                 "key": payload["key"],
@@ -550,7 +574,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             raise CommandError("verification did not report verified=true")
 
         observed_post_id = first_post_id(verification, applied, plan)
-        if action_name == "insight.update":
+        if action_name in {"insight.update", "insight.status.set"}:
             target_post_id = int(payload["post_id"])
             if observed_post_id is not None and observed_post_id != target_post_id:
                 raise CommandError("verified Insight post_id does not match the requested target")
@@ -627,6 +651,9 @@ def self_test() -> int:
     update_changes_schema = by_action["insight.update"]["properties"]["payload"].get("properties", {}).get("changes", {})
     if set(update_changes_schema.get("properties", {})) != UPDATE_FIELDS:
         raise CommandError("schema update fields do not match the runner")
+    status_values = by_action["insight.status.set"]["properties"]["payload"].get("properties", {}).get("status", {}).get("enum")
+    if status_values != ["draft", "publish"]:
+        raise CommandError("schema status action does not match the runner")
     page_payload_schema = by_action["page.slot.update"]["properties"]["payload"]
     page_props = page_payload_schema.get("properties", {})
     if (
@@ -649,6 +676,13 @@ def self_test() -> int:
         "payload": {"post_id": 94, "changes": {"title": "Updated title", "content": "Updated bounded content."}},
     }
     validate_command(good_update, registry)
+
+    good_status = {
+        "version": "1", "command_id": "cmd-selftest-status-0001",
+        "tenant": "eduardo-research", "action": "insight.status.set", "requested_by": "chatgpt",
+        "payload": {"post_id": 94, "status": "publish"},
+    }
+    validate_command(good_status, registry)
 
     good_page = {
         "version": "1", "command_id": "cmd-selftest-page-slot-0001",
@@ -696,7 +730,7 @@ def self_test() -> int:
     except CommandError:
         pass
     else:
-        raise CommandError("self-test: publish status did not fail closed")
+        raise CommandError("self-test: publish status did not fail closed for insight.create")
 
     for field, value in [("status", "publish"), ("scheduled_at", "2030-01-01T12:00:00Z")]:
         bad = json.loads(json.dumps(good_update))
@@ -706,7 +740,25 @@ def self_test() -> int:
         except CommandError:
             pass
         else:
-            raise CommandError(f"self-test: update {field} did not fail closed")
+            raise CommandError(f"self-test: generic update {field} did not fail closed")
+
+    bad_status = json.loads(json.dumps(good_status))
+    bad_status["payload"]["status"] = "private"
+    try:
+        validate_command(bad_status, registry)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("self-test: unsupported Insight status did not fail closed")
+
+    bad_status_extra = json.loads(json.dumps(good_status))
+    bad_status_extra["payload"]["title"] = "Not allowed in status transition"
+    try:
+        validate_command(bad_status_extra, registry)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("self-test: mixed status/editorial transition did not fail closed")
 
     bad_update_empty = json.loads(json.dumps(good_update))
     bad_update_empty["payload"]["changes"] = {}
