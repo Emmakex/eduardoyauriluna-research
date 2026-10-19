@@ -119,7 +119,6 @@ jobs:
           grep -F '"pattern": "^[^<>]+$"' schemas/phase2d-command-v1.schema.json
           grep -F 'environment: phase2d-production' .github/workflows/phase2d-command-gateway.yml
           grep -F 'PHASE2D_GATEWAY_GENERATION: phase2d-v2-20261019' .github/workflows/phase2d-command-gateway.yml
-          grep -F "PHASE2D_MCP_TOKEN: \${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}" .github/workflows/phase2d-command-gateway.yml
           grep -F 'Reject historical workflow reruns' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Guard command identity and replay' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Verify dedicated principal tenant isolation' .github/workflows/phase2d-command-gateway.yml
@@ -158,6 +157,9 @@ jobs:
               raise SystemExit('MCP bearer must not be job-wide')
           if text.count('PHASE2D_MCP_TOKEN:') != 2:
               raise SystemExit('MCP bearer must be scoped only to isolation + execution steps')
+          token_format = "format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN)"
+          if text.count(token_format) != 2:
+              raise SystemExit('MCP bearer must carry the reviewed gateway generation in both MCP steps')
           rerun = text.index('- name: Reject historical workflow reruns')
           resolve = text.index('- name: Resolve exactly one trusted command')
           if rerun >= resolve:
