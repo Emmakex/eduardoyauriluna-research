@@ -1,0 +1,21 @@
+{
+  "action": "insight.update",
+  "command_id": "cmd-phase2e-insight-update-0001",
+  "command_sha256": "de0aceafd9fec569b593d1faa39aeecaa3a2a6866505163a9fa2e6c19892c289",
+  "correlation": {
+    "operation_id": "erm-operation-53e45b0a4d7f489a98fde52f7b552673",
+    "plan_id": "erm-remote-plan-68a23c02321bd30184e6-51d60d90"
+  },
+  "resource": {
+    "changed_fields": [
+      "content",
+      "title"
+    ],
+    "post_id": 94,
+    "title": "Phase 2E Insight update acceptance"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
