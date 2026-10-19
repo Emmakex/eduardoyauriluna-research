@@ -1,13 +1,13 @@
 {
-  "version": "1",
-  "command_id": "cmd-phase2e-page-slot-0001",
-  "tenant": "eduardo-research",
-  "action": "page.slot.update",
   "requested_by": "chatgpt",
+  "action": "page.slot.update",
+  "tenant": "eduardo-research",
+  "command_id": "cmd-phase2e-page-slot-0001",
+  "version": "1",
   "payload": {
-    "key": "contact",
-    "language": "en",
+    "value": "Research contact — Phase 2E acceptance",
     "slot": "eyebrow",
-    "value": "Research contact — Phase 2E acceptance"
+    "language": "en",
+    "key": "contact"
   }
 }
