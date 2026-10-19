@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kairoseth.com/schemas/phase2e-research-object-update-v1.schema.json",
+  "title": "Kairoseth Phase 2E Research Software Title Update v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "command_id", "tenant", "action", "requested_by", "payload"],
+  "properties": {
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"const": "eduardo-research"},
+    "action": {"const": "research.object.update"},
+    "requested_by": {"const": "chatgpt"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "post_id", "changes", "evidence_confirmed", "evidence_reference"],
+      "properties": {
+        "kind": {"const": "software"},
+        "post_id": {"type": "integer", "minimum": 1},
+        "changes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title"],
+          "properties": {
+            "title": {"type": "string", "minLength": 1, "maxLength": 200}
+          }
+        },
+        "evidence_confirmed": {"const": true},
+        "evidence_reference": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    }
+  }
+}
