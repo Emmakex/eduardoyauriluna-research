@@ -1,0 +1,17 @@
+{
+  "action": "research.translation.pair",
+  "command_id": "cmd-phase2e-slice14-research-pair-0001",
+  "command_sha256": "c854ef684de59e8a1d6b887d5e3e8339790ddaf2eb73d2bb042acbbae508916a",
+  "correlation": {
+    "operation_id": "erm-translation-op-ef2237e3210143a2aa9bf70984fb252c",
+    "plan_id": "erm-translation-plan-95f2b85bbef73a52d6-45817c21"
+  },
+  "resource": {
+    "first_id": 108,
+    "second_id": 109
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
