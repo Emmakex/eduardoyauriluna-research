@@ -26,8 +26,17 @@ TENANT_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,63}$")
 INSIGHT_TYPE_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 PLAN_ID_RE = re.compile(r"^erm-remote-plan-[a-f0-9]{20}-[a-f0-9]{8}$")
 OP_ID_RE = re.compile(r"^erm-operation-[a-f0-9]{32}$")
+PAIR_PLAN_ID_RE = re.compile(r"^erm-insight-pair-plan-[a-f0-9]{18}-[a-f0-9]{8}$")
+PAIR_OP_ID_RE = re.compile(r"^erm-insight-pair-op-[a-f0-9]{32}$")
 MAX_SAFE_INTEGER = 9007199254740991
-SUPPORTED_ACTIONS = {"insight.create", "insight.update", "page.slot.update"}
+SUPPORTED_ACTIONS = {
+    "insight.create",
+    "insight.update",
+    "page.slot.update",
+    "insight.translation.pair",
+    "insight.translation.unpair",
+}
+PAIR_ACTIONS = {"insight.translation.pair", "insight.translation.unpair"}
 UPDATE_FIELDS = {"title", "excerpt", "content", "language", "insight_type"}
 PAGE_KEY = "contact"
 PAGE_LANGUAGE = "en"
@@ -115,6 +124,14 @@ def editorial_types(value: Any) -> list[str]:
     return found
 
 
+def valid_post_id(value: Any) -> bool:
+    return (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and 0 < value <= MAX_SAFE_INTEGER
+    )
+
+
 def validate_insight_type(value: Any, field: str) -> None:
     if value is not None and (
         not isinstance(value, str) or not INSIGHT_TYPE_RE.fullmatch(value)
@@ -148,13 +165,7 @@ def validate_create_payload(payload: dict[str, Any]) -> None:
 def validate_update_payload(payload: dict[str, Any]) -> None:
     if set(payload) != {"post_id", "changes"}:
         raise CommandError("insight.update payload must contain only post_id and changes")
-    post_id = payload.get("post_id")
-    if (
-        not isinstance(post_id, int)
-        or isinstance(post_id, bool)
-        or post_id <= 0
-        or post_id > MAX_SAFE_INTEGER
-    ):
+    if not valid_post_id(payload.get("post_id")):
         raise CommandError("payload.post_id must be a positive safe integer")
     changes = payload.get("changes")
     if not isinstance(changes, dict) or not changes:
@@ -198,6 +209,24 @@ def validate_page_slot_payload(payload: dict[str, Any]) -> None:
         raise CommandError("page.slot.update value must be bounded plain text without HTML/CSS markup")
 
 
+def validate_pair_payload(payload: dict[str, Any]) -> None:
+    if set(payload) != {"first_id", "second_id"}:
+        raise CommandError("insight.translation.pair payload must contain only first_id and second_id")
+    first_id = payload.get("first_id")
+    second_id = payload.get("second_id")
+    if not valid_post_id(first_id) or not valid_post_id(second_id):
+        raise CommandError("translation pair IDs must be positive safe integers")
+    if first_id == second_id:
+        raise CommandError("translation pair requires two distinct Insight IDs")
+
+
+def validate_unpair_payload(payload: dict[str, Any]) -> None:
+    if set(payload) != {"post_id"}:
+        raise CommandError("insight.translation.unpair payload must contain only post_id")
+    if not valid_post_id(payload.get("post_id")):
+        raise CommandError("translation unpair post_id must be a positive safe integer")
+
+
 def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
     allowed_top = {"version", "command_id", "tenant", "action", "requested_by", "payload"}
     if set(command) != allowed_top:
@@ -236,6 +265,10 @@ def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
         validate_update_payload(payload)
     elif action == "page.slot.update":
         validate_page_slot_payload(payload)
+    elif action == "insight.translation.pair":
+        validate_pair_payload(payload)
+    elif action == "insight.translation.unpair":
+        validate_unpair_payload(payload)
     else:
         raise CommandError("unsupported action")
 
@@ -292,6 +325,26 @@ def validate_registry(registry: dict[str, Any]) -> None:
         {"key": PAGE_KEY, "language": PAGE_LANGUAGE, "slots": [PAGE_SLOT]}
     ]:
         raise CommandError("page.slot.update target allowlist changed unexpectedly")
+
+    pairing_common = {
+        "capabilities": "research_capabilities",
+        "apply": "site_insight_pairing_apply",
+        "verify": "site_insight_pairing_verify",
+        "rollback": "site_insight_pairing_rollback",
+    }
+    for name, plan_tool in {
+        "insight.translation.pair": "site_insight_pair_plan",
+        "insight.translation.unpair": "site_insight_unpair_plan",
+    }.items():
+        action = actions.get(name)
+        if not isinstance(action, dict):
+            raise CommandError(f"invalid {name} registry entry")
+        if action.get("tools") != {**pairing_common, "plan": plan_tool}:
+            raise CommandError(f"{name} tool mapping is not the accepted bounded lifecycle")
+        if action.get("required_capabilities") != ["translations.write", "operations.rollback"]:
+            raise CommandError(f"{name} capability contract changed unexpectedly")
+        if action.get("verify_rendered") is not False:
+            raise CommandError(f"{name} must use stored semantic verification for draft acceptance")
 
 
 def sanitized_message(message: str, token: str) -> str:
@@ -419,7 +472,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
         client.initialize()
         caps = client.call(tools["capabilities"])
         types: list[str] = []
-        if action_name.startswith("insight."):
+        if action_name in {"insight.create", "insight.update"}:
             types = editorial_types(caps)
             if not types:
                 raise CommandError("live Manager capabilities expose no editorial_types")
@@ -472,16 +525,29 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 "language": payload["language"],
                 "slot": payload["slot"],
             }
+        elif action_name == "insight.translation.pair":
+            plan_args = {"firstId": int(payload["first_id"]), "secondId": int(payload["second_id"])}
+            resource = {"first_id": int(payload["first_id"]), "second_id": int(payload["second_id"])}
+        elif action_name == "insight.translation.unpair":
+            plan_args = {"postId": int(payload["post_id"])}
+            resource = {"post_id": int(payload["post_id"])}
         else:
             raise CommandError("unsupported action reached execution")
 
+        pairing = action_name in PAIR_ACTIONS
+        plan_pattern = PAIR_PLAN_ID_RE if pairing else PLAN_ID_RE
+        operation_pattern = PAIR_OP_ID_RE if pairing else OP_ID_RE
         plan = client.call(tools["plan"], plan_args)
-        plan_id = regex_string(plan, PLAN_ID_RE)
+        plan_id = regex_string(plan, plan_pattern)
         applied = client.call(tools["apply"], {"planId": plan_id, "confirm": True})
-        operation_id = regex_string(applied, OP_ID_RE)
-        verification = client.call(tools["verify"], {"operationId": operation_id, "rendered": True})
+        operation_id = regex_string(applied, operation_pattern)
+        render_flag = action.get("verify_rendered") is True
+        verification = client.call(
+            tools["verify"],
+            {"operationId": operation_id, "rendered": render_flag},
+        )
         if not verified(verification):
-            raise CommandError("rendered verification did not report verified=true")
+            raise CommandError("verification did not report verified=true")
 
         observed_post_id = first_post_id(verification, applied, plan)
         if action_name == "insight.update":
@@ -591,6 +657,20 @@ def self_test() -> int:
     }
     validate_command(good_page, registry)
 
+    good_pair = {
+        "version": "1", "command_id": "cmd-selftest-pair-0001",
+        "tenant": "eduardo-research", "action": "insight.translation.pair", "requested_by": "chatgpt",
+        "payload": {"first_id": 93, "second_id": 95},
+    }
+    validate_command(good_pair, registry)
+
+    good_unpair = {
+        "version": "1", "command_id": "cmd-selftest-unpair-0001",
+        "tenant": "eduardo-research", "action": "insight.translation.unpair", "requested_by": "chatgpt",
+        "payload": {"post_id": 93},
+    }
+    validate_command(good_unpair, registry)
+
     bad_action = json.loads(json.dumps(good_create))
     bad_action["action"] = "shell.execute"
     try:
@@ -660,6 +740,33 @@ def self_test() -> int:
             pass
         else:
             raise CommandError(f"self-test: unsafe Page field {field} did not fail closed")
+
+    bad_pair_same = json.loads(json.dumps(good_pair))
+    bad_pair_same["payload"]["second_id"] = bad_pair_same["payload"]["first_id"]
+    try:
+        validate_command(bad_pair_same, registry)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("self-test: equal translation pair IDs did not fail closed")
+
+    bad_pair_zero = json.loads(json.dumps(good_pair))
+    bad_pair_zero["payload"]["first_id"] = 0
+    try:
+        validate_command(bad_pair_zero, registry)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("self-test: invalid translation pair ID did not fail closed")
+
+    bad_unpair = json.loads(json.dumps(good_unpair))
+    bad_unpair["payload"]["post_id"] = -1
+    try:
+        validate_command(bad_unpair, registry)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("self-test: invalid translation unpair ID did not fail closed")
 
     print("phase2d-command-runner self-test: OK")
     return 0

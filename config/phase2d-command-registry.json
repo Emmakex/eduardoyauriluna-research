@@ -41,6 +41,28 @@
       "allowed_targets": [
         {"key": "contact", "language": "en", "slots": ["eyebrow"]}
       ]
+    },
+    "insight.translation.pair": {
+      "required_capabilities": ["translations.write", "operations.rollback"],
+      "tools": {
+        "capabilities": "research_capabilities",
+        "plan": "site_insight_pair_plan",
+        "apply": "site_insight_pairing_apply",
+        "verify": "site_insight_pairing_verify",
+        "rollback": "site_insight_pairing_rollback"
+      },
+      "verify_rendered": false
+    },
+    "insight.translation.unpair": {
+      "required_capabilities": ["translations.write", "operations.rollback"],
+      "tools": {
+        "capabilities": "research_capabilities",
+        "plan": "site_insight_unpair_plan",
+        "apply": "site_insight_pairing_apply",
+        "verify": "site_insight_pairing_verify",
+        "rollback": "site_insight_pairing_rollback"
+      },
+      "verify_rendered": false
     }
   }
 }

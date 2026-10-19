@@ -72,6 +72,8 @@ jobs:
               Path('commands/phase2d/examples/hola-mundo.json'),
               Path('commands/phase2d/examples/insight-update.json'),
               Path('commands/phase2d/examples/page-slot-update.json'),
+              Path('commands/phase2d/examples/insight-translation-pair.json'),
+              Path('commands/phase2d/examples/insight-translation-unpair.json'),
           ]:
               json.loads(path.read_text(encoding='utf-8'))
               print(f'JSON OK: {path}')
@@ -84,30 +86,36 @@ jobs:
           grep -F '"insight.create"' schemas/phase2d-command-v1.schema.json
           grep -F '"insight.update"' schemas/phase2d-command-v1.schema.json
           grep -F '"page.slot.update"' schemas/phase2d-command-v1.schema.json
+          grep -F '"insight.translation.pair"' schemas/phase2d-command-v1.schema.json
+          grep -F '"insight.translation.unpair"' schemas/phase2d-command-v1.schema.json
           grep -F '"const": "draft"' schemas/phase2d-command-v1.schema.json
-          grep -F '"post_id"' schemas/phase2d-command-v1.schema.json
-          grep -F '"changes"' schemas/phase2d-command-v1.schema.json
-          grep -F '"key": {"const": "contact"}' schemas/phase2d-command-v1.schema.json
-          grep -F '"language": {"const": "en"}' schemas/phase2d-command-v1.schema.json
-          grep -F '"slot": {"const": "eyebrow"}' schemas/phase2d-command-v1.schema.json
-          grep -F '"pattern": "^[^<>]+$"' schemas/phase2d-command-v1.schema.json
+          grep -F '"first_id"' schemas/phase2d-command-v1.schema.json
+          grep -F '"second_id"' schemas/phase2d-command-v1.schema.json
           ! grep -F '"scheduled_at"' schemas/phase2d-command-v1.schema.json
           ! grep -F '"line_ids"' schemas/phase2d-command-v1.schema.json
           grep -F '"plan": "site_insight_create_plan"' config/phase2d-command-registry.json
           grep -F '"plan": "site_insight_update_plan"' config/phase2d-command-registry.json
           grep -F '"plan": "site_page_slots_plan"' config/phase2d-command-registry.json
-          grep -F '"apply": "site_page_slots_apply"' config/phase2d-command-registry.json
-          grep -F '"verify": "site_page_slots_verify"' config/phase2d-command-registry.json
-          grep -F '"rollback": "site_page_slots_rollback"' config/phase2d-command-registry.json
-          grep -F '"allowed_targets"' config/phase2d-command-registry.json
-          grep -F '"pages.write"' config/phase2d-command-registry.json
+          grep -F '"plan": "site_insight_pair_plan"' config/phase2d-command-registry.json
+          grep -F '"plan": "site_insight_unpair_plan"' config/phase2d-command-registry.json
+          grep -F '"apply": "site_insight_pairing_apply"' config/phase2d-command-registry.json
+          grep -F '"verify": "site_insight_pairing_verify"' config/phase2d-command-registry.json
+          grep -F '"rollback": "site_insight_pairing_rollback"' config/phase2d-command-registry.json
+          grep -F '"translations.write"' config/phase2d-command-registry.json
+          grep -F '"verify_rendered": false' config/phase2d-command-registry.json
+          grep -F '"key": {"const": "contact"}' schemas/phase2d-command-v1.schema.json
+          grep -F '"language": {"const": "en"}' schemas/phase2d-command-v1.schema.json
+          grep -F '"slot": {"const": "eyebrow"}' schemas/phase2d-command-v1.schema.json
+          grep -F '"pattern": "^[^<>]+$"' schemas/phase2d-command-v1.schema.json
           grep -F 'environment: phase2d-production' .github/workflows/phase2d-command-gateway.yml
           grep -F 'PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Guard command identity and replay' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Verify dedicated principal tenant isolation' .github/workflows/phase2d-command-gateway.yml
           grep -F 'command_sha256' scripts/phase2d-command-guard.py
           grep -F 'DENIED_TENANT = "phase2d-denied-probe"' scripts/phase2d-command-guard.py
-          grep -F 'SUPPORTED_ACTIONS = {"insight.create", "insight.update", "page.slot.update"}' scripts/phase2d-command-runner.py
+          grep -F 'PAIR_ACTIONS = {"insight.translation.pair", "insight.translation.unpair"}' scripts/phase2d-command-runner.py
+          grep -F 'PAIR_PLAN_ID_RE = re.compile' scripts/phase2d-command-runner.py
+          grep -F 'PAIR_OP_ID_RE = re.compile' scripts/phase2d-command-runner.py
           grep -F 'PAGE_KEY = "contact"' scripts/phase2d-command-runner.py
           grep -F 'PAGE_LANGUAGE = "en"' scripts/phase2d-command-runner.py
           grep -F 'PAGE_SLOT = "eyebrow"' scripts/phase2d-command-runner.py
@@ -141,6 +149,8 @@ jobs:
             commands/phase2d/examples/hola-mundo.json
             commands/phase2d/examples/insight-update.json
             commands/phase2d/examples/page-slot-update.json
+            commands/phase2d/examples/insight-translation-pair.json
+            commands/phase2d/examples/insight-translation-unpair.json
             .github/workflows/phase2d-command-gateway.yml
             .github/workflows/phase2e-expand-gateway-capabilities.yml
             .github/workflows/phase2e-page-acceptance-restore.yml
