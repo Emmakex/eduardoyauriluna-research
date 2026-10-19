@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-phase2e-page-text-slot-0001",
+  "command_sha256": "6ea32faa54e72d653510eb07930b4599d8f859a98059a7bc0e6cdc43e8f9c434",
+  "correlation": {
+    "operation_id": "erm-operation-d516b4cb19a545d6a184a77ea1bcb3b6",
+    "plan_id": "erm-remote-plan-cc2615e2239db7a70616-0def978e"
+  },
+  "resource": {
+    "key": "about",
+    "language": "es",
+    "slot": "lead"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
