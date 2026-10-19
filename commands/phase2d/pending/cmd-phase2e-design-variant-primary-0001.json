@@ -4,12 +4,10 @@
   "tenant": "eduardo-research",
   "action": "design.variant.update",
   "requested_by": "chatgpt",
-  "payload": {
-    "changes": {
-      "hero": "compact",
-      "sections": "plain",
-      "cards": "lifted",
-      "collections": "compact-grid"
-    }
-  }
+  "payload": {"changes": {
+    "hero": "compact",
+    "sections": "plain",
+    "cards": "lifted",
+    "collections": "compact-grid"
+  }}
 }
