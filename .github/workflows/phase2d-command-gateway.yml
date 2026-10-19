@@ -26,11 +26,17 @@ jobs:
     environment: phase2d-production
     env:
       PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
-      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+      PHASE2D_GATEWAY_GENERATION: phase2d-v2-20261019
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+
+      - name: Reject historical workflow reruns
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-run-attempt-guard.py
 
       - name: Resolve exactly one trusted command
         id: command
@@ -83,6 +89,8 @@ jobs:
       - name: Verify dedicated principal tenant isolation
         id: isolation
         shell: bash
+        env:
+          PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
         run: |
           set -euo pipefail
           python3 scripts/phase2e-command-guard.py isolation \
@@ -92,6 +100,8 @@ jobs:
         id: execute
         if: ${{ steps.guard.outputs.decision == 'new' }}
         shell: bash
+        env:
+          PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
         run: |
           set +e
           python3 scripts/phase2e-command-runner-observable.py \
