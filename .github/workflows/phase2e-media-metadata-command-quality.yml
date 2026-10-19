@@ -7,6 +7,7 @@ on:
       - 'schemas/phase2e-media-metadata-v1.schema.json'
       - 'config/phase2e-media-metadata-command-registry.json'
       - 'scripts/phase2e-media-metadata-runner.py'
+      - 'scripts/phase2e-media-fixture-command-runner.py'
       - 'scripts/phase2e-command-guard.py'
       - 'scripts/phase2e-command-runner-observable.py'
       - '.github/workflows/phase2e-media-metadata-command-quality.yml'
@@ -18,6 +19,7 @@ on:
       - 'schemas/phase2e-media-metadata-v1.schema.json'
       - 'config/phase2e-media-metadata-command-registry.json'
       - 'scripts/phase2e-media-metadata-runner.py'
+      - 'scripts/phase2e-media-fixture-command-runner.py'
       - 'scripts/phase2e-command-guard.py'
       - 'scripts/phase2e-command-runner-observable.py'
       - '.github/workflows/phase2e-media-metadata-command-quality.yml'
@@ -34,12 +36,13 @@ jobs:
       - name: Compile Media metadata surface
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/phase2e-media-metadata-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py
+          python3 -m py_compile scripts/phase2e-media-metadata-runner.py scripts/phase2e-media-fixture-command-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py
       - name: Verify baseline and Media metadata self-tests
         run: |
           set -euo pipefail
           python3 scripts/phase2d-command-runner.py --self-test
           python3 scripts/phase2e-media-metadata-runner.py --self-test
+          python3 scripts/phase2e-media-fixture-command-runner.py --self-test
           python3 scripts/phase2e-command-guard.py self-test
       - name: Verify dispatched fail-closed cases
         run: |
@@ -77,10 +80,14 @@ jobs:
           grep -F 'media_metadata.ACTION: media_metadata' scripts/phase2e-command-guard.py
           grep -F 'site_media_metadata_update_plan' config/phase2e-media-metadata-command-registry.json
           grep -F '"verify_rendered": false' config/phase2e-media-metadata-command-registry.json
+          grep -F 'provenance_matches' scripts/phase2e-media-fixture-command-runner.py
+          grep -F 'FAILED_FIXTURE_OPERATION_ID' scripts/phase2e-media-fixture-command-runner.py
+          grep -F 'rollback_proven' scripts/phase2e-media-fixture-command-runner.py
+          ! grep -F 'managed_by_manager' scripts/phase2e-media-fixture-command-runner.py
           ! grep -F 'content_base64' config/phase2e-media-metadata-command-registry.json
           ! grep -F 'source_url' config/phase2e-media-metadata-command-registry.json
       - name: Reject committed credential material
         run: |
           set -euo pipefail
-          files=(schemas/phase2e-media-metadata-v1.schema.json config/phase2e-media-metadata-command-registry.json scripts/phase2e-media-metadata-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          files=(schemas/phase2e-media-metadata-v1.schema.json config/phase2e-media-metadata-command-registry.json scripts/phase2e-media-metadata-runner.py scripts/phase2e-media-fixture-command-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
