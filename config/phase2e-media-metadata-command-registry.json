@@ -1,0 +1,23 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {"enabled": true}
+  },
+  "actions": {
+    "media.metadata.update": {
+      "required_capabilities": ["media.write", "operations.rollback"],
+      "tools": {
+        "plan": "site_media_metadata_update_plan",
+        "apply": "site_media_metadata_apply",
+        "verify": "site_media_metadata_verify",
+        "rollback": "site_media_metadata_rollback"
+      },
+      "verify_rendered": false,
+      "allowed_change_fields": ["title", "alt_text", "caption", "description"],
+      "max_title": 200,
+      "max_alt_text": 500,
+      "max_caption": 2000,
+      "max_description": 12000
+    }
+  }
+}
