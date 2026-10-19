@@ -1,0 +1,43 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {
+      "enabled": true
+    }
+  },
+  "actions": {
+    "navigation.update": {
+      "required_capabilities": [
+        "navigation.write",
+        "operations.rollback"
+      ],
+      "tools": {
+        "plan": "site_navigation_update_plan",
+        "apply": "site_navigation_apply",
+        "verify": "site_navigation_verify",
+        "rollback": "site_navigation_rollback"
+      },
+      "verify_rendered": true,
+      "allowed_locations": [
+        "primary",
+        "footer"
+      ],
+      "allowed_targets": [
+        "home",
+        "about",
+        "research",
+        "publications",
+        "projects",
+        "software",
+        "datasets",
+        "cv",
+        "insights",
+        "contact",
+        "privacy-policy",
+        "legal-notice"
+      ],
+      "max_items": 12,
+      "arbitrary_urls": false
+    }
+  }
+}
