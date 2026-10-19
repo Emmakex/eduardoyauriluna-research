@@ -1,0 +1,110 @@
+name: Phase 2E Insight Research Lines Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-insight-research-lines-v1.schema.json'
+      - 'config/phase2e-insight-research-lines-command-registry.json'
+      - 'scripts/phase2e-insight-research-lines-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-insight-research-lines-command-quality.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-insight-research-lines-v1.schema.json'
+      - 'config/phase2e-insight-research-lines-command-registry.json'
+      - 'scripts/phase2e-insight-research-lines-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-insight-research-lines-command-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile and self-test bounded relation surface
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/phase2e-insight-research-lines-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py
+          python3 scripts/phase2e-insight-research-lines-runner.py --self-test
+          python3 scripts/phase2e-command-guard.py self-test
+
+      - name: Verify dispatched fail-closed cases
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cat > "$tmp/good.json" <<'JSON'
+          {"version":"1","command_id":"cmd-insight-lines-quality-0001","tenant":"eduardo-research","action":"insight.research-lines.update","requested_by":"chatgpt","payload":{"post_id":101,"line_ids":[201,202]}}
+          JSON
+          cat > "$tmp/unlink.json" <<'JSON'
+          {"version":"1","command_id":"cmd-insight-lines-quality-0002","tenant":"eduardo-research","action":"insight.research-lines.update","requested_by":"chatgpt","payload":{"post_id":101,"line_ids":[]}}
+          JSON
+          python3 scripts/phase2e-command-guard.py guard "$tmp/good.json" --result-dir "$tmp/results"
+          python3 scripts/phase2e-command-guard.py guard "$tmp/unlink.json" --result-dir "$tmp/results"
+          for name in duplicate status schedule content tenant; do
+            case "$name" in
+              duplicate) payload='{"post_id":101,"line_ids":[201,201]}' ;;
+              status) payload='{"post_id":101,"line_ids":[201],"status":"publish"}' ;;
+              schedule) payload='{"post_id":101,"line_ids":[201],"scheduled_at":"2030-01-01T10:00:00Z"}' ;;
+              content) payload='{"post_id":101,"line_ids":[201],"content":"blocked"}' ;;
+              tenant) payload='{"post_id":101,"line_ids":[201]}' ;;
+            esac
+            tenant='eduardo-research'; [[ "$name" == tenant ]] && tenant='other-tenant'
+            printf '{"version":"1","command_id":"cmd-insight-lines-bad-%s","tenant":"%s","action":"insight.research-lines.update","requested_by":"chatgpt","payload":%s}\n' "$name" "$tenant" "$payload" > "$tmp/$name.json"
+            if python3 scripts/phase2e-command-guard.py guard "$tmp/$name.json" --result-dir "$tmp/results"; then
+              echo "Unsafe relation case escaped validator: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate JSON Schema independently
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check -q jsonschema
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, ValidationError
+          schema=json.loads(Path('schemas/phase2e-insight-research-lines-v1.schema.json').read_text())
+          Draft202012Validator.check_schema(schema)
+          v=Draft202012Validator(schema)
+          good={"version":"1","command_id":"cmd-schema-insight-lines-0001","tenant":"eduardo-research","action":"insight.research-lines.update","requested_by":"chatgpt","payload":{"post_id":101,"line_ids":[201,202]}}
+          v.validate(good)
+          v.validate({**good,"payload":{"post_id":101,"line_ids":[]}})
+          for bad in [
+            {**good,"payload":{"post_id":101,"line_ids":[201,201]}},
+            {**good,"payload":{"post_id":101,"line_ids":[0]}},
+            {**good,"payload":{"post_id":101,"line_ids":[201],"status":"publish"}},
+            {**good,"payload":{"post_id":101,"line_ids":[201],"content":"blocked"}},
+          ]:
+            try: v.validate(bad)
+            except ValidationError: continue
+            raise SystemExit('unsafe relation schema case validated unexpectedly')
+          print('Insight Research Lines JSON Schema: OK')
+          PY
+
+      - name: Verify bounded surface and existing capability contract
+        run: |
+          set -euo pipefail
+          grep -F '"insight.research-lines.update": INSIGHT_RESEARCH_LINES_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'insight_research_lines.ACTION: insight_research_lines' scripts/phase2e-command-guard.py
+          grep -F 'site_insight_update_plan' config/phase2e-insight-research-lines-command-registry.json
+          grep -F '"insights.write"' config/phase2e-gateway-capabilities.json
+          grep -F '"operations.rollback"' config/phase2e-gateway-capabilities.json
+          ! grep -E '(scheduled_at|status|content|title|excerpt|slug)' config/phase2e-insight-research-lines-command-registry.json schemas/phase2e-insight-research-lines-v1.schema.json
+
+      - name: Reject committed credential material
+        run: |
+          set -euo pipefail
+          files=(schemas/phase2e-insight-research-lines-v1.schema.json config/phase2e-insight-research-lines-command-registry.json scripts/phase2e-insight-research-lines-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
