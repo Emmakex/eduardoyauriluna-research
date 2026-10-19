@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,23 @@ spec.loader.exec_module(base)
 
 class DiscoveryError(RuntimeError):
     pass
+
+
+def install_observable_subprocess() -> None:
+    """Preserve sanitized MCP tool payload on inspector failures for diagnosis only."""
+    real_run = base.subprocess.run
+
+    def observable_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+        completed = real_run(*args, **kwargs)
+        if completed.returncode != 0 and isinstance(completed.stdout, str) and completed.stdout.strip():
+            stderr = completed.stderr if isinstance(completed.stderr, str) else ""
+            combined = f"{stderr.rstrip()}\nMCP tool payload: {completed.stdout.strip()}".strip()
+            token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
+            combined = base.sanitized_message(combined, token)
+            return subprocess.CompletedProcess(completed.args, completed.returncode, completed.stdout, combined)
+        return completed
+
+    base.subprocess.run = observable_run
 
 
 def readiness_payload(value: Any) -> dict[str, Any]:
@@ -113,6 +131,7 @@ def discover(output: Path) -> int:
     base_url = os.environ.get("PHASE2D_MCP_BASE_URL", DEFAULT_BASE_URL).strip().rstrip("/")
     if base_url != DEFAULT_BASE_URL:
         raise DiscoveryError("SEO discovery only permits the production MCP base URL")
+    install_observable_subprocess()
     client = base.McpClient(f"{base_url}/{TENANT}", token)
     try:
         client.initialize()
@@ -162,7 +181,8 @@ def main() -> int:
     try:
         return self_test() if args.self_test else discover(args.output)
     except (DiscoveryError, base.CommandError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+        token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
+        print(f"ERROR: {base.sanitized_message(str(exc), token)}", file=sys.stderr)
         return 2
 
 
