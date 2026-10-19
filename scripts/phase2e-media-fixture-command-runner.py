@@ -2,9 +2,8 @@
 """Manage the exact temporary Media fixture used for metadata gateway acceptance.
 
 Acceptance-only. No user bytes, URL, path or arbitrary metadata enter through Git.
-The create command uses one fixed public 1x1 PNG embedded in this runner. A second
-exact command is permitted only to prove cleanup of the known failed fixture-0001
-operation before any new acceptance mutation is attempted.
+The create command uses one fixed public 1x1 PNG embedded in this runner. Cleanup
+is restricted to the exact accepted temporary fixture operation.
 """
 from __future__ import annotations
 
@@ -21,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = Path(__file__).with_name("phase2d-command-runner.py")
 ACTION = "media.acceptance.fixture.create"
 CREATE_COMMAND_ID = "cmd-phase2e-media-fixture-0002"
-CLEANUP_COMMAND_ID = "cmd-phase2e-media-fixture-cleanup-0002"
-FAILED_FIXTURE_OPERATION_ID = "erm-media-ingest-op-58cfd560af614e6bade2db635a8840b0"
+CLEANUP_COMMAND_ID = "cmd-phase2e-media-fixture-cleanup-0003"
+FAILED_FIXTURE_OPERATION_ID = "erm-media-ingest-op-f660d83f921b4ab6ae128f1ede0bcb50"
 PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC"
 PNG_BYTES = base64.b64decode(PNG_BASE64)
 PNG_SHA256 = hashlib.sha256(PNG_BYTES).hexdigest()
@@ -93,8 +92,10 @@ def execute_cleanup(command: dict[str, Any], client: Any, result_dir: Path) -> i
         {"operationId": FAILED_FIXTURE_OPERATION_ID, "confirm": True},
     )
     if not rollback_proven(rolled):
-        raise CommandError("Known failed Media fixture operation is not proven rolled-back and deleted")
+        raise CommandError("Accepted Media fixture operation is not proven rolled-back and deleted")
     aid = attachment_id(rolled)
+    if aid != 105:
+        raise CommandError("Accepted Media fixture cleanup did not target attachment 105")
     result = {
         "version": "1",
         "status": "success",
@@ -240,7 +241,7 @@ def self_test() -> int:
     if len(PNG_BYTES) != 69 or PNG_SHA256 != "e878950f8091ec010cf5cc723bdea027a8539cf7147cfea199c2f666232dcd4e":
         raise CommandError("fixed PNG fixture changed unexpectedly")
     if not OP_RE.fullmatch(FAILED_FIXTURE_OPERATION_ID):
-        raise CommandError("known failed fixture operation ID has invalid format")
+        raise CommandError("accepted fixture operation ID has invalid format")
     print("phase2e-media-fixture-command-runner self-test: OK")
     return 0
 
