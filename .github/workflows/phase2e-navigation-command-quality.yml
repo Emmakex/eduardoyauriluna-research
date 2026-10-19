@@ -1,0 +1,131 @@
+name: Phase 2E Navigation Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-navigation-v1.schema.json'
+      - 'config/phase2e-navigation-command-registry.json'
+      - 'scripts/phase2e-navigation-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-navigation-command-quality.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-navigation-v1.schema.json'
+      - 'config/phase2e-navigation-command-registry.json'
+      - 'scripts/phase2e-navigation-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-navigation-command-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Navigation command surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/phase2e-navigation-runner.py \
+            scripts/phase2e-command-guard.py \
+            scripts/phase2e-command-runner-observable.py
+
+      - name: Verify Phase 2D baseline remains valid
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-runner.py --self-test
+
+      - name: Verify bounded Navigation runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-navigation-runner.py --self-test
+
+      - name: Verify dispatched replay guard baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py self-test
+
+      - name: Verify Navigation validator dispatch fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cat > "$tmp/good.json" <<'JSON'
+          {"version":"1","command_id":"cmd-navigation-quality-0001","tenant":"eduardo-research","action":"navigation.update","requested_by":"chatgpt","payload":{"location":"primary","items":["home","research","publications"]}}
+          JSON
+          cat > "$tmp/bad-url.json" <<'JSON'
+          {"version":"1","command_id":"cmd-navigation-quality-0002","tenant":"eduardo-research","action":"navigation.update","requested_by":"chatgpt","payload":{"location":"primary","items":["home","https://example.com"]}}
+          JSON
+          cat > "$tmp/bad-duplicate.json" <<'JSON'
+          {"version":"1","command_id":"cmd-navigation-quality-0003","tenant":"eduardo-research","action":"navigation.update","requested_by":"chatgpt","payload":{"location":"primary","items":["home","home"]}}
+          JSON
+          cat > "$tmp/bad-location.json" <<'JSON'
+          {"version":"1","command_id":"cmd-navigation-quality-0004","tenant":"eduardo-research","action":"navigation.update","requested_by":"chatgpt","payload":{"location":"sidebar","items":["home","research"]}}
+          JSON
+          cat > "$tmp/bad-extra.json" <<'JSON'
+          {"version":"1","command_id":"cmd-navigation-quality-0005","tenant":"eduardo-research","action":"navigation.update","requested_by":"chatgpt","payload":{"location":"primary","items":["home","research"],"url":"https://example.com"}}
+          JSON
+          python3 scripts/phase2e-command-guard.py guard "$tmp/good.json" --result-dir "$tmp/results"
+          for bad in bad-url bad-duplicate bad-location bad-extra; do
+            if python3 scripts/phase2e-command-guard.py guard "$tmp/$bad.json" --result-dir "$tmp/results"; then
+              echo "Unsafe Navigation case escaped validator: $bad" >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate Navigation JSON contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in [
+              Path('schemas/phase2e-navigation-v1.schema.json'),
+              Path('config/phase2e-navigation-command-registry.json'),
+          ]:
+              json.loads(path.read_text(encoding='utf-8'))
+              print(f'JSON OK: {path}')
+          PY
+
+      - name: Validate bounded surface markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F '"navigation.update": NAVIGATION_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'navigation.ACTION: navigation' scripts/phase2e-command-guard.py
+          grep -F 'NAV_PLAN_ID_RE = re.compile' scripts/phase2e-navigation-runner.py
+          grep -F 'NAV_OP_ID_RE = re.compile' scripts/phase2e-navigation-runner.py
+          grep -F '"navigation.write"' config/phase2e-navigation-command-registry.json
+          grep -F '"operations.rollback"' config/phase2e-navigation-command-registry.json
+          grep -F '"arbitrary_urls": false' config/phase2e-navigation-command-registry.json
+          grep -F '"rendered": True' scripts/phase2e-navigation-runner.py
+          ! grep -F 'http://' config/phase2e-navigation-command-registry.json
+          ! grep -F 'https://' config/phase2e-navigation-command-registry.json
+
+      - name: Reject committed credential material
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            schemas/phase2e-navigation-v1.schema.json
+            config/phase2e-navigation-command-registry.json
+            scripts/phase2e-navigation-runner.py
+            scripts/phase2e-command-guard.py
+            scripts/phase2e-command-runner-observable.py
+          )
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
