@@ -1,1 +1,4 @@
-{"action":"verify-research-command-gateway","version":"1"}
+{
+  "version": "1",
+  "action": "verify-research-command-gateway"
+}
