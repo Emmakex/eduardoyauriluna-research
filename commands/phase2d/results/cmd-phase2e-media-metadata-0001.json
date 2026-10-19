@@ -1,0 +1,19 @@
+{
+  "action": "media.metadata.update",
+  "command_id": "cmd-phase2e-media-metadata-0001",
+  "command_sha256": "a4d94cedde765f910c36920437a6969dbb6c74b8e8a3550a2552940c59808fa8",
+  "correlation": {
+    "operation_id": "erm-media-op-181c23a90fbb45d8bc9389e1be329dd2",
+    "plan_id": "erm-media-plan-79745a44f52debc2ab6e-b06d547e"
+  },
+  "resource": {
+    "attachment_id": 105,
+    "changed_fields": [
+      "alt_text"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
