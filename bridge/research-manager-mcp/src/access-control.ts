@@ -65,7 +65,7 @@ export class PrincipalRegistry {
     }
 
     const generation = options.phase2dGatewayGeneration?.trim() || null;
-    if (generation !== null && !GATEWAY_GENERATION_RE.fullmatch(generation)) {
+    if (generation !== null && !GATEWAY_GENERATION_RE.test(generation)) {
       throw new Error('MCP_PHASE2D_GATEWAY_GENERATION is invalid');
     }
     const required = options.requirePhase2dGatewayGeneration === true;
