@@ -1,0 +1,28 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {"enabled": true}
+  },
+  "actions": {
+    "research.translation.pair": {
+      "required_capabilities": ["translations.write", "operations.rollback"],
+      "tools": {
+        "plan": "site_translation_pair_plan",
+        "apply": "site_translation_apply",
+        "verify": "site_translation_verify",
+        "rollback": "site_translation_rollback"
+      },
+      "verify_rendered": true
+    },
+    "research.translation.unpair": {
+      "required_capabilities": ["translations.write", "operations.rollback"],
+      "tools": {
+        "plan": "site_translation_unpair_plan",
+        "apply": "site_translation_apply",
+        "verify": "site_translation_verify",
+        "rollback": "site_translation_rollback"
+      },
+      "verify_rendered": true
+    }
+  }
+}
