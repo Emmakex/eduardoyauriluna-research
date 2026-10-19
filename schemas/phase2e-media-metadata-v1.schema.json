@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eduardoyauriluna.com/schemas/phase2e-media-metadata-v1.schema.json",
+  "title": "Phase 2E bounded Media metadata update command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "command_id", "tenant", "action", "requested_by", "payload"],
+  "properties": {
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"const": "eduardo-research"},
+    "action": {"const": "media.metadata.update"},
+    "requested_by": {"const": "chatgpt"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attachment_id", "changes"],
+      "properties": {
+        "attachment_id": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+        "changes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "alt_text": {"type": "string", "maxLength": 500},
+            "caption": {"type": "string", "maxLength": 2000},
+            "description": {"type": "string", "maxLength": 12000}
+          }
+        }
+      }
+    }
+  }
+}
