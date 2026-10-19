@@ -71,8 +71,26 @@ jobs:
           echo "path=$command_path" >> "$GITHUB_OUTPUT"
           echo "id=$command_id" >> "$GITHUB_OUTPUT"
 
+      - name: Guard command identity and replay
+        id: guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-guard.py guard \
+            '${{ steps.command.outputs.path }}' \
+            --result-dir commands/phase2d/results
+
+      - name: Verify dedicated principal tenant isolation
+        id: isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-guard.py isolation \
+            --tenant 'eduardo-research'
+
       - name: Execute bounded MCP lifecycle
         id: execute
+        if: ${{ steps.guard.outputs.decision == 'new' }}
         shell: bash
         run: |
           set +e
@@ -83,8 +101,18 @@ jobs:
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
+      - name: Fingerprint sanitized execution result
+        id: stamp
+        if: ${{ always() && steps.guard.outcome == 'success' && steps.guard.outputs.decision == 'new' && steps.execute.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-guard.py stamp \
+            '${{ steps.command.outputs.path }}' \
+            --result-dir commands/phase2d/results
+
       - name: Upload sanitized execution result
-        if: always()
+        if: ${{ always() && steps.guard.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: phase2d-command-${{ steps.command.outputs.id }}
@@ -93,7 +121,7 @@ jobs:
           retention-days: 30
 
       - name: Persist sanitized result for ChatGPT readback
-        if: always()
+        if: ${{ always() && steps.guard.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -124,4 +152,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ '${{ steps.guard.outcome }}' != 'success' ]]; then
+            echo 'Command replay/idempotency guard failed closed' >&2
+            exit 1
+          fi
+          if [[ '${{ steps.isolation.outcome }}' != 'success' ]]; then
+            echo 'Tenant isolation probe failed closed' >&2
+            exit 1
+          fi
+
+          decision='${{ steps.guard.outputs.decision }}'
+          if [[ "$decision" == 'replay_success' ]]; then
+            echo 'Exact successful command replay accepted without MCP mutation'
+            exit 0
+          fi
+          if [[ "$decision" != 'new' ]]; then
+            echo "Unsupported guard decision: $decision" >&2
+            exit 1
+          fi
+
+          [[ '${{ steps.execute.outcome }}' == 'success' ]]
+          [[ '${{ steps.stamp.outcome }}' == 'success' ]]
           [[ '${{ steps.execute.outputs.exit_code }}' == '0' ]]

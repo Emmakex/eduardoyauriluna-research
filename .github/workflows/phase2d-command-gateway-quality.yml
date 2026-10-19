@@ -6,6 +6,8 @@ on:
       - 'schemas/phase2d-command-v1.schema.json'
       - 'config/phase2d-command-registry.json'
       - 'scripts/phase2d-command-runner.py'
+      - 'scripts/phase2d-command-runner-observable.py'
+      - 'scripts/phase2d-command-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
@@ -16,6 +18,8 @@ on:
       - 'schemas/phase2d-command-v1.schema.json'
       - 'config/phase2d-command-registry.json'
       - 'scripts/phase2d-command-runner.py'
+      - 'scripts/phase2d-command-runner-observable.py'
+      - 'scripts/phase2d-command-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
@@ -33,11 +37,14 @@ jobs:
       - name: Compile Python helpers
         run: |
           python3 -m py_compile scripts/phase2d-command-runner.py
+          python3 -m py_compile scripts/phase2d-command-runner-observable.py
+          python3 -m py_compile scripts/phase2d-command-guard.py
           python3 -m py_compile scripts/phase2d-provision-github-principal.py
 
       - name: Run fail-closed self-tests
         run: |
           python3 scripts/phase2d-command-runner.py --self-test
+          python3 scripts/phase2d-command-guard.py self-test
           python3 scripts/phase2d-provision-github-principal.py --self-test
 
       - name: Validate JSON contracts
@@ -69,6 +76,10 @@ jobs:
           grep -F '"rollback": "site_insight_rollback"' config/phase2d-command-registry.json
           grep -F 'environment: phase2d-production' .github/workflows/phase2d-command-gateway.yml
           grep -F 'PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}' .github/workflows/phase2d-command-gateway.yml
+          grep -F 'Guard command identity and replay' .github/workflows/phase2d-command-gateway.yml
+          grep -F 'Verify dedicated principal tenant isolation' .github/workflows/phase2d-command-gateway.yml
+          grep -F 'command_sha256' scripts/phase2d-command-guard.py
+          grep -F 'DENIED_TENANT = "phase2d-denied-probe"' scripts/phase2d-command-guard.py
           grep -F 'CAPABILITIES = ["site.read", "insights.write", "operations.rollback"]' scripts/phase2d-provision-github-principal.py
           grep -F 'PRINCIPAL_ID = "phase2d-github"' scripts/phase2d-provision-github-principal.py
           grep -F 'TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"' scripts/phase2d-provision-github-principal.py
@@ -81,6 +92,8 @@ jobs:
             schemas/phase2d-command-v1.schema.json
             config/phase2d-command-registry.json
             scripts/phase2d-command-runner.py
+            scripts/phase2d-command-runner-observable.py
+            scripts/phase2d-command-guard.py
             scripts/phase2d-provision-github-principal.py
             commands/phase2d/examples/hola-mundo.json
             .github/workflows/phase2d-command-gateway.yml
