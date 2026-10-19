@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eduardoyauriluna.com/schemas/phase2e-navigation-v1.schema.json",
+  "title": "Phase 2E bounded navigation command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "command_id",
+    "tenant",
+    "action",
+    "requested_by",
+    "payload"
+  ],
+  "properties": {
+    "version": {
+      "const": "1"
+    },
+    "command_id": {
+      "type": "string",
+      "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"
+    },
+    "tenant": {
+      "const": "eduardo-research"
+    },
+    "action": {
+      "const": "navigation.update"
+    },
+    "requested_by": {
+      "const": "chatgpt"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location",
+        "items"
+      ],
+      "properties": {
+        "location": {
+          "enum": [
+            "primary",
+            "footer"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "home",
+              "about",
+              "research",
+              "publications",
+              "projects",
+              "software",
+              "datasets",
+              "cv",
+              "insights",
+              "contact",
+              "privacy-policy",
+              "legal-notice"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
