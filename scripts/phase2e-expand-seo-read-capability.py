@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bind the reviewed Phase 2E gateway capability expander to seo.read only."""
+"""Bind the reviewed Phase 2E gateway capability expander to seo.read."""
 from __future__ import annotations
 
 import importlib.util
@@ -12,7 +12,12 @@ if spec is None or spec.loader is None:
 helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
 
-helper.EXPECTED_NEW_CAPABILITIES = {"seo.read"}
+# Preserve the already-accepted Phase 2E base capabilities and add only seo.read.
+helper.APPROVED_CAPABILITIES = [
+    "pages.write",
+    "translations.write",
+    "seo.read",
+]
 
 if __name__ == "__main__":
     raise SystemExit(helper.main())
