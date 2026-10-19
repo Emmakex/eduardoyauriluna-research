@@ -1,0 +1,81 @@
+name: Phase 2E SEO Discovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/phase2e/seo-discovery.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2d-command-gateway
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact discovery request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('ops/phase2e/seo-discovery.json').read_text(encoding='utf-8'))
+          expected = {'version':'1','tenant':'eduardo-research','action':'discover-safe-remediations','read_only':True}
+          if value != expected:
+              raise SystemExit('SEO discovery request does not match the reviewed read-only contract')
+          print('SEO_DISCOVERY_REQUEST_OK')
+          PY
+
+      - name: Self-test read-only discovery helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-seo-discovery.py --self-test
+
+      - name: Verify dedicated principal tenant isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py isolation --tenant eduardo-research
+
+      - name: Read SEO/GEO readiness and safe candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-seo-discovery.py \
+            --output commands/phase2d/results/phase2e-seo-discovery.json
+
+      - name: Persist sanitized discovery result
+        shell: bash
+        run: |
+          set -euo pipefail
+          result='commands/phase2d/results/phase2e-seo-discovery.json'
+          test -f "$result"
+          cp "$result" /tmp/phase2e-seo-discovery.json
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p "$(dirname "$result")"
+          cp /tmp/phase2e-seo-discovery.json "$result"
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add "$result"
+          if git diff --cached --quiet; then
+            echo 'SEO discovery result already persisted'
+            exit 0
+          fi
+          git commit -m 'phase2e: record read-only SEO remediation discovery'
+          git push origin HEAD:main
