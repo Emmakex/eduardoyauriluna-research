@@ -1,0 +1,88 @@
+name: Phase 2E Navigation Acceptance Restore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/phase2e/navigation-acceptance-restore.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2d-command-gateway
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact Navigation restore request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('ops/phase2e/navigation-acceptance-restore.json').read_text(encoding='utf-8'))
+          expected = {
+              'version': '1',
+              'tenant': 'eduardo-research',
+              'command_id': 'cmd-phase2e-navigation-update-0001',
+              'action': 'restore',
+          }
+          if value != expected:
+              raise SystemExit('Navigation restore request does not match the reviewed acceptance contract')
+          print('NAVIGATION_RESTORE_REQUEST_OK')
+          PY
+
+      - name: Self-test exact Navigation restore helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-navigation-acceptance-restore.py --self-test
+
+      - name: Verify dedicated principal tenant isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py isolation --tenant eduardo-research
+
+      - name: Roll back exact Navigation acceptance operation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-navigation-acceptance-restore.py \
+            --result commands/phase2d/results/cmd-phase2e-navigation-update-0001.json \
+            --discovery commands/phase2d/results/phase2e-navigation-discovery.json \
+            --evidence commands/phase2d/results/cmd-phase2e-navigation-update-0001-restore.json
+
+      - name: Persist sanitized restore evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence='commands/phase2d/results/cmd-phase2e-navigation-update-0001-restore.json'
+          test -f "$evidence"
+          cp "$evidence" /tmp/phase2e-navigation-restore.json
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p "$(dirname "$evidence")"
+          cp /tmp/phase2e-navigation-restore.json "$evidence"
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add "$evidence"
+          if git diff --cached --quiet; then
+            echo 'Navigation restore evidence already persisted'
+            exit 0
+          fi
+          git commit -m 'phase2e: record Navigation acceptance restore'
+          git push origin HEAD:main
