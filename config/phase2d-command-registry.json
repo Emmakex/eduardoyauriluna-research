@@ -22,6 +22,27 @@
       "allowed_statuses": [
         "draft"
       ]
+    },
+    "insight.update": {
+      "required_capabilities": [
+        "insights.write",
+        "operations.rollback"
+      ],
+      "tools": {
+        "capabilities": "research_capabilities",
+        "plan": "site_insight_update_plan",
+        "apply": "site_insight_apply",
+        "verify": "site_insight_verify",
+        "rollback": "site_insight_rollback"
+      },
+      "verify_rendered": true,
+      "allowed_change_fields": [
+        "title",
+        "excerpt",
+        "content",
+        "language",
+        "insight_type"
+      ]
     }
   }
 }
