@@ -1,0 +1,14 @@
+{
+  "action": "navigation.acceptance.restore",
+  "baseline_restored": true,
+  "operation_id": "erm-nav-op-d31ce631a3f240748c8a286f0e31e168",
+  "resource": {
+    "location": "primary",
+    "restored": "exact-discovery-baseline"
+  },
+  "rollback_verified": true,
+  "source_command_id": "cmd-phase2e-navigation-update-0001",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
