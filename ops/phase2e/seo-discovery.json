@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "action": "discover-safe-remediations",
+  "read_only": true
+}
