@@ -1,0 +1,20 @@
+{
+  "action": "research.object.create",
+  "command_id": "cmd-phase2e-research-software-create-0002",
+  "command_sha256": "a66cafe828b258f346d9ce6efd4bf742b91d628bda2cfad6dbd85eb42ea9d762",
+  "correlation": {
+    "operation_id": "erm-object-op-60c2a60441b04c4ab5e41d06e305ec5b",
+    "plan_id": "erm-object-plan-bf9b84041985541cf0-f72b1a9d"
+  },
+  "resource": {
+    "kind": "software",
+    "language": "en",
+    "post_id": 100,
+    "state": "draft",
+    "title": "Phase 2E Research Software acceptance fixture"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
