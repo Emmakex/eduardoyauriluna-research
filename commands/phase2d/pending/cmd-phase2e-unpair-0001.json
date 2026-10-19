@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-unpair-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.translation.unpair",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 93
+  }
+}
