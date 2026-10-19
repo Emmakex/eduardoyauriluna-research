@@ -1,5 +1,5 @@
 <?php
-/** Enforce semantic least-privilege scopes after authenticated REST permission checks. */
+/** Describe semantic least-privilege scopes for authenticated Remote Manager requests. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
@@ -11,49 +11,15 @@ final class Eduardo_Research_Manager_Remote_Semantic_Scope_Guard {
     private const EVIDENCE_OPERATIONS_OPTION = 'eduardo_research_manager_remote_evidence_operations';
 
     public function register(): void {
-        add_filter('rest_request_before_callbacks', array($this, 'enforce'), 10, 3);
         add_filter('rest_request_after_callbacks', array($this, 'augment_capabilities'), 20, 3);
     }
 
     /**
-     * Runs after the route permission callback has authenticated the bearer token and
-     * consumed the nonce, so semantic scopes are checked without re-authentication.
+     * Return semantic scopes for a request. Enforcement belongs inside the authenticated
+     * permission path so the exact bearer credential that passed authentication is used.
      */
-    public function enforce(mixed $response, mixed $handler, WP_REST_Request $request): mixed {
-        if (is_wp_error($response)) { return $response; }
-
-        $route = $request->get_route();
-        $prefix = '/' . Eduardo_Research_Manager_Remote_REST::NAMESPACE;
-        if (! str_starts_with($route, $prefix)) { return $response; }
-
-        $required = $this->required_scopes_for_request($request);
-        if (! $required) { return $response; }
-
-        $credentials = Eduardo_Research_Manager::remote_credentials();
-        $state = $credentials->state();
-        foreach ($required as $scope) {
-            if ($credentials->has_scope($state, $scope)) { continue; }
-
-            $error = new WP_Error(
-                'scope_denied',
-                sprintf('Remote Manager connection does not grant %s.', $scope),
-                array('status'=>403)
-            );
-            Eduardo_Research_Manager::remote_audit()->record(array(
-                'request_id'=>(string) $request->get_header('x-research-manager-request-id'),
-                'connection_id'=>(string) ($state['connection_id'] ?? ''),
-                'wordpress_user_id'=>(int) ($state['wordpress_user_id'] ?? 0),
-                'method'=>$request->get_method(),
-                'route'=>$route,
-                'scope'=>$scope,
-                'event'=>'remote-request-rejected',
-                'outcome'=>'blocked',
-                'error_code'=>'scope_denied',
-            ));
-            return $error;
-        }
-
-        return $response;
+    public function required_scopes(WP_REST_Request $request): array {
+        return $this->required_scopes_for_request($request);
     }
 
     public function augment_capabilities(mixed $response, mixed $handler, WP_REST_Request $request): mixed {
