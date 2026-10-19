@@ -1,0 +1,18 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-research-software-create-0003",
+  "tenant": "eduardo-research",
+  "action": "research.object.create",
+  "requested_by": "chatgpt",
+  "payload": {
+    "kind": "software",
+    "data": {
+      "title": "Phase 2E Research Software update baseline",
+      "language": "en",
+      "status": "draft",
+      "programming_languages": []
+    },
+    "evidence_confirmed": true,
+    "evidence_reference": "acceptance:phase2e:research-software:update-fixture"
+  }
+}
