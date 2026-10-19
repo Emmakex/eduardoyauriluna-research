@@ -1,8 +1,0 @@
-{
-  "version": "1",
-  "command_id": "cmd-phase2e-design-variant-rollback-0001",
-  "tenant": "eduardo-research",
-  "action": "design.acceptance.rollback",
-  "requested_by": "chatgpt",
-  "payload": {"acceptance_only": true}
-}

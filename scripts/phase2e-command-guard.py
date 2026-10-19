@@ -5,7 +5,6 @@ Existing actions keep the original validator unchanged. Bounded Page, Navigation
 Media metadata, Design, Research Object and Research Line actions use dedicated
 strict validators, then reuse the same fingerprinting, replay semantics, result
 stamping and tenant-isolation probe. Binary Media ingest stays outside Git persistence.
-The temporary Design acceptance rollback is exact-command/operation-ID only.
 """
 from __future__ import annotations
 
@@ -18,7 +17,6 @@ PAGE_TEXT_SLOT_RUNNER = HERE / "phase2e-page-text-slot-runner.py"
 NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
 MEDIA_METADATA_RUNNER = HERE / "phase2e-media-metadata-runner.py"
 DESIGN_RUNNER = HERE / "phase2e-design-runner.py"
-DESIGN_ACCEPTANCE_ROLLBACK_RUNNER = HERE / "phase2e-design-acceptance-rollback-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
@@ -39,7 +37,6 @@ page_text_slot = load_module("phase2e_page_text_slot_guard", PAGE_TEXT_SLOT_RUNN
 navigation = load_module("phase2e_navigation_guard", NAVIGATION_RUNNER)
 media_metadata = load_module("phase2e_media_metadata_guard", MEDIA_METADATA_RUNNER)
 design = load_module("phase2e_design_guard", DESIGN_RUNNER)
-design_acceptance_rollback = load_module("phase2e_design_acceptance_rollback_guard", DESIGN_ACCEPTANCE_ROLLBACK_RUNNER)
 research_create = load_module("phase2e_research_object_create_guard", RESEARCH_CREATE_RUNNER)
 research_update = load_module("phase2e_research_object_update_guard", RESEARCH_UPDATE_RUNNER)
 research_line_create = load_module("phase2e_research_line_create_guard", RESEARCH_LINE_CREATE_RUNNER)
@@ -52,7 +49,6 @@ PHASE2E_VALIDATORS = {
     media_metadata.ACTION: media_metadata,
     design.PRESET_ACTION: design,
     design.VARIANT_ACTION: design,
-    design_acceptance_rollback.ACTION: design_acceptance_rollback,
     research_create.ACTION: research_create,
     research_update.ACTION: research_update,
     research_line_create.ACTION: research_line_create,
