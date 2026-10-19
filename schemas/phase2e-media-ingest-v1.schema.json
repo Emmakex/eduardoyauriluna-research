@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://eduardoyauriluna.com/schemas/phase2e-media-ingest-v1.schema.json",
+  "$comment": "Closed command surface: inline bounded binary only; no URL or filesystem sources.",
   "title": "Phase 2E bounded Media ingest command",
   "type": "object",
   "additionalProperties": false,
