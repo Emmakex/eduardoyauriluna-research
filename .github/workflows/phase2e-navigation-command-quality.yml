@@ -108,6 +108,8 @@ jobs:
           set -euo pipefail
           grep -F '"navigation.update": NAVIGATION_RUNNER' scripts/phase2e-command-runner-observable.py
           grep -F 'navigation.ACTION: navigation' scripts/phase2e-command-guard.py
+          grep -F 'if hasattr(module, "subprocess"):' scripts/phase2e-command-runner-observable.py
+          grep -F 'module.base.subprocess.run = observable_run' scripts/phase2e-command-runner-observable.py
           grep -F 'NAV_PLAN_ID_RE = re.compile' scripts/phase2e-navigation-runner.py
           grep -F 'NAV_OP_ID_RE = re.compile' scripts/phase2e-navigation-runner.py
           grep -F '"navigation.write"' config/phase2e-navigation-command-registry.json
