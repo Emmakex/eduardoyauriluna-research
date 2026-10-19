@@ -1,0 +1,32 @@
+name: Phase 2E Ops Dispatch Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase2e-ops-dispatch-once.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch exact immutable MCP deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/phase2c-ovh-deploy.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[action]=deploy' \
+            -f 'inputs[image_ref]=ghcr.io/emmakex/site-control-mcp@sha256:e6e01aeefa4de83d513b09ff5138cba97a73a2add6f822332c31e02766be5dc2' \
+            -f 'inputs[public_host]=mcp.kairoseth.com' \
+            -f 'inputs[reference_tenant_id]=eduardo-research' \
+            -f 'inputs[denied_tenant_id]=phase2c-isolation'
+          echo 'DISPATCHED_PHASE2C_DEPLOY=e6e01aeefa4de83d513b09ff5138cba97a73a2add6f822332c31e02766be5dc2'
