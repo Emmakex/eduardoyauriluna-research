@@ -1,15 +1,1 @@
-{
-  "version": "1",
-  "command_id": "cmd-phase2e-research-line-update-0001",
-  "tenant": "eduardo-research",
-  "action": "research.line.update",
-  "requested_by": "chatgpt",
-  "payload": {
-    "post_id": 102,
-    "changes": {
-      "title": "Phase 2E Research Line update accepted"
-    },
-    "evidence_confirmed": true,
-    "evidence_reference": "acceptance:phase2e:research-line:title-update"
-  }
-}
+{"action":"research.line.update","command_id":"cmd-phase2e-research-line-update-0001","payload":{"changes":{"title":"Phase 2E Research Line update accepted"},"evidence_confirmed":true,"evidence_reference":"acceptance:phase2e:research-line:title-update","post_id":102},"requested_by":"chatgpt","tenant":"eduardo-research","version":"1"}
