@@ -70,6 +70,17 @@ _real_write_result = module.write_result
 _last_diagnostic: str | None = None
 
 
+def diagnostic_sanitizer():
+    sanitizer = getattr(module, "sanitized_message", None)
+    if callable(sanitizer):
+        return sanitizer
+    delegated_base = getattr(module, "base", None)
+    sanitizer = getattr(delegated_base, "sanitized_message", None)
+    if callable(sanitizer):
+        return sanitizer
+    raise RuntimeError("selected command runner does not expose sanitized diagnostic handling")
+
+
 def observable_run(*args, **kwargs):
     global _last_diagnostic
     completed = _real_run(*args, **kwargs)
@@ -78,7 +89,7 @@ def observable_run(*args, **kwargs):
         payload = completed.stdout.strip()
         combined = f"{stderr.rstrip()}\nMCP tool payload: {payload}".strip()
         token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
-        _last_diagnostic = module.sanitized_message(combined, token)
+        _last_diagnostic = diagnostic_sanitizer()(combined, token)
         completed = subprocess.CompletedProcess(completed.args, completed.returncode, completed.stdout, combined)
     return completed
 
