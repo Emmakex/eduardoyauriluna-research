@@ -14,6 +14,62 @@
   },
   "safe_site_candidates": [],
   "status": "success",
+  "structured_input_actions": [
+    {
+      "check_id": "description-source",
+      "dimension": "seo+geo",
+      "gateway": "insights",
+      "operation": "insight-update",
+      "reason": "The Theme derives meta description and schema description/abstract from the structured excerpt.",
+      "required_input": [
+        "value"
+      ],
+      "requires_evidence": false,
+      "source": "resource",
+      "status": "fail",
+      "target": {
+        "identifier": 97,
+        "language": "en",
+        "type": "insight"
+      }
+    },
+    {
+      "check_id": "bilingual-alternate",
+      "dimension": "seo+geo",
+      "gateway": "insight-translations",
+      "operation": "insight-pair",
+      "reason": "A paired EN/ES counterpart enables reciprocal hreflang and bilingual entity discovery.",
+      "required_input": [
+        "counterpart_id"
+      ],
+      "requires_evidence": false,
+      "source": "resource",
+      "status": "advisory",
+      "target": {
+        "identifier": 97,
+        "language": "en",
+        "type": "insight"
+      }
+    },
+    {
+      "check_id": "research-entity-graph",
+      "dimension": "geo",
+      "gateway": "insights",
+      "operation": "insight-update",
+      "reason": "A verified Research Line relation connects the Insight to the site research entity graph and internal related-object graph.",
+      "required_input": [
+        "value"
+      ],
+      "requires_evidence": false,
+      "source": "resource",
+      "status": "advisory",
+      "target": {
+        "identifier": 97,
+        "language": "en",
+        "type": "insight"
+      }
+    }
+  ],
   "tenant": "eduardo-research",
   "version": "1"
 }
