@@ -1,0 +1,43 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {
+      "enabled": true
+    }
+  },
+  "actions": {
+    "research.object.create": {
+      "required_capabilities": [
+        "research.write",
+        "operations.rollback"
+      ],
+      "tools": {
+        "plan": "site_research_object_create_plan",
+        "apply": "site_research_object_apply",
+        "verify": "site_research_object_verify",
+        "rollback": "site_research_object_rollback"
+      },
+      "verify_rendered": false,
+      "allowed_kinds": [
+        "software"
+      ],
+      "allowed_statuses": [
+        "draft"
+      ],
+      "allowed_data_fields": [
+        "title",
+        "excerpt",
+        "content",
+        "language",
+        "status",
+        "software_status",
+        "version",
+        "repository_url",
+        "license",
+        "documentation_url",
+        "programming_languages"
+      ],
+      "evidence_required": true
+    }
+  }
+}
