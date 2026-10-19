@@ -1,0 +1,42 @@
+name: Phase 2E Research Command Quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase2e-research-command-quality.yml'
+      - '.github/workflows/phase2d-command-gateway.yml'
+      - 'config/phase2e-research-command-registry.json'
+      - 'schemas/phase2e-research-command-v1.schema.json'
+      - 'scripts/phase2e-research-object-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile dispatchers and Research runner
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/phase2e-research-object-runner.py \
+            scripts/phase2e-command-guard.py \
+            scripts/phase2e-command-runner-observable.py
+      - name: Verify existing Phase 2D runner remains valid
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-runner.py --self-test
+      - name: Verify bounded Research runner
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-research-object-runner.py --self-test
+      - name: Verify dispatched replay guard
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py self-test
