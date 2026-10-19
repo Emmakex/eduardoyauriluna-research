@@ -1,13 +1,1 @@
-{
-  "version": "1",
-  "command_id": "cmd-phase2e-media-metadata-0001",
-  "tenant": "eduardo-research",
-  "action": "media.metadata.update",
-  "requested_by": "chatgpt",
-  "payload": {
-    "attachment_id": 105,
-    "changes": {
-      "alt_text": "Temporary Media metadata gateway acceptance — bounded and reversible."
-    }
-  }
-}
+{"version":"1","command_id":"cmd-phase2e-media-metadata-0001","tenant":"eduardo-research","action":"media.metadata.update","requested_by":"chatgpt","payload":{"attachment_id":105,"changes":{"alt_text":"Temporary Media metadata gateway acceptance — bounded and reversible."}}}
