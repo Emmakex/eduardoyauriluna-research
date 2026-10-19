@@ -1,0 +1,19 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-hola-mundo-live-0002",
+  "command_sha256": "4f4448a7114a97e00e1741cfcb0037abc9b06fa3118c8f2e75d4863f7b3f3657",
+  "correlation": {
+    "operation_id": "erm-operation-1ff1ee930f9f4d29b9601027d76be833",
+    "plan_id": "erm-remote-plan-4321f6a4f2af6e09ddc1-a2641fb5"
+  },
+  "resource": {
+    "language": "es",
+    "post_id": 110,
+    "state": "draft",
+    "title": "Hola mundo — prueba ChatGPT 20261019"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
