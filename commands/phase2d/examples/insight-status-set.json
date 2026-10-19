@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-example-status-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.status.set",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 93,
+    "status": "publish"
+  }
+}
