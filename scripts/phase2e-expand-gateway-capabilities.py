@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Safely expand the Phase 2D GitHub gateway to one reviewed capability.
+"""Safely converge the production command gateway on reviewed capabilities.
 
-Current production slice: add `pages.write` to BOTH the `eduardo-research`
-tenant entitlements and the existing `phase2d-github` principal capabilities.
-The existing principal bearer reference and secret value are preserved exactly.
+The reviewed Phase 2E capability set is deliberately closed in this source file.
+Each capability is added to BOTH tenant entitlements and the existing
+`phase2d-github` principal while preserving the current bearer exactly.
 
-Run on the production OVH host. The mutation is transactional: the current env is
-backed up with mode 0600, the accepted immutable image is recreated, public health
-and tenant isolation are verified using the already-installed bearer, and any
-failure restores the prior env/runtime. No bearer or .env content is printed.
+The production mutation is transactional: backup mode 0600, accepted immutable
+image recreation, public health + allowed/denied routing checks, and automatic
+rollback on any verification failure. No bearer or .env content is printed.
 """
 from __future__ import annotations
 
@@ -34,7 +33,7 @@ PUBLIC_HEALTH = "https://mcp.kairoseth.com/healthz"
 PUBLIC_MCP_BASE = "https://mcp.kairoseth.com/mcp"
 TENANT_ID = "eduardo-research"
 PRINCIPAL_ID = "phase2d-github"
-CAPABILITY = "pages.write"
+APPROVED_CAPABILITIES = ["pages.write", "translations.write"]
 IMAGE_RE = re.compile(r"^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$")
 
 
@@ -105,7 +104,17 @@ def string_list(value: Any, label: str) -> list[str]:
     return list(value)
 
 
-def build_updated_env(original: str) -> tuple[str, str, bool]:
+def add_missing(values: list[str], approved: list[str]) -> tuple[list[str], list[str]]:
+    output = list(values)
+    added: list[str] = []
+    for capability in approved:
+        if capability not in output:
+            output.append(capability)
+            added.append(capability)
+    return output, added
+
+
+def build_updated_env(original: str) -> tuple[str, str, list[str], list[str]]:
     parsed, tenants, principals = runtime_json(original)
     tenant = one_by_id(tenants, TENANT_ID, "tenant")
     principal = one_by_id(principals, PRINCIPAL_ID, "principal")
@@ -123,28 +132,17 @@ def build_updated_env(original: str) -> tuple[str, str, bool]:
 
     entitlements = string_list(tenant.get("entitlements"), f"{TENANT_ID}.entitlements")
     capabilities = string_list(principal.get("capabilities"), f"{PRINCIPAL_ID}.capabilities")
+    next_entitlements, tenant_added = add_missing(entitlements, APPROVED_CAPABILITIES)
+    next_capabilities, principal_added = add_missing(capabilities, APPROVED_CAPABILITIES)
 
-    changed = False
-    if CAPABILITY not in entitlements:
-        entitlements.append(CAPABILITY)
-        changed = True
-    if CAPABILITY not in capabilities:
-        capabilities.append(CAPABILITY)
-        changed = True
-
-    next_tenants: list[dict[str, Any]] = []
-    for item in tenants:
-        if item.get("id") == TENANT_ID:
-            next_tenants.append({**item, "entitlements": entitlements})
-        else:
-            next_tenants.append(item)
-
-    next_principals: list[dict[str, Any]] = []
-    for item in principals:
-        if item.get("id") == PRINCIPAL_ID:
-            next_principals.append({**item, "capabilities": capabilities})
-        else:
-            next_principals.append(item)
+    next_tenants = [
+        {**item, "entitlements": next_entitlements} if item.get("id") == TENANT_ID else item
+        for item in tenants
+    ]
+    next_principals = [
+        {**item, "capabilities": next_capabilities} if item.get("id") == PRINCIPAL_ID else item
+        for item in principals
+    ]
 
     updated = replace_env_lines(
         original,
@@ -153,14 +151,13 @@ def build_updated_env(original: str) -> tuple[str, str, bool]:
             "MCP_PRINCIPALS_JSON": json.dumps(next_principals, separators=(",", ":")),
         },
     )
-
     after = parse_env(updated)
     if after.get(token_ref) != token:
         raise RuntimeError("capability expansion changed the existing gateway bearer")
     for key, value in parsed.items():
         if key not in {"MCP_TENANTS_JSON", "MCP_PRINCIPALS_JSON"} and after.get(key) != value:
             raise RuntimeError(f"capability expansion changed unrelated env key {key}")
-    return updated, token, changed
+    return updated, token, tenant_added, principal_added
 
 
 def verify_contract(text: str) -> str:
@@ -169,10 +166,11 @@ def verify_contract(text: str) -> str:
     principal = one_by_id(principals, PRINCIPAL_ID, "principal")
     entitlements = string_list(tenant.get("entitlements"), f"{TENANT_ID}.entitlements")
     capabilities = string_list(principal.get("capabilities"), f"{PRINCIPAL_ID}.capabilities")
-    if CAPABILITY not in entitlements:
-        raise RuntimeError(f"tenant is missing {CAPABILITY}")
-    if CAPABILITY not in capabilities:
-        raise RuntimeError(f"principal is missing {CAPABILITY}")
+    for capability in APPROVED_CAPABILITIES:
+        if capability not in entitlements:
+            raise RuntimeError(f"tenant is missing {capability}")
+        if capability not in capabilities:
+            raise RuntimeError(f"principal is missing {capability}")
     if string_list(principal.get("tenants"), f"{PRINCIPAL_ID}.tenants") != [TENANT_ID]:
         raise RuntimeError("principal tenant allowlist changed")
     token_ref = principal.get("bearerTokenEnv")
@@ -202,16 +200,8 @@ def recreate_runtime(image_ref: str) -> None:
     env = {**os.environ, "MCP_IMAGE_REF": image_ref}
     subprocess.run(
         [
-            "docker",
-            "compose",
-            "--project-directory",
-            str(PROJECT_DIR),
-            "-f",
-            str(COMPOSE_PATH),
-            "up",
-            "-d",
-            "--force-recreate",
-            SERVICE,
+            "docker", "compose", "--project-directory", str(PROJECT_DIR),
+            "-f", str(COMPOSE_PATH), "up", "-d", "--force-recreate", SERVICE,
         ],
         cwd=PROJECT_DIR,
         env=env,
@@ -226,7 +216,7 @@ def wait_health() -> None:
     last_error = ""
     for _ in range(30):
         try:
-            request = urllib.request.Request(PUBLIC_HEALTH, headers={"User-Agent": "phase2e-capability-expand/1.0"})
+            request = urllib.request.Request(PUBLIC_HEALTH, headers={"User-Agent": "phase2e-capability-expand/2.0"})
             with urllib.request.urlopen(request, timeout=10) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             if (
@@ -252,7 +242,7 @@ def mcp_initialize_status(url: str, token: str) -> int:
             "params": {
                 "protocolVersion": "2025-06-18",
                 "capabilities": {},
-                "clientInfo": {"name": "phase2e-capability-expand", "version": "1.0"},
+                "clientInfo": {"name": "phase2e-capability-expand", "version": "2.0"},
             },
         }
     ).encode("utf-8")
@@ -264,7 +254,7 @@ def mcp_initialize_status(url: str, token: str) -> int:
             "Authorization": "Bearer " + token,
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
-            "User-Agent": "phase2e-capability-expand/1.0",
+            "User-Agent": "phase2e-capability-expand/2.0",
         },
     )
     try:
@@ -307,16 +297,18 @@ def self_test() -> int:
         f"MCP_TENANTS_JSON={json.dumps([tenant], separators=(',', ':'))}\n"
         f"MCP_PRINCIPALS_JSON={json.dumps([principal], separators=(',', ':'))}\n"
     )
-    updated, token, changed = build_updated_env(sample)
-    if token != "gateway-secret" or not changed:
-        raise RuntimeError("self-test did not preserve the existing bearer or detect expansion")
+    updated, token, tenant_added, principal_added = build_updated_env(sample)
+    if token != "gateway-secret":
+        raise RuntimeError("self-test changed the existing bearer")
+    if tenant_added != APPROVED_CAPABILITIES or principal_added != APPROVED_CAPABILITIES:
+        raise RuntimeError("self-test did not add the reviewed capability set")
     if parse_env(updated).get("UNCHANGED") != "value":
         raise RuntimeError("self-test changed unrelated env material")
     if verify_contract(updated) != "gateway-secret":
         raise RuntimeError("self-test expanded contract is invalid")
-    again, token_again, changed_again = build_updated_env(updated)
-    if changed_again or token_again != "gateway-secret" or again != updated:
-        raise RuntimeError("self-test expansion is not idempotent")
+    again, token_again, tenant_again, principal_again = build_updated_env(updated)
+    if tenant_again or principal_again or token_again != "gateway-secret" or again != updated:
+        raise RuntimeError("self-test convergence is not idempotent")
 
     bad = json.loads(json.dumps(principal))
     bad["tenants"] = [TENANT_ID, "other-tenant"]
@@ -349,15 +341,17 @@ def main() -> int:
         raise SystemExit(f"refusing to continue while transaction backup exists: {BACKUP_PATH}")
 
     original = ENV_PATH.read_text(encoding="utf-8")
-    updated, token, changed = build_updated_env(original)
+    updated, token, tenant_added, principal_added = build_updated_env(original)
     image_ref = current_image_ref()
+    changed = bool(tenant_added or principal_added)
 
     if not changed:
         verify_contract(original)
         wait_health()
         verify_public_routing(token)
-        log(f"Capability {CAPABILITY}: already active for tenant + principal")
+        log("Reviewed gateway capabilities: already active for tenant + principal")
         log("Existing automation bearer: preserved and verified")
+        log("Allowed tenant initialize: HTTP 200")
         log("Denied tenant initialize: HTTP 403")
         return 0
 
@@ -378,8 +372,10 @@ def main() -> int:
         raise
 
     BACKUP_PATH.unlink(missing_ok=True)
-    log(f"Tenant entitlement added: {CAPABILITY}")
-    log(f"Principal capability added: {CAPABILITY}")
+    for capability in tenant_added:
+        log(f"Tenant entitlement added: {capability}")
+    for capability in principal_added:
+        log(f"Principal capability added: {capability}")
     log("Existing automation bearer: preserved and verified")
     log("Allowed tenant initialize: HTTP 200")
     log("Denied tenant initialize: HTTP 403")
