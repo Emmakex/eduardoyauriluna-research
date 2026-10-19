@@ -1,0 +1,14 @@
+{
+  "action": "research.object.acceptance.restore",
+  "operation_id": "erm-object-op-835318dda29f4e8b997598b02b3582d9",
+  "resource": {
+    "kind": "software",
+    "post_id": 101,
+    "restored": "absent"
+  },
+  "rollback_verified": true,
+  "source_command_id": "cmd-phase2e-research-software-create-0003",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
