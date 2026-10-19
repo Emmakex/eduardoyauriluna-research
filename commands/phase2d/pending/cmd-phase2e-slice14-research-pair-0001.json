@@ -1,13 +1,13 @@
 {
-  "version": "1",
-  "command_id": "cmd-phase2e-slice14-research-pair-0001",
-  "tenant": "eduardo-research",
-  "action": "research.translation.pair",
   "requested_by": "chatgpt",
   "payload": {
-    "first_id": 108,
+    "evidence_reference": "Phase 2E Slice 14 reversible structured Research translation production acceptance",
     "second_id": 109,
-    "evidence_confirmed": true,
-    "evidence_reference": "Phase 2E Slice 14 reversible structured Research translation production acceptance"
-  }
+    "first_id": 108,
+    "evidence_confirmed": true
+  },
+  "action": "research.translation.pair",
+  "tenant": "eduardo-research",
+  "command_id": "cmd-phase2e-slice14-research-pair-0001",
+  "version": "1"
 }
