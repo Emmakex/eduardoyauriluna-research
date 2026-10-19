@@ -1,16 +1,1 @@
-{
-  "version": "1",
-  "command_id": "cmd-phase2e-research-software-update-0001",
-  "tenant": "eduardo-research",
-  "action": "research.object.update",
-  "requested_by": "chatgpt",
-  "payload": {
-    "kind": "software",
-    "post_id": 101,
-    "changes": {
-      "title": "Phase 2E Research Software update accepted"
-    },
-    "evidence_confirmed": true,
-    "evidence_reference": "acceptance:phase2e:research-software:title-update"
-  }
-}
+{"action":"research.object.update","command_id":"cmd-phase2e-research-software-update-0001","payload":{"changes":{"title":"Phase 2E Research Software update accepted"},"evidence_confirmed":true,"evidence_reference":"acceptance:phase2e:research-software:title-update","kind":"software","post_id":101},"requested_by":"chatgpt","tenant":"eduardo-research","version":"1"}
