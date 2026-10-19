@@ -1,0 +1,19 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-phase2d-idempotency-0001",
+  "command_sha256": "dd74cc80b863a42e4762f172ade9d0c9199e2abf69db9ed29eff143dabca6100",
+  "correlation": {
+    "operation_id": "erm-operation-07c96ffb983b4c2a8055a08b7e35d7c5",
+    "plan_id": "erm-remote-plan-6bd17b796139cb4a697a-47c59708"
+  },
+  "resource": {
+    "language": "es",
+    "post_id": 94,
+    "state": "draft",
+    "title": "Phase 2D idempotency acceptance"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
