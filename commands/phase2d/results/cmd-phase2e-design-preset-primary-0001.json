@@ -1,0 +1,20 @@
+{
+  "action": "design.preset.update",
+  "command_id": "cmd-phase2e-design-preset-primary-0001",
+  "command_sha256": "61316db9a22162c7ebf84a5180d58de7c944f340c455f11442984093dee36682",
+  "correlation": {
+    "operation_id": "erm-design-op-ce24526154c64b0e9adb956505d6e81a",
+    "plan_id": "erm-design-plan-201a6fffe5a1fbd5bc-d9a365d8"
+  },
+  "resource": {
+    "changed_fields": [
+      "density",
+      "palette",
+      "typography"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
