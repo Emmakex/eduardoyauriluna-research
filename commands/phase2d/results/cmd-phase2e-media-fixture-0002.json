@@ -1,0 +1,31 @@
+{
+  "action": "media.acceptance.fixture.create",
+  "command_id": "cmd-phase2e-media-fixture-0002",
+  "command_sha256": "c5448b1b2ebcaa99a989fc9d492c998919c21cf2c0b9c41c31834476a51f1b77",
+  "correlation": {
+    "operation_id": "erm-media-ingest-op-f660d83f921b4ab6ae128f1ede0bcb50",
+    "plan_id": "erm-media-ingest-plan-03b15a8da65f4ccaf807-ad4f7c6b"
+  },
+  "resource": {
+    "attachment_id": 105,
+    "byte_size": 69,
+    "file_name": "phase2e-media-metadata-acceptance.png",
+    "mime_type": "image/png",
+    "sha256": "e878950f8091ec010cf5cc723bdea027a8539cf7147cfea199c2f666232dcd4e",
+    "temporary": true
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verification": {
+    "alt_matches": true,
+    "checksum_matches": true,
+    "mime_matches": true,
+    "provenance_matches": true
+  },
+  "verified": true,
+  "version": "1"
+}
