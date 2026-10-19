@@ -1,5 +1,5 @@
 {
-  "version": "1",
   "tenant": "eduardo-research",
-  "action": "prepare"
+  "action": "prepare",
+  "version": "1"
 }
