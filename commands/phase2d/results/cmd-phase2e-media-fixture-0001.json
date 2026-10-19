@@ -1,0 +1,17 @@
+{
+  "action": "media.acceptance.fixture.create",
+  "command_id": "cmd-phase2e-media-fixture-0001",
+  "command_sha256": "07d9f2cde0030d48874899cb99655765378cca0968afb510c5f38b7510c2dd8d",
+  "correlation": {
+    "operation_id": "erm-media-ingest-op-58cfd560af614e6bade2db635a8840b0",
+    "plan_id": "erm-media-ingest-plan-a6348576f5759c158e80-a15aaacc"
+  },
+  "error": {
+    "code": "fixture_failed",
+    "message": "Acceptance-only Media fixture creation failed."
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
