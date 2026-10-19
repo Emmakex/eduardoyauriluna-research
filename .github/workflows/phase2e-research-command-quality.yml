@@ -1,5 +1,6 @@
 name: Phase 2E Research Command Quality
 
+# Fail closed before any production Research command is accepted.
 on:
   push:
     branches: [main]
