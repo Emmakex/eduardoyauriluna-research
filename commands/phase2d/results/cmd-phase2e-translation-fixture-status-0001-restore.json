@@ -1,0 +1,12 @@
+{
+  "action": "translation_fixture.status.restore",
+  "operation_id": "erm-operation-f372924190f544eabba05b6f62805c63",
+  "resource": {
+    "post_id": 97,
+    "restored_status": "draft"
+  },
+  "rollback_verified": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
