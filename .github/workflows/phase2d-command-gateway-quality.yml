@@ -10,10 +10,12 @@ on:
       - 'scripts/phase2d-command-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
       - 'scripts/phase2e-expand-gateway-capabilities.py'
+      - 'scripts/phase2e-page-acceptance-restore.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
       - '.github/workflows/phase2e-expand-gateway-capabilities.yml'
+      - '.github/workflows/phase2e-page-acceptance-restore.yml'
   push:
     branches: [main]
     paths:
@@ -24,10 +26,12 @@ on:
       - 'scripts/phase2d-command-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
       - 'scripts/phase2e-expand-gateway-capabilities.py'
+      - 'scripts/phase2e-page-acceptance-restore.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
       - '.github/workflows/phase2e-expand-gateway-capabilities.yml'
+      - '.github/workflows/phase2e-page-acceptance-restore.yml'
 
 permissions:
   contents: read
@@ -45,6 +49,7 @@ jobs:
           python3 -m py_compile scripts/phase2d-command-guard.py
           python3 -m py_compile scripts/phase2d-provision-github-principal.py
           python3 -m py_compile scripts/phase2e-expand-gateway-capabilities.py
+          python3 -m py_compile scripts/phase2e-page-acceptance-restore.py
 
       - name: Run fail-closed self-tests
         run: |
@@ -52,6 +57,7 @@ jobs:
           python3 scripts/phase2d-command-guard.py self-test
           python3 scripts/phase2d-provision-github-principal.py --self-test
           python3 scripts/phase2e-expand-gateway-capabilities.py --self-test
+          python3 scripts/phase2e-page-acceptance-restore.py --self-test
 
       - name: Validate JSON contracts
         shell: bash
@@ -112,6 +118,12 @@ jobs:
           grep -F 'phase2d-github tenant allowlist is not the accepted single-tenant contract' scripts/phase2e-expand-gateway-capabilities.py
           grep -F "'add_capabilities': ['pages.write']" .github/workflows/phase2e-expand-gateway-capabilities.yml
           grep -F 'group: phase2c-ovh-production' .github/workflows/phase2e-expand-gateway-capabilities.yml
+          grep -F 'site_page_slots_rollback' scripts/phase2e-page-acceptance-restore.py
+          grep -F 'EXPECTED_KEY = "contact"' scripts/phase2e-page-acceptance-restore.py
+          grep -F 'EXPECTED_LANGUAGE = "en"' scripts/phase2e-page-acceptance-restore.py
+          grep -F 'EXPECTED_SLOT = "eyebrow"' scripts/phase2e-page-acceptance-restore.py
+          grep -F 'environment: phase2d-production' .github/workflows/phase2e-page-acceptance-restore.yml
+          grep -F "'command_id': 'cmd-phase2e-page-slot-0001'" .github/workflows/phase2e-page-acceptance-restore.yml
 
       - name: Reject committed credential material
         shell: bash
@@ -125,10 +137,12 @@ jobs:
             scripts/phase2d-command-guard.py
             scripts/phase2d-provision-github-principal.py
             scripts/phase2e-expand-gateway-capabilities.py
+            scripts/phase2e-page-acceptance-restore.py
             commands/phase2d/examples/hola-mundo.json
             commands/phase2d/examples/insight-update.json
             commands/phase2d/examples/page-slot-update.json
             .github/workflows/phase2d-command-gateway.yml
             .github/workflows/phase2e-expand-gateway-capabilities.yml
+            .github/workflows/phase2e-page-acceptance-restore.yml
           )
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"

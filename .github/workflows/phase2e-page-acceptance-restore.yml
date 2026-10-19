@@ -1,0 +1,80 @@
+name: Phase 2E Page Acceptance Restore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/phase2e/page-slot-acceptance-restore.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2d-command-gateway
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact Page acceptance restore request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('ops/phase2e/page-slot-acceptance-restore.json')
+          value = json.loads(path.read_text(encoding='utf-8'))
+          expected = {
+              'version': '1',
+              'command_id': 'cmd-phase2e-page-slot-0001',
+              'tenant': 'eduardo-research',
+              'key': 'contact',
+              'language': 'en',
+              'slot': 'eyebrow',
+          }
+          if value != expected:
+              raise SystemExit('restore request does not match the reviewed Page acceptance contract')
+          print('PAGE_RESTORE_REQUEST_OK')
+          PY
+
+      - name: Restore accepted Page operation baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-page-acceptance-restore.py \
+            --result commands/phase2d/results/cmd-phase2e-page-slot-0001.json \
+            --evidence commands/phase2d/results/cmd-phase2e-page-slot-0001-restore.json
+
+      - name: Persist sanitized restore evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence='commands/phase2d/results/cmd-phase2e-page-slot-0001-restore.json'
+          test -f "$evidence"
+          cp "$evidence" /tmp/phase2e-page-restore.json
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p "$(dirname "$evidence")"
+          cp /tmp/phase2e-page-restore.json "$evidence"
+
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add "$evidence"
+          if git diff --cached --quiet; then
+            echo 'Restore evidence already persisted'
+            exit 0
+          fi
+          git commit -m 'phase2e: record Page acceptance baseline restore'
+          git push origin HEAD:main
