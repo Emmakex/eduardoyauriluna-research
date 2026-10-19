@@ -1,0 +1,22 @@
+{
+  "action": "insight.translation.pair",
+  "command_id": "cmd-phase2e-pair-0002",
+  "command_sha256": "e84025d6d0b79f1a76f3dee71f095a573a94c1e6f5310dab4342dc2c73c18782",
+  "correlation": {
+    "operation_id": null,
+    "plan_id": null
+  },
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_insight_pair_plan' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /insights/pairing/plan with HTTP 400: research_manager_translation_not_public\"}],\"isError\":true}}",
+    "message": "The bounded MCP lifecycle did not complete successfully."
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
