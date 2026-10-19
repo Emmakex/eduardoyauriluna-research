@@ -113,6 +113,17 @@ check(str_contains($v1caps,"'normal_operation_ssh_required'=>false"),'Capabiliti
 check(str_contains($v1caps,"'normal_operation_wordpress_credentials_shared'=>false"),'Capabilities must keep shared WordPress credentials out of normal operation');
 check(str_contains($v1caps,"'arbitrary_wordpress_rest_proxy'=>false"),'Capabilities must keep arbitrary WordPress REST proxy disabled');
 
+$semantic=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php');
+$remoteRest=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php');
+check(false===strpos($semantic,"rest_request_before_callbacks"),'Semantic scope enforcement must not run before REST permission authentication');
+check(str_contains($semantic,'public function required_scopes(WP_REST_Request $request): array'),'Semantic guard must expose request scope requirements to the authenticated permission path');
+$authenticatePos=strpos($remoteRest,'$connection = $this->credentials->authenticate($token);');
+$semanticPos=strpos($remoteRest,'$semantic_guard->required_scopes($request)');
+$ratePos=strpos($remoteRest,'$rate = $this->guard->enforce_rate_limit');
+check(false!==$authenticatePos&&false!==$semanticPos&&false!==$ratePos&&$authenticatePos<$semanticPos&&$semanticPos<$ratePos,'Semantic scopes must be checked after bearer authentication and before rate/nonce execution');
+check(str_contains($remoteRest,'$this->audit_failure($request, $semantic_scope, $error, $metadata, $connection);'),'Semantic scope denial must audit the exact authenticated connection');
+check(str_contains($semantic,"'scope_check_order'] = 'authenticate-once-then-semantic-scopes'"),'Capabilities must advertise authenticate-once semantic scope ordering');
+
 $bootstrap=source('wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php');
 foreach(array('Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST','Remote_Identity_Profile_REST','V1_Controls_Admin','V1_Capabilities') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
 
