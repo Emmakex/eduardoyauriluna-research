@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "command_id": "cmd-phase2e-page-text-slot-0001",
+  "action": "restore",
+  "key": "about",
+  "language": "es",
+  "slot": "lead"
+}
