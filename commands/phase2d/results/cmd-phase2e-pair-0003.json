@@ -1,0 +1,17 @@
+{
+  "action": "insight.translation.pair",
+  "command_id": "cmd-phase2e-pair-0003",
+  "command_sha256": "355baf8ab673f754a90454c42598ea78d4981034e1212b33ef74359cf913bf2e",
+  "correlation": {
+    "operation_id": "erm-insight-pair-op-63615cbed54a464a8d5b1f9edb67bbad",
+    "plan_id": "erm-insight-pair-plan-6b67c4caea26ea80a0-f20956ef"
+  },
+  "resource": {
+    "first_id": 93,
+    "second_id": 97
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
