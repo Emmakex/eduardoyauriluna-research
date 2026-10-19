@@ -1,0 +1,21 @@
+{
+  "action": "design.variant.update",
+  "command_id": "cmd-phase2e-design-variant-primary-0001",
+  "command_sha256": "cc219c614734f01e5cd2232dc6bb55d4fdda27ce671f8b7475ab95934ca332eb",
+  "correlation": {
+    "operation_id": "erm-design-variant-op-289fd25763e84de7ace9b89144db4b6c",
+    "plan_id": "erm-design-variant-plan-3482c1730c0ffcef0d-93ddd8e2"
+  },
+  "resource": {
+    "changed_fields": [
+      "cards",
+      "collections",
+      "hero",
+      "sections"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
