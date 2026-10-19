@@ -1,1 +1,1 @@
-{"add_capabilities":["navigation.write"],"principal":"phase2d-github","tenant":"eduardo-research","version":"1"}
+{"add_capabilities":["navigation.read","navigation.write"],"principal":"phase2d-github","tenant":"eduardo-research","version":"1"}
