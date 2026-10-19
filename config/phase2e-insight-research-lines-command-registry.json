@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {"enabled": true}
+  },
+  "actions": {
+    "insight.research-lines.update": {
+      "required_capabilities": ["insights.write", "operations.rollback"],
+      "tools": {
+        "plan": "site_insight_update_plan",
+        "apply": "site_insight_apply",
+        "verify": "site_insight_verify",
+        "rollback": "site_insight_rollback"
+      },
+      "verify_rendered": true,
+      "max_line_ids": 32,
+      "relation_field": "line_ids"
+    }
+  }
+}
