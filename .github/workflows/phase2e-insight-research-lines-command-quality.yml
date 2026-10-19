@@ -7,8 +7,6 @@ on:
       - 'schemas/phase2e-insight-research-lines-v1.schema.json'
       - 'config/phase2e-insight-research-lines-command-registry.json'
       - 'scripts/phase2e-insight-research-lines-runner.py'
-      - 'scripts/phase2e-slice13-line-fixture-runner.py'
-      - 'scripts/phase2e-slice13-acceptance-rollback-runner.py'
       - 'scripts/phase2e-command-guard.py'
       - 'scripts/phase2e-command-runner-observable.py'
       - '.github/workflows/phase2e-insight-research-lines-command-quality.yml'
@@ -16,13 +14,10 @@ on:
     branches:
       - main
       - 'phase2e/**'
-      - 'ops/**'
     paths:
       - 'schemas/phase2e-insight-research-lines-v1.schema.json'
       - 'config/phase2e-insight-research-lines-command-registry.json'
       - 'scripts/phase2e-insight-research-lines-runner.py'
-      - 'scripts/phase2e-slice13-line-fixture-runner.py'
-      - 'scripts/phase2e-slice13-acceptance-rollback-runner.py'
       - 'scripts/phase2e-command-guard.py'
       - 'scripts/phase2e-command-runner-observable.py'
       - '.github/workflows/phase2e-insight-research-lines-command-quality.yml'
@@ -40,10 +35,8 @@ jobs:
       - name: Compile and self-test bounded relation surface
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/phase2e-insight-research-lines-runner.py scripts/phase2e-slice13-line-fixture-runner.py scripts/phase2e-slice13-acceptance-rollback-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py
+          python3 -m py_compile scripts/phase2e-insight-research-lines-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py
           python3 scripts/phase2e-insight-research-lines-runner.py --self-test
-          python3 scripts/phase2e-slice13-line-fixture-runner.py --self-test
-          python3 scripts/phase2e-slice13-acceptance-rollback-runner.py --self-test
           python3 scripts/phase2e-command-guard.py self-test
 
       - name: Verify dispatched fail-closed cases
@@ -56,16 +49,8 @@ jobs:
           cat > "$tmp/unlink.json" <<'JSON'
           {"version":"1","command_id":"cmd-insight-lines-quality-0002","tenant":"eduardo-research","action":"insight.research-lines.update","requested_by":"chatgpt","payload":{"post_id":101,"line_ids":[]}}
           JSON
-          cat > "$tmp/fixture.json" <<'JSON'
-          {"version":"1","command_id":"cmd-phase2e-slice13-line-fixture-0001","tenant":"eduardo-research","action":"research.line.acceptance.fixture.create","requested_by":"chatgpt","payload":{"acceptance_only":true}}
-          JSON
-          cat > "$tmp/rollback.json" <<'JSON'
-          {"version":"1","command_id":"cmd-phase2e-slice13-relation-rollback-0001","tenant":"eduardo-research","action":"slice13.acceptance.rollback","requested_by":"chatgpt","payload":{"acceptance_only":true}}
-          JSON
           python3 scripts/phase2e-command-guard.py guard "$tmp/good.json" --result-dir "$tmp/results"
           python3 scripts/phase2e-command-guard.py guard "$tmp/unlink.json" --result-dir "$tmp/results"
-          python3 scripts/phase2e-command-guard.py guard "$tmp/fixture.json" --result-dir "$tmp/results"
-          python3 scripts/phase2e-command-guard.py guard "$tmp/rollback.json" --result-dir "$tmp/results"
           for name in duplicate status schedule content tenant; do
             case "$name" in
               duplicate) payload='{"post_id":101,"line_ids":[201,201]}' ;;
@@ -81,20 +66,6 @@ jobs:
               exit 1
             fi
           done
-          cat > "$tmp/fixture-bad.json" <<'JSON'
-          {"version":"1","command_id":"cmd-phase2e-slice13-line-fixture-0001","tenant":"eduardo-research","action":"research.line.acceptance.fixture.create","requested_by":"chatgpt","payload":{"acceptance_only":true,"status":"publish"}}
-          JSON
-          if python3 scripts/phase2e-command-guard.py guard "$tmp/fixture-bad.json" --result-dir "$tmp/results"; then
-            echo 'Unsafe fixture payload escaped exact validator' >&2
-            exit 1
-          fi
-          cat > "$tmp/rollback-bad.json" <<'JSON'
-          {"version":"1","command_id":"cmd-phase2e-slice13-relation-rollback-0001","tenant":"eduardo-research","action":"slice13.acceptance.rollback","requested_by":"chatgpt","payload":{"acceptance_only":true,"operation_id":"erm-operation-30c4c80fdb2c4b64a9260edbd5803118"}}
-          JSON
-          if python3 scripts/phase2e-command-guard.py guard "$tmp/rollback-bad.json" --result-dir "$tmp/results"; then
-            echo 'Unsafe rollback operation ID escaped exact validator' >&2
-            exit 1
-          fi
 
       - name: Validate JSON Schema independently
         run: |
@@ -126,14 +97,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -F '"insight.research-lines.update": INSIGHT_RESEARCH_LINES_RUNNER' scripts/phase2e-command-runner-observable.py
-          grep -F '"research.line.acceptance.fixture.create": SLICE13_LINE_FIXTURE_RUNNER' scripts/phase2e-command-runner-observable.py
-          grep -F '"slice13.acceptance.rollback": SLICE13_ROLLBACK_RUNNER' scripts/phase2e-command-runner-observable.py
           grep -F 'insight_research_lines.ACTION: insight_research_lines' scripts/phase2e-command-guard.py
-          grep -F 'slice13_line_fixture.ACTION: slice13_line_fixture' scripts/phase2e-command-guard.py
-          grep -F 'slice13_rollback.ACTION: slice13_rollback' scripts/phase2e-command-guard.py
           grep -F 'site_insight_update_plan' config/phase2e-insight-research-lines-command-registry.json
           grep -F '"insights.write"' config/phase2e-gateway-capabilities.json
-          grep -F '"research.write"' config/phase2e-gateway-capabilities.json
           grep -F '"operations.rollback"' config/phase2e-gateway-capabilities.json
           python3 - <<'PY'
           import json
@@ -155,5 +121,5 @@ jobs:
       - name: Reject committed credential material
         run: |
           set -euo pipefail
-          files=(schemas/phase2e-insight-research-lines-v1.schema.json config/phase2e-insight-research-lines-command-registry.json scripts/phase2e-insight-research-lines-runner.py scripts/phase2e-slice13-line-fixture-runner.py scripts/phase2e-slice13-acceptance-rollback-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          files=(schemas/phase2e-insight-research-lines-v1.schema.json config/phase2e-insight-research-lines-command-registry.json scripts/phase2e-insight-research-lines-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
