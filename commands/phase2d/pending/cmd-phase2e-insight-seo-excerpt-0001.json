@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-insight-seo-excerpt-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 97,
+    "changes": {
+      "excerpt": "Hello world. This is the English counterpart managed through the Research Manager MCP command gateway."
+    }
+  }
+}
