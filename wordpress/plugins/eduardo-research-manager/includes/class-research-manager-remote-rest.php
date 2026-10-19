@@ -252,6 +252,19 @@ final class Eduardo_Research_Manager_Remote_REST {
             return $error;
         }
 
+        $semantic_guard = new Eduardo_Research_Manager_Remote_Semantic_Scope_Guard();
+        foreach ($semantic_guard->required_scopes($request) as $semantic_scope) {
+            if ($this->credentials->has_scope($connection, $semantic_scope)) { continue; }
+
+            $error = new WP_Error(
+                'scope_denied',
+                sprintf('Remote Manager connection does not grant %s.', $semantic_scope),
+                array('status' => 403)
+            );
+            $this->audit_failure($request, $semantic_scope, $error, $metadata, $connection);
+            return $error;
+        }
+
         $rate = $this->guard->enforce_rate_limit((string) $connection['connection_id']);
         if (is_wp_error($rate)) {
             $this->audit_failure($request, $required_scope, $rate, $metadata, $connection);
