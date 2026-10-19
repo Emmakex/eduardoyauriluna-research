@@ -1,0 +1,23 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {"enabled": true}
+  },
+  "actions": {
+    "page.slot.update": {
+      "required_capabilities": ["pages.write", "operations.rollback"],
+      "tools": {
+        "capabilities": "research_capabilities",
+        "plan": "site_page_slots_plan",
+        "apply": "site_page_slots_apply",
+        "verify": "site_page_slots_verify",
+        "rollback": "site_page_slots_rollback"
+      },
+      "verify_rendered": true,
+      "allowed_keys": ["about", "research", "publications", "projects", "software", "datasets", "cv", "insights", "contact", "privacy-policy", "legal-notice"],
+      "allowed_languages": ["en", "es"],
+      "allowed_slots": ["eyebrow", "lead"],
+      "value_max": 200
+    }
+  }
+}
