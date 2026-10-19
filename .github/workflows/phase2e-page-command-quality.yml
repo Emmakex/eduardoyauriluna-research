@@ -1,0 +1,124 @@
+name: Phase 2E Page Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-page-text-slot-v1.schema.json'
+      - 'config/phase2e-page-text-slot-registry.json'
+      - 'scripts/phase2e-page-text-slot-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-page-command-quality.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-page-text-slot-v1.schema.json'
+      - 'config/phase2e-page-text-slot-registry.json'
+      - 'scripts/phase2e-page-text-slot-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-page-command-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Page command surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/phase2e-page-text-slot-runner.py \
+            scripts/phase2e-command-guard.py \
+            scripts/phase2e-command-runner-observable.py
+
+      - name: Verify Phase 2D baseline remains valid
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-runner.py --self-test
+
+      - name: Verify bounded Page text-slot runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-page-text-slot-runner.py --self-test
+
+      - name: Verify dispatched replay guard baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py self-test
+
+      - name: Verify Page validator dispatch fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cat > "$tmp/good.json" <<'JSON'
+          {"version":"1","command_id":"cmd-page-text-quality-0001","tenant":"eduardo-research","action":"page.slot.update","requested_by":"chatgpt","payload":{"key":"about","language":"es","slot":"lead","value":"Perfil del investigador."}}
+          JSON
+          cat > "$tmp/bad-home.json" <<'JSON'
+          {"version":"1","command_id":"cmd-page-text-quality-0002","tenant":"eduardo-research","action":"page.slot.update","requested_by":"chatgpt","payload":{"key":"home","language":"es","slot":"lead","value":"Debe fallar cerrado."}}
+          JSON
+          cat > "$tmp/bad-sections.json" <<'JSON'
+          {"version":"1","command_id":"cmd-page-text-quality-0003","tenant":"eduardo-research","action":"page.slot.update","requested_by":"chatgpt","payload":{"key":"about","language":"es","slot":"sections","value":"Debe fallar cerrado."}}
+          JSON
+          python3 scripts/phase2e-command-guard.py guard "$tmp/good.json" --result-dir "$tmp/results"
+          if python3 scripts/phase2e-command-guard.py guard "$tmp/bad-home.json" --result-dir "$tmp/results"; then
+            echo 'Home escaped the Phase 2E Page allowlist' >&2
+            exit 1
+          fi
+          if python3 scripts/phase2e-command-guard.py guard "$tmp/bad-sections.json" --result-dir "$tmp/results"; then
+            echo 'sections escaped the scalar Page allowlist' >&2
+            exit 1
+          fi
+
+      - name: Validate Page JSON contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in [
+              Path('schemas/phase2e-page-text-slot-v1.schema.json'),
+              Path('config/phase2e-page-text-slot-registry.json'),
+          ]:
+              json.loads(path.read_text(encoding='utf-8'))
+              print(f'JSON OK: {path}')
+          PY
+
+      - name: Validate bounded surface markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F '"page.slot.update": PAGE_TEXT_SLOT_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'page_text_slot.ACTION: page_text_slot' scripts/phase2e-command-guard.py
+          grep -F 'ALLOWED_SLOTS = ("eyebrow", "lead")' scripts/phase2e-page-text-slot-runner.py
+          grep -F '"operations.rollback"' config/phase2e-page-text-slot-registry.json
+          grep -F '"rendered": True' scripts/phase2e-page-text-slot-runner.py
+          ! grep -F '"home"' config/phase2e-page-text-slot-registry.json
+          ! grep -F '"sections"' config/phase2e-page-text-slot-registry.json
+
+      - name: Reject committed credential material
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            schemas/phase2e-page-text-slot-v1.schema.json
+            config/phase2e-page-text-slot-registry.json
+            scripts/phase2e-page-text-slot-runner.py
+            scripts/phase2e-command-guard.py
+            scripts/phase2e-command-runner-observable.py
+          )
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
