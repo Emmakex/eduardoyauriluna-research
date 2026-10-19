@@ -1,8 +1,1 @@
-{
-  "version": "1",
-  "tenant": "eduardo-research",
-  "principal": "phase2d-github",
-  "add_capabilities": [
-    "seo.read"
-  ]
-}
+{"add_capabilities":["seo.read"],"principal":"phase2d-github","tenant":"eduardo-research","version":"1"}
