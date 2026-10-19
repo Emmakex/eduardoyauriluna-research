@@ -13,6 +13,7 @@
       ],
       "tools": {
         "plan": "site_media_ingest_plan",
+        "cancel": "site_media_ingest_cancel",
         "apply": "site_media_ingest_apply",
         "verify": "site_media_ingest_verify",
         "rollback": "site_media_ingest_rollback"
