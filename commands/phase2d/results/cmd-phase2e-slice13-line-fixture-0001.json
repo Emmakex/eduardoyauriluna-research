@@ -1,0 +1,24 @@
+{
+  "action": "research.line.acceptance.fixture.create",
+  "command_id": "cmd-phase2e-slice13-line-fixture-0001",
+  "command_sha256": "0970b0414daceb324e9e3db0a831563d1e54ebb6a131bbfb7f354cdee8a1a9c0",
+  "correlation": {
+    "operation_id": "erm-line-op-8916fbfc086c43a79ce2528f5fbef192",
+    "plan_id": "erm-line-plan-55f416f28fda707fdfe9-5db8c850"
+  },
+  "resource": {
+    "evidence_status": "verified",
+    "kind": "line",
+    "language": "en",
+    "non_academic_fixture": true,
+    "post_id": 106,
+    "research_status": "active",
+    "slug": "phase2e-slice13-relation-line-fixture-20261019",
+    "state": "publish",
+    "temporary": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
