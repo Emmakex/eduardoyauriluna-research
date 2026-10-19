@@ -1,0 +1,87 @@
+name: Phase 2E Research Object Acceptance Restore 0002
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/phase2e/research-object-acceptance-restore-0002.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2d-command-gateway
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact restore request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('ops/phase2e/research-object-acceptance-restore-0002.json').read_text(encoding='utf-8'))
+          expected = {
+              'version': '1',
+              'tenant': 'eduardo-research',
+              'command_id': 'cmd-phase2e-research-software-create-0002',
+              'action': 'restore',
+          }
+          if value != expected:
+              raise SystemExit('Research object restore request does not match the reviewed acceptance contract')
+          print('RESEARCH_OBJECT_RESTORE_REQUEST_OK')
+          PY
+
+      - name: Self-test bounded restore helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-research-object-acceptance-restore-0002.py --self-test
+
+      - name: Verify dedicated principal tenant isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py isolation --tenant eduardo-research
+
+      - name: Roll back exact Research Software acceptance operation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-research-object-acceptance-restore-0002.py \
+            --result commands/phase2d/results/cmd-phase2e-research-software-create-0002.json \
+            --evidence commands/phase2d/results/cmd-phase2e-research-software-create-0002-restore.json
+
+      - name: Persist sanitized restore evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence='commands/phase2d/results/cmd-phase2e-research-software-create-0002-restore.json'
+          test -f "$evidence"
+          cp "$evidence" /tmp/phase2e-research-object-restore-0002.json
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p "$(dirname "$evidence")"
+          cp /tmp/phase2e-research-object-restore-0002.json "$evidence"
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add "$evidence"
+          if git diff --cached --quiet; then
+            echo 'Restore evidence already persisted'
+            exit 0
+          fi
+          git commit -m 'phase2e: record Research Software acceptance restore 0002'
+          git push origin HEAD:main
