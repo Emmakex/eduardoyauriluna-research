@@ -1,8 +1,8 @@
 {
-  "action": "prepare",
   "version": "1",
   "tenant": "eduardo-research",
   "post_id": 97,
   "from_status": "draft",
-  "to_status": "publish"
+  "to_status": "publish",
+  "action": "restore"
 }
