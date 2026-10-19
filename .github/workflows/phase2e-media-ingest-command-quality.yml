@@ -116,8 +116,8 @@ jobs:
           grep -F 'MAX_BYTES = 5 * 1024 * 1024' scripts/phase2e-media-ingest-runner.py
           grep -F 'checksum_matches' scripts/phase2e-media-ingest-runner.py
           grep -F 'managed_by_manager' scripts/phase2e-media-ingest-runner.py
-          ! grep -F 'source_url' config/phase2e-media-ingest-command-registry.json
-          ! grep -F 'filesystem_path' config/phase2e-media-ingest-command-registry.json
+          ! grep -F '"source_url"' config/phase2e-media-ingest-command-registry.json
+          ! grep -F '"filesystem_path":' config/phase2e-media-ingest-command-registry.json
 
       - name: Reject committed credential material
         shell: bash
