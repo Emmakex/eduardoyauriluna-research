@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kairoseth.com/schemas/phase2e-research-command-v1.schema.json",
+  "title": "Kairoseth Phase 2E Research Command v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "command_id", "tenant", "action", "requested_by", "payload"],
+  "properties": {
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"const": "eduardo-research"},
+    "action": {"const": "research.object.create"},
+    "requested_by": {"const": "chatgpt"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "data", "evidence_confirmed", "evidence_reference"],
+      "properties": {
+        "kind": {"const": "software"},
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "language", "status"],
+          "properties": {
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "excerpt": {"type": "string", "maxLength": 1000},
+            "content": {"type": "string", "maxLength": 60000},
+            "language": {"enum": ["es", "en"]},
+            "status": {"const": "draft"},
+            "software_status": {"type": "string", "maxLength": 1000},
+            "version": {"type": "string", "maxLength": 1000},
+            "repository_url": {"type": "string", "maxLength": 2000},
+            "license": {"type": "string", "maxLength": 1000},
+            "documentation_url": {"type": "string", "maxLength": 2000},
+            "programming_languages": {
+              "type": "array",
+              "maxItems": 64,
+              "items": {"type": "string", "maxLength": 1000}
+            }
+          }
+        },
+        "evidence_confirmed": {"const": true},
+        "evidence_reference": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    }
+  }
+}
