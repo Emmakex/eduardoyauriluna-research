@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bind the reviewed Phase 2E gateway capability expander to navigation.write."""
+"""Bind the reviewed Phase 2E gateway capability expander to Navigation read/write."""
 from __future__ import annotations
 
 import importlib.util
@@ -13,8 +13,8 @@ helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
 
 # The base expander is additive: all already-active reviewed capabilities are
-# preserved exactly; this binding permits only the new Navigation capability.
-helper.APPROVED_CAPABILITIES = ["navigation.write"]
+# preserved exactly; this binding permits only bounded Navigation read/write.
+helper.APPROVED_CAPABILITIES = ["navigation.read", "navigation.write"]
 
 if __name__ == "__main__":
     raise SystemExit(helper.main())
