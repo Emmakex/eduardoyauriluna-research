@@ -1,5 +1,5 @@
 {
+  "version": "1",
   "tenant": "eduardo-research",
-  "action": "prepare",
-  "version": "1"
+  "action": "cleanup"
 }
