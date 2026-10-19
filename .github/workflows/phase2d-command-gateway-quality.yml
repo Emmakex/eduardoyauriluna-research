@@ -6,6 +6,7 @@ on:
       - 'schemas/phase2d-command-v1.schema.json'
       - 'config/phase2d-command-registry.json'
       - 'scripts/phase2d-command-runner.py'
+      - 'scripts/phase2d-provision-github-principal.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
@@ -15,6 +16,7 @@ on:
       - 'schemas/phase2d-command-v1.schema.json'
       - 'config/phase2d-command-registry.json'
       - 'scripts/phase2d-command-runner.py'
+      - 'scripts/phase2d-provision-github-principal.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
@@ -28,11 +30,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compile Python runner
-        run: python3 -m py_compile scripts/phase2d-command-runner.py
+      - name: Compile Python helpers
+        run: |
+          python3 -m py_compile scripts/phase2d-command-runner.py
+          python3 -m py_compile scripts/phase2d-provision-github-principal.py
 
-      - name: Run fail-closed self-test
-        run: python3 scripts/phase2d-command-runner.py --self-test
+      - name: Run fail-closed self-tests
+        run: |
+          python3 scripts/phase2d-command-runner.py --self-test
+          python3 scripts/phase2d-provision-github-principal.py --self-test
 
       - name: Validate JSON contracts
         shell: bash
@@ -63,6 +69,9 @@ jobs:
           grep -F '"rollback": "site_insight_rollback"' config/phase2d-command-registry.json
           grep -F 'environment: phase2d-production' .github/workflows/phase2d-command-gateway.yml
           grep -F 'PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}' .github/workflows/phase2d-command-gateway.yml
+          grep -F 'CAPABILITIES = ["insights.write", "operations.rollback"]' scripts/phase2d-provision-github-principal.py
+          grep -F 'PRINCIPAL_ID = "phase2d-github"' scripts/phase2d-provision-github-principal.py
+          grep -F 'TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"' scripts/phase2d-provision-github-principal.py
 
       - name: Reject committed credential material
         shell: bash
@@ -72,6 +81,7 @@ jobs:
             schemas/phase2d-command-v1.schema.json
             config/phase2d-command-registry.json
             scripts/phase2d-command-runner.py
+            scripts/phase2d-provision-github-principal.py
             commands/phase2d/examples/hola-mundo.json
             .github/workflows/phase2d-command-gateway.yml
           )
