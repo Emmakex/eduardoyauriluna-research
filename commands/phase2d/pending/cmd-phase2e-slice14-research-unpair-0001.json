@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-slice14-research-unpair-0001",
+  "tenant": "eduardo-research",
+  "action": "research.translation.unpair",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 108,
+    "evidence_confirmed": true,
+    "evidence_reference": "Phase 2E Slice 14 reversible structured Research translation production acceptance cleanup"
+  }
+}
