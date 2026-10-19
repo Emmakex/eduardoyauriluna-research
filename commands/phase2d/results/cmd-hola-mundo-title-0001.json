@@ -1,0 +1,20 @@
+{
+  "action": "insight.update",
+  "command_id": "cmd-hola-mundo-title-0001",
+  "command_sha256": "e247551b60c96d8b07788b2b5959c797939a00cfcaab0cdbf00b001d029c4372",
+  "correlation": {
+    "operation_id": "erm-operation-861f8c5be232492d9d44307b55fb8011",
+    "plan_id": "erm-remote-plan-94947576922fbbff817b-de91be6c"
+  },
+  "resource": {
+    "changed_fields": [
+      "title"
+    ],
+    "post_id": 110,
+    "title": "Hola mundo"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
