@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {
+      "enabled": true
+    }
+  },
+  "actions": {
+    "media.ingest": {
+      "required_capabilities": [
+        "media.write",
+        "operations.rollback"
+      ],
+      "tools": {
+        "plan": "site_media_ingest_plan",
+        "apply": "site_media_ingest_apply",
+        "verify": "site_media_ingest_verify",
+        "rollback": "site_media_ingest_rollback"
+      },
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf"
+      ],
+      "max_bytes": 5242880,
+      "max_filename": 200,
+      "max_title": 200,
+      "max_alt_text": 500,
+      "max_caption": 2000,
+      "max_description": 12000,
+      "arbitrary_urls": false,
+      "filesystem_paths": false,
+      "image_alt_text_required": true
+    }
+  }
+}
