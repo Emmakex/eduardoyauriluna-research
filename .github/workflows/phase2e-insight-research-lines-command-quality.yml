@@ -101,7 +101,22 @@ jobs:
           grep -F 'site_insight_update_plan' config/phase2e-insight-research-lines-command-registry.json
           grep -F '"insights.write"' config/phase2e-gateway-capabilities.json
           grep -F '"operations.rollback"' config/phase2e-gateway-capabilities.json
-          ! grep -E '(scheduled_at|status|content|title|excerpt|slug)' config/phase2e-insight-research-lines-command-registry.json schemas/phase2e-insight-research-lines-v1.schema.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          schema=json.loads(Path('schemas/phase2e-insight-research-lines-v1.schema.json').read_text())
+          registry=json.loads(Path('config/phase2e-insight-research-lines-command-registry.json').read_text())
+          payload_props=set(schema['properties']['payload']['properties'])
+          if payload_props != {'post_id','line_ids'}:
+              raise SystemExit(f'unexpected relation payload surface: {sorted(payload_props)}')
+          action=registry['actions']['insight.research-lines.update']
+          if action.get('relation_field') != 'line_ids' or action.get('max_line_ids') != 32:
+              raise SystemExit('relation registry bounds changed unexpectedly')
+          forbidden={'scheduled_at','status','content','title','excerpt','slug'}
+          if forbidden & payload_props:
+              raise SystemExit('higher-risk Insight fields leaked into relation payload')
+          print('Bounded relation surface: OK')
+          PY
 
       - name: Reject committed credential material
         run: |
