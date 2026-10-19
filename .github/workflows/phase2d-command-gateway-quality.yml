@@ -114,9 +114,9 @@ jobs:
           grep -F 'CAPABILITIES = ["site.read", "insights.write", "operations.rollback"]' scripts/phase2d-provision-github-principal.py
           grep -F 'PRINCIPAL_ID = "phase2d-github"' scripts/phase2d-provision-github-principal.py
           grep -F 'TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"' scripts/phase2d-provision-github-principal.py
-          grep -F 'CAPABILITY = "pages.write"' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'APPROVED_CAPABILITIES = ["pages.write", "translations.write"]' scripts/phase2e-expand-gateway-capabilities.py
           grep -F 'phase2d-github tenant allowlist is not the accepted single-tenant contract' scripts/phase2e-expand-gateway-capabilities.py
-          grep -F "'add_capabilities': ['pages.write']" .github/workflows/phase2e-expand-gateway-capabilities.yml
+          grep -F "'add_capabilities': ['pages.write', 'translations.write']" .github/workflows/phase2e-expand-gateway-capabilities.yml
           grep -F 'group: phase2c-ovh-production' .github/workflows/phase2e-expand-gateway-capabilities.yml
           grep -F 'site_page_slots_rollback' scripts/phase2e-page-acceptance-restore.py
           grep -F 'EXPECTED_KEY = "contact"' scripts/phase2e-page-acceptance-restore.py
