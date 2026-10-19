@@ -120,6 +120,5 @@ jobs:
             scripts/phase2e-page-text-slot-runner.py
             scripts/phase2e-command-guard.py
             scripts/phase2e-command-runner-observable.py
-            .github/workflows/phase2e-page-command-quality.yml
           )
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
