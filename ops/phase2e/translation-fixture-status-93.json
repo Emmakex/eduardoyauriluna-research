@@ -4,5 +4,5 @@
   "post_id": 93,
   "from_status": "draft",
   "to_status": "publish",
-  "action": "prepare"
+  "action": "restore"
 }
