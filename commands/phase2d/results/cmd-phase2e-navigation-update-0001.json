@@ -1,0 +1,18 @@
+{
+  "action": "navigation.update",
+  "command_id": "cmd-phase2e-navigation-update-0001",
+  "command_sha256": "1682971d5ab12a5206a4bda3ca1e0b5e3f1f1b41f05a5a5df8e64e1fc3ddcccd",
+  "correlation": {
+    "operation_id": "erm-nav-op-d31ce631a3f240748c8a286f0e31e168",
+    "plan_id": "erm-nav-plan-932ffc13e9f5140e4a-83b64b08"
+  },
+  "resource": {
+    "item_count": 9,
+    "location": "primary",
+    "registered_targets_only": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
