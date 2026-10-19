@@ -5,6 +5,11 @@ This module is source-of-truth only. Importing it never mutates production.
 The manifest is intentionally validated against the exact capability set that has
 already been accepted in production so an unreviewed scope cannot enter through
 an Infrastructure-as-Code edit alone.
+
+Repository executions read ``config/phase2e-gateway-capability-manifest.json``.
+OVH staging executions may copy the same manifest beside this module in ``/tmp``;
+that sibling fallback keeps provisioning/expansion scripts self-contained without
+weakening the reviewed capability contract.
 """
 from __future__ import annotations
 
@@ -13,7 +18,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_PATH = ROOT / "config" / "phase2e-gateway-capability-manifest.json"
+REPO_MANIFEST_PATH = ROOT / "config" / "phase2e-gateway-capability-manifest.json"
+STAGED_MANIFEST_PATH = Path(__file__).with_name("phase2e-gateway-capability-manifest.json")
 EXPECTED_TENANT = "eduardo-research"
 EXPECTED_PRINCIPAL_ID = "phase2d-github"
 BASELINE_CAPABILITIES = (
@@ -35,7 +41,17 @@ class CapabilityManifestError(RuntimeError):
     pass
 
 
-def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
+def default_manifest_path() -> Path:
+    if REPO_MANIFEST_PATH.is_file():
+        return REPO_MANIFEST_PATH
+    if STAGED_MANIFEST_PATH.is_file():
+        return STAGED_MANIFEST_PATH
+    raise CapabilityManifestError("gateway capability manifest is not available in repository or staged form")
+
+
+def load_manifest(path: Path | None = None) -> dict[str, Any]:
+    if path is None:
+        path = default_manifest_path()
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -60,17 +76,17 @@ def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
     return value
 
 
-def reviewed_capabilities(path: Path = MANIFEST_PATH) -> list[str]:
+def reviewed_capabilities(path: Path | None = None) -> list[str]:
     return list(load_manifest(path)["capabilities"])
 
 
-def validate_subset(capabilities: list[str] | tuple[str, ...]) -> list[str]:
+def validate_subset(capabilities: list[str] | tuple[str, ...], path: Path | None = None) -> list[str]:
     if not capabilities or not all(isinstance(item, str) and item for item in capabilities):
         raise CapabilityManifestError("requested capability subset must contain non-empty strings")
     requested = list(capabilities)
     if len(requested) != len(set(requested)):
         raise CapabilityManifestError("requested capability subset contains duplicates")
-    reviewed = reviewed_capabilities()
+    reviewed = reviewed_capabilities(path)
     unknown = [item for item in requested if item not in reviewed]
     if unknown:
         raise CapabilityManifestError("requested capability subset contains unreviewed scopes: " + ", ".join(unknown))
