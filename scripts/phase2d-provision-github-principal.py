@@ -7,7 +7,7 @@ Run on the production OVH host as a user that can update
 Security properties:
 - never prints .env.production or any existing secret;
 - generates a dedicated outer bearer locally on the OVH host;
-- grants only eduardo-research + insights.write + operations.rollback;
+- grants only eduardo-research + site.read + insights.write + operations.rollback;
 - preserves all existing tenants/principals;
 - keeps a mode-0600 rollback snapshot only during the transaction;
 - recreates the accepted immutable MCP image already recorded on the host;
@@ -44,7 +44,7 @@ PUBLIC_MCP_BASE = "https://mcp.kairoseth.com/mcp"
 TENANT_ID = "eduardo-research"
 PRINCIPAL_ID = "phase2d-github"
 TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"
-CAPABILITIES = ["insights.write", "operations.rollback"]
+CAPABILITIES = ["site.read", "insights.write", "operations.rollback"]
 IMAGE_RE = re.compile(r"^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$")
 
 
@@ -330,7 +330,7 @@ def main() -> int:
     BACKUP_PATH.unlink(missing_ok=True)
     log(f"Principal {PRINCIPAL_ID}: ACTIVE")
     log(f"Tenant allowlist: {TENANT_ID}")
-    log("Commercial capabilities: insights.write, operations.rollback")
+    log("Commercial capabilities: site.read, insights.write, operations.rollback")
     log("Public health: OK")
     log("Allowed tenant initialize: HTTP 200")
     log("Denied tenant initialize: HTTP 403")
