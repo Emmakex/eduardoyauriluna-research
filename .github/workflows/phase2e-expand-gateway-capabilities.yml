@@ -42,7 +42,7 @@ jobs:
               'version': '1',
               'tenant': 'eduardo-research',
               'principal': 'phase2d-github',
-              'add_capabilities': ['pages.write'],
+              'add_capabilities': ['pages.write', 'translations.write'],
           }
           if value != expected:
               raise SystemExit('capability request does not match the reviewed Phase 2E contract')
@@ -74,7 +74,7 @@ jobs:
           "${SSH[@]}" "$SSH_TARGET" "umask 077; rm -rf '$REMOTE_TMP'; mkdir -p '$REMOTE_TMP'"
           "${SCP[@]}" scripts/phase2e-expand-gateway-capabilities.py "$SSH_TARGET:$REMOTE_TMP/phase2e-expand-gateway-capabilities.py"
 
-      - name: Expand production entitlement and principal capability
+      - name: Converge production tenant and principal capabilities
         shell: bash
         run: |
           set -euo pipefail
