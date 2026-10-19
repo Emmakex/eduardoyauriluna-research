@@ -27,8 +27,12 @@ INSIGHT_TYPE_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 PLAN_ID_RE = re.compile(r"^erm-remote-plan-[a-f0-9]{20}-[a-f0-9]{8}$")
 OP_ID_RE = re.compile(r"^erm-operation-[a-f0-9]{32}$")
 MAX_SAFE_INTEGER = 9007199254740991
-SUPPORTED_ACTIONS = {"insight.create", "insight.update"}
+SUPPORTED_ACTIONS = {"insight.create", "insight.update", "page.slot.update"}
 UPDATE_FIELDS = {"title", "excerpt", "content", "language", "insight_type"}
+PAGE_KEY = "contact"
+PAGE_LANGUAGE = "en"
+PAGE_SLOT = "eyebrow"
+PAGE_VALUE_MAX = 200
 
 
 class CommandError(RuntimeError):
@@ -125,7 +129,6 @@ def validate_create_payload(payload: dict[str, Any]) -> None:
     for required in ("title", "language", "status", "content"):
         if required not in payload:
             raise CommandError(f"payload.{required} is required")
-
     title = payload.get("title")
     content = payload.get("content")
     if not isinstance(title, str) or not title.strip() or len(title) > 200:
@@ -153,13 +156,11 @@ def validate_update_payload(payload: dict[str, Any]) -> None:
         or post_id > MAX_SAFE_INTEGER
     ):
         raise CommandError("payload.post_id must be a positive safe integer")
-
     changes = payload.get("changes")
     if not isinstance(changes, dict) or not changes:
         raise CommandError("payload.changes must contain at least one bounded editorial field")
     if not set(changes).issubset(UPDATE_FIELDS):
         raise CommandError("payload.changes contains unsupported or higher-risk fields")
-
     if "title" in changes:
         title = changes["title"]
         if not isinstance(title, str) or not title.strip() or len(title) > 200:
@@ -175,6 +176,26 @@ def validate_update_payload(payload: dict[str, Any]) -> None:
     if "language" in changes and changes["language"] not in {"es", "en"}:
         raise CommandError("payload.changes.language must be es or en")
     validate_insight_type(changes.get("insight_type"), "payload.changes.insight_type")
+
+
+def validate_page_slot_payload(payload: dict[str, Any]) -> None:
+    if set(payload) != {"key", "language", "slot", "value"}:
+        raise CommandError("page.slot.update payload must contain only key, language, slot and value")
+    if payload.get("key") != PAGE_KEY:
+        raise CommandError("page.slot.update key is outside the accepted target allowlist")
+    if payload.get("language") != PAGE_LANGUAGE:
+        raise CommandError("page.slot.update language is outside the accepted target allowlist")
+    if payload.get("slot") != PAGE_SLOT:
+        raise CommandError("page.slot.update slot is outside the accepted target allowlist")
+    value = payload.get("value")
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or len(value) > PAGE_VALUE_MAX
+        or "<" in value
+        or ">" in value
+    ):
+        raise CommandError("page.slot.update value must be bounded plain text without HTML/CSS markup")
 
 
 def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
@@ -195,7 +216,6 @@ def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
     tenant_config = tenants.get(tenant)
     if not isinstance(tenant_config, dict) or tenant_config.get("enabled") is not True:
         raise CommandError("tenant is disabled")
-
     action = command.get("action")
     actions = registry.get("actions")
     if (
@@ -207,7 +227,6 @@ def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
         raise CommandError("action is not registered")
     if command.get("requested_by") != "chatgpt":
         raise CommandError("requested_by must be chatgpt")
-
     payload = command.get("payload")
     if not isinstance(payload, dict):
         raise CommandError("payload must be an object")
@@ -215,7 +234,9 @@ def validate_command(command: dict[str, Any], registry: dict[str, Any]) -> None:
         validate_create_payload(payload)
     elif action == "insight.update":
         validate_update_payload(payload)
-    else:  # defensive even though SUPPORTED_ACTIONS is closed above
+    elif action == "page.slot.update":
+        validate_page_slot_payload(payload)
+    else:
         raise CommandError("unsupported action")
 
 
@@ -226,22 +247,20 @@ def validate_registry(registry: dict[str, Any]) -> None:
     if not isinstance(actions, dict) or set(actions) != SUPPORTED_ACTIONS:
         raise CommandError("registry action set does not match the bounded command surface")
 
-    common_tools = {
+    insight_common = {
         "capabilities": "research_capabilities",
         "apply": "site_insight_apply",
         "verify": "site_insight_verify",
         "rollback": "site_insight_rollback",
     }
-    expected_plans = {
+    for name, plan_tool in {
         "insight.create": "site_insight_create_plan",
         "insight.update": "site_insight_update_plan",
-    }
-    for name in sorted(SUPPORTED_ACTIONS):
+    }.items():
         action = actions.get(name)
         if not isinstance(action, dict):
             raise CommandError(f"invalid {name} registry entry")
-        expected_tools = {**common_tools, "plan": expected_plans[name]}
-        if action.get("tools") != expected_tools:
+        if action.get("tools") != {**insight_common, "plan": plan_tool}:
             raise CommandError(f"{name} tool mapping is not the accepted bounded lifecycle")
         if action.get("required_capabilities") != ["insights.write", "operations.rollback"]:
             raise CommandError(f"{name} capability contract changed unexpectedly")
@@ -253,6 +272,26 @@ def validate_registry(registry: dict[str, Any]) -> None:
     allowed_change_fields = actions["insight.update"].get("allowed_change_fields")
     if not isinstance(allowed_change_fields, list) or set(allowed_change_fields) != UPDATE_FIELDS:
         raise CommandError("insight.update registry fields do not match the bounded update surface")
+
+    page = actions.get("page.slot.update")
+    if not isinstance(page, dict):
+        raise CommandError("invalid page.slot.update registry entry")
+    if page.get("required_capabilities") != ["pages.write", "operations.rollback"]:
+        raise CommandError("page.slot.update capability contract changed unexpectedly")
+    if page.get("tools") != {
+        "capabilities": "research_capabilities",
+        "plan": "site_page_slots_plan",
+        "apply": "site_page_slots_apply",
+        "verify": "site_page_slots_verify",
+        "rollback": "site_page_slots_rollback",
+    }:
+        raise CommandError("page.slot.update tool mapping is not the accepted bounded lifecycle")
+    if page.get("verify_rendered") is not True:
+        raise CommandError("page.slot.update must require rendered verification")
+    if page.get("allowed_targets") != [
+        {"key": PAGE_KEY, "language": PAGE_LANGUAGE, "slots": [PAGE_SLOT]}
+    ]:
+        raise CommandError("page.slot.update target allowlist changed unexpectedly")
 
 
 def sanitized_message(message: str, token: str) -> str:
@@ -295,17 +334,8 @@ class McpClient:
         self.storage = temp_path / "storage"
         self.oauth = temp_path / "oauth.json"
         self.base = [
-            "npx",
-            "--yes",
-            "@modelcontextprotocol/inspector@2.5.0",
-            "--cli",
-            "--config",
-            str(config),
-            "--server",
-            "phase2d",
-            "--stored-auth-only",
-            "--format",
-            "json",
+            "npx", "--yes", "@modelcontextprotocol/inspector@2.5.0", "--cli",
+            "--config", str(config), "--server", "phase2d", "--stored-auth-only", "--format", "json",
         ]
 
     def close(self) -> None:
@@ -336,16 +366,11 @@ class McpClient:
         self.run(["--method", "initialize"])
 
     def call(self, tool: str, args: dict[str, Any] | None = None) -> Any:
-        payload = self.run(
-            [
-                "--method",
-                "tools/call",
-                "--tool-name",
-                tool,
-                "--tool-args-json",
-                json.dumps(args or {}, separators=(",", ":"), ensure_ascii=False),
-            ]
-        )
+        payload = self.run([
+            "--method", "tools/call",
+            "--tool-name", tool,
+            "--tool-args-json", json.dumps(args or {}, separators=(",", ":"), ensure_ascii=False),
+        ])
         result = payload.get("result") or {}
         if result.get("isError"):
             raise CommandError(f"MCP tool {tool} returned an error")
@@ -393,9 +418,11 @@ def execute(command_path: Path, result_dir: Path) -> int:
     try:
         client.initialize()
         caps = client.call(tools["capabilities"])
-        types = editorial_types(caps)
-        if not types:
-            raise CommandError("live Manager capabilities expose no editorial_types")
+        types: list[str] = []
+        if action_name.startswith("insight."):
+            types = editorial_types(caps)
+            if not types:
+                raise CommandError("live Manager capabilities expose no editorial_types")
 
         payload = command["payload"]
         reason = f"Kairoseth command {command_id}: {action_name}"
@@ -405,9 +432,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             requested_type = payload.get("insight_type")
             if requested_type is not None and requested_type not in types:
                 raise CommandError("requested insight_type is not available on the target tenant")
-            insight_type = requested_type or (
-                "research_note" if "research_note" in types else sorted(types)[0]
-            )
+            insight_type = requested_type or ("research_note" if "research_note" in types else sorted(types)[0])
             data: dict[str, Any] = {
                 "title": payload["title"],
                 "content": payload["content"],
@@ -429,19 +454,24 @@ def execute(command_path: Path, result_dir: Path) -> int:
             if requested_type is not None and requested_type not in types:
                 raise CommandError("requested insight_type is not available on the target tenant")
             target_post_id = int(payload["post_id"])
-            plan_args = {
-                "postId": target_post_id,
-                "changes": changes,
-                "reason": reason,
-            }
-            resource = {
-                "post_id": target_post_id,
-                "changed_fields": sorted(changes),
-            }
+            plan_args = {"postId": target_post_id, "changes": changes, "reason": reason}
+            resource = {"post_id": target_post_id, "changed_fields": sorted(changes)}
             if "title" in changes:
                 resource["title"] = changes["title"]
             if "language" in changes:
                 resource["language"] = changes["language"]
+        elif action_name == "page.slot.update":
+            plan_args = {
+                "key": payload["key"],
+                "language": payload["language"],
+                "slots": {payload["slot"]: payload["value"]},
+                "reason": reason,
+            }
+            resource = {
+                "key": payload["key"],
+                "language": payload["language"],
+                "slot": payload["slot"],
+            }
         else:
             raise CommandError("unsupported action reached execution")
 
@@ -449,10 +479,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
         plan_id = regex_string(plan, PLAN_ID_RE)
         applied = client.call(tools["apply"], {"planId": plan_id, "confirm": True})
         operation_id = regex_string(applied, OP_ID_RE)
-        verification = client.call(
-            tools["verify"],
-            {"operationId": operation_id, "rendered": True},
-        )
+        verification = client.call(tools["verify"], {"operationId": operation_id, "rendered": True})
         if not verified(verification):
             raise CommandError("rendered verification did not report verified=true")
 
@@ -461,7 +488,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             target_post_id = int(payload["post_id"])
             if observed_post_id is not None and observed_post_id != target_post_id:
                 raise CommandError("verified Insight post_id does not match the requested target")
-        elif observed_post_id is not None:
+        elif action_name == "insight.create" and observed_post_id is not None:
             resource["post_id"] = observed_post_id
 
         result: dict[str, Any] = {
@@ -472,10 +499,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "command_id": command_id,
             "verified": True,
             "resource": resource,
-            "correlation": {
-                "plan_id": plan_id,
-                "operation_id": operation_id,
-            },
+            "correlation": {"plan_id": plan_id, "operation_id": operation_id},
         }
         path = write_result(result_dir, command_id, result)
         print(f"SUCCESS {path}")
@@ -498,14 +522,8 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 "code": "execution_failed",
                 "message": "The bounded MCP lifecycle did not complete successfully.",
             },
-            "correlation": {
-                "plan_id": plan_id,
-                "operation_id": operation_id,
-            },
-            "rollback": {
-                "attempted": operation_id is not None,
-                "verified": rollback_ok,
-            },
+            "correlation": {"plan_id": plan_id, "operation_id": operation_id},
+            "rollback": {"attempted": operation_id is not None, "verified": rollback_ok},
         }
         path = write_result(result_dir, command_id, result)
         print(f"FAILED {path}: {sanitized_message(str(exc), token)}", file=sys.stderr)
@@ -518,7 +536,6 @@ def self_test() -> int:
     registry = load_json(REGISTRY_PATH)
     validate_registry(registry)
     schema = load_json(SCHEMA_PATH)
-
     schema_actions = schema.get("properties", {}).get("action", {}).get("enum")
     if not isinstance(schema_actions, list) or set(schema_actions) != SUPPORTED_ACTIONS:
         raise CommandError("schema action set and registry are out of sync")
@@ -541,44 +558,38 @@ def self_test() -> int:
     create_payload_schema = by_action["insight.create"]["properties"]["payload"]
     if create_payload_schema.get("properties", {}).get("status", {}).get("const") != "draft":
         raise CommandError("schema must keep insight.create draft-only")
-    update_changes_schema = (
-        by_action["insight.update"]["properties"]["payload"]
-        .get("properties", {})
-        .get("changes", {})
-    )
+    update_changes_schema = by_action["insight.update"]["properties"]["payload"].get("properties", {}).get("changes", {})
     if set(update_changes_schema.get("properties", {})) != UPDATE_FIELDS:
         raise CommandError("schema update fields do not match the runner")
+    page_payload_schema = by_action["page.slot.update"]["properties"]["payload"]
+    page_props = page_payload_schema.get("properties", {})
+    if (
+        page_props.get("key", {}).get("const") != PAGE_KEY
+        or page_props.get("language", {}).get("const") != PAGE_LANGUAGE
+        or page_props.get("slot", {}).get("const") != PAGE_SLOT
+    ):
+        raise CommandError("schema Page target does not match the runner allowlist")
 
     good_create = {
-        "version": "1",
-        "command_id": "cmd-selftest-create-0001",
-        "tenant": "eduardo-research",
-        "action": "insight.create",
-        "requested_by": "chatgpt",
-        "payload": {
-            "title": "Hola mundo",
-            "language": "es",
-            "status": "draft",
-            "content": "Hola mundo.",
-        },
+        "version": "1", "command_id": "cmd-selftest-create-0001",
+        "tenant": "eduardo-research", "action": "insight.create", "requested_by": "chatgpt",
+        "payload": {"title": "Hola mundo", "language": "es", "status": "draft", "content": "Hola mundo."},
     }
     validate_command(good_create, registry)
 
     good_update = {
-        "version": "1",
-        "command_id": "cmd-selftest-update-0001",
-        "tenant": "eduardo-research",
-        "action": "insight.update",
-        "requested_by": "chatgpt",
-        "payload": {
-            "post_id": 94,
-            "changes": {
-                "title": "Updated title",
-                "content": "Updated bounded content.",
-            },
-        },
+        "version": "1", "command_id": "cmd-selftest-update-0001",
+        "tenant": "eduardo-research", "action": "insight.update", "requested_by": "chatgpt",
+        "payload": {"post_id": 94, "changes": {"title": "Updated title", "content": "Updated bounded content."}},
     }
     validate_command(good_update, registry)
+
+    good_page = {
+        "version": "1", "command_id": "cmd-selftest-page-slot-0001",
+        "tenant": "eduardo-research", "action": "page.slot.update", "requested_by": "chatgpt",
+        "payload": {"key": PAGE_KEY, "language": PAGE_LANGUAGE, "slot": PAGE_SLOT, "value": "Research contact"},
+    }
+    validate_command(good_page, registry)
 
     bad_action = json.loads(json.dumps(good_create))
     bad_action["action"] = "shell.execute"
@@ -607,23 +618,15 @@ def self_test() -> int:
     else:
         raise CommandError("self-test: publish status did not fail closed")
 
-    bad_update_status = json.loads(json.dumps(good_update))
-    bad_update_status["payload"]["changes"]["status"] = "publish"
-    try:
-        validate_command(bad_update_status, registry)
-    except CommandError:
-        pass
-    else:
-        raise CommandError("self-test: update publication state did not fail closed")
-
-    bad_update_schedule = json.loads(json.dumps(good_update))
-    bad_update_schedule["payload"]["changes"]["scheduled_at"] = "2030-01-01T12:00:00Z"
-    try:
-        validate_command(bad_update_schedule, registry)
-    except CommandError:
-        pass
-    else:
-        raise CommandError("self-test: update scheduling did not fail closed")
+    for field, value in [("status", "publish"), ("scheduled_at", "2030-01-01T12:00:00Z")]:
+        bad = json.loads(json.dumps(good_update))
+        bad["payload"]["changes"][field] = value
+        try:
+            validate_command(bad, registry)
+        except CommandError:
+            pass
+        else:
+            raise CommandError(f"self-test: update {field} did not fail closed")
 
     bad_update_empty = json.loads(json.dumps(good_update))
     bad_update_empty["payload"]["changes"] = {}
@@ -642,6 +645,21 @@ def self_test() -> int:
         pass
     else:
         raise CommandError("self-test: invalid update post_id did not fail closed")
+
+    for field, value in [
+        ("key", "home"),
+        ("language", "es"),
+        ("slot", "hero"),
+        ("value", "<style>body{display:none}</style>"),
+    ]:
+        bad = json.loads(json.dumps(good_page))
+        bad["payload"][field] = value
+        try:
+            validate_command(bad, registry)
+        except CommandError:
+            pass
+        else:
+            raise CommandError(f"self-test: unsafe Page field {field} did not fail closed")
 
     print("phase2d-command-runner self-test: OK")
     return 0
