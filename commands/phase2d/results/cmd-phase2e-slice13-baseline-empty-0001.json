@@ -1,0 +1,20 @@
+{
+  "action": "insight.research-lines.update",
+  "command_id": "cmd-phase2e-slice13-baseline-empty-0001",
+  "command_sha256": "2f6b494be5ad003503b7b872a8240a64385102afa0b1a166b920fc98a26b36de",
+  "correlation": {
+    "operation_id": "erm-operation-aa803a7f69ef48c4a796ac2310872f42",
+    "plan_id": "erm-remote-plan-ec556047bf101bc3c711-6a8c6b63"
+  },
+  "resource": {
+    "changed_fields": [
+      "line_ids"
+    ],
+    "line_ids": [],
+    "post_id": 107
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
