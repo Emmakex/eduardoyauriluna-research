@@ -3,10 +3,9 @@
 
 Existing commands still execute in the original Phase 2D runner. Bounded Page,
 Navigation, Media metadata, Design, Insight Research-Line relation, Research Object
-and Research Line commands execute in dedicated runners. Acceptance-only fixture and
-rollback actions are exact-contract helpers removed after production proof. Binary
-Media ingest remains outside this Git-persisted command channel. All paths retain
-sanitized MCP tool-error capture.
+and Research Line commands execute in dedicated runners. Binary Media ingest remains
+outside this Git-persisted command channel. All paths retain sanitized MCP tool-error
+capture.
 """
 from __future__ import annotations
 
@@ -24,8 +23,6 @@ NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
 MEDIA_METADATA_RUNNER = HERE / "phase2e-media-metadata-runner.py"
 DESIGN_RUNNER = HERE / "phase2e-design-runner.py"
 INSIGHT_RESEARCH_LINES_RUNNER = HERE / "phase2e-insight-research-lines-runner.py"
-SLICE13_LINE_FIXTURE_RUNNER = HERE / "phase2e-slice13-line-fixture-runner.py"
-SLICE13_ROLLBACK_RUNNER = HERE / "phase2e-slice13-acceptance-rollback-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
@@ -37,8 +34,6 @@ RUNNERS = {
     "design.preset.update": DESIGN_RUNNER,
     "design.variant.update": DESIGN_RUNNER,
     "insight.research-lines.update": INSIGHT_RESEARCH_LINES_RUNNER,
-    "research.line.acceptance.fixture.create": SLICE13_LINE_FIXTURE_RUNNER,
-    "slice13.acceptance.rollback": SLICE13_ROLLBACK_RUNNER,
     "research.object.create": RESEARCH_CREATE_RUNNER,
     "research.object.update": RESEARCH_UPDATE_RUNNER,
     "research.line.create": RESEARCH_LINE_CREATE_RUNNER,
