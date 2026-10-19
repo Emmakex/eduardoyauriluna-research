@@ -4,9 +4,11 @@
   "tenant": "eduardo-research",
   "action": "design.preset.update",
   "requested_by": "chatgpt",
-  "payload": {"changes": {
-    "palette": "graphite-academic",
-    "typography": "humanist-sans",
-    "density": "compact"
-  }}
+  "payload": {
+    "changes": {
+      "palette": "graphite-academic",
+      "typography": "humanist-sans",
+      "density": "compact"
+    }
+  }
 }
