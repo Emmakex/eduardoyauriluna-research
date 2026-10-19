@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "command_id": "cmd-phase2e-research-software-update-0001",
+  "post_id": 101,
+  "action": "restore"
+}
