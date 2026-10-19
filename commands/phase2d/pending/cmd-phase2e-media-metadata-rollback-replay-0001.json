@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-media-metadata-rollback-replay-0001",
+  "tenant": "eduardo-research",
+  "action": "media.metadata.acceptance.rollback",
+  "requested_by": "chatgpt",
+  "payload": {
+    "acceptance_only": true
+  }
+}
