@@ -1,0 +1,22 @@
+{
+  "action": "insight.research-lines.update",
+  "command_id": "cmd-phase2e-slice13-relation-primary-0001",
+  "command_sha256": "40d48dfc25f73c2556e5e67393c0c3c40e5515d8a22a67e9c981aecf9f5b2a51",
+  "correlation": {
+    "operation_id": "erm-operation-30c4c80fdb2c4b64a9260edbd5803118",
+    "plan_id": "erm-remote-plan-4704b840c766e7fbee23-5b8803ff"
+  },
+  "resource": {
+    "changed_fields": [
+      "line_ids"
+    ],
+    "line_ids": [
+      106
+    ],
+    "post_id": 107
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
