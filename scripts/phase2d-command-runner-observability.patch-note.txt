@@ -1,0 +1,1 @@
+Phase 2D observability note: preserve the bounded MCP tool payload when Inspector exits with tool_is_error so production command failures can be diagnosed without exposing bearer material. This note is temporary to anchor the hotfix branch and will not be merged independently.
