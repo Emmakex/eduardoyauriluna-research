@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Phase 2E bounded Research translation command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "command_id", "tenant", "action", "requested_by", "payload"],
+  "properties": {
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"const": "eduardo-research"},
+    "action": {"enum": ["research.translation.pair", "research.translation.unpair"]},
+    "requested_by": {"const": "chatgpt"},
+    "payload": {"type": "object"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"action": {"const": "research.translation.pair"}}, "required": ["action"]},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["first_id", "second_id"],
+            "properties": {
+              "first_id": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "second_id": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "evidence_confirmed": {"type": "boolean"},
+              "evidence_reference": {"type": "string", "maxLength": 512}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"action": {"const": "research.translation.unpair"}}, "required": ["action"]},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["post_id"],
+            "properties": {
+              "post_id": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "evidence_confirmed": {"type": "boolean"},
+              "evidence_reference": {"type": "string", "maxLength": 512}
+            }
+          }
+        }
+      }
+    }
+  ]
+}
