@@ -1,0 +1,22 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-hola-mundo-live-0001",
+  "command_sha256": "ee536d018a56791ecb6d9a617b576f0e91ea8c3e53f1fea3bb01ac29cbfdda16",
+  "correlation": {
+    "operation_id": null,
+    "plan_id": "erm-remote-plan-12f5a0d706f4a3e57d2b-f2c28a77"
+  },
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_insight_apply' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /plans/erm-remote-plan-12f5a0d706f4a3e57d2b-f2c28a77/apply with HTTP 409: research_manager_insight_creation_conflict\"}],\"isError\":true}}",
+    "message": "The bounded MCP lifecycle did not complete successfully."
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
