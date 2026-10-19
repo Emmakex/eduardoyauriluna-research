@@ -1,0 +1,15 @@
+{
+  "action": "page.slot.acceptance_restore",
+  "operation_id": "erm-operation-d516b4cb19a545d6a184a77ea1bcb3b6",
+  "resource": {
+    "key": "about",
+    "language": "es",
+    "restored": "previous_snapshot",
+    "slot": "lead"
+  },
+  "rollback_verified": true,
+  "source_command_id": "cmd-phase2e-page-text-slot-0001",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
