@@ -1,0 +1,100 @@
+name: Phase 2E Research Translation Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-research-translation-v1.schema.json'
+      - 'config/phase2e-research-translation-command-registry.json'
+      - 'config/phase2e-gateway-capabilities.json'
+      - 'scripts/phase2e-research-translation-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-research-translation-command-quality.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-research-translation-v1.schema.json'
+      - 'config/phase2e-research-translation-command-registry.json'
+      - 'config/phase2e-gateway-capabilities.json'
+      - 'scripts/phase2e-research-translation-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-research-translation-command-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile bounded Research translation surface
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/phase2e-research-translation-runner.py \
+            scripts/phase2e-command-guard.py \
+            scripts/phase2e-command-runner-observable.py
+
+      - name: Verify runner and dispatched guard self-tests
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-research-translation-runner.py --self-test
+          python3 scripts/phase2e-command-guard.py self-test
+
+      - name: Validate JSON contract and fail-closed schema cases
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check -q jsonschema
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, ValidationError
+          schema=json.loads(Path('schemas/phase2e-research-translation-v1.schema.json').read_text())
+          registry=json.loads(Path('config/phase2e-research-translation-command-registry.json').read_text())
+          Draft202012Validator.check_schema(schema)
+          v=Draft202012Validator(schema)
+          pair={"version":"1","command_id":"cmd-schema-research-pair-0001","tenant":"eduardo-research","action":"research.translation.pair","requested_by":"chatgpt","payload":{"first_id":101,"second_id":102}}
+          unpair={"version":"1","command_id":"cmd-schema-research-unpair-0001","tenant":"eduardo-research","action":"research.translation.unpair","requested_by":"chatgpt","payload":{"post_id":101}}
+          v.validate(pair); v.validate(unpair)
+          for bad in [
+            {**pair,"payload":{"first_id":101,"second_id":102,"status":"publish"}},
+            {**pair,"payload":{"first_id":101,"second_id":102,"tool":"site_translation_apply"}},
+            {**pair,"payload":{"first_id":101,"second_id":102,"post_type":"insight"}},
+            {**unpair,"payload":{"post_id":0}},
+          ]:
+            try: v.validate(bad)
+            except ValidationError: continue
+            raise SystemExit('unsafe Research translation schema case validated')
+          assert set(registry['actions']) == {'research.translation.pair','research.translation.unpair'}
+          print('Research translation JSON contracts: OK')
+          PY
+
+      - name: Verify permanent bounded lifecycle markers
+        run: |
+          set -euo pipefail
+          grep -F '"research.translation.pair": RESEARCH_TRANSLATION_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F '"research.translation.unpair": RESEARCH_TRANSLATION_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'research_translation.PAIR_ACTION: research_translation' scripts/phase2e-command-guard.py
+          grep -F 'research_translation.UNPAIR_ACTION: research_translation' scripts/phase2e-command-guard.py
+          grep -F 'site_translation_pair_plan' config/phase2e-research-translation-command-registry.json
+          grep -F 'site_translation_unpair_plan' config/phase2e-research-translation-command-registry.json
+          grep -F 'site_translation_apply' config/phase2e-research-translation-command-registry.json
+          grep -F 'site_translation_verify' config/phase2e-research-translation-command-registry.json
+          grep -F 'site_translation_rollback' config/phase2e-research-translation-command-registry.json
+          grep -F '"translations.write"' config/phase2e-gateway-capabilities.json
+          ! grep -F '"evidence.write"' config/phase2e-gateway-capabilities.json
+          ! grep -F '"identity.write"' config/phase2e-gateway-capabilities.json
+          ! grep -E '(backend_url|tool_name|scheduled_at|status|post_type)' config/phase2e-research-translation-command-registry.json
+
+      - name: Reject committed credential material
+        run: |
+          set -euo pipefail
+          files=(schemas/phase2e-research-translation-v1.schema.json config/phase2e-research-translation-command-registry.json scripts/phase2e-research-translation-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
