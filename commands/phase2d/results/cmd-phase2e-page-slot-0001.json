@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-phase2e-page-slot-0001",
+  "command_sha256": "5480f753c12baea37a6e9aaed9825f42b9344acfb64165d684275f96b0988a98",
+  "correlation": {
+    "operation_id": "erm-operation-47eaeb0701d646a8ac0b81b006c57206",
+    "plan_id": "erm-remote-plan-1f25d55181c967f6b4aa-0eb5c87c"
+  },
+  "resource": {
+    "key": "contact",
+    "language": "en",
+    "slot": "eyebrow"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
