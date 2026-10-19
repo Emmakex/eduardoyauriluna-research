@@ -21,6 +21,8 @@ EXPECTED_LANGUAGE = "es"
 EXPECTED_FROM_STATUS = "draft"
 EXPECTED_TO_STATUS = "publish"
 EXPECTED_REQUEST = ROOT / "ops" / "hola-mundo-live-publish.json"
+CREATE_EVIDENCE = ROOT / "commands" / "phase2d" / "results" / "cmd-hola-mundo-live-0002.json"
+TITLE_EVIDENCE = ROOT / "commands" / "phase2d" / "results" / "cmd-hola-mundo-title-0001.json"
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner", RUNNER)
 if spec is None or spec.loader is None:
@@ -46,6 +48,29 @@ def load_request(path: Path) -> dict[str, Any]:
         raise PublishError("request is outside the exact reviewed Hola mundo publication contract")
     return value
 
+def validate_trusted_gateway_evidence() -> None:
+    created = runner.load_json(CREATE_EVIDENCE)
+    if created.get("status") != "success" or created.get("verified") is not True:
+        raise PublishError("Hola mundo create evidence is not a verified success")
+    if created.get("tenant") != EXPECTED_TENANT or created.get("action") != "insight.create":
+        raise PublishError("Hola mundo create evidence tenant/action mismatch")
+    resource = created.get("resource")
+    if not isinstance(resource, dict) or resource.get("post_id") != EXPECTED_POST_ID:
+        raise PublishError("Hola mundo create evidence post ID mismatch")
+    if resource.get("language") != EXPECTED_LANGUAGE or resource.get("state") != EXPECTED_FROM_STATUS:
+        raise PublishError("Hola mundo create evidence baseline mismatch")
+
+    titled = runner.load_json(TITLE_EVIDENCE)
+    if titled.get("status") != "success" or titled.get("verified") is not True:
+        raise PublishError("Hola mundo title evidence is not a verified success")
+    if titled.get("tenant") != EXPECTED_TENANT or titled.get("action") != "insight.update":
+        raise PublishError("Hola mundo title evidence tenant/action mismatch")
+    titled_resource = titled.get("resource")
+    if not isinstance(titled_resource, dict) or titled_resource.get("post_id") != EXPECTED_POST_ID:
+        raise PublishError("Hola mundo title evidence post ID mismatch")
+    if titled_resource.get("title") != EXPECTED_TITLE or titled_resource.get("changed_fields") != ["title"]:
+        raise PublishError("Hola mundo title evidence final title mismatch")
+
 def client() -> Any:
     token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
     if not token:
@@ -61,12 +86,17 @@ def first_key(value: Any, key: str) -> Any:
             return obj[key]
     return None
 
-def checked_permalink(value: Any) -> str:
-    candidate = first_key(value, "permalink")
-    if not isinstance(candidate, str) or not candidate:
+def checked_permalink(*values: Any) -> str:
+    candidate: Any = None
+    for value in values:
+        candidate = first_key(value, "permalink")
+        if isinstance(candidate, str) and candidate:
+            break
         candidate = first_key(value, "url")
+        if isinstance(candidate, str) and candidate:
+            break
     if not isinstance(candidate, str) or not candidate:
-        raise PublishError("published Insight exposes no public permalink")
+        raise PublishError("verified publication exposes no public permalink")
     parsed = urlparse(candidate)
     if parsed.scheme != "https" or not parsed.hostname or not parsed.hostname.endswith("eduardoyauriluna.com"):
         raise PublishError("published permalink is outside eduardoyauriluna.com")
@@ -77,18 +107,11 @@ def write_json(path: Path, value: dict[str, Any]) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 def publish(evidence: Path) -> int:
+    validate_trusted_gateway_evidence()
     c = client()
     operation_id: str | None = None
     try:
         c.initialize()
-        before = c.call("site_insight_inspect", {"postId": EXPECTED_POST_ID})
-        if first_key(before, "title") != EXPECTED_TITLE:
-            raise PublishError("target title is not exactly Hola mundo")
-        if first_key(before, "language") != EXPECTED_LANGUAGE:
-            raise PublishError("target language is not es")
-        if first_key(before, "status") != EXPECTED_FROM_STATUS:
-            raise PublishError("target is not in the expected draft state")
-
         plan = c.call("site_insight_update_plan", {
             "postId": EXPECTED_POST_ID,
             "changes": {"status": EXPECTED_TO_STATUS},
@@ -100,11 +123,7 @@ def publish(evidence: Path) -> int:
         verification = c.call("site_insight_verify", {"operationId": operation_id, "rendered": True})
         if not runner.verified(verification):
             raise PublishError("rendered publication verification did not report verified=true")
-
-        after = c.call("site_insight_inspect", {"postId": EXPECTED_POST_ID})
-        if first_key(after, "title") != EXPECTED_TITLE or first_key(after, "status") != EXPECTED_TO_STATUS:
-            raise PublishError("published Insight readback does not match requested final state")
-        permalink = checked_permalink(after)
+        permalink = checked_permalink(verification, applied, plan)
         result = {
             "version": "1",
             "status": "success",
