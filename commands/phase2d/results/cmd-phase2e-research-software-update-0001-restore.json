@@ -1,0 +1,17 @@
+{
+  "action": "research.object.update.acceptance.restore",
+  "operation_id": "erm-object-op-96f54623cb404dbba327daa258ed6ae6",
+  "resource": {
+    "kind": "software",
+    "post_id": 101,
+    "restored": "snapshot-baseline",
+    "restored_fields": [
+      "title"
+    ]
+  },
+  "rollback_verified": true,
+  "source_command_id": "cmd-phase2e-research-software-update-0001",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
