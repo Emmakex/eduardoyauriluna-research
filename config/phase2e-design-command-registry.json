@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {"enabled": true}
+  },
+  "actions": {
+    "design.preset.update": {
+      "required_capabilities": ["design.write", "operations.rollback"],
+      "tools": {
+        "plan": "site_design_preset_update_plan",
+        "apply": "site_design_preset_apply",
+        "verify": "site_design_preset_verify",
+        "rollback": "site_design_preset_rollback"
+      },
+      "allowed_values": {
+        "palette": ["researcher", "ocean-lab", "graphite-academic"],
+        "typography": ["modern-sans", "academic-mixed", "humanist-sans"],
+        "density": ["compact", "balanced", "airy"]
+      }
+    },
+    "design.variant.update": {
+      "required_capabilities": ["design.write", "operations.rollback"],
+      "tools": {
+        "plan": "site_design_variant_update_plan",
+        "apply": "site_design_variant_apply",
+        "verify": "site_design_variant_verify",
+        "rollback": "site_design_variant_rollback"
+      },
+      "allowed_values": {
+        "hero": ["orbit", "editorial", "compact"],
+        "sections": ["layered", "plain", "bands"],
+        "cards": ["bordered", "lifted", "quiet"],
+        "collections": ["editorial-grid", "compact-grid", "list"]
+      }
+    }
+  }
+}

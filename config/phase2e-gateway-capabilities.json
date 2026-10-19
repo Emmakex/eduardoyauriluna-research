@@ -15,6 +15,7 @@
     "navigation.read",
     "navigation.write",
     "media.read",
-    "media.write"
+    "media.write",
+    "design.write"
   ]
 }

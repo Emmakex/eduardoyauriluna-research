@@ -1,0 +1,153 @@
+name: Phase 2E Design Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-design-preset-v1.schema.json'
+      - 'schemas/phase2e-design-variant-v1.schema.json'
+      - 'config/phase2e-design-command-registry.json'
+      - 'config/phase2e-gateway-capabilities.json'
+      - 'ops/phase2e/gateway-design-capability.json'
+      - 'scripts/phase2e-design-runner.py'
+      - 'scripts/phase2e-expand-design-capability.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-design-command-quality.yml'
+      - '.github/workflows/phase2e-expand-design-capability.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-design-preset-v1.schema.json'
+      - 'schemas/phase2e-design-variant-v1.schema.json'
+      - 'config/phase2e-design-command-registry.json'
+      - 'config/phase2e-gateway-capabilities.json'
+      - 'ops/phase2e/gateway-design-capability.json'
+      - 'scripts/phase2e-design-runner.py'
+      - 'scripts/phase2e-expand-design-capability.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-design-command-quality.yml'
+      - '.github/workflows/phase2e-expand-design-capability.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile bounded Design surface
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/phase2e-design-runner.py \
+            scripts/phase2e-expand-design-capability.py \
+            scripts/phase2e-command-guard.py \
+            scripts/phase2e-command-runner-observable.py
+
+      - name: Verify runner, guard and capability self-tests
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-runner.py --self-test
+          python3 scripts/phase2e-design-runner.py --self-test
+          python3 scripts/phase2e-command-guard.py self-test
+          python3 scripts/phase2e-expand-design-capability.py --self-test
+
+      - name: Verify dispatched Design fail-closed cases
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cat > "$tmp/preset-good.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-preset-quality-0001","tenant":"eduardo-research","action":"design.preset.update","requested_by":"chatgpt","payload":{"changes":{"typography":"academic-mixed","density":"balanced"}}}
+          JSON
+          cat > "$tmp/variant-good.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-variant-quality-0001","tenant":"eduardo-research","action":"design.variant.update","requested_by":"chatgpt","payload":{"changes":{"hero":"orbit","cards":"quiet"}}}
+          JSON
+          cat > "$tmp/bad-css.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0001","tenant":"eduardo-research","action":"design.preset.update","requested_by":"chatgpt","payload":{"changes":{"palette":"researcher"},"css":"body{}"}}
+          JSON
+          cat > "$tmp/bad-intent.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0002","tenant":"eduardo-research","action":"design.preset.update","requested_by":"chatgpt","payload":{"changes":{"palette":"researcher"},"intent":"free form"}}
+          JSON
+          cat > "$tmp/bad-font.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0003","tenant":"eduardo-research","action":"design.preset.update","requested_by":"chatgpt","payload":{"changes":{"typography":"remote-font"}}}
+          JSON
+          cat > "$tmp/bad-html.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0004","tenant":"eduardo-research","action":"design.variant.update","requested_by":"chatgpt","payload":{"changes":{"hero":"raw-html"}}}
+          JSON
+          cat > "$tmp/bad-field.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0005","tenant":"eduardo-research","action":"design.variant.update","requested_by":"chatgpt","payload":{"changes":{"custom_css":"x"}}}
+          JSON
+          cat > "$tmp/bad-empty.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0006","tenant":"eduardo-research","action":"design.variant.update","requested_by":"chatgpt","payload":{"changes":{}}}
+          JSON
+          cat > "$tmp/bad-tenant.json" <<'JSON'
+          {"version":"1","command_id":"cmd-design-bad-quality-0007","tenant":"other-tenant","action":"design.preset.update","requested_by":"chatgpt","payload":{"changes":{"palette":"researcher"}}}
+          JSON
+          python3 scripts/phase2e-command-guard.py guard "$tmp/preset-good.json" --result-dir "$tmp/results"
+          python3 scripts/phase2e-command-guard.py guard "$tmp/variant-good.json" --result-dir "$tmp/results"
+          for bad in bad-css bad-intent bad-font bad-html bad-field bad-empty bad-tenant; do
+            if python3 scripts/phase2e-command-guard.py guard "$tmp/$bad.json" --result-dir "$tmp/results"; then
+              echo "Unsafe Design case escaped validator: $bad" >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate JSON Schemas independently
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check -q jsonschema
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, ValidationError
+
+          preset = json.loads(Path('schemas/phase2e-design-preset-v1.schema.json').read_text())
+          variant = json.loads(Path('schemas/phase2e-design-variant-v1.schema.json').read_text())
+          Draft202012Validator.check_schema(preset)
+          Draft202012Validator.check_schema(variant)
+          pv = Draft202012Validator(preset)
+          vv = Draft202012Validator(variant)
+          good_preset = {"version":"1","command_id":"cmd-schema-design-preset-0001","tenant":"eduardo-research","action":"design.preset.update","requested_by":"chatgpt","payload":{"changes":{"palette":"ocean-lab","typography":"modern-sans","density":"airy"}}}
+          good_variant = {"version":"1","command_id":"cmd-schema-design-variant-0001","tenant":"eduardo-research","action":"design.variant.update","requested_by":"chatgpt","payload":{"changes":{"hero":"editorial","sections":"bands","cards":"bordered","collections":"list"}}}
+          pv.validate(good_preset); vv.validate(good_variant)
+          bad = [
+              (pv, {**good_preset, "payload":{"changes":{}}}),
+              (pv, {**good_preset, "payload":{"changes":{"palette":"arbitrary"}}}),
+              (pv, {**good_preset, "payload":{"changes":{"palette":"researcher"},"intent":"x"}}),
+              (vv, {**good_variant, "payload":{"changes":{"hero":"html"}}}),
+              (vv, {**good_variant, "payload":{"changes":{"classes":"x"}}}),
+          ]
+          for validator, value in bad:
+              try:
+                  validator.validate(value)
+              except ValidationError:
+                  continue
+              raise SystemExit('unsafe Design schema case validated unexpectedly')
+          print('Design JSON Schemas: OK')
+          PY
+
+      - name: Verify permanent bounded surface markers
+        run: |
+          set -euo pipefail
+          grep -F '"design.preset.update": DESIGN_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F '"design.variant.update": DESIGN_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'design.PRESET_ACTION: design' scripts/phase2e-command-guard.py
+          grep -F 'design.VARIANT_ACTION: design' scripts/phase2e-command-guard.py
+          grep -F 'site_design_preset_update_plan' config/phase2e-design-command-registry.json
+          grep -F 'site_design_variant_update_plan' config/phase2e-design-command-registry.json
+          grep -F '"design.write"' config/phase2e-gateway-capabilities.json
+          ! grep -F '"design.read"' config/phase2e-gateway-capabilities.json
+          ! grep -E '(custom_css|source_url|content_base64|font_url)' config/phase2e-design-command-registry.json
+
+      - name: Reject committed credential material
+        run: |
+          set -euo pipefail
+          files=(schemas/phase2e-design-preset-v1.schema.json schemas/phase2e-design-variant-v1.schema.json config/phase2e-design-command-registry.json config/phase2e-gateway-capabilities.json ops/phase2e/gateway-design-capability.json scripts/phase2e-design-runner.py scripts/phase2e-expand-design-capability.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"

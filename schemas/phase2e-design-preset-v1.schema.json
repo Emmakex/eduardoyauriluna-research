@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eduardoyauriluna.com/schemas/phase2e-design-preset-v1.schema.json",
+  "title": "Phase 2E bounded Design preset update command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "command_id", "tenant", "action", "requested_by", "payload"],
+  "properties": {
+    "version": {"const": "1"},
+    "command_id": {"type": "string", "pattern": "^cmd-[a-z0-9][a-z0-9-]{7,63}$"},
+    "tenant": {"const": "eduardo-research"},
+    "action": {"const": "design.preset.update"},
+    "requested_by": {"const": "chatgpt"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changes"],
+      "properties": {
+        "changes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "palette": {"enum": ["researcher", "ocean-lab", "graphite-academic"]},
+            "typography": {"enum": ["modern-sans", "academic-mixed", "humanist-sans"]},
+            "density": {"enum": ["compact", "balanced", "airy"]}
+          }
+        }
+      }
+    }
+  }
+}
