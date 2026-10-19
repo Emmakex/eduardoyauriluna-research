@@ -1,0 +1,20 @@
+{
+  "action": "research.object.update",
+  "command_id": "cmd-phase2e-research-software-update-0001",
+  "command_sha256": "b85fb531c2854045d1671b910b2a5b09d27cfc0efdb5b0ae391a7d6c862535b7",
+  "correlation": {
+    "operation_id": "erm-object-op-96f54623cb404dbba327daa258ed6ae6",
+    "plan_id": "erm-object-plan-c4dcfb416699949194-37c9bc8d"
+  },
+  "resource": {
+    "changed_fields": [
+      "title"
+    ],
+    "kind": "software",
+    "post_id": 101
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
