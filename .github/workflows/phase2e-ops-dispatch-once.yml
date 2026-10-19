@@ -24,4 +24,4 @@ jobs:
           gh api --method POST \
             "repos/${GITHUB_REPOSITORY}/actions/workflows/phase2e-harden-gateway-generation.yml/dispatches" \
             -f ref=main
-          echo 'DISPATCHED_PHASE2E_GATEWAY_GENERATION=phase2d-v2-20261019'
+          echo 'DISPATCHED_PHASE2E_GATEWAY_GENERATION_RETRY=phase2d-v2-20261019'
