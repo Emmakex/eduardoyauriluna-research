@@ -2,8 +2,9 @@
 """Dispatch the observable production command runner across accepted Phase 2E actions.
 
 Existing commands still execute in the original Phase 2D runner. Bounded Page,
-Navigation, Research Object and Research Line commands execute in dedicated runners.
-All paths retain the same sanitized MCP tool-error capture used for production diagnosis.
+Navigation, Media, Research Object and Research Line commands execute in dedicated
+runners. All paths retain the same sanitized MCP tool-error capture used for
+production diagnosis.
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ HERE = Path(__file__).resolve().parent
 BASE_RUNNER = HERE / "phase2d-command-runner.py"
 PAGE_TEXT_SLOT_RUNNER = HERE / "phase2e-page-text-slot-runner.py"
 NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
+MEDIA_INGEST_RUNNER = HERE / "phase2e-media-ingest-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
@@ -25,6 +27,7 @@ RESEARCH_LINE_UPDATE_RUNNER = HERE / "phase2e-research-line-update-runner.py"
 RUNNERS = {
     "page.slot.update": PAGE_TEXT_SLOT_RUNNER,
     "navigation.update": NAVIGATION_RUNNER,
+    "media.ingest": MEDIA_INGEST_RUNNER,
     "research.object.create": RESEARCH_CREATE_RUNNER,
     "research.object.update": RESEARCH_UPDATE_RUNNER,
     "research.line.create": RESEARCH_LINE_CREATE_RUNNER,
@@ -92,9 +95,6 @@ def observable_write_result(result_dir, command_id, result):
     return _real_write_result(result_dir, command_id, result)
 
 
-# Dedicated Phase 2E runners are allowed to delegate subprocess use exclusively
-# through their imported Phase 2D `base` module. Do not require every runner to
-# re-export a `subprocess` attribute merely for observability instrumentation.
 if hasattr(module, "subprocess"):
     module.subprocess.run = observable_run
 module.write_result = observable_write_result
