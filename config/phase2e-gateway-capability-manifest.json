@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "principal_id": "phase2d-github",
+  "capabilities": [
+    "site.read",
+    "insights.write",
+    "operations.rollback",
+    "pages.write",
+    "translations.write",
+    "research.write",
+    "seo.read",
+    "seo.write"
+  ]
+}
