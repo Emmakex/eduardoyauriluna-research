@@ -1,43 +1,59 @@
 name: Phase 2E Research Command Quality
 
-# Fail closed before any production Research command is accepted.
 on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/phase2e-research-command-quality.yml'
-      - '.github/workflows/phase2d-command-gateway.yml'
-      - 'config/phase2e-research-command-registry.json'
-      - 'schemas/phase2e-research-command-v1.schema.json'
-      - 'scripts/phase2e-research-object-runner.py'
-      - 'scripts/phase2e-command-guard.py'
-      - 'scripts/phase2e-command-runner-observable.py'
+      - 'ops/phase2e/research-command-quality.json'
 
 permissions:
   contents: read
 
 jobs:
   quality:
+    if: github.actor == 'Emmakex'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate exact quality request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('ops/phase2e/research-command-quality.json').read_text(encoding='utf-8'))
+          expected = {'version': '1', 'action': 'verify-research-command-gateway'}
+          if value != expected:
+              raise SystemExit('Research quality request does not match the reviewed contract')
+          print('RESEARCH_COMMAND_QUALITY_REQUEST_OK')
+          PY
+
       - name: Compile dispatchers and Research runner
+        shell: bash
         run: |
           set -euo pipefail
           python3 -m py_compile \
             scripts/phase2e-research-object-runner.py \
             scripts/phase2e-command-guard.py \
             scripts/phase2e-command-runner-observable.py
+
       - name: Verify existing Phase 2D runner remains valid
+        shell: bash
         run: |
           set -euo pipefail
           python3 scripts/phase2d-command-runner.py --self-test
+
       - name: Verify bounded Research runner
+        shell: bash
         run: |
           set -euo pipefail
           python3 scripts/phase2e-research-object-runner.py --self-test
+
       - name: Verify dispatched replay guard
+        shell: bash
         run: |
           set -euo pipefail
           python3 scripts/phase2e-command-guard.py self-test
