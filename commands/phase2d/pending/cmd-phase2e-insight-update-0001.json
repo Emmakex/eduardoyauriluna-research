@@ -1,14 +1,14 @@
 {
-  "version": "1",
-  "command_id": "cmd-phase2e-insight-update-0001",
-  "tenant": "eduardo-research",
-  "action": "insight.update",
   "requested_by": "chatgpt",
+  "action": "insight.update",
+  "tenant": "eduardo-research",
+  "command_id": "cmd-phase2e-insight-update-0001",
+  "version": "1",
   "payload": {
-    "post_id": 94,
     "changes": {
-      "title": "Phase 2E Insight update acceptance",
-      "content": "Borrador técnico actualizado mediante el command gateway. Esta modificación verifica insight.update con Plan, Apply, rendered Verify, aislamiento de tenant e idempotencia de replay."
-    }
+      "content": "Borrador técnico actualizado mediante el command gateway. Esta modificación verifica insight.update con Plan, Apply, rendered Verify, aislamiento de tenant e idempotencia de replay.",
+      "title": "Phase 2E Insight update acceptance"
+    },
+    "post_id": 94
   }
 }
