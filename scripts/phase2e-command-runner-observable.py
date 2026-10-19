@@ -4,7 +4,8 @@
 Existing commands still execute in the original Phase 2D runner. Bounded Page,
 Navigation, Media metadata, Research Object and Research Line commands execute in
 dedicated runners. Binary Media ingest remains outside this Git-persisted command
-channel except for one exact acceptance-only fixed public fixture action.
+channel except for one exact acceptance-only fixed public fixture action. Temporary
+Media acceptance rollback actions are exact-ID only and removed after acceptance.
 All paths retain sanitized MCP tool-error capture.
 """
 from __future__ import annotations
@@ -22,6 +23,7 @@ PAGE_TEXT_SLOT_RUNNER = HERE / "phase2e-page-text-slot-runner.py"
 NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
 MEDIA_METADATA_RUNNER = HERE / "phase2e-media-metadata-runner.py"
 MEDIA_FIXTURE_RUNNER = HERE / "phase2e-media-fixture-command-runner.py"
+MEDIA_METADATA_ACCEPTANCE_ROLLBACK_RUNNER = HERE / "phase2e-media-metadata-acceptance-rollback-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
@@ -31,6 +33,7 @@ RUNNERS = {
     "navigation.update": NAVIGATION_RUNNER,
     "media.metadata.update": MEDIA_METADATA_RUNNER,
     "media.acceptance.fixture.create": MEDIA_FIXTURE_RUNNER,
+    "media.metadata.acceptance.rollback": MEDIA_METADATA_ACCEPTANCE_ROLLBACK_RUNNER,
     "research.object.create": RESEARCH_CREATE_RUNNER,
     "research.object.update": RESEARCH_UPDATE_RUNNER,
     "research.line.create": RESEARCH_LINE_CREATE_RUNNER,
