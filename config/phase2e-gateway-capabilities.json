@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "principal": "phase2d-github",
+  "bearer_token_env": "PRINCIPAL_PHASE2D_GITHUB_TOKEN",
+  "capabilities": [
+    "site.read",
+    "insights.write",
+    "operations.rollback",
+    "pages.write",
+    "translations.write",
+    "research.write",
+    "seo.read",
+    "seo.write",
+    "navigation.read",
+    "navigation.write",
+    "media.read",
+    "media.write"
+  ]
+}
