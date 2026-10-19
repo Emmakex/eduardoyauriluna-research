@@ -1,0 +1,20 @@
+{
+  "action": "research.object.create",
+  "command_id": "cmd-phase2e-research-software-create-0003",
+  "command_sha256": "5ac45d69a8a713a5aca4da59d8f3914dc1f6411578f7c19bc3622fa409463129",
+  "correlation": {
+    "operation_id": "erm-object-op-835318dda29f4e8b997598b02b3582d9",
+    "plan_id": "erm-object-plan-1d03196a61b4e4fd66-880a673c"
+  },
+  "resource": {
+    "kind": "software",
+    "language": "en",
+    "post_id": 101,
+    "state": "draft",
+    "title": "Phase 2E Research Software update baseline"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
