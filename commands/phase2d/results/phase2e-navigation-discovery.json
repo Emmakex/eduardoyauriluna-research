@@ -1,0 +1,41 @@
+{
+  "action": "navigation.discovery",
+  "baseline": {
+    "footer": [
+      "privacy-policy",
+      "legal-notice"
+    ],
+    "primary": [
+      "about",
+      "research",
+      "publications",
+      "projects",
+      "software",
+      "datasets",
+      "cv",
+      "insights",
+      "contact"
+    ]
+  },
+  "candidate": {
+    "items": [
+      "research",
+      "about",
+      "publications",
+      "projects",
+      "software",
+      "datasets",
+      "cv",
+      "insights",
+      "contact"
+    ],
+    "location": "primary",
+    "membership_changed": false,
+    "reorder_only": true
+  },
+  "read_only": true,
+  "revision": "fcec9b6e5c65894525e368c699730b6b14407b26e97039a0069dfd3e090e14ff",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
