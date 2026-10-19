@@ -1,0 +1,19 @@
+{
+  "action": "insight.update",
+  "command_id": "cmd-phase2e-insight-seo-excerpt-0001",
+  "command_sha256": "7b4c49c99cee04ca0109364051106e0d2aad4d3cbbbf6fbc7be97eba29e5a6c6",
+  "correlation": {
+    "operation_id": "erm-operation-8852dc23e96e4b3abf7688d1a8a22b45",
+    "plan_id": "erm-remote-plan-3e69940d7a751c592a0c-17bb5d11"
+  },
+  "resource": {
+    "changed_fields": [
+      "excerpt"
+    ],
+    "post_id": 97
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
