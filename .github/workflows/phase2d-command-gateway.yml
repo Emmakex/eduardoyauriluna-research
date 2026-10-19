@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/phase2d-command-guard.py guard \
+          python3 scripts/phase2e-command-guard.py guard \
             '${{ steps.command.outputs.path }}' \
             --result-dir commands/phase2d/results
 
@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/phase2d-command-guard.py isolation \
+          python3 scripts/phase2e-command-guard.py isolation \
             --tenant 'eduardo-research'
 
       - name: Execute bounded MCP lifecycle
@@ -94,7 +94,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 scripts/phase2d-command-runner-observable.py \
+          python3 scripts/phase2e-command-runner-observable.py \
             '${{ steps.command.outputs.path }}' \
             --result-dir commands/phase2d/results
           status=$?
@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/phase2d-command-guard.py stamp \
+          python3 scripts/phase2e-command-guard.py stamp \
             '${{ steps.command.outputs.path }}' \
             --result-dir commands/phase2d/results
 
