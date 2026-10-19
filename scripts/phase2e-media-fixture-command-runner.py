@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = Path(__file__).with_name("phase2d-command-runner.py")
 ACTION = "media.acceptance.fixture.create"
 CREATE_COMMAND_ID = "cmd-phase2e-media-fixture-0002"
-CLEANUP_COMMAND_ID = "cmd-phase2e-media-fixture-cleanup-0001"
+CLEANUP_COMMAND_ID = "cmd-phase2e-media-fixture-cleanup-0002"
 FAILED_FIXTURE_OPERATION_ID = "erm-media-ingest-op-58cfd560af614e6bade2db635a8840b0"
 PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC"
 PNG_BYTES = base64.b64decode(PNG_BASE64)
@@ -83,11 +83,7 @@ def status_is(value: Any, expected: str) -> bool:
 
 
 def rollback_proven(value: Any) -> bool:
-    return (
-        base.rollback_verified(value)
-        and status_is(value, "rolled-back")
-        and signal_true(value, "deleted")
-    )
+    return base.rollback_verified(value) and status_is(value, "rolled-back") and signal_true(value, "deleted")
 
 
 def execute_cleanup(command: dict[str, Any], client: Any, result_dir: Path) -> int:
@@ -103,7 +99,7 @@ def execute_cleanup(command: dict[str, Any], client: Any, result_dir: Path) -> i
         "version": "1",
         "status": "success",
         "tenant": "eduardo-research",
-        "action": "media.acceptance.fixture.cleanup",
+        "action": ACTION,
         "command_id": command_id,
         "verified": True,
         "resource": {"attachment_id": aid, "temporary": True, "deleted": True},
@@ -182,10 +178,7 @@ def execute_create(command: dict[str, Any], client: Any, token: str, result_dir:
         if operation_id:
             rollback_attempted = True
             try:
-                rolled = client.call(
-                    "site_media_ingest_rollback",
-                    {"operationId": operation_id, "confirm": True},
-                )
+                rolled = client.call("site_media_ingest_rollback", {"operationId": operation_id, "confirm": True})
                 rollback_ok = rollback_proven(rolled)
             except Exception:
                 rollback_ok = False
@@ -203,19 +196,13 @@ def execute_create(command: dict[str, Any], client: Any, token: str, result_dir:
             "action": ACTION,
             "command_id": command_id,
             "verified": False,
-            "error": {
-                "code": "fixture_failed",
-                "message": "Acceptance-only Media fixture creation failed.",
-            },
+            "error": {"code": "fixture_failed", "message": "Acceptance-only Media fixture creation failed."},
             "rollback": {"attempted": rollback_attempted, "verified": rollback_ok},
             "cancel": {"attempted": cancel_attempted, "verified": cancel_ok},
             "correlation": {"plan_id": plan_id, "operation_id": operation_id},
         }
         path = write_result(result_dir, command_id, result)
-        print(
-            f"FAILED {path}: {sanitized_message(str(exc), token)}",
-            file=__import__("sys").stderr,
-        )
+        print(f"FAILED {path}: {sanitized_message(str(exc), token)}", file=__import__("sys").stderr)
         return 1
 
 
