@@ -39,6 +39,7 @@ jobs:
             scripts/phase2e-research-object-runner.py \
             scripts/phase2e-research-object-update-runner.py \
             scripts/phase2e-research-line-create-runner.py \
+            scripts/phase2e-research-line-update-runner.py \
             scripts/phase2e-command-guard.py \
             scripts/phase2e-command-runner-observable.py
 
@@ -65,6 +66,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/phase2e-research-line-create-runner.py --self-test
+
+      - name: Verify bounded Research Line update runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-research-line-update-runner.py --self-test
 
       - name: Verify dispatched replay guard
         shell: bash
