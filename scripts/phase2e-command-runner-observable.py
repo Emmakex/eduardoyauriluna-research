@@ -2,8 +2,8 @@
 """Dispatch the observable production command runner across accepted Phase 2E actions.
 
 Existing commands still execute in the original Phase 2D runner. Bounded Research
-create/update commands execute in dedicated runners. All paths retain the same
-sanitized MCP tool-error capture used for production diagnosis.
+object create/update and Research Line create commands execute in dedicated runners.
+All paths retain the same sanitized MCP tool-error capture used for production diagnosis.
 """
 from __future__ import annotations
 
@@ -18,9 +18,11 @@ HERE = Path(__file__).resolve().parent
 BASE_RUNNER = HERE / "phase2d-command-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
+RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
 RUNNERS = {
     "research.object.create": RESEARCH_CREATE_RUNNER,
     "research.object.update": RESEARCH_UPDATE_RUNNER,
+    "research.line.create": RESEARCH_LINE_CREATE_RUNNER,
 }
 
 
