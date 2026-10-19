@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 scripts/phase2d-command-runner.py \
+          python3 scripts/phase2d-command-runner-observable.py \
             '${{ steps.command.outputs.path }}' \
             --result-dir commands/phase2d/results
           status=$?
