@@ -47,7 +47,18 @@ jobs:
             command_path='${{ inputs.command_path }}'
             files=("$command_path")
           else
-            mapfile -t files < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            mapfile -t active_files < <(git diff-tree --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            mapfile -t deleted_files < <(git diff-tree --no-commit-id --name-only --diff-filter=D -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            if [[ ${#active_files[@]} -eq 0 && ${#deleted_files[@]} -gt 0 ]]; then
+              echo "cleanup_only=true" >> "$GITHUB_OUTPUT"
+              echo "Pending command cleanup only; no executable command will run"
+              exit 0
+            fi
+            if [[ ${#deleted_files[@]} -gt 0 ]]; then
+              echo "Pending command deletion cannot be combined with an executable command" >&2
+              exit 1
+            fi
+            files=("${active_files[@]}")
           fi
 
           if [[ ${#files[@]} -ne 1 ]]; then
@@ -74,11 +85,13 @@ jobs:
           print(command_id)
           PY
           )"
+          echo "cleanup_only=false" >> "$GITHUB_OUTPUT"
           echo "path=$command_path" >> "$GITHUB_OUTPUT"
           echo "id=$command_id" >> "$GITHUB_OUTPUT"
 
       - name: Guard command identity and replay
         id: guard
+        if: ${{ steps.command.outputs.cleanup_only != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -88,6 +101,7 @@ jobs:
 
       - name: Verify dedicated principal tenant isolation
         id: isolation
+        if: ${{ steps.command.outputs.cleanup_only != 'true' }}
         shell: bash
         env:
           PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
@@ -98,7 +112,7 @@ jobs:
 
       - name: Execute bounded MCP lifecycle
         id: execute
-        if: ${{ steps.guard.outputs.decision == 'new' }}
+        if: ${{ steps.command.outputs.cleanup_only != 'true' && steps.guard.outputs.decision == 'new' }}
         shell: bash
         env:
           PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
@@ -113,7 +127,7 @@ jobs:
 
       - name: Fingerprint sanitized execution result
         id: stamp
-        if: ${{ always() && steps.guard.outcome == 'success' && steps.guard.outputs.decision == 'new' && steps.execute.outcome == 'success' }}
+        if: ${{ always() && steps.command.outputs.cleanup_only != 'true' && steps.guard.outcome == 'success' && steps.guard.outputs.decision == 'new' && steps.execute.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -122,7 +136,7 @@ jobs:
             --result-dir commands/phase2d/results
 
       - name: Upload sanitized execution result
-        if: ${{ always() && steps.guard.outcome == 'success' }}
+        if: ${{ always() && steps.command.outputs.cleanup_only != 'true' && steps.guard.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: phase2d-command-${{ steps.command.outputs.id }}
@@ -131,7 +145,7 @@ jobs:
           retention-days: 30
 
       - name: Persist sanitized result for ChatGPT readback
-        if: ${{ always() && steps.guard.outcome == 'success' }}
+        if: ${{ always() && steps.command.outputs.cleanup_only != 'true' && steps.guard.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -163,6 +177,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ '${{ steps.command.outputs.cleanup_only }}' == 'true' ]]; then
+            echo 'Cleanup-only pending deletion accepted without MCP execution'
+            exit 0
+          fi
           if [[ '${{ steps.guard.outcome }}' != 'success' ]]; then
             echo 'Command replay/idempotency guard failed closed' >&2
             exit 1
