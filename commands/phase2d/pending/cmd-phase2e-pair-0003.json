@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-pair-0003",
+  "tenant": "eduardo-research",
+  "action": "insight.translation.pair",
+  "requested_by": "chatgpt",
+  "payload": {
+    "first_id": 93,
+    "second_id": 97
+  }
+}
