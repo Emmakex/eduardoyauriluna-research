@@ -1,0 +1,27 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {
+      "enabled": true
+    }
+  },
+  "actions": {
+    "insight.create": {
+      "required_capabilities": [
+        "insights.write",
+        "operations.rollback"
+      ],
+      "tools": {
+        "capabilities": "research_capabilities",
+        "plan": "site_insight_create_plan",
+        "apply": "site_insight_apply",
+        "verify": "site_insight_verify",
+        "rollback": "site_insight_rollback"
+      },
+      "verify_rendered": true,
+      "allowed_statuses": [
+        "draft"
+      ]
+    }
+  }
+}
