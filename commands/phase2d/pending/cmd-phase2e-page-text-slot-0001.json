@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-page-text-slot-0001",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "about",
+    "language": "es",
+    "slot": "lead",
+    "value": "Aceptación temporal Phase 2E; se revertirá tras verificar el gateway."
+  }
+}
