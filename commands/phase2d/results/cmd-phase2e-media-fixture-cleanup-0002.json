@@ -1,0 +1,22 @@
+{
+  "action": "media.acceptance.fixture.create",
+  "command_id": "cmd-phase2e-media-fixture-cleanup-0002",
+  "command_sha256": "be5f9ed6ae8e2c645715e1a84d28400a0f73d42d450942567f946d0e5e8fbf1a",
+  "correlation": {
+    "operation_id": "erm-media-ingest-op-58cfd560af614e6bade2db635a8840b0"
+  },
+  "resource": {
+    "attachment_id": 104,
+    "deleted": true,
+    "temporary": true
+  },
+  "rollback": {
+    "attempted": true,
+    "status": "rolled-back",
+    "verified": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
