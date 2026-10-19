@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2d-idempotency-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.create",
+  "requested_by": "chatgpt",
+  "payload": {
+    "title": "Phase 2D idempotency acceptance",
+    "language": "es",
+    "status": "draft",
+    "content": "Borrador técnico de aceptación de Phase 2D. Este registro verifica que un comando nuevo se ejecuta una sola vez y que su reintento exacto no genera una segunda mutación mediante Research Manager MCP."
+  }
+}
