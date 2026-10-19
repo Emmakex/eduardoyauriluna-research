@@ -1,0 +1,32 @@
+{
+  "version": "1",
+  "tenants": {
+    "eduardo-research": {
+      "enabled": true
+    }
+  },
+  "actions": {
+    "research.line.create": {
+      "required_capabilities": [
+        "research.write",
+        "operations.rollback"
+      ],
+      "tools": {
+        "plan": "site_research_line_create_plan",
+        "apply": "site_research_line_apply",
+        "verify": "site_research_line_verify",
+        "rollback": "site_research_line_rollback"
+      },
+      "verify_rendered": false,
+      "allowed_statuses": [
+        "draft"
+      ],
+      "allowed_data_fields": [
+        "title",
+        "language",
+        "status"
+      ],
+      "evidence_required": true
+    }
+  }
+}
