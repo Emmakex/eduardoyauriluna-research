@@ -1,0 +1,95 @@
+name: Phase 2E Slice 14 Research Translation Fixtures
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/phase2e/slice14-research-translation-fixtures.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2d-command-gateway
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Self-test bounded Slice 14 fixture helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-slice14-research-translation-fixtures.py --self-test
+
+      - name: Verify dedicated principal tenant isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py isolation --tenant eduardo-research
+
+      - name: Hydrate already-persisted evidence for rerun safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          prepare='commands/phase2d/results/cmd-phase2e-slice14-fixtures-prepare-0001.json'
+          cleanup='commands/phase2d/results/cmd-phase2e-slice14-fixtures-cleanup-0001.json'
+          git fetch origin main
+          mkdir -p "$(dirname "$prepare")"
+          if git show "origin/main:$prepare" > /tmp/slice14-prepare.json 2>/dev/null; then
+            cp /tmp/slice14-prepare.json "$prepare"
+          fi
+          if git show "origin/main:$cleanup" > /tmp/slice14-cleanup.json 2>/dev/null; then
+            cp /tmp/slice14-cleanup.json "$cleanup"
+          fi
+
+      - name: Prepare or clean exact Slice 14 fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-slice14-research-translation-fixtures.py \
+            --request ops/phase2e/slice14-research-translation-fixtures.json \
+            --prepare-evidence commands/phase2d/results/cmd-phase2e-slice14-fixtures-prepare-0001.json \
+            --cleanup-evidence commands/phase2d/results/cmd-phase2e-slice14-fixtures-cleanup-0001.json
+
+      - name: Persist sanitized fixture evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          action="$(python3 - <<'PY'
+          import json
+          print(json.load(open('ops/phase2e/slice14-research-translation-fixtures.json', encoding='utf-8'))['action'])
+          PY
+          )"
+          if [[ "$action" == 'prepare' ]]; then
+            evidence='commands/phase2d/results/cmd-phase2e-slice14-fixtures-prepare-0001.json'
+            message='phase2e: record Slice 14 fixture preparation'
+          else
+            evidence='commands/phase2d/results/cmd-phase2e-slice14-fixtures-cleanup-0001.json'
+            message='phase2e: record Slice 14 fixture cleanup'
+          fi
+          test -f "$evidence"
+          cp "$evidence" /tmp/slice14-evidence.json
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p "$(dirname "$evidence")"
+          cp /tmp/slice14-evidence.json "$evidence"
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add "$evidence"
+          if git diff --cached --quiet; then
+            echo 'Slice 14 fixture evidence already persisted'
+            exit 0
+          fi
+          git commit -m "$message"
+          git push origin HEAD:main
