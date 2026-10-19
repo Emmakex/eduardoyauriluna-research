@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-design-variant-primary-0001",
+  "tenant": "eduardo-research",
+  "action": "design.variant.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "changes": {
+      "hero": "compact",
+      "sections": "plain",
+      "cards": "lifted",
+      "collections": "compact-grid"
+    }
+  }
+}
