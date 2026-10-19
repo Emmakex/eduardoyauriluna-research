@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "action": "publish",
+  "post_id": 110,
+  "title": "Hola mundo",
+  "from_status": "draft",
+  "to_status": "publish"
+}
