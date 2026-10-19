@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-research-line-create-0001",
+  "tenant": "eduardo-research",
+  "action": "research.line.create",
+  "requested_by": "chatgpt",
+  "payload": {
+    "data": {
+      "title": "Phase 2E Research Line acceptance fixture",
+      "language": "en",
+      "status": "draft"
+    },
+    "evidence_confirmed": true,
+    "evidence_reference": "acceptance:phase2e:research-line:create"
+  }
+}
