@@ -4,8 +4,9 @@
 Existing actions keep the original validator unchanged. Bounded Page, Navigation,
 Media metadata, Design, Insight Research-Line relation, Research Object and Research
 Line actions use dedicated strict validators, then reuse the same fingerprinting,
-replay semantics, result stamping and tenant-isolation probe. Binary Media ingest
-stays outside Git persistence.
+replay semantics, result stamping and tenant-isolation probe. Acceptance-only fixture
+actions are exact-contract helpers and are removed after their production proof.
+Binary Media ingest stays outside Git persistence.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
 MEDIA_METADATA_RUNNER = HERE / "phase2e-media-metadata-runner.py"
 DESIGN_RUNNER = HERE / "phase2e-design-runner.py"
 INSIGHT_RESEARCH_LINES_RUNNER = HERE / "phase2e-insight-research-lines-runner.py"
+SLICE13_LINE_FIXTURE_RUNNER = HERE / "phase2e-slice13-line-fixture-runner.py"
 RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
@@ -40,6 +42,7 @@ navigation = load_module("phase2e_navigation_guard", NAVIGATION_RUNNER)
 media_metadata = load_module("phase2e_media_metadata_guard", MEDIA_METADATA_RUNNER)
 design = load_module("phase2e_design_guard", DESIGN_RUNNER)
 insight_research_lines = load_module("phase2e_insight_research_lines_guard", INSIGHT_RESEARCH_LINES_RUNNER)
+slice13_line_fixture = load_module("phase2e_slice13_line_fixture_guard", SLICE13_LINE_FIXTURE_RUNNER)
 research_create = load_module("phase2e_research_object_create_guard", RESEARCH_CREATE_RUNNER)
 research_update = load_module("phase2e_research_object_update_guard", RESEARCH_UPDATE_RUNNER)
 research_line_create = load_module("phase2e_research_line_create_guard", RESEARCH_LINE_CREATE_RUNNER)
@@ -53,6 +56,7 @@ PHASE2E_VALIDATORS = {
     design.PRESET_ACTION: design,
     design.VARIANT_ACTION: design,
     insight_research_lines.ACTION: insight_research_lines,
+    slice13_line_fixture.ACTION: slice13_line_fixture,
     research_create.ACTION: research_create,
     research_update.ACTION: research_update,
     research_line_create.ACTION: research_line_create,
