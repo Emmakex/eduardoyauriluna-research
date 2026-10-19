@@ -1,38 +1,20 @@
 {
   "action": "seo.geo.discovery",
   "advisory_count": 2,
-  "blocking_count": 1,
+  "blocking_count": 0,
   "optimization_complete": false,
   "read_only": true,
-  "ready": false,
+  "ready": true,
   "residual_summary": {
     "evidence_required": 0,
     "manual_review": 0,
     "safe_remediation": 0,
-    "structured_input": 3,
-    "total": 3
+    "structured_input": 2,
+    "total": 2
   },
   "safe_site_candidates": [],
   "status": "success",
   "structured_input_actions": [
-    {
-      "check_id": "description-source",
-      "dimension": "seo+geo",
-      "gateway": "insights",
-      "operation": "insight-update",
-      "reason": "The Theme derives meta description and schema description/abstract from the structured excerpt.",
-      "required_input": [
-        "value"
-      ],
-      "requires_evidence": false,
-      "source": "resource",
-      "status": "fail",
-      "target": {
-        "identifier": 97,
-        "language": "en",
-        "type": "insight"
-      }
-    },
     {
       "check_id": "bilingual-alternate",
       "dimension": "seo+geo",
