@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Safely converge the production command gateway on reviewed capabilities.
 
-The reviewed Phase 2E capability set is deliberately closed in this source file.
-Each capability is added to BOTH tenant entitlements and the existing
-`phase2d-github` principal while preserving the current bearer exactly.
+Each wrapper binds ``APPROVED_CAPABILITIES`` to one reviewed Phase 2E slice.
+Capabilities are added to BOTH tenant entitlements and the existing
+``phase2d-github`` principal while preserving the underlying bearer exactly.
 
 The production mutation is transactional: backup mode 0600, accepted immutable
 image recreation, public health + allowed/denied routing checks, and automatic
-rollback on any verification failure. No bearer or .env content is printed.
+rollback on any verification failure. Public verification respects the strict
+Phase 2D gateway-generation presentation contract without mutating stored
+credential material. No bearer or .env content is printed.
 """
 from __future__ import annotations
 
@@ -35,6 +37,8 @@ TENANT_ID = "eduardo-research"
 PRINCIPAL_ID = "phase2d-github"
 APPROVED_CAPABILITIES = ["pages.write", "translations.write"]
 IMAGE_RE = re.compile(r"^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$")
+GENERATION_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
 def log(message: str) -> None:
@@ -179,6 +183,17 @@ def verify_contract(text: str) -> str:
     return parsed[token_ref]
 
 
+def presented_gateway_bearer(env: dict[str, str], underlying: str) -> str:
+    """Return the public bearer presentation without changing stored credentials."""
+    strict = env.get("MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION", "").strip().lower() in TRUE_VALUES
+    if not strict:
+        return underlying
+    generation = env.get("MCP_PHASE2D_GATEWAY_GENERATION", "").strip()
+    if not GENERATION_RE.fullmatch(generation):
+        raise RuntimeError("strict gateway generation is enabled but generation is missing or invalid")
+    return f"{underlying}.{generation}"
+
+
 def current_image_ref() -> str:
     if not CURRENT_IMAGE_PATH.is_file():
         raise RuntimeError("accepted current image reference is missing")
@@ -216,7 +231,7 @@ def wait_health() -> None:
     last_error = ""
     for _ in range(30):
         try:
-            request = urllib.request.Request(PUBLIC_HEALTH, headers={"User-Agent": "phase2e-capability-expand/2.0"})
+            request = urllib.request.Request(PUBLIC_HEALTH, headers={"User-Agent": "phase2e-capability-expand/2.1"})
             with urllib.request.urlopen(request, timeout=10) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             if (
@@ -242,7 +257,7 @@ def mcp_initialize_status(url: str, token: str) -> int:
             "params": {
                 "protocolVersion": "2025-06-18",
                 "capabilities": {},
-                "clientInfo": {"name": "phase2e-capability-expand", "version": "2.0"},
+                "clientInfo": {"name": "phase2e-capability-expand", "version": "2.1"},
             },
         }
     ).encode("utf-8")
@@ -254,7 +269,7 @@ def mcp_initialize_status(url: str, token: str) -> int:
             "Authorization": "Bearer " + token,
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
-            "User-Agent": "phase2e-capability-expand/2.0",
+            "User-Agent": "phase2e-capability-expand/2.1",
         },
     )
     try:
@@ -266,7 +281,8 @@ def mcp_initialize_status(url: str, token: str) -> int:
         return int(exc.code)
 
 
-def verify_public_routing(token: str) -> None:
+def verify_public_routing(env: dict[str, str], underlying: str) -> None:
+    token = presented_gateway_bearer(env, underlying)
     allowed = mcp_initialize_status(f"{PUBLIC_MCP_BASE}/{TENANT_ID}", token)
     denied = mcp_initialize_status(f"{PUBLIC_MCP_BASE}/phase2d-denied-probe", token)
     if allowed != 200:
@@ -306,9 +322,33 @@ def self_test() -> int:
         raise RuntimeError("self-test changed unrelated env material")
     if verify_contract(updated) != "gateway-secret":
         raise RuntimeError("self-test expanded contract is invalid")
+    if presented_gateway_bearer(parse_env(updated), token) != "gateway-secret":
+        raise RuntimeError("self-test changed bearer presentation in compatibility mode")
     again, token_again, tenant_again, principal_again = build_updated_env(updated)
     if tenant_again or principal_again or token_again != "gateway-secret" or again != updated:
         raise RuntimeError("self-test convergence is not idempotent")
+
+    strict_sample = sample + (
+        "MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION=true\n"
+        "MCP_PHASE2D_GATEWAY_GENERATION=phase2d-v2-20261019\n"
+    )
+    strict_updated, strict_token, _, _ = build_updated_env(strict_sample)
+    strict_env = parse_env(strict_updated)
+    if strict_env.get("EXISTING_GATEWAY_TOKEN") != "gateway-secret":
+        raise RuntimeError("self-test strict generation mutated stored bearer")
+    if presented_gateway_bearer(strict_env, strict_token) != "gateway-secret.phase2d-v2-20261019":
+        raise RuntimeError("self-test strict generation did not contextualize bearer presentation")
+
+    for invalid_generation in ("", "INVALID GENERATION", ".bad", "a" * 65):
+        invalid_env = dict(strict_env)
+        invalid_env["MCP_PHASE2D_GATEWAY_GENERATION"] = invalid_generation
+        try:
+            presented_gateway_bearer(invalid_env, strict_token)
+        except RuntimeError as exc:
+            if "generation is missing or invalid" not in str(exc):
+                raise
+        else:
+            raise RuntimeError("self-test did not fail closed on invalid strict generation")
 
     bad = json.loads(json.dumps(principal))
     bad["tenants"] = [TENANT_ID, "other-tenant"]
@@ -348,7 +388,7 @@ def main() -> int:
     if not changed:
         verify_contract(original)
         wait_health()
-        verify_public_routing(token)
+        verify_public_routing(parse_env(original), token)
         log("Reviewed gateway capabilities: already active for tenant + principal")
         log("Existing automation bearer: preserved and verified")
         log("Allowed tenant initialize: HTTP 200")
@@ -359,10 +399,11 @@ def main() -> int:
     os.chmod(BACKUP_PATH, 0o600)
     atomic_write_env(updated)
     try:
-        verify_contract(ENV_PATH.read_text(encoding="utf-8"))
+        live = ENV_PATH.read_text(encoding="utf-8")
+        verify_contract(live)
         recreate_runtime(image_ref)
         wait_health()
-        verify_public_routing(token)
+        verify_public_routing(parse_env(live), token)
     except Exception:
         log("Capability expansion verification failed; restoring previous production environment")
         atomic_write_env(BACKUP_PATH.read_text(encoding="utf-8"))
