@@ -1,0 +1,127 @@
+name: Phase 2D Command Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'commands/phase2d/pending/*.json'
+  workflow_dispatch:
+    inputs:
+      command_path:
+        description: 'Existing commands/phase2d/pending/*.json command to execute'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2d-command-gateway
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Resolve exactly one trusted command
+        id: command
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            command_path='${{ inputs.command_path }}'
+            files=("$command_path")
+          else
+            mapfile -t files < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+          fi
+
+          if [[ ${#files[@]} -ne 1 ]]; then
+            echo "Expected exactly one Phase 2D pending command; found ${#files[@]}" >&2
+            exit 1
+          fi
+
+          command_path="${files[0]}"
+          if [[ ! "$command_path" =~ ^commands/phase2d/pending/[A-Za-z0-9._-]+\.json$ ]]; then
+            echo "Command path is outside the trusted pending namespace" >&2
+            exit 1
+          fi
+          if [[ ! -f "$command_path" ]]; then
+            echo "Command file does not exist" >&2
+            exit 1
+          fi
+
+          command_id="$(python3 - "$command_path" <<'PY'
+          import json, re, sys
+          value = json.load(open(sys.argv[1], encoding='utf-8'))
+          command_id = value.get('command_id', '')
+          if not isinstance(command_id, str) or re.fullmatch(r'cmd-[a-z0-9][a-z0-9-]{7,63}', command_id) is None:
+              raise SystemExit('invalid command_id')
+          print(command_id)
+          PY
+          )"
+          echo "path=$command_path" >> "$GITHUB_OUTPUT"
+          echo "id=$command_id" >> "$GITHUB_OUTPUT"
+
+      - name: Execute bounded MCP lifecycle
+        id: execute
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/phase2d-command-runner.py \
+            '${{ steps.command.outputs.path }}' \
+            --result-dir commands/phase2d/results
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload sanitized execution result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-command-${{ steps.command.outputs.id }}
+          path: commands/phase2d/results/${{ steps.command.outputs.id }}.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Persist sanitized result for ChatGPT readback
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="commands/phase2d/results/${{ steps.command.outputs.id }}.json"
+          if [[ ! -f "$result" ]]; then
+            echo "No sanitized result was produced; nothing to persist"
+            exit 0
+          fi
+
+          cp "$result" /tmp/phase2d-result.json
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p "$(dirname "$result")"
+          cp /tmp/phase2d-result.json "$result"
+
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add "$result"
+          if git diff --cached --quiet; then
+            echo "Result already persisted"
+            exit 0
+          fi
+          git commit -m "phase2d: record command result ${{ steps.command.outputs.id }}"
+          git push origin HEAD:main
+
+      - name: Enforce execution success
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ '${{ steps.execute.outputs.exit_code }}' == '0' ]]
