@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-hola-mundo-title-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 110,
+    "changes": {
+      "title": "Hola mundo"
+    }
+  }
+}
