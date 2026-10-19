@@ -1,1 +1,8 @@
-{"add_capabilities":["design.write"],"principal":"phase2d-github","tenant":"eduardo-research","version":"1"}
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "principal": "phase2d-github",
+  "add_capabilities": [
+    "design.write"
+  ]
+}
