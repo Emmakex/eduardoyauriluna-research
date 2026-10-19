@@ -1,0 +1,23 @@
+{
+  "action": "slice14.research_translation.fixtures.prepare",
+  "fixtures": [
+    {
+      "language": "en",
+      "operation_id": "erm-object-op-7591f0a28df546c89ca29b8610775432",
+      "plan_id": "erm-object-plan-dadb57d0d11bdb9142-7907a88d",
+      "post_id": 108,
+      "state": "publish"
+    },
+    {
+      "language": "es",
+      "operation_id": "erm-object-op-ad8fcb8ef3c544548a23113052927e74",
+      "plan_id": "erm-object-plan-777dd8b20df67ab5c3-3815b947",
+      "post_id": 109,
+      "state": "publish"
+    }
+  ],
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
