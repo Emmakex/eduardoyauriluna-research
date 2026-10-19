@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-design-preset-primary-0001",
+  "tenant": "eduardo-research",
+  "action": "design.preset.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "changes": {
+      "palette": "graphite-academic",
+      "typography": "humanist-sans",
+      "density": "compact"
+    }
+  }
+}
