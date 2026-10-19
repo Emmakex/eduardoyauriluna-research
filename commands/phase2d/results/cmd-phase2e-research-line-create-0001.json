@@ -1,0 +1,20 @@
+{
+  "action": "research.line.create",
+  "command_id": "cmd-phase2e-research-line-create-0001",
+  "command_sha256": "a869c85314f61380e741c591bb759b002bcc1cb305055122cd96e9c000b3eb03",
+  "correlation": {
+    "operation_id": "erm-line-op-0249ecfe81f3479ea94d4397220cba82",
+    "plan_id": "erm-line-plan-a58bb6d97f1a0f89f3bd-7291e15f"
+  },
+  "resource": {
+    "kind": "line",
+    "language": "en",
+    "post_id": 102,
+    "state": "draft",
+    "title": "Phase 2E Research Line acceptance fixture"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
