@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   execute:
-    if: github.actor == 'Emmakex' || github.actor == 'github-actions[bot]'
+    if: github.actor == 'Emmakex'
     runs-on: ubuntu-latest
     environment: phase2d-production
     env:
