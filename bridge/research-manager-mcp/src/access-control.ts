@@ -8,16 +8,44 @@ export interface PrincipalAccess {
   capabilities: readonly CommercialCapability[];
 }
 
+export interface PrincipalRegistryOptions {
+  phase2dGatewayGeneration?: string | null;
+  requirePhase2dGatewayGeneration?: boolean;
+}
+
+const PHASE2D_GATEWAY_PRINCIPAL_ID = 'phase2d-github';
+const GATEWAY_GENERATION_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+
 function secureEqual(left: string, right: string): boolean {
   const a = Buffer.from(left, 'utf8');
   const b = Buffer.from(right, 'utf8');
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+function envFlag(name: string, raw: string | undefined): boolean {
+  if (!raw) return false;
+  const value = raw.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(value)) return true;
+  if (['0', 'false', 'no', 'off'].includes(value)) return false;
+  throw new Error(`${name} must be true/false`);
+}
+
+function defaultOptions(): PrincipalRegistryOptions {
+  return {
+    phase2dGatewayGeneration: (process.env.MCP_PHASE2D_GATEWAY_GENERATION ?? '').trim() || null,
+    requirePhase2dGatewayGeneration: envFlag(
+      'MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION',
+      process.env.MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION,
+    ),
+  };
+}
+
 export class PrincipalRegistry {
   private readonly principals: readonly PrincipalAccess[];
+  private readonly phase2dGatewayGeneration: string | null;
+  private readonly requirePhase2dGatewayGeneration: boolean;
 
-  constructor(principals: readonly PrincipalAccess[]) {
+  constructor(principals: readonly PrincipalAccess[], options: PrincipalRegistryOptions = defaultOptions()) {
     const ids = new Set<string>();
     const bearerTokens = new Set<string>();
     for (const principal of principals) {
@@ -35,7 +63,19 @@ export class PrincipalRegistry {
         throw new Error(`Principal ${principal.id} must be granted at least one commercial capability`);
       }
     }
+
+    const generation = options.phase2dGatewayGeneration?.trim() || null;
+    if (generation !== null && !GATEWAY_GENERATION_RE.test(generation)) {
+      throw new Error('MCP_PHASE2D_GATEWAY_GENERATION is invalid');
+    }
+    const required = options.requirePhase2dGatewayGeneration === true;
+    if (required && generation === null) {
+      throw new Error('MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION requires MCP_PHASE2D_GATEWAY_GENERATION');
+    }
+
     this.principals = principals;
+    this.phase2dGatewayGeneration = generation;
+    this.requirePhase2dGatewayGeneration = required;
   }
 
   get size(): number {
@@ -47,7 +87,17 @@ export class PrincipalRegistry {
     const supplied = authorizationHeader.slice(7);
     let matched: PrincipalAccess | null = null;
     for (const principal of this.principals) {
-      if (secureEqual(supplied, principal.bearerToken)) matched = principal;
+      const bareMatch = secureEqual(supplied, principal.bearerToken);
+      if (principal.id !== PHASE2D_GATEWAY_PRINCIPAL_ID || this.phase2dGatewayGeneration === null) {
+        if (bareMatch) matched = principal;
+        continue;
+      }
+
+      const contextualBearer = `${principal.bearerToken}.${this.phase2dGatewayGeneration}`;
+      const contextualMatch = secureEqual(supplied, contextualBearer);
+      if (contextualMatch || (!this.requirePhase2dGatewayGeneration && bareMatch)) {
+        matched = principal;
+      }
     }
     return matched;
   }

@@ -8,14 +8,17 @@ on:
       - 'scripts/phase2d-command-runner.py'
       - 'scripts/phase2d-command-runner-observable.py'
       - 'scripts/phase2d-command-guard.py'
+      - 'scripts/phase2d-run-attempt-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
       - 'scripts/phase2e-expand-gateway-capabilities.py'
       - 'scripts/phase2e-page-acceptance-restore.py'
+      - 'scripts/phase2e-harden-gateway-generation.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
       - '.github/workflows/phase2e-expand-gateway-capabilities.yml'
       - '.github/workflows/phase2e-page-acceptance-restore.yml'
+      - '.github/workflows/phase2e-harden-gateway-generation.yml'
   push:
     branches: [main]
     paths:
@@ -24,14 +27,17 @@ on:
       - 'scripts/phase2d-command-runner.py'
       - 'scripts/phase2d-command-runner-observable.py'
       - 'scripts/phase2d-command-guard.py'
+      - 'scripts/phase2d-run-attempt-guard.py'
       - 'scripts/phase2d-provision-github-principal.py'
       - 'scripts/phase2e-expand-gateway-capabilities.py'
       - 'scripts/phase2e-page-acceptance-restore.py'
+      - 'scripts/phase2e-harden-gateway-generation.py'
       - 'commands/phase2d/examples/*.json'
       - '.github/workflows/phase2d-command-gateway.yml'
       - '.github/workflows/phase2d-command-gateway-quality.yml'
       - '.github/workflows/phase2e-expand-gateway-capabilities.yml'
       - '.github/workflows/phase2e-page-acceptance-restore.yml'
+      - '.github/workflows/phase2e-harden-gateway-generation.yml'
 
 permissions:
   contents: read
@@ -47,17 +53,21 @@ jobs:
           python3 -m py_compile scripts/phase2d-command-runner.py
           python3 -m py_compile scripts/phase2d-command-runner-observable.py
           python3 -m py_compile scripts/phase2d-command-guard.py
+          python3 -m py_compile scripts/phase2d-run-attempt-guard.py
           python3 -m py_compile scripts/phase2d-provision-github-principal.py
           python3 -m py_compile scripts/phase2e-expand-gateway-capabilities.py
           python3 -m py_compile scripts/phase2e-page-acceptance-restore.py
+          python3 -m py_compile scripts/phase2e-harden-gateway-generation.py
 
       - name: Run fail-closed self-tests
         run: |
           python3 scripts/phase2d-command-runner.py --self-test
           python3 scripts/phase2d-command-guard.py self-test
+          python3 scripts/phase2d-run-attempt-guard.py --self-test
           python3 scripts/phase2d-provision-github-principal.py --self-test
           python3 scripts/phase2e-expand-gateway-capabilities.py --self-test
           python3 scripts/phase2e-page-acceptance-restore.py --self-test
+          python3 scripts/phase2e-harden-gateway-generation.py --self-test
 
       - name: Validate JSON contracts
         shell: bash
@@ -108,11 +118,17 @@ jobs:
           grep -F '"slot": {"const": "eyebrow"}' schemas/phase2d-command-v1.schema.json
           grep -F '"pattern": "^[^<>]+$"' schemas/phase2d-command-v1.schema.json
           grep -F 'environment: phase2d-production' .github/workflows/phase2d-command-gateway.yml
-          grep -F 'PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}' .github/workflows/phase2d-command-gateway.yml
+          grep -F 'PHASE2D_GATEWAY_GENERATION: phase2d-v2-20261019' .github/workflows/phase2d-command-gateway.yml
+          grep -F 'Reject historical workflow reruns' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Guard command identity and replay' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Verify dedicated principal tenant isolation' .github/workflows/phase2d-command-gateway.yml
           grep -F 'command_sha256' scripts/phase2d-command-guard.py
           grep -F 'DENIED_TENANT = "phase2d-denied-probe"' scripts/phase2d-command-guard.py
+          grep -F 'historical workflow reruns are not permitted' scripts/phase2d-run-attempt-guard.py
+          grep -F 'GENERATION = "phase2d-v2-20261019"' scripts/phase2e-harden-gateway-generation.py
+          grep -F 'bare_allowed != 401' scripts/phase2e-harden-gateway-generation.py
+          grep -F 'contextual_allowed != 200' scripts/phase2e-harden-gateway-generation.py
+          grep -F 'contextual_denied != 403' scripts/phase2e-harden-gateway-generation.py
           grep -F 'PAIR_ACTIONS = {"insight.translation.pair", "insight.translation.unpair"}' scripts/phase2d-command-runner.py
           grep -F 'PAIR_PLAN_ID_RE = re.compile' scripts/phase2d-command-runner.py
           grep -F 'PAIR_OP_ID_RE = re.compile' scripts/phase2d-command-runner.py
@@ -133,6 +149,24 @@ jobs:
           grep -F 'environment: phase2d-production' .github/workflows/phase2e-page-acceptance-restore.yml
           grep -F "'command_id': 'cmd-phase2e-page-slot-0001'" .github/workflows/phase2e-page-acceptance-restore.yml
 
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/phase2d-command-gateway.yml').read_text(encoding='utf-8')
+          pre_steps = text.split('    steps:', 1)[0]
+          if 'PHASE2D_MCP_TOKEN:' in pre_steps:
+              raise SystemExit('MCP bearer must not be job-wide')
+          if text.count('PHASE2D_MCP_TOKEN:') != 2:
+              raise SystemExit('MCP bearer must be scoped only to isolation + execution steps')
+          token_format = "format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN)"
+          if text.count(token_format) != 2:
+              raise SystemExit('MCP bearer must carry the reviewed gateway generation in both MCP steps')
+          rerun = text.index('- name: Reject historical workflow reruns')
+          resolve = text.index('- name: Resolve exactly one trusted command')
+          if rerun >= resolve:
+              raise SystemExit('rerun guard must execute before command resolution')
+          print('GATEWAY_WORKFLOW_HARDENING_OK')
+          PY
+
       - name: Reject committed credential material
         shell: bash
         run: |
@@ -143,9 +177,11 @@ jobs:
             scripts/phase2d-command-runner.py
             scripts/phase2d-command-runner-observable.py
             scripts/phase2d-command-guard.py
+            scripts/phase2d-run-attempt-guard.py
             scripts/phase2d-provision-github-principal.py
             scripts/phase2e-expand-gateway-capabilities.py
             scripts/phase2e-page-acceptance-restore.py
+            scripts/phase2e-harden-gateway-generation.py
             commands/phase2d/examples/hola-mundo.json
             commands/phase2d/examples/insight-update.json
             commands/phase2d/examples/page-slot-update.json
@@ -154,5 +190,6 @@ jobs:
             .github/workflows/phase2d-command-gateway.yml
             .github/workflows/phase2e-expand-gateway-capabilities.yml
             .github/workflows/phase2e-page-acceptance-restore.yml
+            .github/workflows/phase2e-harden-gateway-generation.yml
           )
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
