@@ -24,6 +24,27 @@ Set `MCP_SHARED_ROUTING=true`, provide `MCP_TENANTS_JSON` and `MCP_PRINCIPALS_JS
 
 No secret belongs in the image, Compose file, tenant registry JSON or source repository.
 
+## Phase 2C acceptance principal
+
+The production deployment gate must use a dedicated outer MCP principal. Do not reuse an operator principal such as `research-ops`, and do not reuse the Phase 2D automation principal.
+
+For the current `scripts/phase2c-mcp-remote-acceptance.sh` contract, the least-privilege principal is:
+
+```json
+{
+  "id": "phase2c-acceptance",
+  "bearerTokenEnv": "PRINCIPAL_PHASE2C_ACCEPTANCE_TOKEN",
+  "tenants": ["eduardo-research"],
+  "capabilities": ["site.read", "navigation.read", "design.read"]
+}
+```
+
+The `production` GitHub Environment secret `MCP_ACCEPTANCE_TOKEN` must contain the bearer referenced by `PRINCIPAL_PHASE2C_ACCEPTANCE_TOKEN`. This token is an outer MCP credential only; it is separate from all Research Manager read/write credentials.
+
+This capability set is intentionally narrow: the acceptance harness performs `research_status`, `research_versions`, `research_capabilities`, `site_navigation_inspect` and `site_design_readiness`, plus HTTP authentication and tenant-isolation checks. If the acceptance harness later adds another MCP tool, update this principal explicitly rather than widening it pre-emptively.
+
+The successful production run `39196296999` established the full Phase 2C remote-read/two-tenant gate after diagnosing that `MCP_ACCEPTANCE_TOKEN` had previously authenticated as the narrower `phase2d-github` principal. Keep principal identities purpose-specific so CI failures remain attributable and least privilege is preserved.
+
 ## Persistent telemetry
 
 Managed production must configure:
