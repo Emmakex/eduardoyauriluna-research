@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-pair-en-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.create",
+  "requested_by": "chatgpt",
+  "payload": {
+    "title": "Hello world",
+    "language": "en",
+    "status": "draft",
+    "content": "Hello world. This is the English counterpart managed through the Research Manager MCP command gateway."
+  }
+}
