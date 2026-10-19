@@ -1,0 +1,19 @@
+{
+  "action": "hola_mundo.publish",
+  "correlation": {
+    "operation_id": "erm-operation-30c7ac2787ef47e68c59ab40fed4228f",
+    "plan_id": "erm-remote-plan-fd4466e87c3f1749a232-25849396"
+  },
+  "rendered_verified": true,
+  "resource": {
+    "language": "es",
+    "permalink": "https://eduardoyauriluna.com/es/notas/hola-mundo-prueba-chatgpt-20261019/",
+    "post_id": 110,
+    "status": "publish",
+    "title": "Hola mundo"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
