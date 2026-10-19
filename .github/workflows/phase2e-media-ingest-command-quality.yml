@@ -1,0 +1,133 @@
+name: Phase 2E Media Ingest Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-media-ingest-v1.schema.json'
+      - 'config/phase2e-media-ingest-command-registry.json'
+      - 'scripts/phase2e-media-ingest-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-media-ingest-command-quality.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-media-ingest-v1.schema.json'
+      - 'config/phase2e-media-ingest-command-registry.json'
+      - 'scripts/phase2e-media-ingest-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-media-ingest-command-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Media command surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/phase2e-media-ingest-runner.py \
+            scripts/phase2e-command-guard.py \
+            scripts/phase2e-command-runner-observable.py
+
+      - name: Verify Phase 2D baseline remains valid
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-runner.py --self-test
+
+      - name: Verify bounded Media ingest runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-media-ingest-runner.py --self-test
+
+      - name: Verify dispatched replay guard baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-command-guard.py self-test
+
+      - name: Verify Media validator dispatch fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          png="iVBORw0KGgpyZXNlYXJjaC1tZWRpYS1xdWFsaXR5"
+          cat > "$tmp/good.json" <<JSON
+          {"version":"1","command_id":"cmd-media-quality-0001","tenant":"eduardo-research","action":"media.ingest","requested_by":"chatgpt","payload":{"file_name":"quality.png","mime_type":"image/png","content_base64":"$png","alt_text":"Temporary quality fixture"}}
+          JSON
+          cat > "$tmp/bad-url.json" <<JSON
+          {"version":"1","command_id":"cmd-media-quality-0002","tenant":"eduardo-research","action":"media.ingest","requested_by":"chatgpt","payload":{"file_name":"quality.png","mime_type":"image/png","content_base64":"$png","alt_text":"Temporary quality fixture","source_url":"https://example.com/x.png"}}
+          JSON
+          cat > "$tmp/bad-path.json" <<JSON
+          {"version":"1","command_id":"cmd-media-quality-0003","tenant":"eduardo-research","action":"media.ingest","requested_by":"chatgpt","payload":{"file_name":"../quality.png","mime_type":"image/png","content_base64":"$png","alt_text":"Temporary quality fixture"}}
+          JSON
+          cat > "$tmp/bad-alt.json" <<JSON
+          {"version":"1","command_id":"cmd-media-quality-0004","tenant":"eduardo-research","action":"media.ingest","requested_by":"chatgpt","payload":{"file_name":"quality.png","mime_type":"image/png","content_base64":"$png","alt_text":""}}
+          JSON
+          cat > "$tmp/bad-mime.json" <<JSON
+          {"version":"1","command_id":"cmd-media-quality-0005","tenant":"eduardo-research","action":"media.ingest","requested_by":"chatgpt","payload":{"file_name":"quality.pdf","mime_type":"application/pdf","content_base64":"$png"}}
+          JSON
+          python3 scripts/phase2e-command-guard.py guard "$tmp/good.json" --result-dir "$tmp/results"
+          for bad in bad-url bad-path bad-alt bad-mime; do
+            if python3 scripts/phase2e-command-guard.py guard "$tmp/$bad.json" --result-dir "$tmp/results"; then
+              echo "Unsafe Media case escaped validator: $bad" >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate Media JSON contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in [
+              Path('schemas/phase2e-media-ingest-v1.schema.json'),
+              Path('config/phase2e-media-ingest-command-registry.json'),
+          ]:
+              json.loads(path.read_text(encoding='utf-8'))
+              print(f'JSON OK: {path}')
+          PY
+
+      - name: Validate bounded Media surface markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F '"media.ingest": MEDIA_INGEST_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'media_ingest.ACTION: media_ingest' scripts/phase2e-command-guard.py
+          grep -F 'site_media_ingest_cancel' config/phase2e-media-ingest-command-registry.json
+          grep -F '"arbitrary_urls": false' config/phase2e-media-ingest-command-registry.json
+          grep -F '"filesystem_paths": false' config/phase2e-media-ingest-command-registry.json
+          grep -F '"image_alt_text_required": true' config/phase2e-media-ingest-command-registry.json
+          grep -F 'MAX_BYTES = 5 * 1024 * 1024' scripts/phase2e-media-ingest-runner.py
+          grep -F 'checksum_matches' scripts/phase2e-media-ingest-runner.py
+          grep -F 'managed_by_manager' scripts/phase2e-media-ingest-runner.py
+          ! grep -F 'source_url' config/phase2e-media-ingest-command-registry.json
+          ! grep -F 'filesystem_path' config/phase2e-media-ingest-command-registry.json
+
+      - name: Reject committed credential material
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            schemas/phase2e-media-ingest-v1.schema.json
+            config/phase2e-media-ingest-command-registry.json
+            scripts/phase2e-media-ingest-runner.py
+            scripts/phase2e-command-guard.py
+            scripts/phase2e-command-runner-observable.py
+          )
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
