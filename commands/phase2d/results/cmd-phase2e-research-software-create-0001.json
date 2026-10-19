@@ -1,0 +1,22 @@
+{
+  "action": "research.object.create",
+  "command_id": "cmd-phase2e-research-software-create-0001",
+  "command_sha256": "cc311e74e749473b01f2ae544b54daaa4b5d1951d386371a5c7c3d3d0a012cec",
+  "correlation": {
+    "operation_id": null,
+    "plan_id": null
+  },
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_research_object_create_plan' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /research-objects/plan with HTTP 400: research_manager_unknown_software_status\"}],\"isError\":true}}",
+    "message": "The bounded Research Software lifecycle did not complete successfully."
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
