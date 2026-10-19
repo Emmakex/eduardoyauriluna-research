@@ -1,0 +1,19 @@
+{
+  "action": "insight.create",
+  "command_id": "cmd-phase2e-slice13-insight-fixture-0001",
+  "command_sha256": "4826bc2506e2de1443c1b3a8cb2331af6210c34d5ec7e2c9a550facd11cbc20e",
+  "correlation": {
+    "operation_id": "erm-operation-882f69d4e63344bfbda9b80fe79cdea9",
+    "plan_id": "erm-remote-plan-77d6ad1a762ed0c3c94e-a229c77c"
+  },
+  "resource": {
+    "language": "en",
+    "post_id": 107,
+    "state": "draft",
+    "title": "Temporary M4 relation Insight — Slice 13 reversible acceptance fixture"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
