@@ -1,0 +1,86 @@
+name: Phase 2E Media Metadata Command Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'schemas/phase2e-media-metadata-v1.schema.json'
+      - 'config/phase2e-media-metadata-command-registry.json'
+      - 'scripts/phase2e-media-metadata-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-media-metadata-command-quality.yml'
+  push:
+    branches:
+      - main
+      - 'phase2e/**'
+    paths:
+      - 'schemas/phase2e-media-metadata-v1.schema.json'
+      - 'config/phase2e-media-metadata-command-registry.json'
+      - 'scripts/phase2e-media-metadata-runner.py'
+      - 'scripts/phase2e-command-guard.py'
+      - 'scripts/phase2e-command-runner-observable.py'
+      - '.github/workflows/phase2e-media-metadata-command-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Media metadata surface
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/phase2e-media-metadata-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py
+      - name: Verify baseline and Media metadata self-tests
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-command-runner.py --self-test
+          python3 scripts/phase2e-media-metadata-runner.py --self-test
+          python3 scripts/phase2e-command-guard.py self-test
+      - name: Verify dispatched fail-closed cases
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cat > "$tmp/good.json" <<'JSON'
+          {"version":"1","command_id":"cmd-media-meta-quality-0001","tenant":"eduardo-research","action":"media.metadata.update","requested_by":"chatgpt","payload":{"attachment_id":123,"changes":{"alt_text":"Bounded alt text"}}}
+          JSON
+          cat > "$tmp/bad-file.json" <<'JSON'
+          {"version":"1","command_id":"cmd-media-meta-quality-0002","tenant":"eduardo-research","action":"media.metadata.update","requested_by":"chatgpt","payload":{"attachment_id":123,"changes":{"file":"replacement.png"}}}
+          JSON
+          cat > "$tmp/bad-url.json" <<'JSON'
+          {"version":"1","command_id":"cmd-media-meta-quality-0003","tenant":"eduardo-research","action":"media.metadata.update","requested_by":"chatgpt","payload":{"attachment_id":123,"changes":{"alt_text":"x"},"source_url":"https://example.com/x.png"}}
+          JSON
+          cat > "$tmp/bad-id.json" <<'JSON'
+          {"version":"1","command_id":"cmd-media-meta-quality-0004","tenant":"eduardo-research","action":"media.metadata.update","requested_by":"chatgpt","payload":{"attachment_id":0,"changes":{"alt_text":"x"}}}
+          JSON
+          python3 scripts/phase2e-command-guard.py guard "$tmp/good.json" --result-dir "$tmp/results"
+          for bad in bad-file bad-url bad-id; do
+            if python3 scripts/phase2e-command-guard.py guard "$tmp/$bad.json" --result-dir "$tmp/results"; then
+              echo "Unsafe Media metadata case escaped validator: $bad" >&2
+              exit 1
+            fi
+          done
+      - name: Validate contracts and surface markers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in [Path('schemas/phase2e-media-metadata-v1.schema.json'),Path('config/phase2e-media-metadata-command-registry.json')]:
+              json.loads(path.read_text(encoding='utf-8'))
+          PY
+          grep -F '"media.metadata.update": MEDIA_METADATA_RUNNER' scripts/phase2e-command-runner-observable.py
+          grep -F 'media_metadata.ACTION: media_metadata' scripts/phase2e-command-guard.py
+          grep -F 'site_media_metadata_update_plan' config/phase2e-media-metadata-command-registry.json
+          grep -F '"verify_rendered": false' config/phase2e-media-metadata-command-registry.json
+          ! grep -F 'content_base64' config/phase2e-media-metadata-command-registry.json
+          ! grep -F 'source_url' config/phase2e-media-metadata-command-registry.json
+      - name: Reject committed credential material
+        run: |
+          set -euo pipefail
+          files=(schemas/phase2e-media-metadata-v1.schema.json config/phase2e-media-metadata-command-registry.json scripts/phase2e-media-metadata-runner.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
