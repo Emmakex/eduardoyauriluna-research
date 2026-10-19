@@ -58,28 +58,37 @@ jobs:
               Path('schemas/phase2d-command-v1.schema.json'),
               Path('config/phase2d-command-registry.json'),
               Path('commands/phase2d/examples/hola-mundo.json'),
+              Path('commands/phase2d/examples/insight-update.json'),
           ]:
               json.loads(path.read_text(encoding='utf-8'))
               print(f'JSON OK: {path}')
           PY
 
-      - name: Validate initial bounded surface
+      - name: Validate bounded command surface
         shell: bash
         run: |
           set -euo pipefail
-          grep -F '"action": {' schemas/phase2d-command-v1.schema.json
-          grep -F '"const": "insight.create"' schemas/phase2d-command-v1.schema.json
+          grep -F '"insight.create"' schemas/phase2d-command-v1.schema.json
+          grep -F '"insight.update"' schemas/phase2d-command-v1.schema.json
           grep -F '"const": "draft"' schemas/phase2d-command-v1.schema.json
+          grep -F '"post_id"' schemas/phase2d-command-v1.schema.json
+          grep -F '"changes"' schemas/phase2d-command-v1.schema.json
+          ! grep -F '"scheduled_at"' schemas/phase2d-command-v1.schema.json
+          ! grep -F '"line_ids"' schemas/phase2d-command-v1.schema.json
           grep -F '"plan": "site_insight_create_plan"' config/phase2d-command-registry.json
+          grep -F '"plan": "site_insight_update_plan"' config/phase2d-command-registry.json
           grep -F '"apply": "site_insight_apply"' config/phase2d-command-registry.json
           grep -F '"verify": "site_insight_verify"' config/phase2d-command-registry.json
           grep -F '"rollback": "site_insight_rollback"' config/phase2d-command-registry.json
+          grep -F '"allowed_change_fields"' config/phase2d-command-registry.json
           grep -F 'environment: phase2d-production' .github/workflows/phase2d-command-gateway.yml
           grep -F 'PHASE2D_MCP_TOKEN: ${{ secrets.PHASE2D_MCP_TOKEN }}' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Guard command identity and replay' .github/workflows/phase2d-command-gateway.yml
           grep -F 'Verify dedicated principal tenant isolation' .github/workflows/phase2d-command-gateway.yml
           grep -F 'command_sha256' scripts/phase2d-command-guard.py
           grep -F 'DENIED_TENANT = "phase2d-denied-probe"' scripts/phase2d-command-guard.py
+          grep -F 'SUPPORTED_ACTIONS = {"insight.create", "insight.update"}' scripts/phase2d-command-runner.py
+          grep -F 'UPDATE_FIELDS = {"title", "excerpt", "content", "language", "insight_type"}' scripts/phase2d-command-runner.py
           grep -F 'CAPABILITIES = ["site.read", "insights.write", "operations.rollback"]' scripts/phase2d-provision-github-principal.py
           grep -F 'PRINCIPAL_ID = "phase2d-github"' scripts/phase2d-provision-github-principal.py
           grep -F 'TOKEN_ENV = "PRINCIPAL_PHASE2D_GITHUB_TOKEN"' scripts/phase2d-provision-github-principal.py
@@ -96,6 +105,7 @@ jobs:
             scripts/phase2d-command-guard.py
             scripts/phase2d-provision-github-principal.py
             commands/phase2d/examples/hola-mundo.json
+            commands/phase2d/examples/insight-update.json
             .github/workflows/phase2d-command-gateway.yml
           )
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"

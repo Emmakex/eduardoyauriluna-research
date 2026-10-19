@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-example-update-0001",
+  "tenant": "eduardo-research",
+  "action": "insight.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "post_id": 94,
+    "changes": {
+      "title": "Phase 2E bounded Insight update"
+    }
+  }
+}
