@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-slice13-line-fixture-0001",
+  "tenant": "eduardo-research",
+  "action": "research.line.acceptance.fixture.create",
+  "requested_by": "chatgpt",
+  "payload": {"acceptance_only": true}
+}
