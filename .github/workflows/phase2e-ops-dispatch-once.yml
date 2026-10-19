@@ -15,13 +15,14 @@ jobs:
     if: github.actor == 'Emmakex'
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch strict gateway generation activation
+      - name: Dispatch current-main gateway replay proof
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/phase2e-harden-gateway-generation.yml/dispatches" \
-            -f ref=main
-          echo 'DISPATCHED_PHASE2E_GATEWAY_GENERATION_RETRY=phase2d-v2-20261019'
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/phase2d-command-gateway.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[command_path]=commands/phase2d/pending/cmd-phase2e-media-metadata-0001.json'
+          echo 'DISPATCHED_ISSUE_281_REPLAY=cmd-phase2e-media-metadata-0001'
