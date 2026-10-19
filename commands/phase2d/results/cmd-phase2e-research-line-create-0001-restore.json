@@ -1,0 +1,14 @@
+{
+  "action": "research.line.create.acceptance.restore",
+  "operation_id": "erm-line-op-0249ecfe81f3479ea94d4397220cba82",
+  "resource": {
+    "kind": "line",
+    "post_id": 102,
+    "restored": "absent"
+  },
+  "rollback_verified": true,
+  "source_command_id": "cmd-phase2e-research-line-create-0001",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
