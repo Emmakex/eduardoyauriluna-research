@@ -11,6 +11,7 @@ on:
       - 'ops/phase2e/gateway-design-capability.json'
       - 'scripts/phase2e-design-runner.py'
       - 'scripts/phase2e-expand-design-capability.py'
+      - 'scripts/phase2e-expand-gateway-capabilities.py'
       - 'scripts/phase2e-command-guard.py'
       - 'scripts/phase2e-command-runner-observable.py'
       - '.github/workflows/phase2e-design-command-quality.yml'
@@ -19,6 +20,7 @@ on:
     branches:
       - main
       - 'phase2e/**'
+      - 'hotfix/**'
     paths:
       - 'schemas/phase2e-design-preset-v1.schema.json'
       - 'schemas/phase2e-design-variant-v1.schema.json'
@@ -27,6 +29,7 @@ on:
       - 'ops/phase2e/gateway-design-capability.json'
       - 'scripts/phase2e-design-runner.py'
       - 'scripts/phase2e-expand-design-capability.py'
+      - 'scripts/phase2e-expand-gateway-capabilities.py'
       - 'scripts/phase2e-command-guard.py'
       - 'scripts/phase2e-command-runner-observable.py'
       - '.github/workflows/phase2e-design-command-quality.yml'
@@ -48,6 +51,7 @@ jobs:
           python3 -m py_compile \
             scripts/phase2e-design-runner.py \
             scripts/phase2e-expand-design-capability.py \
+            scripts/phase2e-expand-gateway-capabilities.py \
             scripts/phase2e-command-guard.py \
             scripts/phase2e-command-runner-observable.py
 
@@ -58,6 +62,16 @@ jobs:
           python3 scripts/phase2e-design-runner.py --self-test
           python3 scripts/phase2e-command-guard.py self-test
           python3 scripts/phase2e-expand-design-capability.py --self-test
+
+      - name: Verify strict gateway generation compatibility
+        run: |
+          set -euo pipefail
+          grep -F 'def presented_gateway_bearer' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'MCP_PHASE2D_REQUIRE_GATEWAY_GENERATION' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'MCP_PHASE2D_GATEWAY_GENERATION' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'verify_public_routing(parse_env(original), token)' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'verify_public_routing(parse_env(live), token)' scripts/phase2e-expand-gateway-capabilities.py
+          grep -F 'strict generation mutated stored bearer' scripts/phase2e-expand-gateway-capabilities.py
 
       - name: Verify dispatched Design fail-closed cases
         run: |
@@ -149,5 +163,5 @@ jobs:
       - name: Reject committed credential material
         run: |
           set -euo pipefail
-          files=(schemas/phase2e-design-preset-v1.schema.json schemas/phase2e-design-variant-v1.schema.json config/phase2e-design-command-registry.json config/phase2e-gateway-capabilities.json ops/phase2e/gateway-design-capability.json scripts/phase2e-design-runner.py scripts/phase2e-expand-design-capability.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
+          files=(schemas/phase2e-design-preset-v1.schema.json schemas/phase2e-design-variant-v1.schema.json config/phase2e-design-command-registry.json config/phase2e-gateway-capabilities.json ops/phase2e/gateway-design-capability.json scripts/phase2e-design-runner.py scripts/phase2e-expand-design-capability.py scripts/phase2e-expand-gateway-capabilities.py scripts/phase2e-command-guard.py scripts/phase2e-command-runner-observable.py)
           ! grep -E '(erm1_|ermt1_|Bearer[[:space:]]+[A-Za-z0-9._-]{16,})' "${files[@]}"
