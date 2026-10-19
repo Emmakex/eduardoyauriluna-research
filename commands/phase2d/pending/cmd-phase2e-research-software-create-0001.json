@@ -1,0 +1,24 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase2e-research-software-create-0001",
+  "tenant": "eduardo-research",
+  "action": "research.object.create",
+  "requested_by": "chatgpt",
+  "payload": {
+    "kind": "software",
+    "data": {
+      "title": "Phase 2E Research Software acceptance fixture",
+      "excerpt": "Temporary draft used to verify the bounded ChatGPT Research command gateway.",
+      "content": "Acceptance-only draft. This Research Software object will be rolled back after replay verification.",
+      "language": "en",
+      "status": "draft",
+      "software_status": "Acceptance-only",
+      "version": "0.0-acceptance",
+      "programming_languages": [
+        "Python"
+      ]
+    },
+    "evidence_confirmed": true,
+    "evidence_reference": "acceptance:phase2e:research-software:create"
+  }
+}
