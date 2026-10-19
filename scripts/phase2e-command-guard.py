@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Dispatch the proven Phase 2D replay/isolation guard across Phase 2E actions.
 
-Existing actions keep the original validator unchanged. The first Research action
-uses its dedicated strict validator, then reuses the same command fingerprinting,
-replay semantics, result stamping and production tenant-isolation probe.
+Existing actions keep the original validator unchanged. Bounded Research create
+and update actions use dedicated strict validators, then reuse the same command
+fingerprinting, replay semantics, result stamping and tenant-isolation probe.
 """
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BASE_GUARD = HERE / "phase2d-command-guard.py"
-RESEARCH_RUNNER = HERE / "phase2e-research-object-runner.py"
+RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
+RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 
 
 def load_module(name: str, path: Path):
@@ -25,16 +26,24 @@ def load_module(name: str, path: Path):
 
 
 guard = load_module("phase2d_command_guard_base", BASE_GUARD)
-research = load_module("phase2e_research_object_runner_guard", RESEARCH_RUNNER)
+research_create = load_module("phase2e_research_object_create_guard", RESEARCH_CREATE_RUNNER)
+research_update = load_module("phase2e_research_object_update_guard", RESEARCH_UPDATE_RUNNER)
 original_load_validated_command = guard.load_validated_command
+
+RESEARCH_VALIDATORS = {
+    research_create.ACTION: research_create,
+    research_update.ACTION: research_update,
+}
 
 
 def dispatched_load_validated_command(path: Path):
     raw = guard.runner.load_json(path)
-    if raw.get("action") == research.ACTION:
+    action = raw.get("action")
+    validator = RESEARCH_VALIDATORS.get(action)
+    if validator is not None:
         try:
-            return research.load_validated_command(path)
-        except research.CommandError as exc:
+            return validator.load_validated_command(path)
+        except validator.CommandError as exc:
             raise guard.GuardError(str(exc)) from exc
     return original_load_validated_command(path)
 
