@@ -7,22 +7,12 @@ on:
       - '.github/workflows/phase2e-ops-dispatch-once.yml'
 
 permissions:
-  actions: write
   contents: read
 
 jobs:
-  dispatch:
+  retired:
     if: github.actor == 'Emmakex'
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch current-main gateway replay proof
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/phase2d-command-gateway.yml/dispatches" \
-            -f ref=main \
-            -f 'inputs[command_path]=commands/phase2d/pending/cmd-phase2e-media-metadata-0001.json'
-          echo 'DISPATCHED_ISSUE_281_REPLAY=cmd-phase2e-media-metadata-0001'
+      - name: Retired
+        run: echo 'PHASE2E_OPS_DISPATCH_RETIRED=1'
