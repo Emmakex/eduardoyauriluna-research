@@ -1,0 +1,19 @@
+{
+  "action": "seo.geo.discovery",
+  "advisory_count": 2,
+  "blocking_count": 1,
+  "optimization_complete": false,
+  "read_only": true,
+  "ready": false,
+  "residual_summary": {
+    "evidence_required": 0,
+    "manual_review": 0,
+    "safe_remediation": 0,
+    "structured_input": 3,
+    "total": 3
+  },
+  "safe_site_candidates": [],
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
