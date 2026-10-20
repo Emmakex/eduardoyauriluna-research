@@ -61,6 +61,18 @@ grep -Fq "export type TenantProductProfile = 'research-theme' | 'generic-wordpre
 grep -Fq 'productProfile: productProfile(definition.profile' "$CONFIG"
 grep -Fq "site_baseline_audit: { commercialCapability:'diagnostics.read', backendScopes:['site.diagnostics']" "$AUTH"
 
+# Portable admin UX is a product contract, not a cosmetic extra. Keep the generic
+# surface understandable, progressive, accessible and safe for non-technical users.
+grep -Fq "Connect this site to ChatGPT" "$PORTABILITY"
+grep -Fq "Read-only protection active" "$PORTABILITY"
+grep -Fq "Technical connection details" "$PORTABILITY"
+grep -Fq "data-site-manager-copy" "$PORTABILITY"
+grep -Fq 'aria-live="polite"' "$PORTABILITY"
+grep -Fq "Disconnect this site?" "$PORTABILITY"
+grep -Fq ":focus-visible" "$PORTABILITY"
+grep -Fq "@media(max-width:600px)" "$PORTABILITY"
+grep -Fq "Measurements we do not fake" "$PORTABILITY"
+
 # Generic profile must not whitelist any mutation endpoint.
 if sed -n '/\$allowed = array(/,/);/p' "$PORTABILITY" | grep -Eq '/operations|/pages|/insights|/research-|/seo-geo|/design|/media|/navigation'; then
   echo 'Generic endpoint allowlist unexpectedly contains a Research/mutation surface.' >&2
@@ -80,4 +92,4 @@ if grep -Eq 'req\.query|request\.url|process\.argv|searchParams\.get' "$EXTERNAL
   exit 1
 fi
 
-echo 'Manager 0.11 portability contract: OK'
+echo 'Manager 0.11 portability + UX contract: OK'
