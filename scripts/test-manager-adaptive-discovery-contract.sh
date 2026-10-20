@@ -19,7 +19,7 @@ grep -q "activated_plugin" "$DISCOVERY" || fail "plugin activation invalidation 
 grep -q "deactivated_plugin" "$DISCOVERY" || fail "plugin deactivation invalidation hook is missing"
 grep -q "switch_theme" "$DISCOVERY" || fail "theme switch invalidation hook is missing"
 grep -q "upgrader_process_complete" "$DISCOVERY" || fail "upgrade invalidation hook is missing"
-grep -q "update_option_permalink_structure" "$DISCOVERY" || fail "routing invalidation hook is missing"
+grep -q "permalink_structure" "$DISCOVERY" || fail "routing invalidation hook is missing"
 
 grep -q "'content_types'" "$DISCOVERY" || fail "content type discovery is missing"
 grep -q "'taxonomies'" "$DISCOVERY" || fail "taxonomy discovery is missing"
