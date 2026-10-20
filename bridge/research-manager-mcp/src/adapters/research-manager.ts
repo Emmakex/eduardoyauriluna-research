@@ -14,7 +14,7 @@ import type * as A7 from '../a7-contracts.js';
 import type * as Site from './site-control.js';
 
 export class ResearchManagerAdapter implements Site.SiteControlAdapter {
-  readonly kind='research-manager'; readonly tenantId:string; readonly tenantLabel:string;
+  readonly kind='research-manager'; readonly tenantId:string; readonly tenantLabel:string; readonly productProfile:Site.SiteProductProfile;
   private readonly languages:readonly string[];
   private readonly client:ResearchManagerClient;
   private readonly writeClient:ResearchManagerWriteClient;
@@ -24,7 +24,7 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
   private readonly a6WriteClient:ResearchManagerA6WriteClient;
   private readonly a7WriteClient:ResearchManagerA7WriteClient;
   constructor(tenant:TenantConfig,fetchImpl:typeof fetch=fetch){
-    this.tenantId=tenant.id; this.tenantLabel=tenant.label; this.languages=tenant.languages;
+    this.tenantId=tenant.id; this.tenantLabel=tenant.label; this.languages=tenant.languages; this.productProfile=tenant.productProfile??'research-theme';
     this.client=new ResearchManagerClient(tenant,fetchImpl);
     this.writeClient=new ResearchManagerWriteClient(tenant,fetchImpl);
     this.a3WriteClient=new ResearchManagerA3WriteClient(tenant,fetchImpl);
