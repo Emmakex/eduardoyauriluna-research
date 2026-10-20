@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { PrincipalRegistry, type PrincipalAccess } from './access-control.js';
+import { GenericWordPressAdapter } from './adapters/generic-wordpress.js';
 import { ResearchManagerAdapter } from './adapters/research-manager.js';
 import type { SiteControlAdapter } from './adapters/site-control.js';
 import { loadConfig, type TenantConfig } from './config.js';
@@ -13,7 +14,7 @@ import { TenantRegistry } from './tenant-registry.js';
 import { accessAuditRecord, UsageBoundary } from './usage-boundary.js';
 
 const config=loadConfig();const registry=new TenantRegistry(config.tenants);const principalRegistry=new PrincipalRegistry(config.principals);const usage=new UsageBoundary(config.requestsPerMinute);const telemetry=createTelemetrySink(config.telemetryPath,config.requirePersistentTelemetry);
-function createAdapter(selected:TenantConfig):SiteControlAdapter{switch(selected.adapter){case'research-manager':return new ResearchManagerAdapter(selected);}}
+function createAdapter(selected:TenantConfig):SiteControlAdapter{switch(selected.adapter){case'research-manager':return selected.productProfile==='generic-wordpress'?new GenericWordPressAdapter(selected):new ResearchManagerAdapter(selected);}}
 function createTenantRuntime(selected:TenantConfig){const adapter=createAdapter(selected);const mcp=createMcpHandler(()=>createBridgeServer(adapter));const handle=toNodeHandler(mcp,{onerror(error){const message=error instanceof Error?error.message:'unknown adapter error';console.error(`[mcp] adapter error tenant=${selected.id}: ${message}`);}});return{adapter,mcp,handle};}
 const runtimes=new Map(config.tenants.map((tenant)=>[tenant.id,createTenantRuntime(tenant)] as const));
 function hostnameFromHeader(value:string|undefined):string|null{if(!value)return null;try{return new URL(`http://${value}`).hostname.toLowerCase();}catch{return null;}}
