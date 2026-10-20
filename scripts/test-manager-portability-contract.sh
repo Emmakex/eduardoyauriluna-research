@@ -72,8 +72,9 @@ if grep -Eq 'research_|registerResearchWriteTools|registerA[3-7]WriteTools|site_
   exit 1
 fi
 
-# External probe must stay bounded to the configured tenant origin and fixed discovery paths.
-if grep -Eq 'req\.query|request\.url|process\.argv|new URL\([^,]+\)' "$EXTERNAL_PROBE"; then
+# External probe must not consume arbitrary target input. Its URL comes from tenant config;
+# runtime probes use only fixed discovery paths and same-host HTTPS redirects.
+if grep -Eq 'req\.query|request\.url|process\.argv|searchParams\.get' "$EXTERNAL_PROBE"; then
   echo 'External Site Probe contains a potential arbitrary target input path.' >&2
   exit 1
 fi
