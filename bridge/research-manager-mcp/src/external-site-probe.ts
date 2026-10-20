@@ -88,7 +88,7 @@ async function boundedFetch(root:URL,path:string,fetchImpl:FetchLike,maxBytes:nu
       if(REDIRECT_STATUSES.has(response.status)&&location){
         const next=new URL(location,current);
         redirects.push({url:current.toString(),status:response.status,location:next.toString()});
-        if(next.hostname!==root.hostname||next.protocol!=='https:')throw new Error('redirect_outside_configured_https_host');
+        if(next.origin!==root.origin||next.protocol!=='https:')throw new Error('redirect_outside_configured_https_origin');
         current=next;continue;
       }
       const selected:Record<string,string>={};for(const name of HEADER_NAMES){const value=response.headers.get(name);if(value)selected[name]=boundedText(value,1000);}
