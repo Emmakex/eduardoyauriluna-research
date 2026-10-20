@@ -6,9 +6,7 @@ function toolResult(data:unknown){
   return {content:[{type:'text' as const,text:JSON.stringify(data,null,2)}],structuredContent:{data}};
 }
 
-function record(value:unknown):Record<string,unknown>|null{
-  return typeof value==='object'&&value!==null&&!Array.isArray(value)?value as Record<string,unknown>:null;
-}
+type PortableSiteControlAdapter=SiteControlAdapter&{baseline?:()=>Promise<unknown>};
 
 export function registerPortableTools(server:McpServer,adapter:SiteControlAdapter):void{
   server.registerTool(
@@ -20,12 +18,11 @@ export function registerPortableTools(server:McpServer,adapter:SiteControlAdapte
     },
     async()=>{
       requireCapability('diagnostics.read');
-      const capabilities=record(await adapter.capabilities());
-      const baseline=capabilities?.site_baseline;
-      if(baseline===undefined){
-        throw new Error('Site Baseline Audit is unavailable. The Manager tenant credential must grant site.diagnostics and run a portable-capable Manager version.');
+      const portable=adapter as PortableSiteControlAdapter;
+      if(typeof portable.baseline!=='function'){
+        throw new Error('Site Baseline Audit is unavailable for this adapter.');
       }
-      return toolResult(baseline);
+      return toolResult(await portable.baseline());
     },
   );
 }
