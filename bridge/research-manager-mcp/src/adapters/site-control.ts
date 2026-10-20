@@ -200,7 +200,7 @@ export interface SiteControlAdapter {
   readonly kind: string;
   readonly tenantId: string;
   readonly tenantLabel: string;
-  readonly productProfile: SiteProductProfile;
+  readonly productProfile?: SiteProductProfile;
   status(): Promise<unknown>;
   versions(): Promise<unknown>;
   capabilities(): Promise<unknown>;
