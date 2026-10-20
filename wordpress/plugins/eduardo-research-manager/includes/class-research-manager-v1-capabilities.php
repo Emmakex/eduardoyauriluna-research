@@ -59,6 +59,12 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             'arbitrary_wordpress_rest_proxy'=>false,
             'surfaces'=>array('identity','pages','navigation','insights','research-lines','research-objects','translations','evidence','media','seo-geo','design','connections','audit','operations'),
         );
+
+        $granted=is_array($data['granted_scopes']??null)?$data['granted_scopes']:array();
+        if(in_array('site.diagnostics',$granted,true)){
+            $data['site_baseline']=(new Eduardo_Research_Manager_Site_Baseline())->run();
+        }
+
         $payload['data']=$data;$response->set_data($payload);return $response;
     }
 }
