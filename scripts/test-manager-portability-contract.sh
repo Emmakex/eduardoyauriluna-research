@@ -44,8 +44,9 @@ grep -Fq "/wp-json/research-manager/v1/audit/baseline" "$PORTABLE_CLIENT"
 grep -Fq "class ExternalSiteProbe" "$EXTERNAL_PROBE"
 grep -Fq "'/robots.txt'" "$EXTERNAL_PROBE"
 grep -Fq "'/wp-sitemap.xml'" "$EXTERNAL_PROBE"
-grep -Fq "next.hostname!==root.hostname" "$EXTERNAL_PROBE"
+grep -Fq "next.origin!==root.origin" "$EXTERNAL_PROBE"
 grep -Fq "next.protocol!=='https:'" "$EXTERNAL_PROBE"
+grep -Fq "redirect_outside_configured_https_origin" "$EXTERNAL_PROBE"
 grep -Fq "extends PortableResearchManagerAdapter" "$GENERIC_ADAPTER"
 grep -Fq "class PortableResearchManagerAdapter" "$PORTABLE_RESEARCH_ADAPTER"
 grep -Fq "'site_status'" "$GENERIC_SERVER"
@@ -73,7 +74,7 @@ if grep -Eq 'research_|registerResearchWriteTools|registerA[3-7]WriteTools|site_
 fi
 
 # External probe must not consume arbitrary target input. Its URL comes from tenant config;
-# runtime probes use only fixed discovery paths and same-host HTTPS redirects.
+# runtime probes use only fixed discovery paths and same-origin HTTPS redirects.
 if grep -Eq 'req\.query|request\.url|process\.argv|searchParams\.get' "$EXTERNAL_PROBE"; then
   echo 'External Site Probe contains a potential arbitrary target input path.' >&2
   exit 1
