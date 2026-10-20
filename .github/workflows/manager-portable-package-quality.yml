@@ -62,7 +62,7 @@ jobs:
           npm run typecheck
           npm test
 
-      - name: Build installable Manager ZIP
+      - name: Build installable Manager ZIP and handoff manifest
         shell: bash
         run: |
           set -euo pipefail
@@ -74,8 +74,31 @@ jobs:
             zip -qr ../research-manager-0.11.0.zip eduardo-research-manager
           )
           test -s dist/research-manager-0.11.0.zip
-          sha256sum dist/research-manager-0.11.0.zip > dist/research-manager-0.11.0.zip.sha256
+          PLUGIN_SHA256="$(sha256sum dist/research-manager-0.11.0.zip | awk '{print $1}')"
+          printf '%s  %s\n' "$PLUGIN_SHA256" 'research-manager-0.11.0.zip' > dist/research-manager-0.11.0.zip.sha256
           unzip -l dist/research-manager-0.11.0.zip | grep -F 'eduardo-research-manager/eduardo-research-manager.php'
+          jq -n \
+            --arg plugin_version '0.11.0' \
+            --arg plugin_file 'research-manager-0.11.0.zip' \
+            --arg plugin_sha256 "$PLUGIN_SHA256" \
+            --arg source_commit "$GITHUB_SHA" \
+            --arg tenant_profile 'generic-wordpress' \
+            --arg manager_scopes 'site.read,site.diagnostics' \
+            --arg mcp_capabilities 'site.read,diagnostics.read' \
+            '{
+              schema_version: 1,
+              plugin: {version:$plugin_version,file:$plugin_file,sha256:$plugin_sha256},
+              bridge: {repository:"Emmakex/eduardoyauriluna-research",source_commit:$source_commit},
+              generic_wordpress: {
+                tenant_profile:$tenant_profile,
+                manager_scopes:($manager_scopes|split(",")),
+                mcp_capabilities:($mcp_capabilities|split(",")),
+                tools:["site_status","site_versions","site_capabilities","site_baseline_audit"],
+                writes_enabled:false
+              },
+              external_acceptance_project:"Nueva web Emmake",
+              external_acceptance_target:"emmake/nuevaweb"
+            }' > dist/research-manager-0.11.0.manifest.json
 
       - name: Upload portable Manager package
         uses: actions/upload-artifact@v4
@@ -84,5 +107,6 @@ jobs:
           path: |
             dist/research-manager-0.11.0.zip
             dist/research-manager-0.11.0.zip.sha256
+            dist/research-manager-0.11.0.manifest.json
           if-no-files-found: error
           retention-days: 30
