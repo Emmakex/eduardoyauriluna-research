@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-profile.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-baseline.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-portability.php';
+
 final class Eduardo_Research_Manager_V1_Capabilities {
-    public function register(): void { add_filter('rest_request_after_callbacks',array($this,'augment'),99,3); }
+    public function register(): void {
+        (new Eduardo_Research_Manager_Portability())->register();
+        add_filter('rest_request_after_callbacks',array($this,'augment'),99,3);
+    }
 
     public function augment(mixed $response,mixed $handler,WP_REST_Request $request): mixed {
         if('/'.Eduardo_Research_Manager_Remote_REST::NAMESPACE.'/capabilities'!==$request->get_route()||is_wp_error($response)||!$response instanceof WP_REST_Response){return $response;}
