@@ -6,11 +6,16 @@ if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Portability {
     private const NAMESPACE = 'research-manager/v1';
+    private const ADMIN_SLUG = 'site-manager';
+    private const TOKEN_TRANSIENT = 'erm_site_manager_token_';
+    private const NOTICE_TRANSIENT = 'erm_site_manager_notice_';
 
     public function register(): void {
         add_action('rest_api_init', array($this, 'register_routes'), 20);
         add_filter('rest_endpoints', array($this, 'filter_generic_endpoints'), 999);
         add_filter('rest_request_after_callbacks', array($this, 'normalise_generic_response'), 1000, 3);
+        add_action('admin_menu', array($this, 'admin_menu'), 999);
+        add_action('admin_post_site_manager_remote', array($this, 'handle_admin_action'));
     }
 
     public function register_routes(): void {
@@ -125,6 +130,150 @@ final class Eduardo_Research_Manager_Portability {
         return $response;
     }
 
+    public function admin_menu(): void {
+        if ($this->research_available()) { return; }
+
+        global $submenu;
+        if (isset($submenu['tools.php']) && is_array($submenu['tools.php'])) {
+            foreach ($submenu['tools.php'] as $index => $item) {
+                $slug = is_array($item) ? (string) ($item[2] ?? '') : '';
+                if (0 === strpos($slug, 'eduardo-research-manager')) {
+                    unset($submenu['tools.php'][$index]);
+                }
+            }
+        }
+
+        add_management_page(
+            'Site Manager',
+            'Site Manager',
+            'manage_options',
+            self::ADMIN_SLUG,
+            array($this, 'render_admin')
+        );
+    }
+
+    public function handle_admin_action(): void {
+        if ($this->research_available() || ! current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to manage Site Manager.', 'eduardo-research-manager'));
+        }
+        check_admin_referer('erm_site_manager_remote');
+
+        $action = sanitize_key((string) ($_POST['manager_action'] ?? ''));
+        $credentials = Eduardo_Research_Manager::remote_credentials();
+        $notice = array('type'=>'success','message'=>'');
+
+        if ('connect' === $action || 'rotate' === $action) {
+            $issued = $credentials->issue_token(
+                array('site.read','site.diagnostics'),
+                get_current_user_id(),
+                'Site Manager Bridge'
+            );
+            if (is_wp_error($issued)) {
+                $notice = array('type'=>'error','message'=>$issued->get_error_message());
+            } else {
+                $token = (string) ($issued['token'] ?? '');
+                if ('' !== $token) {
+                    set_transient($this->token_key(), $token, 5 * MINUTE_IN_SECONDS);
+                }
+                $notice['message'] = 'A least-privilege Site Manager credential was generated. Copy the token now; only its hash is stored.';
+            }
+        } elseif ('revoke' === $action) {
+            $credentials->revoke();
+            $notice['message'] = 'The Site Manager production credential was revoked.';
+        } else {
+            $notice = array('type'=>'error','message'=>'Unsupported Site Manager action.');
+        }
+
+        set_transient($this->notice_key(), $notice, 5 * MINUTE_IN_SECONDS);
+        wp_safe_redirect(admin_url('tools.php?page=' . self::ADMIN_SLUG));
+        exit;
+    }
+
+    public function render_admin(): void {
+        if (! current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to access Site Manager.', 'eduardo-research-manager'));
+        }
+
+        $profile = (new Eduardo_Research_Manager_Site_Profile())->snapshot();
+        $baseline = (new Eduardo_Research_Manager_Site_Baseline())->run();
+        $connection = Eduardo_Research_Manager::remote_credentials()->primary_state();
+        $token = get_transient($this->token_key());
+        if (is_string($token) && '' !== $token) {
+            delete_transient($this->token_key());
+        } else {
+            $token = '';
+        }
+        $notice = get_transient($this->notice_key());
+        if (is_array($notice)) {
+            delete_transient($this->notice_key());
+        } else {
+            $notice = array();
+        }
+        ?>
+        <div class="wrap">
+          <h1><?php echo esc_html__('Site Manager', 'eduardo-research-manager'); ?></h1>
+          <p><?php echo esc_html__('Portable read-only control plane for this WordPress site. Research-only surfaces are disabled because the Research Theme contract is not active.', 'eduardo-research-manager'); ?></p>
+
+          <?php if ($notice) : ?>
+            <div class="notice notice-<?php echo esc_attr((string) ($notice['type'] ?? 'info')); ?> inline"><p><?php echo esc_html((string) ($notice['message'] ?? '')); ?></p></div>
+          <?php endif; ?>
+
+          <?php if ('' !== $token) : ?>
+            <div class="notice notice-warning inline">
+              <p><strong><?php echo esc_html__('Copy this token now. It is shown once.', 'eduardo-research-manager'); ?></strong></p>
+              <p><code style="word-break:break-all;user-select:all"><?php echo esc_html($token); ?></code></p>
+            </div>
+          <?php endif; ?>
+
+          <h2><?php echo esc_html__('Detected profile', 'eduardo-research-manager'); ?></h2>
+          <table class="widefat striped" style="max-width:900px"><tbody>
+            <tr><th>Profile</th><td><code><?php echo esc_html((string) ($profile['id'] ?? '')); ?></code></td></tr>
+            <tr><th>WordPress</th><td><?php echo esc_html((string) ($profile['wordpress_version'] ?? '')); ?></td></tr>
+            <tr><th>PHP</th><td><?php echo esc_html((string) ($profile['php_version'] ?? '')); ?></td></tr>
+            <tr><th>Active theme</th><td><?php echo esc_html((string) ($profile['active_theme']['name'] ?? '')); ?> — <?php echo esc_html((string) ($profile['active_theme']['version'] ?? '')); ?></td></tr>
+          </tbody></table>
+
+          <h2><?php echo esc_html__('ChatGPT / MCP connection', 'eduardo-research-manager'); ?></h2>
+          <p><?php echo esc_html__('Generic sites use exactly site.read + site.diagnostics. Write scopes are not exposed in this profile.', 'eduardo-research-manager'); ?></p>
+          <table class="widefat striped" style="max-width:900px"><tbody>
+            <tr><th>Connection ID</th><td><code><?php echo esc_html((string) ($connection['connection_id'] ?? '')); ?></code></td></tr>
+            <tr><th>Enabled</th><td><?php echo ! empty($connection['enabled']) ? 'YES' : 'NO'; ?></td></tr>
+            <tr><th>Generation</th><td><?php echo esc_html((string) ((int) ($connection['generation'] ?? 0))); ?></td></tr>
+            <tr><th>Scopes</th><td><code><?php echo esc_html(implode(', ', (array) ($connection['scopes'] ?? array()))); ?></code></td></tr>
+            <tr><th>Last used</th><td><?php echo esc_html((string) ($connection['last_used_at'] ?? '')); ?></td></tr>
+          </tbody></table>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+              <input type="hidden" name="action" value="site_manager_remote">
+              <input type="hidden" name="manager_action" value="<?php echo ! empty($connection['credential_present']) ? 'rotate' : 'connect'; ?>">
+              <?php wp_nonce_field('erm_site_manager_remote'); ?>
+              <?php submit_button(! empty($connection['credential_present']) ? __('Rotate connection token', 'eduardo-research-manager') : __('Generate connection token', 'eduardo-research-manager'), 'primary', 'submit', false); ?>
+            </form>
+            <?php if (! empty($connection['credential_present'])) : ?>
+              <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="site_manager_remote">
+                <input type="hidden" name="manager_action" value="revoke">
+                <?php wp_nonce_field('erm_site_manager_remote'); ?>
+                <?php submit_button(__('Revoke connection', 'eduardo-research-manager'), 'secondary', 'submit', false); ?>
+              </form>
+            <?php endif; ?>
+          </div>
+
+          <h2><?php echo esc_html__('Site Baseline Audit', 'eduardo-research-manager'); ?></h2>
+          <p><?php echo esc_html__('The baseline below is read-only WordPress evidence. External DNS/TLS, Lighthouse/CWV, accessibility, Search Console and analytics stay explicitly not_measured until their probes are connected.', 'eduardo-research-manager'); ?></p>
+          <table class="widefat striped" style="max-width:900px"><tbody>
+            <tr><th>Home URL</th><td><code><?php echo esc_html((string) ($baseline['urls']['home'] ?? '')); ?></code></td></tr>
+            <tr><th>Search visibility</th><td><?php echo esc_html((string) ($baseline['indexability']['wordpress_search_visibility'] ?? '')); ?></td></tr>
+            <tr><th>Permalink structure</th><td><code><?php echo esc_html((string) ($baseline['routing']['permalink_structure'] ?? '')); ?></code></td></tr>
+            <tr><th>Installed plugins</th><td><?php echo esc_html((string) ((int) ($baseline['plugins']['installed_count'] ?? 0))); ?></td></tr>
+            <tr><th>Native sitemap</th><td><?php echo ! empty($baseline['discovery']['native_sitemaps_available']) ? esc_html((string) ($baseline['discovery']['native_sitemap_url'] ?? '')) : 'Unavailable'; ?></td></tr>
+            <tr><th>Generated</th><td><?php echo esc_html((string) ($baseline['generated_at'] ?? '')); ?></td></tr>
+          </tbody></table>
+        </div>
+        <?php
+    }
+
     private function generic_diagnostics(): array {
         $checks = array();
         $home = home_url('/');
@@ -173,5 +322,13 @@ final class Eduardo_Research_Manager_Portability {
             'data'=>$data,
             'request_id'=>$request_id,
         ));
+    }
+
+    private function token_key(): string {
+        return self::TOKEN_TRANSIENT . get_current_user_id();
+    }
+
+    private function notice_key(): string {
+        return self::NOTICE_TRANSIENT . get_current_user_id();
     }
 }
