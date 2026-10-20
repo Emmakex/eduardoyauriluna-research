@@ -4,11 +4,13 @@ import { parseCapabilityList, type CommercialCapability } from './entitlements.j
 import { EnvSecretResolver, type SecretResolver } from './secret-resolver.js';
 
 export type TenantAdapter = 'research-manager';
+export type TenantProductProfile = 'research-theme' | 'generic-wordpress';
 
 export interface TenantConfig {
   id: string;
   label: string;
   adapter: TenantAdapter;
+  productProfile: TenantProductProfile;
   managerBaseUrl: URL;
   managerReadToken: string;
   managerWriteToken: string | null;
@@ -37,6 +39,7 @@ interface TenantDefinition {
   id?: unknown;
   label?: unknown;
   adapter?: unknown;
+  profile?: unknown;
   baseUrl?: unknown;
   readTokenEnv?: unknown;
   writeTokenEnv?: unknown;
@@ -104,6 +107,12 @@ function principalId(raw: unknown, field: string): string {
   return raw;
 }
 
+function productProfile(raw: unknown, field: string): TenantProductProfile {
+  if (raw === undefined || raw === null || raw === '') return 'research-theme';
+  if (raw === 'research-theme' || raw === 'generic-wordpress') return raw;
+  throw new Error(`${field} must be research-theme or generic-wordpress`);
+}
+
 function httpsUrl(raw: unknown, field: string): URL {
   if (typeof raw !== 'string' || !raw.trim()) throw new Error(`${field} is required`);
   const url = new URL(raw);
@@ -156,6 +165,7 @@ function tenantFromDefinition(
     id,
     label,
     adapter: 'research-manager',
+    productProfile: productProfile(definition.profile, `${prefix}.profile`),
     managerBaseUrl: httpsUrl(definition.baseUrl, `${prefix}.baseUrl`),
     managerReadToken: managerToken(resolver.resolve(readTokenReference), readTokenReference),
     managerWriteToken: writeTokenReference
@@ -194,6 +204,7 @@ function configuredTenants(env: NodeJS.ProcessEnv, resolver: SecretResolver): re
       id: tenantId(env.MCP_TENANT_ID?.trim() || 'eduardo-research', 'MCP_TENANT_ID'),
       label: (env.MCP_TENANT_LABEL ?? 'Eduardo Research').trim() || 'Eduardo Research',
       adapter: 'research-manager',
+      productProfile: productProfile(env.MCP_TENANT_PROFILE?.trim() || 'research-theme', 'MCP_TENANT_PROFILE'),
       managerBaseUrl,
       managerReadToken: managerToken(resolver.resolve('ERM_READ_TOKEN'), 'ERM_READ_TOKEN'),
       managerWriteToken: managerWriteToken
@@ -278,10 +289,13 @@ export function loadConfig(
     throw new Error('MCP_SHARED_ROUTING requires MCP_PRINCIPALS_JSON');
   }
   if (sharedRouting && inboundBearerToken !== null) {
-    throw new Error('MCP_BEARER_TOKEN is legacy single-tenant auth and cannot be used with MCP_SHARED_ROUTING');
+    throw new Error('MCP_BEARER_TOKEN must not be set when MCP_SHARED_ROUTING=true');
+  }
+  if (sharedRouting && !isLoopback && !telemetryPath && requirePersistentTelemetry) {
+    throw new Error('Managed shared routing requires MCP_TELEMETRY_PATH when persistent telemetry is required');
   }
   if (!sharedRouting && !isLoopback && inboundBearerToken === null) {
-    throw new Error('MCP_BEARER_TOKEN is required for non-loopback single-tenant mode');
+    throw new Error('MCP_BEARER_TOKEN is required when the MCP listener is not loopback-only');
   }
   if (requirePersistentTelemetry && telemetryPath === null) {
     throw new Error('MCP_REQUIRE_PERSISTENT_TELEMETRY requires MCP_TELEMETRY_PATH');
@@ -296,7 +310,7 @@ export function loadConfig(
     bindHost,
     port: positiveInt('MCP_PORT', env.MCP_PORT, 8787),
     inboundBearerToken,
-    allowedHosts: csv(env.MCP_ALLOWED_HOSTS || 'localhost,127.0.0.1'),
+    allowedHosts: csv(env.MCP_ALLOWED_HOSTS),
     allowedOriginHosts: csv(env.MCP_ALLOWED_ORIGIN_HOSTS),
     telemetryPath,
     requirePersistentTelemetry,
