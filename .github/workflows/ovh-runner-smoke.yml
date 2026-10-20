@@ -1,0 +1,64 @@
+name: OVH Research Runner Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-research-runner-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, Linux, X64, kairoseth-ci, eduardo-research, ovh]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify runner identity and base toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "runner.name=${{ runner.name }}"
+          echo "runner.os=${{ runner.os }}"
+          echo "runner.arch=${{ runner.arch }}"
+          test "${{ runner.os }}" = "Linux"
+          test "${{ runner.arch }}" = "X64"
+          command -v bash
+          command -v git
+          command -v curl
+          command -v jq
+          command -v php
+          php -v
+
+      - name: Verify Docker access when Docker is installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v docker >/dev/null 2>&1; then
+            docker version
+            docker info >/dev/null
+          else
+            echo "Docker is not installed; runner smoke continues because not every quality job requires Docker."
+          fi
+
+      - name: Verify repository workspace and outbound HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          git rev-parse --is-inside-work-tree
+          curl --fail --silent --show-error --location --max-time 20 \
+            https://api.github.com/meta >/tmp/github-meta.json
+          jq -e '.hooks | type == "array"' /tmp/github-meta.json >/dev/null
+
+      - name: Show bounded capacity snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h .
+          free -h || true
+          uptime
