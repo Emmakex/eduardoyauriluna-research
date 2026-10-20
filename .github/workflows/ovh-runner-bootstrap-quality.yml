@@ -1,0 +1,40 @@
+name: OVH Runner Bootstrap Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ovh-register-research-runner.sh'
+      - '.github/workflows/ovh-runner-smoke.yml'
+      - '.github/workflows/ovh-runner-bootstrap-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    # Temporary bootstrap validator. This workflow is retired or moved to the
+    # OVH runner after private-runner acceptance succeeds.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate installer shell syntax
+        shell: bash
+        run: bash -n scripts/ovh-register-research-runner.sh
+
+      - name: Enforce dedicated runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'RUNNER_USER="${RUNNER_USER:-ghr-eduardo-research}"' scripts/ovh-register-research-runner.sh
+          grep -F 'RUNNER_ROOT="${RUNNER_ROOT:-/srv/kairoseth/runners/eduardo-research}"' scripts/ovh-register-research-runner.sh
+          grep -F 'RUNNER_LABELS="${RUNNER_LABELS:-kairoseth-ci,eduardo-research,ovh}"' scripts/ovh-register-research-runner.sh
+          grep -F 'runs-on: [self-hosted, Linux, X64, kairoseth-ci, eduardo-research, ovh]' .github/workflows/ovh-runner-smoke.yml
+
+      - name: Enforce no persisted registration token
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number -E 'GITHUB_RUNNER_TOKEN=.+' scripts .github/workflows/ovh-runner-smoke.yml
+          grep -F 'unset GITHUB_RUNNER_TOKEN' scripts/ovh-register-research-runner.sh
