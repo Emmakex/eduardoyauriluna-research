@@ -1,43 +1,65 @@
-# Research Manager
+# Research Manager / Site Manager
 
-Independent WordPress control plane for the Eduardo Research Theme. The Theme remains the public layout, route, SEO/GEO, Schema and accessibility authority.
+Portable WordPress control plane by Emmake / Kairoseth.
 
 ## Current version
 
-`0.9.0`
+`0.11.0`
 
-The Manager now covers:
+Version 0.11 introduces a compatibility layer that lets the same plugin run safely in two automatic product profiles without renaming the already accepted internal PHP classes or stored option keys.
+
+## Product profiles
+
+### `generic-wordpress`
+
+Activated automatically when the Eduardo Research Theme contract is not present.
+
+This profile is deliberately read-only and portable. It provides:
+
+- local **Tools → Site Manager** onboarding;
+- a production credential fixed to `site.read + site.diagnostics`;
+- token generation/rotation/revocation with the raw token shown once;
+- authenticated `status`, `versions`, `capabilities`, `readiness` and `diagnostics`;
+- `GET /wp-json/research-manager/v1/audit/baseline`;
+- a portable Site Baseline Audit over WordPress/runtime/theme/plugin/content/indexability/routing/discovery/remote state;
+- explicit `not_measured` states for external DNS/TLS/headers, Lighthouse/CWV, Axe/WCAG, Search Console, analytics and search visibility until those external probes are connected.
+
+Research-only REST routes are removed from the exposed endpoint inventory in this profile. Generic installations do not advertise or permit Research mutations.
+
+### `research-theme`
+
+Activated automatically when the compatible Eduardo Research Theme contract is present.
+
+This keeps the complete accepted Research Manager control plane:
 
 - checksummed `Preview → Apply → Verify → Rollback`;
-- Theme-owned Page hydration/reversible creation;
-- EN/ES Insights;
+- Theme-owned Page hydration and bounded slot/state mutation;
+- EN/ES Insights and translations;
+- Research Lines;
 - evidence-aware Publications, Projects, Software and Datasets;
+- Navigation, Media, SEO/GEO and Design surfaces;
 - HTTP-level rendered frontend verification;
-- M1 authenticated, read-only remote bridge for the ChatGPT-governed operating model.
+- scoped authenticated remote bridge and audit trail;
+- v1 production-accepted mutation lifecycles.
 
-## M1 remote Manager bridge
+The Site Baseline Audit is also exposed to Research tenants when the calling Manager credential includes `site.diagnostics`.
 
-The remote bridge is the first transport layer for the canonical operating path:
-
-```text
-Eduardo → ChatGPT → authenticated Research Manager → shared Manager services → WordPress / Research Theme
-```
-
-M1 deliberately exposes **read-only** operations. Remote mutations remain unavailable until M2 implements the exact Plan → Apply → Verify → Rollback operation lifecycle.
-
-### REST namespace
+## Remote namespace
 
 `/wp-json/research-manager/v1`
 
-Read endpoints:
+Universal read endpoints:
 
 - `GET /status` — `site.read`;
 - `GET /versions` — `site.read`;
 - `GET /capabilities` — `site.read`;
 - `GET /readiness` — `site.diagnostics`;
-- `GET /diagnostics` — `site.diagnostics`.
+- `GET /diagnostics` — `site.diagnostics`;
+- `GET /audit/baseline` — `site.diagnostics`.
 
-### Authentication and request protection
+The generic profile exposes only those routes. The Research profile expands the namespace with the previously accepted bounded Research resources and write lifecycles.
+
+## Authentication and request protection
 
 Remote credentials are site-specific and bound to a local WordPress administrator. The raw bearer token is shown only when generated or rotated; WordPress persists only its password hash and a non-secret prefix.
 
@@ -48,92 +70,43 @@ Authenticated calls require:
 - `X-Research-Manager-Nonce`;
 - `X-Research-Manager-Timestamp`.
 
-The bridge enforces:
+The bridge enforces revocable/rotatable credentials, explicit scopes, local administrator capability validation, HTTPS outside local/development environments, timestamp validity, nonce replay protection, rate limiting, idempotency primitives and bounded audit records without bearer tokens or credential hashes.
 
-- revocable/rotatable credentials;
-- explicit scopes;
-- local administrator capability validation;
-- HTTPS outside local/development environments;
-- timestamp validity window;
-- nonce replay protection;
-- per-connection rate limiting;
-- request/idempotency primitives for M2;
-- bounded audit records that never contain bearer tokens or credential hashes.
+## MCP gateway
 
-### Local control
-
-WordPress → Tools → Research Manager Remote provides the local security console for:
-
-- generating a connection token;
-- rotating it;
-- enabling/disabling remote access;
-- revoking the credential immediately;
-- selecting scopes;
-- viewing recent non-secret audit events.
-
-No SSH access, WordPress administrator password sharing, arbitrary PHP/SQL/filesystem execution or generic WordPress REST proxy is part of the remote contract.
-
-## Evidence discipline
-
-Academic and research claims require explicit evidence confirmation plus a non-empty evidence/source reference before Apply. Stored-state verification and public-render verification are intentionally separate: the Manager can confirm what was persisted while the Theme still decides what is safe to expose.
-
-## Rendered frontend verification
-
-`Eduardo_Research_Manager_Rendered_Verifier` verifies the actual HTTP response produced by WordPress after a mutation.
-
-For Theme-owned pages it checks:
-
-- HTTP 200;
-- canonical URL;
-- correct EN/ES `<html lang>`;
-- current-language `hreflang`;
-- EN/ES alternates plus `x-default`;
-- Open Graph URL;
-- presence of JSON-LD;
-- optional expected/forbidden rendered text.
-
-For Research records it additionally checks the expected Schema type:
-
-- Research Line / Project → `CreativeWork`;
-- Dataset → `Dataset`;
-- Software → `SoftwareSourceCode`;
-- Publication → Theme-selected `CreativeWork`, `ScholarlyArticle`, `Report`, etc.
-
-The verifier derives evidence-sensitive forbidden values from private storage. If a DOI, publication type or review status exists privately without its public verification flag, rendered verification requires that raw claim to remain absent from public HTML/Schema.
-
-Rendered HTTP verification is exposed separately through `Eduardo_Research_Manager::rendered()`. It is not executed synchronously inside `Apply`, avoiding self-request deadlocks on single-worker PHP environments. The intended workflow is:
+The shared Site Control MCP remains multi-tenant and deny-by-default:
 
 ```text
-Preview → Apply → stored Verify → rendered Verify → keep/rollback decision
+ChatGPT project → mcp.kairoseth.com/mcp/{tenant-id} → Site Control MCP → scoped Manager credential → WordPress
 ```
 
-## Resource services
+Manager 0.11 adds MCP tool `site_baseline_audit`. The outer MCP principal must have commercial capability `diagnostics.read`; the site Manager credential must include `site.diagnostics`.
 
-- `pages()` — Theme-defined page models/slots and reversible page creation.
-- `insights()` — bounded editorial notes.
-- `outputs()` — publications/research outputs with academic metadata and evidence gates.
-- `projects()` — structured research projects.
-- `software()` — research software, release/repository/DOI metadata.
-- `datasets()` — research datasets, access/provenance/methodology/DOI metadata.
-- `rendered()` — HTTP-level public result verification.
-- `remote_credentials()` — local remote identity/credential/scopes.
-- `remote_audit()` — bounded non-secret remote audit trail.
-- `remote_guard()` — timestamp, replay, rate and idempotency guards.
-- `remote_rest()` — versioned read-only remote adapter over shared Manager services.
+Tenant configuration remains explicit. Each tenant has its own base URL, Manager token secret reference, languages and commercial entitlements. Principals independently declare which tenants and capabilities they may access.
 
-Research objects share an internal executor registry for creation, stored-state verification and provenance-safe rollback, while each resource keeps its own validation contract.
+## First portable acceptance target
 
-## Mutation boundaries
+The first unrelated WordPress acceptance target is `emmake/nuevaweb`. Its installation, connection and operational testing are intentionally performed from the separate ChatGPT project **Nueva web Emmake** so the acceptance does not depend on Research-project conversation context.
 
-Generic mutations remain narrow. Dedicated resource creation actions do not grant arbitrary WordPress publishing control. Snapshots are bounded, non-autoloaded and one-shot for rollback.
+Acceptance sequence:
 
-The M1 remote bridge does not expose mutation routes. M2 must reuse these same application services rather than create an unrestricted remote WordPress administration path.
+1. install the 0.11.0 ZIP;
+2. activate under the unrelated Emmake theme/site;
+3. confirm profile `generic-wordpress`;
+4. generate the fixed `site.read + site.diagnostics` credential from Tools → Site Manager;
+5. register a dedicated MCP tenant;
+6. verify tenant isolation;
+7. call status/capabilities and `site_baseline_audit` from MCP;
+8. confirm Research routes/writes are unavailable;
+9. persist sanitized evidence;
+10. only then define future generic write modules.
 
-## Admin surfaces
+## Safety boundaries
 
-- WordPress → Tools → Research Manager — readiness/control-plane state and structured site operations.
-- WordPress → Tools → Research Manager Remote — local connection security, scopes, rotation/revocation and audit.
-
-## Next implementation block
-
-**M2 — remote operation lifecycle:** exact plan IDs, state fingerprints, plan expiry, Preview, exact-plan Apply, stale-state rejection, operation status, stored verification, rendered verification, rollback, retry/idempotency acceptance and audit correlation.
+- No arbitrary WordPress REST proxy.
+- No arbitrary PHP, SQL, filesystem or shell execution.
+- No Research mutation capability on a generic site.
+- Existing Research behavior remains backward compatible.
+- Site Baseline Audit is read-only.
+- Credentials remain scoped, revocable and generation-bound.
+- External measurements are never fabricated; unavailable probes are reported as `not_measured`.
