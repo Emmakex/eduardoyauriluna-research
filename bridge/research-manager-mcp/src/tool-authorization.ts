@@ -8,6 +8,11 @@ export interface ToolAuthorizationContract {
 }
 
 export const TOOL_AUTHORIZATION = {
+  site_status: { commercialCapability:'site.read', backendScopes:['site.read'], readOnly:true },
+  site_versions: { commercialCapability:'site.read', backendScopes:['site.read'], readOnly:true },
+  site_capabilities: { commercialCapability:'site.read', backendScopes:['site.read'], readOnly:true },
+  site_baseline_audit: { commercialCapability:'diagnostics.read', backendScopes:['site.diagnostics'], readOnly:true },
+
   research_status: { commercialCapability:'site.read', backendScopes:['site.read'], readOnly:true },
   research_versions: { commercialCapability:'site.read', backendScopes:['site.read'], readOnly:true },
   research_capabilities: { commercialCapability:'site.read', backendScopes:['site.read'], readOnly:true },
