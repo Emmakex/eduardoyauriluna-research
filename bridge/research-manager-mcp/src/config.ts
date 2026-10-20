@@ -10,7 +10,7 @@ export interface TenantConfig {
   id: string;
   label: string;
   adapter: TenantAdapter;
-  productProfile: TenantProductProfile;
+  productProfile?: TenantProductProfile;
   managerBaseUrl: URL;
   managerReadToken: string;
   managerWriteToken: string | null;
