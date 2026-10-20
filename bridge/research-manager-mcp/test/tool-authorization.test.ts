@@ -6,6 +6,8 @@ import { TOOL_AUTHORIZATION } from '../src/tool-authorization.js';
 function serverMappings(): Map<string,string> {
   const sources=[
     readFileSync(new URL('../src/server.ts',import.meta.url),'utf8'),
+    readFileSync(new URL('../src/generic-server.ts',import.meta.url),'utf8'),
+    readFileSync(new URL('../src/portable-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/research-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a3-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a4-write-tools.ts',import.meta.url),'utf8'),
@@ -31,8 +33,8 @@ function serverMappings(): Map<string,string> {
 test('every registered MCP tool has an authoritative primary commercial capability mapping',()=>{
   const actual=serverMappings();
   const catalogEntries=Object.entries(TOOL_AUTHORIZATION);
-  assert.equal(catalogEntries.length,96);
-  assert.equal(actual.size,96);
+  assert.equal(catalogEntries.length,100);
+  assert.equal(actual.size,100);
   assert.deepEqual([...actual.keys()].sort(),catalogEntries.map(([name])=>name).sort());
   const writeTools=new Set([
     'site_page_slots_plan','site_page_slots_apply','site_page_slots_verify','site_page_slots_rollback',
@@ -58,6 +60,11 @@ test('every registered MCP tool has an authoritative primary commercial capabili
 });
 
 test('backend scope contracts preserve adapter security boundaries',()=>{
+  assert.deepEqual(TOOL_AUTHORIZATION.site_status.backendScopes,['site.read']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_versions.backendScopes,['site.read']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_capabilities.backendScopes,['site.read']);
+  assert.equal(TOOL_AUTHORIZATION.site_baseline_audit.commercialCapability,'diagnostics.read');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_baseline_audit.backendScopes,['site.diagnostics']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_pages_list.backendScopes,['site.read']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_plan.backendScopes,['operations.apply']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_verify.backendScopes,['site.read','site.diagnostics']);
