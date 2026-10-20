@@ -81,12 +81,13 @@ final class Eduardo_Research_Manager_Portability {
             $data['preset'] = array('id'=>'','version'=>0,'minimum_supported_version'=>0,'compatible'=>false);
         } elseif ($prefix . '/capabilities' === $route) {
             $connection = Eduardo_Research_Manager::remote_credentials()->state();
+            $granted = is_array($connection['scopes'] ?? null) ? array_values($connection['scopes']) : array();
             $data = array(
                 'namespace' => self::NAMESPACE,
                 'connection_id' => (string) ($connection['connection_id'] ?? ''),
                 'product_profile' => $profile,
                 'portable' => true,
-                'granted_scopes' => is_array($connection['scopes'] ?? null) ? array_values($connection['scopes']) : array(),
+                'granted_scopes' => $granted,
                 'effective_supported_scopes' => array('site.read','site.diagnostics'),
                 'writes_enabled' => false,
                 'read_endpoints' => array(
@@ -104,6 +105,9 @@ final class Eduardo_Research_Manager_Portability {
                     'reason'=>'Generic WordPress profile is read-only in Manager 0.11 portability acceptance.',
                 ),
             );
+            if (in_array('site.diagnostics', $granted, true)) {
+                $data['site_baseline'] = (new Eduardo_Research_Manager_Site_Baseline())->run();
+            }
         } elseif ($prefix . '/readiness' === $route) {
             $data = array(
                 'ready'=>$diagnostics['ready'],
