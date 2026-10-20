@@ -1,0 +1,84 @@
+name: Manager Portable Package Quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'bridge/research-manager-mcp/**'
+      - 'scripts/test-manager-portability-contract.sh'
+      - '.github/workflows/manager-portable-package-quality.yml'
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'bridge/research-manager-mcp/**'
+      - 'scripts/test-manager-portability-contract.sh'
+      - '.github/workflows/manager-portable-package-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-manager:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Lint portable Manager PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress/plugins/eduardo-research-manager -type f -name '*.php' -print0 \
+            | xargs -0 -n1 php -l >/tmp/manager-php-lint.log
+          tail -20 /tmp/manager-php-lint.log
+
+      - name: Validate portability contract
+        shell: bash
+        run: bash scripts/test-manager-portability-contract.sh
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Typecheck and test MCP bridge
+        working-directory: bridge/research-manager-mcp
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm test
+
+      - name: Build installable Manager ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist/manager-package
+          mkdir -p dist/manager-package/eduardo-research-manager
+          cp -a wordpress/plugins/eduardo-research-manager/. dist/manager-package/eduardo-research-manager/
+          (
+            cd dist/manager-package
+            zip -qr ../research-manager-0.11.0.zip eduardo-research-manager
+          )
+          test -s dist/research-manager-0.11.0.zip
+          sha256sum dist/research-manager-0.11.0.zip > dist/research-manager-0.11.0.zip.sha256
+          unzip -l dist/research-manager-0.11.0.zip | grep -F 'eduardo-research-manager/eduardo-research-manager.php'
+
+      - name: Upload portable Manager package
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-manager-0.11.0
+          path: |
+            dist/research-manager-0.11.0.zip
+            dist/research-manager-0.11.0.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
