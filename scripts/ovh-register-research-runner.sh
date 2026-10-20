@@ -71,6 +71,9 @@ if [[ "$current_version" != "$runner_version" || ! -x "$RUNNER_ROOT/config.sh" ]
   fi
 
   tar -xzf "$tmp/runner.tar.gz" -C "$RUNNER_ROOT"
+  if [[ -x "$RUNNER_ROOT/bin/installdependencies.sh" ]]; then
+    "$RUNNER_ROOT/bin/installdependencies.sh"
+  fi
   printf '%s\n' "$runner_version" > "$RUNNER_ROOT/.runner-version"
   chown -R "$RUNNER_USER:$RUNNER_USER" "$RUNNER_ROOT"
 fi
@@ -78,8 +81,7 @@ fi
 if [[ -f "$RUNNER_ROOT/.runner" ]]; then
   echo "Runner is already configured at $RUNNER_ROOT; nothing to register."
 else
-  sudo -u "$RUNNER_USER" \
-    env RUNNER_ALLOW_RUNASROOT=0 \
+  runuser -u "$RUNNER_USER" -- \
     "$RUNNER_ROOT/config.sh" \
       --unattended \
       --url "$REPOSITORY_URL" \
@@ -92,7 +94,7 @@ fi
 
 cd "$RUNNER_ROOT"
 
-if [[ ! -f /etc/systemd/system/actions.runner.Emmakex-eduardoyauriluna-research.*.service ]]; then
+if ! compgen -G '/etc/systemd/system/actions.runner.Emmakex-eduardoyauriluna-research.*.service' >/dev/null; then
   ./svc.sh install "$RUNNER_USER"
 fi
 
