@@ -194,10 +194,13 @@ export interface SiteSeoInternalLinksRequest { limit?: number; }
 export interface SiteSeoReadinessRequest { perTypeLimit?: number; }
 export interface SiteDesignReadinessRequest { rendered?: boolean; }
 
+export type SiteProductProfile = 'research-theme' | 'generic-wordpress';
+
 export interface SiteControlAdapter {
   readonly kind: string;
   readonly tenantId: string;
   readonly tenantLabel: string;
+  readonly productProfile: SiteProductProfile;
   status(): Promise<unknown>;
   versions(): Promise<unknown>;
   capabilities(): Promise<unknown>;
