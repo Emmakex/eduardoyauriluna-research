@@ -17,6 +17,7 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             }
         }, 1000);
         add_filter('rest_request_after_callbacks',array($this,'augment'),99,3);
+        add_filter('rest_request_after_callbacks',array($this,'strip_diagnostic_payload_from_capabilities'),1001,3);
     }
 
     public function augment(mixed $response,mixed $handler,WP_REST_Request $request): mixed {
@@ -65,11 +66,16 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             'surfaces'=>array('identity','pages','navigation','insights','research-lines','research-objects','translations','evidence','media','seo-geo','design','connections','audit','operations'),
         );
 
-        $granted=is_array($data['granted_scopes']??null)?$data['granted_scopes']:array();
-        if(in_array('site.diagnostics',$granted,true)){
-            $data['site_baseline']=(new Eduardo_Research_Manager_Site_Baseline())->run();
-        }
-
         $payload['data']=$data;$response->set_data($payload);return $response;
+    }
+
+    /** Capability discovery is site.read; diagnostics must never piggyback on it. */
+    public function strip_diagnostic_payload_from_capabilities(mixed $response,mixed $handler,WP_REST_Request $request): mixed {
+        if('/'.Eduardo_Research_Manager_Remote_REST::NAMESPACE.'/capabilities'!==$request->get_route()||is_wp_error($response)||!$response instanceof WP_REST_Response){return $response;}
+        $payload=$response->get_data();
+        if(!is_array($payload)||!is_array($payload['data']??null)){return $response;}
+        unset($payload['data']['site_baseline']);
+        $response->set_data($payload);
+        return $response;
     }
 }
