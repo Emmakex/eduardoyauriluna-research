@@ -61,12 +61,15 @@ Append this definition to `MCP_TENANTS_JSON`:
   "id": "emmake-nuevaweb",
   "label": "Emmake Nueva Web",
   "adapter": "research-manager",
+  "profile": "generic-wordpress",
   "baseUrl": "https://REPLACE-WITH-NUEVAWEB-URL",
   "readTokenEnv": "TENANT_EMMAKE_NUEVAWEB_READ_TOKEN",
   "languages": ["es"],
   "entitlements": ["site.read", "diagnostics.read"]
 }
 ```
+
+`profile` is explicit because it also controls the MCP tool inventory. `generic-wordpress` exposes only `site_status`, `site_versions`, `site_capabilities` and `site_baseline_audit`; Research tools are not registered for that tenant.
 
 If the site exposes another language, add it explicitly after validating the site configuration.
 
@@ -109,9 +112,9 @@ using only `PRINCIPAL_NUEVAWEB_EMMAKE_TOKEN` as the outer MCP bearer.
 
 Run, in order:
 
-1. `research_status`
-2. `research_versions`
-3. `research_capabilities`
+1. `site_status`
+2. `site_versions`
+3. `site_capabilities`
 4. `site_baseline_audit`
 
 Expected capability profile:
