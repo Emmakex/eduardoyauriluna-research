@@ -10,11 +10,16 @@ import { registerA6WriteTools } from './a6-write-tools.js';
 import type { A7WriteAdapter } from './a7-contracts.js';
 import { registerA7WriteTools } from './a7-write-tools.js';
 import type { SiteControlAdapter } from './adapters/site-control.js';
+import { createGenericBridgeServer } from './generic-server.js';
 import { registerPortableTools } from './portable-tools.js';
 import { registerResearchWriteTools } from './research-write-tools.js';
 import { createBridgeServer as createBaseBridgeServer } from './server.js';
 
 export function createBridgeServer(adapter:SiteControlAdapter):McpServer{
+  if(adapter.productProfile==='generic-wordpress'){
+    return createGenericBridgeServer(adapter);
+  }
+
   const server=createBaseBridgeServer(adapter);
   registerPortableTools(server,adapter);
   registerResearchWriteTools(server,adapter);
