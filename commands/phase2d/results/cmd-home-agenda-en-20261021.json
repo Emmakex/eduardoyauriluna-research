@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-home-agenda-en-20261021",
+  "command_sha256": "7d64a66a00559637fbecf5fac2a664edf47d89a5c51ca3ebd7c8eee6ef789c49",
+  "correlation": {
+    "operation_id": "erm-operation-967bb04e51544da690c201199b65769d",
+    "plan_id": "erm-remote-plan-571c5cf50943a93a1c13-27816c28"
+  },
+  "resource": {
+    "key": "home",
+    "language": "en",
+    "slot": "research-lines-intro"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
