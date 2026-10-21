@@ -12,7 +12,7 @@
  <div class="research-shell research-header-inner">
   <a class="research-brand" href="<?php echo esc_url(eduardo_research_page_url('home')); ?>" rel="home">
    <span class="research-brand-mark" aria-hidden="true">EY</span>
-   <span class="research-brand-name"><?php bloginfo('name'); ?></span>
+   <span class="research-brand-name"><?php echo esc_html(eduardo_research_canonical_identity_name()); ?></span>
   </a>
   <?php $menu_open_label = 'es' === eduardo_research_current_language() ? 'Menú' : 'Menu'; $menu_close_label = 'es' === eduardo_research_current_language() ? 'Cerrar' : 'Close'; ?>
   <button class="research-menu-toggle" type="button" aria-expanded="false" aria-controls="research-header-actions" data-research-menu-toggle data-open-label="<?php echo esc_attr($menu_open_label); ?>" data-close-label="<?php echo esc_attr($menu_close_label); ?>">
