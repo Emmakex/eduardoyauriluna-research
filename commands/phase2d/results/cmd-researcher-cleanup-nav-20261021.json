@@ -1,0 +1,18 @@
+{
+  "action": "navigation.update",
+  "command_id": "cmd-researcher-cleanup-nav-20261021",
+  "command_sha256": "ce2db679ac3431951c19ffad1a310c67bf7702a17298b9f4596869bd60ea6cf1",
+  "correlation": {
+    "operation_id": "erm-nav-op-f413131a745b4bb3940da75cfe5bfad6",
+    "plan_id": "erm-nav-plan-dec8df1faee2806a83-c018ff98"
+  },
+  "resource": {
+    "item_count": 5,
+    "location": "primary",
+    "registered_targets_only": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
