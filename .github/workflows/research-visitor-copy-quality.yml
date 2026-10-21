@@ -1,0 +1,32 @@
+name: Research Visitor Copy Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/research-visitor-copy-guard.py'
+      - '.github/workflows/research-visitor-copy-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/themes/eduardo-research/**'
+      - '.github/scripts/research-visitor-copy-guard.py'
+      - '.github/workflows/research-visitor-copy-quality.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-visitor-copy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visitor-copy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Guard visitor-facing Research copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/research-visitor-copy-guard.py
