@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-evidence-list-describe-20261021",
+  "tenant": "eduardo-research",
+  "action": "manager.tool.describe",
+  "requested_by": "chatgpt",
+  "payload": {
+    "tool": "site_evidence_list"
+  }
+}
