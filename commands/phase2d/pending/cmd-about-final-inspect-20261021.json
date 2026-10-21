@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-about-final-inspect-20261021",
+  "tenant": "eduardo-research",
+  "action": "manager.page.inspect.pair",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "about",
+    "languages": ["en", "es"]
+  }
+}
