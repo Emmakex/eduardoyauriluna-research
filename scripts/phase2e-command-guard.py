@@ -3,9 +3,9 @@
 
 Existing actions keep the original validator unchanged. Bounded Page, Navigation,
 Media metadata, Design, Insight Research-Line relation, structured Research translation,
-Research Object and Research Line actions use dedicated strict validators, then reuse
-the same fingerprinting, replay semantics, result stamping and tenant-isolation probe.
-Binary Media ingest stays outside Git persistence.
+Research Object, Research Line and read-only Manager inspection actions use dedicated
+strict validators, then reuse the same fingerprinting, replay semantics, result stamping
+and tenant-isolation probe. Binary Media ingest stays outside Git persistence.
 """
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
 RESEARCH_LINE_UPDATE_RUNNER = HERE / "phase2e-research-line-update-runner.py"
+MANAGER_READ_RUNNER = HERE / "phase2e-manager-read-runner.py"
 
 
 def load_module(name: str, path: Path):
@@ -46,6 +47,7 @@ research_create = load_module("phase2e_research_object_create_guard", RESEARCH_C
 research_update = load_module("phase2e_research_object_update_guard", RESEARCH_UPDATE_RUNNER)
 research_line_create = load_module("phase2e_research_line_create_guard", RESEARCH_LINE_CREATE_RUNNER)
 research_line_update = load_module("phase2e_research_line_update_guard", RESEARCH_LINE_UPDATE_RUNNER)
+manager_read = load_module("phase2e_manager_read_guard", MANAGER_READ_RUNNER)
 original_load_validated_command = guard.load_validated_command
 
 PHASE2E_VALIDATORS = {
@@ -61,6 +63,7 @@ PHASE2E_VALIDATORS = {
     research_update.ACTION: research_update,
     research_line_create.ACTION: research_line_create,
     research_line_update.ACTION: research_line_update,
+    manager_read.ACTION: manager_read,
 }
 
 
