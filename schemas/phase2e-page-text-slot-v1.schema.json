@@ -21,13 +21,29 @@
         },
         "language": {"enum": ["en", "es"]},
         "slot": {
-          "enum": ["eyebrow", "lead", "hero-eyebrow", "hero-lead", "research-lines-heading", "research-lines-intro", "selected-outputs-heading", "selected-outputs-intro", "academic-identifiers-heading", "latest-insights-heading", "final-cta-heading", "final-cta-body", "final-cta-button"]
+          "enum": ["eyebrow", "lead", "sections", "hero-eyebrow", "hero-lead", "research-lines-heading", "research-lines-intro", "selected-outputs-heading", "selected-outputs-intro", "academic-identifiers-heading", "latest-insights-heading", "final-cta-heading", "final-cta-body", "final-cta-button"]
         },
         "value": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 200,
-          "pattern": "^[^<>\\r\\n]+$"
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^<>\\r\\n]+$"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^<>\\r\\n]+$"
+              }
+            }
+          ]
         }
       }
     }
