@@ -32,6 +32,11 @@ function eduardo_research_register_all_rewrites(): void {
 function eduardo_research_install(): void {
     $preset = eduardo_research_preset();
     $page_ids = array();
+
+    // This is a site-specific Research Theme: a clean installation must never expose
+    // WordPress' generic installation title as the researcher identity or Schema name.
+    update_option('blogname', eduardo_research_canonical_identity_name());
+
     foreach ((array) ($preset['pages'] ?? array()) as $key => $contract) {
         $page_ids[$key] = eduardo_research_install_page((string) $key, (array) $contract);
     }
