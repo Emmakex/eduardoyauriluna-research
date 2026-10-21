@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-cleanup-cv-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "cv",
+    "language": "en",
+    "slot": "lead",
+    "value": "Academic and professional background of Eduardo Jose Yauri Luna, focused on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems."
+  }
+}
