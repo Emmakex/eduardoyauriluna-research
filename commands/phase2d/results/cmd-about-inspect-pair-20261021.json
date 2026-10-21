@@ -1,0 +1,14 @@
+{
+  "action": "manager.page.inspect.pair",
+  "command_id": "cmd-about-inspect-pair-20261021",
+  "command_sha256": "3ca29f0a9e21c2c9fd0c4f9a0ee953030e663fc6443cd1287aadd118029af7d0",
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_page_inspect' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Commercial entitlement denied: pages.read (principal_not_granted)\"}],\"isError\":true}}",
+    "message": "The bounded Manager read operation did not complete successfully."
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
