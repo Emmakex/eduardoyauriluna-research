@@ -132,17 +132,7 @@ function eduardo_research_render_legal_surface(string $key): void {
     $model = eduardo_research_surface_model($key);
     $stored = get_option('eduardo_research_legal_' . sanitize_key($key) . ('es' === $language ? '_es' : ''), array());
     $sections = is_array($stored) ? $stored : array();
-    if (! $sections) {
-        $privacy = 'privacy-policy' === $key;
-        $sections = array(array(
-            'title' => 'es' === $language
-                ? ($privacy ? 'Información de privacidad en preparación' : 'Información legal en preparación')
-                : ($privacy ? 'Privacy information in preparation' : 'Legal information in preparation'),
-            'body' => 'es' === $language
-                ? 'Esta página se completará con la información aplicable a eduardoyauriluna.com.'
-                : 'This page will be completed with the information applicable to eduardoyauriluna.com.',
-        ));
-    }
+    if (! $sections) { return; }
     ?>
     <div class="research-legal-layout">
       <?php foreach ($sections as $index => $section) :
