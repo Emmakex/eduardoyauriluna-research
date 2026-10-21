@@ -27,6 +27,7 @@ function eduardo_research_render_cv_record(array $record, string $fallback): voi
     $period = eduardo_research_cv_record_period($record);
     $context = eduardo_research_cv_record_context($record);
     $url = isset($record['url']) && is_scalar($record['url']) ? esc_url((string) $record['url']) : '';
+    $link_label = 'es' === eduardo_research_current_language() ? 'Ver registro' : 'View record';
     ?>
     <article class="research-cv-entry">
       <div class="research-cv-entry-period"><?php echo esc_html($period); ?></div>
@@ -34,7 +35,7 @@ function eduardo_research_render_cv_record(array $record, string $fallback): voi
         <h3><?php echo esc_html($title); ?></h3>
         <?php if ('' !== $context) : ?><p class="research-cv-context"><?php echo esc_html($context); ?></p><?php endif; ?>
         <?php if ('' !== $summary) : ?><p><?php echo esc_html($summary); ?></p><?php elseif ('' !== $value && $value !== $title) : ?><p><?php echo esc_html($value); ?></p><?php endif; ?>
-        <?php if ('' !== $url) : ?><a class="research-cv-source" href="<?php echo $url; ?>" rel="noopener"><?php echo esc_html(eduardo_research_t('open_source')); ?> <span aria-hidden="true">↗</span></a><?php endif; ?>
+        <?php if ('' !== $url) : ?><a class="research-cv-source" href="<?php echo $url; ?>" rel="noopener"><?php echo esc_html($link_label); ?> <span aria-hidden="true">↗</span></a><?php endif; ?>
       </div>
     </article>
     <?php
