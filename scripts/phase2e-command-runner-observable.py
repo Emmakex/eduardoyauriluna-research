@@ -3,9 +3,9 @@
 
 Existing commands still execute in the original Phase 2D runner. Bounded Page,
 Navigation, Media metadata, Design, Insight Research-Line relation, structured Research
-translation, Research Object and Research Line commands execute in dedicated runners.
-Binary Media ingest remains outside this Git-persisted command channel. All paths retain
-sanitized MCP tool-error capture.
+translation, Research Object, Research Line and read-only Manager inspection commands
+execute in dedicated runners. Binary Media ingest remains outside this Git-persisted
+command channel. All paths retain sanitized MCP tool-error capture.
 """
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
 RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
 RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
 RESEARCH_LINE_UPDATE_RUNNER = HERE / "phase2e-research-line-update-runner.py"
+MANAGER_READ_RUNNER = HERE / "phase2e-manager-read-runner.py"
 RUNNERS = {
     "page.slot.update": PAGE_TEXT_SLOT_RUNNER,
     "navigation.update": NAVIGATION_RUNNER,
@@ -41,6 +42,7 @@ RUNNERS = {
     "research.object.update": RESEARCH_UPDATE_RUNNER,
     "research.line.create": RESEARCH_LINE_CREATE_RUNNER,
     "research.line.update": RESEARCH_LINE_UPDATE_RUNNER,
+    "manager.tools.list": MANAGER_READ_RUNNER,
 }
 
 
