@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-home-hero-lead-es-20261021",
+  "command_sha256": "129469cb90493b49ca1ebe5b1962b9da2a71110fdc0da8f9a7443d1d34d6a029",
+  "correlation": {
+    "operation_id": "erm-operation-0e8242c3ea79436db3d6941a893c10f2",
+    "plan_id": "erm-remote-plan-27094dd3167c720d8426-26ba36e5"
+  },
+  "resource": {
+    "key": "home",
+    "language": "es",
+    "slot": "hero-lead"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
