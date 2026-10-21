@@ -1,0 +1,122 @@
+{
+  "action": "manager.page.inspect.pair",
+  "command_id": "cmd-about-inspect-pair-20261021-r3",
+  "command_sha256": "05771e8b60990c7c188ed3906100b39f82e46ba4102ffafa3e93a6d6f9e93365",
+  "pages": {
+    "en": {
+      "allowed_slots": [
+        "eyebrow",
+        "lead",
+        "sections"
+      ],
+      "contract_aligned": true,
+      "contract_slug": "about",
+      "effective_slots": {
+        "eyebrow": "Research profile",
+        "lead": "Eduardo Jose Yauri Luna develops applied research at the intersection of artificial intelligence, autonomous systems and digital transformation. His work is informed by more than ten years of professional experience in digital strategy, web technologies, automation and software-enabled business systems.",
+        "sections": [
+          "Research focus",
+          "Professional background",
+          "Identity and evidence"
+        ]
+      },
+      "expected_model": "research-about-v1",
+      "expected_role": "profile",
+      "key": "about",
+      "language": "en",
+      "model": "research-about-v1",
+      "option_key": "eduardo_research_surface_about",
+      "page_id": 9,
+      "published": true,
+      "role": "profile",
+      "slug": "about",
+      "state_policy": {
+        "allowed_statuses": [
+          "draft",
+          "publish"
+        ],
+        "archive_status": "draft",
+        "destructive_delete": false,
+        "slug_editable": false,
+        "slug_source": "theme-contract",
+        "status_editable": true,
+        "title_editable": true
+      },
+      "status": "publish",
+      "stored_slots": {
+        "eyebrow": "Research profile",
+        "lead": "Eduardo Jose Yauri Luna develops applied research at the intersection of artificial intelligence, autonomous systems and digital transformation. His work is informed by more than ten years of professional experience in digital strategy, web technologies, automation and software-enabled business systems.",
+        "sections": [
+          "Research focus",
+          "Professional background",
+          "Identity and evidence"
+        ]
+      },
+      "title": "About",
+      "url": "https://eduardoyauriluna.com/about/"
+    },
+    "es": {
+      "allowed_slots": [
+        "eyebrow",
+        "lead",
+        "sections"
+      ],
+      "contract_aligned": true,
+      "contract_slug": "about",
+      "effective_slots": {
+        "eyebrow": "Perfil de investigación",
+        "lead": "Eduardo Jose Yauri Luna desarrolla investigación aplicada en la intersección entre inteligencia artificial, sistemas autónomos y transformación digital. Su trabajo se apoya en más de diez años de experiencia profesional en estrategia digital, tecnologías web, automatización y sistemas empresariales basados en software.",
+        "sections": [
+          "Enfoque de investigación",
+          "Trayectoria profesional",
+          "Identidad y evidencia"
+        ]
+      },
+      "expected_model": "research-about-v1",
+      "expected_role": "profile",
+      "key": "about",
+      "language": "es",
+      "model": "research-about-v1",
+      "option_key": "eduardo_research_surface_about_es",
+      "page_id": 9,
+      "published": true,
+      "role": "profile",
+      "slug": "about",
+      "state_policy": {
+        "allowed_statuses": [
+          "draft",
+          "publish"
+        ],
+        "archive_status": "draft",
+        "destructive_delete": false,
+        "slug_editable": false,
+        "slug_source": "theme-contract",
+        "status_editable": true,
+        "title_editable": true
+      },
+      "status": "publish",
+      "stored_slots": {
+        "eyebrow": "Perfil de investigación",
+        "lead": "Eduardo Jose Yauri Luna desarrolla investigación aplicada en la intersección entre inteligencia artificial, sistemas autónomos y transformación digital. Su trabajo se apoya en más de diez años de experiencia profesional en estrategia digital, tecnologías web, automatización y sistemas empresariales basados en software.",
+        "sections": [
+          "Enfoque de investigación",
+          "Trayectoria profesional",
+          "Identidad y evidencia"
+        ]
+      },
+      "title": "About",
+      "url": "https://eduardoyauriluna.com/es/perfil/"
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "key": "about",
+    "languages": [
+      "en",
+      "es"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
