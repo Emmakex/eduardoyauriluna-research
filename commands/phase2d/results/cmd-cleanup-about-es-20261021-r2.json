@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-cleanup-about-es-20261021-r2",
+  "command_sha256": "d73a56dafd2389901152ed220bfb2712b445131ef9dcee1f01067b451fd6fd52",
+  "correlation": {
+    "operation_id": "erm-operation-35d7f449c9544842b39a275f591c3a19",
+    "plan_id": "erm-remote-plan-17a94ffd67db0e8cd5c6-8161eeb8"
+  },
+  "resource": {
+    "key": "about",
+    "language": "es",
+    "slot": "sections"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
