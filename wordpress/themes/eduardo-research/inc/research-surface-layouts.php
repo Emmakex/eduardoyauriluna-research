@@ -10,33 +10,33 @@ function eduardo_research_surface_layout(string $key, ?string $language = null):
     $layouts = array(
         'about' => array(
             'sections' => array(
-                array('group'=>'profile','label'=>$es ? 'Perfil de investigación' : 'Research profile','intro'=>$es ? 'Biografía, enfoque y contexto publicados únicamente desde evidencia verificada.' : 'Biography, focus and context published only from verified evidence.'),
-                array('group'=>'affiliations','label'=>$es ? 'Afiliaciones verificadas' : 'Verified affiliations','intro'=>$es ? 'Instituciones y relaciones académicas o profesionales confirmadas.' : 'Confirmed academic or professional institutional relationships.'),
-                array('group'=>'identifiers','label'=>$es ? 'Identidad académica' : 'Academic identity','intro'=>$es ? 'Identificadores y perfiles externos que han sido verificados explícitamente.' : 'External identifiers and profiles that have been explicitly verified.'),
+                array('group'=>'profile','label'=>$es ? 'Perfil de investigación' : 'Research profile','intro'=>$es ? 'Enfoque de investigación, trayectoria y contexto profesional relevante.' : 'Research focus, background and relevant professional context.'),
+                array('group'=>'affiliations','label'=>$es ? 'Afiliaciones' : 'Affiliations','intro'=>$es ? 'Relaciones académicas o profesionales vinculadas al perfil investigador.' : 'Academic or professional relationships connected to the research profile.'),
+                array('group'=>'identifiers','label'=>$es ? 'Perfiles académicos' : 'Academic profiles','intro'=>$es ? 'Identificadores y perfiles académicos públicos de Eduardo Jose Yauri Luna.' : 'Public academic identifiers and profiles for Eduardo Jose Yauri Luna.'),
             ),
             'links' => array('research','cv','contact'),
         ),
         'research' => array(
             'sections' => array(
-                array('group'=>'research_lines','label'=>$es ? 'Líneas de investigación' : 'Research lines','intro'=>$es ? 'Áreas de trabajo activas organizadas alrededor de preguntas y resultados verificables.' : 'Active areas of work organised around questions and verifiable outputs.'),
-                array('group'=>'research_questions','label'=>$es ? 'Preguntas de investigación' : 'Research questions','intro'=>$es ? 'Preguntas explícitas que orientan la agenda de investigación.' : 'Explicit questions guiding the research agenda.'),
-                array('group'=>'methods','label'=>$es ? 'Métodos' : 'Methods','intro'=>$es ? 'Métodos, marcos y procedimientos declarados para el trabajo reproducible.' : 'Declared methods, frameworks and procedures supporting reproducible work.'),
+                array('group'=>'research_lines','label'=>$es ? 'Líneas de investigación' : 'Research lines','intro'=>$es ? 'Líneas que estructuran la agenda de investigación.' : 'Research lines that structure the research agenda.'),
+                array('group'=>'research_questions','label'=>$es ? 'Preguntas de investigación' : 'Research questions','intro'=>$es ? 'Preguntas que orientan el desarrollo de la agenda de investigación.' : 'Questions guiding the development of the research agenda.'),
+                array('group'=>'methods','label'=>$es ? 'Métodos' : 'Methods','intro'=>$es ? 'Métodos y enfoques planteados para desarrollar y evaluar el trabajo de investigación.' : 'Methods and approaches proposed to develop and evaluate the research work.'),
             ),
             'links' => array('publications','projects','software','datasets'),
         ),
         'cv' => array(
             'sections' => array(
-                array('group'=>'experience','label'=>$es ? 'Experiencia' : 'Experience','intro'=>$es ? 'Trayectoria publicada desde registros verificados.' : 'Career history published from verified records.'),
-                array('group'=>'education','label'=>$es ? 'Formación' : 'Education','intro'=>$es ? 'Formación y credenciales únicamente cuando exista evidencia verificada.' : 'Education and credentials only when verified evidence exists.'),
-                array('group'=>'affiliations','label'=>$es ? 'Afiliaciones' : 'Affiliations','intro'=>$es ? 'Relaciones institucionales confirmadas.' : 'Confirmed institutional relationships.'),
-                array('group'=>'awards','label'=>$es ? 'Reconocimientos' : 'Awards','intro'=>$es ? 'Premios o reconocimientos solo cuando estén documentados.' : 'Awards or distinctions only when documented.'),
+                array('group'=>'experience','label'=>$es ? 'Experiencia' : 'Experience','intro'=>$es ? 'Trayectoria profesional relevante para la agenda de investigación.' : 'Professional background relevant to the research agenda.'),
+                array('group'=>'education','label'=>$es ? 'Formación' : 'Education','intro'=>$es ? 'Formación académica y credenciales.' : 'Academic education and credentials.'),
+                array('group'=>'affiliations','label'=>$es ? 'Afiliaciones' : 'Affiliations','intro'=>$es ? 'Relaciones institucionales vinculadas al perfil investigador.' : 'Institutional relationships connected to the research profile.'),
+                array('group'=>'awards','label'=>$es ? 'Reconocimientos' : 'Awards','intro'=>$es ? 'Premios y reconocimientos académicos o profesionales.' : 'Academic or professional awards and distinctions.'),
             ),
             'links' => array('publications','projects','contact'),
         ),
         'contact' => array(
             'sections' => array(
-                array('group'=>'contact','label'=>$es ? 'Consultas de investigación' : 'Research enquiries','intro'=>$es ? 'Canales de contacto publicados desde información verificada.' : 'Contact channels published from verified information.'),
-                array('group'=>'identifiers','label'=>$es ? 'Perfiles académicos' : 'Academic profiles','intro'=>$es ? 'Perfiles externos verificados para identidad y descubrimiento.' : 'Verified external profiles for identity and discovery.'),
+                array('group'=>'contact','label'=>$es ? 'Contacto' : 'Contact','intro'=>$es ? 'Canales de contacto para conversaciones académicas y colaboración.' : 'Contact channels for academic conversations and collaboration.'),
+                array('group'=>'identifiers','label'=>$es ? 'Perfiles académicos' : 'Academic profiles','intro'=>$es ? 'Perfiles académicos públicos de Eduardo Jose Yauri Luna.' : 'Public academic profiles for Eduardo Jose Yauri Luna.'),
             ),
             'links' => array('research','publications'),
         ),
@@ -59,7 +59,7 @@ function eduardo_research_render_evidence_section(array $section, int $position)
     $label = (string) ($section['label'] ?? $group);
     $intro = (string) ($section['intro'] ?? '');
     $records = eduardo_research_verified_localized_evidence($group);
-    $language = eduardo_research_current_language();
+    if (! $records) { return; }
     ?>
     <section class="research-interior-block" data-evidence-group="<?php echo esc_attr($group); ?>">
       <header class="research-interior-block-heading">
@@ -70,38 +70,31 @@ function eduardo_research_render_evidence_section(array $section, int $position)
           <?php if ('' !== $intro) : ?><p><?php echo esc_html($intro); ?></p><?php endif; ?>
         </div>
       </header>
-      <?php if ($records) : ?>
-        <div class="research-interior-records">
-          <?php foreach ($records as $record) :
-              $title = eduardo_research_surface_record_title($record, $label);
-              $summary = isset($record['summary']) && is_scalar($record['summary']) ? trim((string) $record['summary']) : '';
-              $value = isset($record['value']) && is_scalar($record['value']) ? trim((string) $record['value']) : '';
-              $url = isset($record['url']) && is_scalar($record['url']) ? esc_url((string) $record['url']) : '';
-          ?>
-            <article class="research-interior-record">
-              <div class="research-interior-record-mark" aria-hidden="true"></div>
-              <div>
-                <h3><?php echo esc_html($title); ?></h3>
-                <?php if ('' !== $summary) : ?><p><?php echo esc_html($summary); ?></p><?php elseif ('' !== $value && $value !== $title) : ?><p><?php echo esc_html($value); ?></p><?php endif; ?>
-                <?php if ('' !== $url) : ?><a class="research-text-link" href="<?php echo $url; ?>" rel="noopener"><?php echo esc_html(eduardo_research_t('open_source')); ?> <span aria-hidden="true">↗</span></a><?php endif; ?>
-              </div>
-            </article>
-          <?php endforeach; ?>
-        </div>
-      <?php else : ?>
-        <div class="research-interior-empty">
-          <div class="research-verification-mark" aria-hidden="true">✓</div>
-          <div>
-            <h3><?php echo esc_html('es' === $language ? 'Pendiente de evidencia verificada' : 'Awaiting verified evidence'); ?></h3>
-            <p><?php echo esc_html('es' === $language ? 'La estructura está preparada, pero no se publicará ninguna afirmación hasta que exista evidencia verificada.' : 'The structure is ready, but no claim will be published until verified evidence exists.'); ?></p>
-          </div>
-        </div>
-      <?php endif; ?>
+      <div class="research-interior-records">
+        <?php foreach ($records as $record) :
+            $title = eduardo_research_surface_record_title($record, $label);
+            $summary = isset($record['summary']) && is_scalar($record['summary']) ? trim((string) $record['summary']) : '';
+            $value = isset($record['value']) && is_scalar($record['value']) ? trim((string) $record['value']) : '';
+            $url = isset($record['url']) && is_scalar($record['url']) ? esc_url((string) $record['url']) : '';
+        ?>
+          <article class="research-interior-record">
+            <div class="research-interior-record-mark" aria-hidden="true"></div>
+            <div>
+              <h3><?php echo esc_html($title); ?></h3>
+              <?php if ('' !== $summary) : ?><p><?php echo esc_html($summary); ?></p><?php elseif ('' !== $value && $value !== $title) : ?><p><?php echo esc_html($value); ?></p><?php endif; ?>
+              <?php if ('' !== $url) : ?><a class="research-text-link" href="<?php echo $url; ?>" rel="noopener"><?php echo esc_html(eduardo_research_t('open_source')); ?> <span aria-hidden="true">↗</span></a><?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
     </section>
     <?php
 }
 
 function eduardo_research_render_surface_links(array $keys): void {
+    if (function_exists('eduardo_research_navigation_target_is_visible')) {
+        $keys = array_values(array_filter($keys, 'eduardo_research_navigation_target_is_visible'));
+    }
     if (! $keys) { return; }
     $language = eduardo_research_current_language();
     ?>
@@ -123,9 +116,13 @@ function eduardo_research_render_surface_links(array $keys): void {
 function eduardo_research_render_structured_surface(string $key): void {
     $layout = eduardo_research_surface_layout($key);
     $sections = is_array($layout['sections'] ?? null) ? $layout['sections'] : array();
-    foreach ($sections as $index => $section) {
+    $position = 0;
+    foreach ($sections as $section) {
         if (! is_array($section)) { continue; }
-        eduardo_research_render_evidence_section($section, $index + 1);
+        $group = sanitize_key((string) ($section['group'] ?? ''));
+        if (! eduardo_research_verified_localized_evidence($group)) { continue; }
+        $position++;
+        eduardo_research_render_evidence_section($section, $position);
     }
     eduardo_research_render_surface_links(is_array($layout['links'] ?? null) ? $layout['links'] : array());
 }
@@ -136,11 +133,14 @@ function eduardo_research_render_legal_surface(string $key): void {
     $stored = get_option('eduardo_research_legal_' . sanitize_key($key) . ('es' === $language ? '_es' : ''), array());
     $sections = is_array($stored) ? $stored : array();
     if (! $sections) {
+        $privacy = 'privacy-policy' === $key;
         $sections = array(array(
-            'title' => 'es' === $language ? 'Información legal pendiente de verificación' : 'Legal information awaiting verification',
+            'title' => 'es' === $language
+                ? ($privacy ? 'Información de privacidad en preparación' : 'Información legal en preparación')
+                : ($privacy ? 'Privacy information in preparation' : 'Legal information in preparation'),
             'body' => 'es' === $language
-                ? 'El Theme mantiene esta página publicada y estructurada, pero los datos legales específicos del titular deben verificarse antes de mostrarse.'
-                : 'The Theme keeps this page published and structured, but owner-specific legal details must be verified before they are shown.',
+                ? 'Esta página se completará con la información aplicable a eduardoyauriluna.com.'
+                : 'This page will be completed with the information applicable to eduardoyauriluna.com.',
         ));
     }
     ?>
