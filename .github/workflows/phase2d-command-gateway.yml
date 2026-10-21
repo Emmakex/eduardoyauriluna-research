@@ -47,8 +47,8 @@ jobs:
             command_path='${{ inputs.command_path }}'
             files=("$command_path")
           else
-            mapfile -t files < <(git diff-tree --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
-            mapfile -t deleted < <(git diff-tree --no-commit-id --name-only --diff-filter=D -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
+            mapfile -t files < <(git diff-tree -m --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json' | sort -u)
+            mapfile -t deleted < <(git diff-tree -m --no-commit-id --name-only --diff-filter=D -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json' | sort -u)
             if [[ ${#files[@]} -eq 0 && ${#deleted[@]} -gt 0 ]]; then
               echo "mode=cleanup" >> "$GITHUB_OUTPUT"
               echo "cleanup_count=${#deleted[@]}" >> "$GITHUB_OUTPUT"
