@@ -1,0 +1,37 @@
+{
+  "action": "manager.evidence.contact.audit",
+  "command_id": "cmd-contact-evidence-audit-20261021",
+  "command_sha256": "c5ed878ea7e1e1f75c91a58c65383834773f28f13ae24913d0199d8d8719bc8a",
+  "groups": {
+    "contact": {
+      "count": 0,
+      "group": "contact",
+      "items": [],
+      "label": "Research contact",
+      "surfaces": [
+        "contact"
+      ]
+    },
+    "identifiers": {
+      "count": 0,
+      "group": "identifiers",
+      "items": [],
+      "label": "Academic identifiers",
+      "surfaces": [
+        "about",
+        "contact"
+      ]
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "groups": [
+      "contact",
+      "identifiers"
+    ],
+    "surface": "contact"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
