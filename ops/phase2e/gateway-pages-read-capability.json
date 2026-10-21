@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "principal": "phase2d-github",
+  "add_capabilities": [
+    "pages.read"
+  ]
+}

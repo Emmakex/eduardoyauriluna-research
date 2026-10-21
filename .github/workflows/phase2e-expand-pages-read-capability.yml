@@ -1,0 +1,101 @@
+name: Phase 2E Expand Pages Read Capability
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/phase2e/gateway-pages-read-capability.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  expand:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+      OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact reviewed capability request
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?OVH_MCP_HOST production secret is required}"
+          : "${OVH_MCP_USER:?OVH_MCP_USER production secret is required}"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('ops/phase2e/gateway-pages-read-capability.json').read_text(encoding='utf-8'))
+          expected = {
+              'version': '1',
+              'tenant': 'eduardo-research',
+              'principal': 'phase2d-github',
+              'add_capabilities': ['pages.read'],
+          }
+          if value != expected:
+              raise SystemExit('Pages read capability request does not match the reviewed Phase 2E contract')
+          print('PAGES_READ_CAPABILITY_REQUEST_OK')
+          PY
+
+      - name: Self-test pages.read mismatch repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2e-expand-pages-read-capability.py --self-test
+
+      - name: Configure strict SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?OVH_MCP_SSH_KEY production secret is required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?OVH_MCP_SSH_KNOWN_HOSTS production secret is required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Stage reviewed capability expander on OVH
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_TMP="/tmp/phase2e-pages-read-capability-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          "${SSH[@]}" "$SSH_TARGET" "umask 077; rm -rf '$REMOTE_TMP'; mkdir -p '$REMOTE_TMP'"
+          "${SCP[@]}" scripts/phase2e-expand-gateway-capabilities.py "$SSH_TARGET:$REMOTE_TMP/phase2e-expand-gateway-capabilities.py"
+          "${SCP[@]}" scripts/phase2e-expand-pages-read-capability.py "$SSH_TARGET:$REMOTE_TMP/phase2e-expand-pages-read-capability.py"
+
+      - name: Converge production tenant and principal pages.read capability
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_TMP="/tmp/phase2e-pages-read-capability-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          "${SSH[@]}" "$SSH_TARGET" "python3 '$REMOTE_TMP/phase2e-expand-pages-read-capability.py'"
+
+      - name: Clean remote staging directory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_TMP="/tmp/phase2e-pages-read-capability-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          if [ -f "$HOME/.ssh/id_ed25519" ]; then
+            ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              "$SSH_TARGET" "rm -rf '$REMOTE_TMP'" || true
+          fi
