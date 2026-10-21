@@ -1,0 +1,118 @@
+{
+  "action": "manager.page.inspect.pair",
+  "command_id": "cmd-contact-inspect-pair-20261021",
+  "command_sha256": "7145187f6e19e0d5e4439f23007151596043265109bbe688fd582c773663a923",
+  "pages": {
+    "en": {
+      "allowed_slots": [
+        "eyebrow",
+        "lead",
+        "sections"
+      ],
+      "contract_aligned": true,
+      "contract_slug": "contact",
+      "effective_slots": {
+        "eyebrow": "Research contact",
+        "lead": "Contact for academic conversations, collaboration and enquiries related to the research agenda.",
+        "sections": [
+          "Research enquiries",
+          "Academic profiles"
+        ]
+      },
+      "expected_model": "research-contact-v1",
+      "expected_role": "contact",
+      "key": "contact",
+      "language": "en",
+      "model": "research-contact-v1",
+      "option_key": "eduardo_research_surface_contact",
+      "page_id": 17,
+      "published": true,
+      "role": "contact",
+      "slug": "contact",
+      "state_policy": {
+        "allowed_statuses": [
+          "draft",
+          "publish"
+        ],
+        "archive_status": "draft",
+        "destructive_delete": false,
+        "slug_editable": false,
+        "slug_source": "theme-contract",
+        "status_editable": true,
+        "title_editable": true
+      },
+      "status": "publish",
+      "stored_slots": {
+        "eyebrow": "Research contact",
+        "lead": "Contact for academic conversations, collaboration and enquiries related to the research agenda.",
+        "sections": [
+          "Research enquiries",
+          "Academic profiles"
+        ]
+      },
+      "title": "Contact",
+      "url": "https://eduardoyauriluna.com/contact/"
+    },
+    "es": {
+      "allowed_slots": [
+        "eyebrow",
+        "lead",
+        "sections"
+      ],
+      "contract_aligned": true,
+      "contract_slug": "contact",
+      "effective_slots": {
+        "eyebrow": "Contacto de investigación",
+        "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.",
+        "sections": [
+          "Consultas de investigación",
+          "Perfiles académicos"
+        ]
+      },
+      "expected_model": "research-contact-v1",
+      "expected_role": "contact",
+      "key": "contact",
+      "language": "es",
+      "model": "research-contact-v1",
+      "option_key": "eduardo_research_surface_contact_es",
+      "page_id": 17,
+      "published": true,
+      "role": "contact",
+      "slug": "contact",
+      "state_policy": {
+        "allowed_statuses": [
+          "draft",
+          "publish"
+        ],
+        "archive_status": "draft",
+        "destructive_delete": false,
+        "slug_editable": false,
+        "slug_source": "theme-contract",
+        "status_editable": true,
+        "title_editable": true
+      },
+      "status": "publish",
+      "stored_slots": {
+        "eyebrow": "Contacto de investigación",
+        "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.",
+        "sections": [
+          "Consultas de investigación",
+          "Perfiles académicos"
+        ]
+      },
+      "title": "Contact",
+      "url": "https://eduardoyauriluna.com/es/contacto/"
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "key": "contact",
+    "languages": [
+      "en",
+      "es"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
