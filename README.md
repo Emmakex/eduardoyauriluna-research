@@ -4,31 +4,29 @@ Repository for the academic and research identity of **Eduardo Jose Yauri Luna**
 
 ## Purpose
 
-Build a coherent, verifiable and reusable research presence around artificial intelligence, digital transformation, autonomous systems and applied business research.
+Build a coherent and verifiable research presence around artificial intelligence, digital transformation, autonomous systems and applied business research.
 
-The site runs on WordPress with the Research Theme + Research Manager architecture. The Theme owns deterministic public rendering. The Manager owns controlled site operations.
+The public website is exclusively about **Eduardo Jose Yauri Luna as a researcher**. Internal implementation, verification and management mechanisms must not become part of the visitor-facing narrative.
 
-## Canonical operating model
+## Current operating model
 
-The current product/workflow direction is:
+The site currently runs on WordPress with the Research Theme + Research Manager architecture. This is a transitional implementation while the reusable management capabilities are progressively extracted into the separate **Site Manager** product.
 
 ```text
-Eduardo → ChatGPT → authenticated Research Manager → shared Manager services → WordPress resources → Research Theme → rendered eduardoyauriluna.com → verification back to ChatGPT
+Eduardo → ChatGPT → authenticated Research Manager → WordPress resources → Research Theme → eduardoyauriluna.com
 ```
 
 For the managed Eduardo workflow:
 
 - **ChatGPT is the primary instruction surface**;
-- **Research Manager is the authenticated execution bridge/gateway**;
-- **Research Theme is the frontend rendering authority**;
+- **Research Manager is the current authenticated execution bridge/gateway**;
+- **Research Theme is the current frontend rendering authority**;
 - **WordPress Admin is the local/fallback/self-service surface**;
 - **WP-CLI and SSH are optional bootstrap/automation/support transports**, not normal operating dependencies.
 
+The Research Manager and generic product code will be removed from this repository progressively as Site Manager reaches functional parity. The migration must not block development of Eduardo's research identity or academic presence.
+
 Canonical specification: [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md).
-
-Primary execution tracker: **issue #97 — ChatGPT-governed Manager for eduardoyauriluna.com (M1–M8)**.
-
-Do not replace this path with speculative multi-client Control Center work before the Eduardo single-site flow is proven end to end.
 
 ## Canonical identity
 
@@ -36,31 +34,60 @@ Do not replace this path with speculative multi-client Control Center work befor
 - Canonical domain: **eduardoyauriluna.com**
 - Primary language: **English**
 - Secondary language: **Spanish**
-- Preferred external researcher identifier: **ORCID**
+- Primary external researcher identifier: **ORCID**
+
+## Academic identity rollout
+
+External academic identity should be consolidated in this order:
+
+1. **ORCID**
+2. **Google Scholar**
+3. **OpenAlex**
+4. Other relevant academic profiles and research services
+
+**LinkedIn is a supporting source for biographical and professional facts needed by the research website.** It is not the primary academic identity layer and should not drive the public structure of the site.
+
+Any external profile data used on the website must be checked before publication.
 
 ## Research platform goals
 
-- Academic profile and research statement
-- Research lines and projects
+- Research profile and research statement
+- Research lines and research questions
 - Publications and working papers
-- Research software and datasets
+- Research projects
+- Research software and datasets when they become genuine research outputs
 - DOI-aware publication records
 - Academic SEO and structured metadata
-- Connections with ORCID, Google Scholar, Zenodo, OpenAlex, Crossref and GitHub
-- Research Readiness dashboard
-- ChatGPT-governed website operation through the authenticated Manager bridge
-- Preparation for doctoral applications in 2027
+- Connections with ORCID, Google Scholar, OpenAlex, Zenodo, Crossref and GitHub
+- Preparation for doctoral applications and future research activity
+- ChatGPT-governed website operation through the current authenticated Manager bridge
+
+## Public content principle
+
+Verification is an internal system capability, not a public message.
+
+The public site should present:
+
+- Eduardo Jose Yauri Luna;
+- his research agenda;
+- relevant academic and professional background;
+- publications and outputs when they exist;
+- research notes;
+- academic profiles;
+- contact and collaboration information.
+
+Empty collections, internal evidence states, implementation terminology and product mechanics should not be promoted as public content.
 
 ## Repository structure
 
-- `docs/` — architecture, roadmap, integrations and decisions
+- `docs/` — current architecture, roadmap, integrations and transition decisions
 - `content/` — source content for biography, research, projects and publications
-- `config/` — non-secret site and connector configuration examples
-- `wordpress/` — Research Theme and Research Manager implementation
+- `config/` — non-secret site and connector configuration
+- `wordpress/` — current website implementation and transitional Research Manager code
 
 ## Architecture sources of truth
 
-Use this order when deciding what to build:
+Until the Site Manager extraction is complete, use this order when deciding implementation work:
 
 1. [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md)
 2. [`docs/10-decisions.md`](docs/10-decisions.md)
@@ -69,15 +96,22 @@ Use this order when deciding what to build:
 5. [`docs/09-roadmap.md`](docs/09-roadmap.md)
 6. [`docs/21-product-vision-backlog.md`](docs/21-product-vision-backlog.md)
 
+## Licensing
+
+This repository is **proprietary**. See [`LICENSE`](LICENSE).
+
+No open-source licence is granted at repository level. Third-party dependencies and separately identified third-party material remain subject to their own licences.
+
+Reusable product components may later move to the separate Site Manager repository under whatever licence is chosen for that product. That future decision does not change the proprietary status of this repository.
+
 ## Security
 
 Never commit API keys, OAuth client secrets, tokens, passwords or private credentials. The remote Manager must use site-specific, revocable, scoped credentials and must not expose arbitrary PHP, SQL, filesystem or shell execution.
 
-## Current status
+## Current direction
 
-- Research identity foundation: implemented/documented.
-- Research Theme: operational in repository/CI; real-site acceptance remains separate.
-- Research Manager core: substantial implementation exists for Pages, Insights, Research objects, translations, evidence, diagnostics, remediation, rendered verification and academic connections.
-- ChatGPT ↔ Manager authenticated bridge: **not yet implemented; current primary engineering work**.
-
-See [`docs/16-current-implementation-status.md`](docs/16-current-implementation-status.md) for the current implementation state and [`docs/09-roadmap.md`](docs/09-roadmap.md) for M1–M8 execution order.
+- Research identity foundation: implemented and being cleaned for researcher-only presentation.
+- Research Theme: operational; public copy is being separated from internal implementation language.
+- Research Manager: remains temporarily in this repository while reusable capabilities are moved gradually to Site Manager.
+- Academic profile priority: **ORCID → Google Scholar → OpenAlex → additional research profiles**.
+- LinkedIn: supporting factual source for the website, not the primary academic profile.
