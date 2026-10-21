@@ -44,6 +44,7 @@ RUNNERS = {
     "research.line.update": RESEARCH_LINE_UPDATE_RUNNER,
     "manager.tools.list": MANAGER_READ_RUNNER,
     "manager.tool.describe": MANAGER_READ_RUNNER,
+    "manager.page.inspect.pair": MANAGER_READ_RUNNER,
 }
 
 
