@@ -13,7 +13,21 @@ $insights = new WP_Query(eduardo_research_localized_query_args(array(
     'post_type'=>'post','post_status'=>'publish','posts_per_page'=>3,'orderby'=>'date','order'=>'DESC','no_found_rows'=>true,
 ), $language));
 $research_lines = new WP_Query(eduardo_research_verified_line_query_args($language, 6));
-$identifiers = eduardo_research_verified_localized_evidence('identifiers');
+$identifiers = array_values(array_filter(
+    eduardo_research_verified_localized_evidence('identifiers'),
+    static function ($identifier) {
+        if (! is_array($identifier) || empty($identifier['url'])) {
+            return false;
+        }
+
+        $host = strtolower((string) wp_parse_url((string) $identifier['url'], PHP_URL_HOST));
+        $host = preg_replace('/^www\./', '', $host);
+
+        return 'orcid.org' === $host
+            || 'openalex.org' === $host
+            || 0 === strpos($host, 'scholar.google.');
+    }
+));
 $has_research_lines = $research_lines->have_posts();
 $has_outputs = $recent_outputs->have_posts();
 $has_insights = $insights->have_posts();
