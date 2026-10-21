@@ -1,0 +1,31 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-page-inspect-schema-20261021",
+  "command_sha256": "442b990b3f0b0b1ae3bbb8961d00e47040ac1ab76349ac563c4294a0253adff4",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect one registered page in an enabled language.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "key": {
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "type": "string"
+        },
+        "language": {
+          "pattern": "^[a-z][a-z0-9-]{1,15}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "language"
+      ],
+      "type": "object"
+    },
+    "name": "site_page_inspect"
+  },
+  "version": "1"
+}
