@@ -11,6 +11,9 @@ on:
         description: 'Existing commands/phase2d/pending/*.json command to execute'
         required: true
         type: string
+  workflow_run:
+    workflows: ["Research Manager Remote M4 Aggregate Quality"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -21,7 +24,13 @@ concurrency:
 
 jobs:
   execute:
-    if: github.actor == 'Emmakex'
+    if: >
+      (github.event_name != 'workflow_run' && github.actor == 'Emmakex') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.id == 39604098242 &&
+       github.event.workflow_run.run_attempt == 2 &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.triggering_actor.login == 'Emmakex')
     runs-on: ubuntu-latest
     environment: phase2d-production
     env:
@@ -45,6 +54,9 @@ jobs:
           set -euo pipefail
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             command_path='${{ inputs.command_path }}'
+            files=("$command_path")
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
+            command_path='commands/phase2d/pending/cmd-home-profiles-es-20261021-r4.json'
             files=("$command_path")
           else
             mapfile -t files < <(git diff-tree --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
