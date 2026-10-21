@@ -4,6 +4,17 @@
 
 First standalone release-candidate of the Eduardo Research Theme.
 
+### Hotfix — Researcher-only public content cleanup (2026-10-21)
+
+- Refocus the public site exclusively on the researcher identity of **Eduardo Jose Yauri Luna** and his research agenda in artificial intelligence, digital transformation and autonomous systems for business processes.
+- Replace public-facing Theme/system/evidence language with researcher-facing academic copy while preserving evidence validation internally.
+- Reframe the Home visual around the four research directions: autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.
+- Hide empty research outputs, academic identifiers and research-note sections instead of exposing implementation placeholders.
+- Reduce the default primary navigation to About, Research, CV, Insights and Contact; collection destinations remain available once real records exist.
+- Hide empty evidence sections on structured surfaces and keep collection links conditional on public content.
+- Align EN/ES defaults and the canonical research blueprint with the same researcher-first wording.
+- Keep SEO/GEO, schema, evidence gates, bilingual routing and Manager verification contracts unchanged.
+
 ### Hotfix — Phase 4 production Media acceptance
 
 - Render the Theme-owned primary Media slot from `single-post.php`, the template WordPress actually resolves for managed Insight posts.
