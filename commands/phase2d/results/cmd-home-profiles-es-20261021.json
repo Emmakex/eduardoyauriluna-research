@@ -1,0 +1,22 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-home-profiles-es-20261021",
+  "command_sha256": "a62a038b9300781906f8c0410657a4068630d186bcccef6a711292219ea187e2",
+  "correlation": {
+    "operation_id": "erm-operation-36513b835be2485795ebab51994afa61",
+    "plan_id": "erm-remote-plan-a79a9f11915b0347b6ec-62094d20"
+  },
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_page_slots_verify' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /operations/erm-operation-36513b835be2485795ebab51994afa61/verify with HTTP 409: validation_failed\"}],\"isError\":true}}",
+    "message": "The bounded Page text-slot lifecycle did not complete successfully."
+  },
+  "rollback": {
+    "attempted": true,
+    "verified": true
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
