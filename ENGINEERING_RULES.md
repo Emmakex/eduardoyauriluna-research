@@ -8,7 +8,7 @@ This file defines the default operating rule for all work on the live website `e
 
 ## 1. Canonical operating flow for website changes
 
-For all normal website content, structure, SEO/GEO, research-profile and presentation operations, the mandatory flow is:
+For all normal website content, structure, SEO/GEO, research-profile and presentation operations, the mandatory governance lifecycle is:
 
 ```text
 Conversation
@@ -24,18 +24,41 @@ Verify
 Result reported back in the conversation
 ```
 
-Expanded:
+The **canonical production transport from this ChatGPT conversation** is:
+
+```text
+Eduardo
+→ ChatGPT
+→ GitHub connector
+→ GitHub Actions / Kairoseth Command Gateway
+→ production MCP tenant (`eduardo-research`)
+→ Research Manager
+→ WordPress
+→ Verify
+→ sanitized result to GitHub
+→ ChatGPT
+```
+
+This is the accepted operator path for governing `eduardoyauriluna.com` from ChatGPT.
+
+Expanded lifecycle:
 
 ```text
 Eduardo → ChatGPT conversation
-        → authenticated governance / Research Manager capability
+        → governed command through the GitHub connector
+        → GitHub Actions / Kairoseth Command Gateway
+        → selected production MCP tenant `eduardo-research`
+        → Research Manager capability
         → read actual production state
         → bounded Preview / validation
         → authorised Apply against the real production WordPress resource
         → stored-state verification
         → rendered production verification when applicable
-        → real result returned to Eduardo
+        → sanitized execution result returned through GitHub
+        → ChatGPT reports the real outcome to Eduardo
 ```
+
+A direct `ChatGPT → MCP` channel may be used in the future when explicitly available and authorised, but it is **not required** for the canonical managed flow above.
 
 ## 2. Production is the normal target
 
@@ -64,17 +87,42 @@ This includes, when supported by the Manager capability:
 
 A change is **not complete** because a repository file was changed or a commit passed CI. For normal website operations, completion requires a successful production Apply and Verify result.
 
-## 3. Repository is not a staging layer for normal content operations
+## 3. GitHub is the governed transport, not an editorial staging layer
 
-Do **not** use Git commits, repository content files, command fixtures or CI as an intermediate publishing workflow for ordinary website updates.
+GitHub has two distinct roles and they must never be confused.
+
+### 3.1 Allowed and canonical role: execution bridge
+
+For operations initiated from this conversation, GitHub is the controlled transport between ChatGPT and the production MCP:
+
+```text
+ChatGPT
+→ GitHub connector
+→ GitHub Actions / Kairoseth Command Gateway
+→ MCP `eduardo-research`
+→ Research Manager
+→ WordPress production
+```
+
+The bridge may carry validated command envelopes, invoke bounded actions, enforce tenant/capability rules, preserve idempotency and return sanitized verification results.
+
+### 3.2 Forbidden normal-content role: repository staging
+
+Do **not** use Git commits, repository content files, command fixtures or CI as an intermediate publishing store for ordinary website updates.
 
 The repository may document intent, architecture, contracts, engineering rules, schemas, tests and implementation code, but the normal content lifecycle must not become:
 
 ```text
-Conversation → edit repo content → commit → deploy content to WordPress
+Conversation → edit repo content → commit → deploy that content to WordPress
 ```
 
 That is **not** the operating model for `eduardoyauriluna.com`.
+
+Therefore:
+
+> **GitHub is part of the command transport, but the repository is not the source of truth or staging area for normal WordPress content.**
+
+The source of truth for live content is the governed production WordPress state verified through Research Manager/MCP.
 
 ## 4. Repository changes are reserved for code / architecture
 
@@ -126,12 +174,14 @@ The ChatGPT conversation is the primary control surface for Eduardo.
 The expected behaviour is:
 
 1. understand the requested outcome;
-2. inspect actual production state when needed;
-3. translate intent into bounded Manager operations;
-4. preview/validate material mutations;
-5. apply directly to WordPress production;
-6. verify stored and rendered state;
-7. report what actually changed, including failures or partial results.
+2. inspect actual production state through the governed MCP path when needed;
+3. translate intent into a bounded command/action;
+4. send it through the GitHub connector and Kairoseth Command Gateway to tenant `eduardo-research`;
+5. preview/validate material mutations through Research Manager;
+6. apply directly to WordPress production;
+7. verify stored and rendered state;
+8. read the sanitized result returned through GitHub;
+9. report what actually changed, including failures or partial results.
 
 WordPress Admin remains a fallback/admin surface. SSH, direct database edits, arbitrary PHP, FTP and ad-hoc WP-CLI writes are not normal content-operation paths.
 
@@ -162,14 +212,29 @@ Do not expose as public narrative:
 
 For normal production operations, the authoritative completion evidence is the governed operation result plus verification of the actual production state.
 
+The expected readback chain is:
+
+```text
+WordPress production
+→ Research Manager Verify
+→ production MCP
+→ Kairoseth Command Gateway / GitHub Actions
+→ sanitized GitHub result
+→ ChatGPT
+→ Eduardo
+```
+
 Repository commits are authoritative only for code/documentation changes, not as proof that a normal content update is live.
 
-## 9. Related canonical contract
+## 9. Related canonical contracts
 
-This global rule specialises and operationalises the repository contract in:
+This global rule specialises and operationalises the repository contracts and accepted production bridge, including:
 
 - `docs/22-chat-governed-manager-contract.md`
+- Phase 2D accepted ChatGPT/GitHub Command Bridge to production MCP
 
-Where there is ambiguity about ordinary website operation, use this rule:
+Where there is ambiguity about ordinary website operation, use both of these rules together:
 
-> **Conversation → governance → Preview/validation → Apply directly in WordPress production → Verify → result.**
+> **Governance lifecycle:** Conversation → governance → Preview/validation → Apply directly in WordPress production → Verify → result.
+
+> **Canonical transport from here:** Eduardo → ChatGPT → GitHub connector → GitHub Actions / Kairoseth Command Gateway → MCP production (`eduardo-research`) → Research Manager → WordPress → Verify → result to GitHub → ChatGPT.
