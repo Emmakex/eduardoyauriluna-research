@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-outputs-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "en",
+    "slot": "selected-outputs-intro",
+    "value": "Publications, projects, research software and datasets developed from the research agenda."
+  }
+}
