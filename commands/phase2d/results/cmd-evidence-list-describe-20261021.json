@@ -1,0 +1,36 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-evidence-list-describe-20261021",
+  "command_sha256": "37bf1d1b438f0fa300c752c6490a0def766c8140651a6491c0ad087b1c8e7b7f",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "List evidence records in one closed evidence group.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "group": {
+          "enum": [
+            "profile",
+            "affiliations",
+            "identifiers",
+            "research_questions",
+            "methods",
+            "experience",
+            "education",
+            "awards",
+            "contact"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "group"
+      ],
+      "type": "object"
+    },
+    "name": "site_evidence_list"
+  },
+  "version": "1"
+}
