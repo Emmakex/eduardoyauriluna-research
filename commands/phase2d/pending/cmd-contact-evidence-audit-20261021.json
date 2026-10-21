@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-contact-evidence-audit-20261021",
+  "tenant": "eduardo-research",
+  "action": "manager.evidence.contact.audit",
+  "requested_by": "chatgpt",
+  "payload": {}
+}
