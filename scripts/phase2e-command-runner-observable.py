@@ -47,6 +47,7 @@ RUNNERS = {
     "manager.page.inspect.pair": MANAGER_READ_RUNNER,
     "manager.evidence.about.audit": MANAGER_READ_RUNNER,
     "manager.evidence.cv.audit": MANAGER_READ_RUNNER,
+    "manager.evidence.contact.audit": MANAGER_READ_RUNNER,
     "manager.research.lines.list.pair": MANAGER_READ_RUNNER,
 }
 
