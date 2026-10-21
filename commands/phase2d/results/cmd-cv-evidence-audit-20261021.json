@@ -1,0 +1,57 @@
+{
+  "action": "manager.evidence.cv.audit",
+  "command_id": "cmd-cv-evidence-audit-20261021",
+  "command_sha256": "42c6152dc7c3b7e1045e6f06983ba6e115fb331691ba5be07794ccd679ccd47b",
+  "groups": {
+    "affiliations": {
+      "count": 0,
+      "group": "affiliations",
+      "items": [],
+      "label": "Affiliations",
+      "surfaces": [
+        "about",
+        "cv"
+      ]
+    },
+    "awards": {
+      "count": 0,
+      "group": "awards",
+      "items": [],
+      "label": "Awards",
+      "surfaces": [
+        "cv"
+      ]
+    },
+    "education": {
+      "count": 0,
+      "group": "education",
+      "items": [],
+      "label": "Education",
+      "surfaces": [
+        "cv"
+      ]
+    },
+    "experience": {
+      "count": 0,
+      "group": "experience",
+      "items": [],
+      "label": "Experience",
+      "surfaces": [
+        "cv"
+      ]
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "groups": [
+      "experience",
+      "education",
+      "affiliations",
+      "awards"
+    ],
+    "surface": "cv"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
