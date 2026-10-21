@@ -1,0 +1,130 @@
+{
+  "action": "manager.page.inspect.pair",
+  "command_id": "cmd-research-inspect-pair-20261021-r2",
+  "command_sha256": "ce727cec1a83bf7f429bc2c1e1bc1681e0d67443f6e202e358b4c8fd33b72879",
+  "pages": {
+    "en": {
+      "allowed_slots": [
+        "eyebrow",
+        "lead",
+        "sections"
+      ],
+      "contract_aligned": true,
+      "contract_slug": "research",
+      "effective_slots": {
+        "eyebrow": "Research agenda",
+        "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+        "sections": [
+          "Autonomous AI agents",
+          "Human–AI collaboration",
+          "Digital transformation in SMEs",
+          "AI-mediated information discovery",
+          "Methods and evaluation"
+        ]
+      },
+      "expected_model": "research-hub-v1",
+      "expected_role": "research-hub",
+      "key": "research",
+      "language": "en",
+      "model": "research-hub-v1",
+      "option_key": "eduardo_research_surface_research",
+      "page_id": 10,
+      "published": true,
+      "role": "research-hub",
+      "slug": "research",
+      "state_policy": {
+        "allowed_statuses": [
+          "draft",
+          "publish"
+        ],
+        "archive_status": "draft",
+        "destructive_delete": false,
+        "slug_editable": false,
+        "slug_source": "theme-contract",
+        "status_editable": true,
+        "title_editable": true
+      },
+      "status": "publish",
+      "stored_slots": {
+        "eyebrow": "Research agenda",
+        "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+        "sections": [
+          "Autonomous AI agents",
+          "Human–AI collaboration",
+          "Digital transformation in SMEs",
+          "AI-mediated information discovery",
+          "Methods and evaluation"
+        ]
+      },
+      "title": "Research",
+      "url": "https://eduardoyauriluna.com/research/"
+    },
+    "es": {
+      "allowed_slots": [
+        "eyebrow",
+        "lead",
+        "sections"
+      ],
+      "contract_aligned": true,
+      "contract_slug": "research",
+      "effective_slots": {
+        "eyebrow": "Agenda de investigación",
+        "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+        "sections": [
+          "Agentes autónomos de IA",
+          "Colaboración humano–IA",
+          "Transformación digital en pymes",
+          "Descubrimiento de información mediado por IA",
+          "Métodos y evaluación"
+        ]
+      },
+      "expected_model": "research-hub-v1",
+      "expected_role": "research-hub",
+      "key": "research",
+      "language": "es",
+      "model": "research-hub-v1",
+      "option_key": "eduardo_research_surface_research_es",
+      "page_id": 10,
+      "published": true,
+      "role": "research-hub",
+      "slug": "research",
+      "state_policy": {
+        "allowed_statuses": [
+          "draft",
+          "publish"
+        ],
+        "archive_status": "draft",
+        "destructive_delete": false,
+        "slug_editable": false,
+        "slug_source": "theme-contract",
+        "status_editable": true,
+        "title_editable": true
+      },
+      "status": "publish",
+      "stored_slots": {
+        "eyebrow": "Agenda de investigación",
+        "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+        "sections": [
+          "Agentes autónomos de IA",
+          "Colaboración humano–IA",
+          "Transformación digital en pymes",
+          "Descubrimiento de información mediado por IA",
+          "Métodos y evaluación"
+        ]
+      },
+      "title": "Research",
+      "url": "https://eduardoyauriluna.com/es/investigacion/"
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "key": "research",
+    "languages": [
+      "en",
+      "es"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
