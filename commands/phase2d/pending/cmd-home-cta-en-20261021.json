@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-cta-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "en",
+    "slot": "final-cta-body",
+    "value": "Explore the research lines, the questions that guide them and the methods proposed for their development."
+  }
+}
