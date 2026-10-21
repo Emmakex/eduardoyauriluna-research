@@ -7,7 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 function eduardo_research_preset(): array {
     return array(
         'id' => 'research',
-        'version' => 4,
+        'version' => 5,
         'frontend_authority' => 'theme',
         'default_language' => 'en',
         'languages' => array('en','es'),
@@ -25,7 +25,7 @@ function eduardo_research_preset(): array {
             'privacy-policy' => array('role'=>'legal','slug'=>'privacy-policy','wp_slug'=>'privacy-policy','model'=>'research-legal-v1','label'=>'Privacy','labels'=>array('en'=>'Privacy','es'=>'Privacidad'),'slugs'=>array('en'=>'privacy-policy','es'=>'privacidad')),
             'legal-notice' => array('role'=>'legal','slug'=>'legal-notice','wp_slug'=>'legal-notice','model'=>'research-legal-v1','label'=>'Legal notice','labels'=>array('en'=>'Legal notice','es'=>'Aviso legal'),'slugs'=>array('en'=>'legal-notice','es'=>'aviso-legal')),
         ),
-        'primary_navigation' => array('about','research','publications','projects','software','datasets','cv','insights','contact'),
+        'primary_navigation' => array('about','research','cv','insights','contact'),
         'footer_navigation' => array('privacy-policy','legal-notice'),
         'evidence_required' => array(
             'degrees','affiliations','peer_review_status','doi','citation_metrics',
@@ -72,9 +72,42 @@ function eduardo_research_navigation_state(): array {
     return eduardo_research_navigation_sanitize_state(is_array($stored) ? $stored : array());
 }
 
+function eduardo_research_navigation_target_is_visible(string $key): bool {
+    $post_types = array(
+        'publications'=>'research_output',
+        'projects'=>'research_project',
+        'software'=>'research_software',
+        'datasets'=>'research_dataset',
+    );
+    if (! isset($post_types[$key])) { return true; }
+
+    $language = function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en';
+    static $cache = array();
+    $cache_key = $language . ':' . $key;
+    if (array_key_exists($cache_key, $cache)) { return (bool) $cache[$cache_key]; }
+
+    $args = array(
+        'post_type'=>$post_types[$key],
+        'post_status'=>'publish',
+        'posts_per_page'=>1,
+        'fields'=>'ids',
+        'no_found_rows'=>true,
+    );
+    if (function_exists('eduardo_research_localized_query_args')) {
+        $args = eduardo_research_localized_query_args($args, $language);
+    }
+    $query = new WP_Query($args);
+    $cache[$cache_key] = $query->have_posts();
+    return (bool) $cache[$cache_key];
+}
+
 function eduardo_research_navigation_keys(string $location): array {
     $state = eduardo_research_navigation_state();
-    return array_values((array) ($state[sanitize_key($location)] ?? array()));
+    $keys = array_values((array) ($state[sanitize_key($location)] ?? array()));
+    if ('primary' === sanitize_key($location)) {
+        $keys = array_values(array_filter($keys, 'eduardo_research_navigation_target_is_visible'));
+    }
+    return $keys;
 }
 
 function eduardo_research_page_url(string $key, ?string $language = null): string {
