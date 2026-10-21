@@ -21,9 +21,9 @@ function eduardo_research_canonical_identity_headline(?string $language = null):
         $headline = trim((string) $stored[$key]);
         if ('' !== $headline) { return $headline; }
     }
-    if ('es' === $language) { return 'Investigación, software y sistemas digitales basados en evidencia'; }
-    $fallback = trim((string) get_bloginfo('description'));
-    return '' !== $fallback ? $fallback : 'Research, software and evidence-driven digital systems';
+    return 'es' === $language
+        ? 'Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales'
+        : 'Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes';
 }
 
 function eduardo_research_default_model(?string $language = null): array {
@@ -35,17 +35,17 @@ function eduardo_research_default_model(?string $language = null): array {
             'hero-eyebrow'=>'Perfil de investigación',
             'researcher-name'=>$name,
             'researcher-headline'=>$headline,
-            'hero-lead'=>'Un perfil de investigación estructurado para el descubrimiento académico, la reproducibilidad y el contexto académico legible por máquinas.',
+            'hero-lead'=>'Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.',
             'hero-primary-target'=>'research',
             'hero-secondary-target'=>'cv',
             'research-lines-heading'=>'Agenda de investigación',
-            'research-lines-intro'=>'Las líneas activas de investigación, preguntas y métodos se publican aquí con una procedencia clara.',
-            'selected-outputs-heading'=>'Resultados seleccionados',
-            'selected-outputs-intro'=>'Publicaciones, proyectos, software y datos se representan como objetos de investigación de primera clase.',
-            'academic-identifiers-heading'=>'Identidad académica verificada',
-            'latest-insights-heading'=>'Últimas notas de investigación',
+            'research-lines-intro'=>'La agenda de investigación se articula en torno a agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.',
+            'selected-outputs-heading'=>'Resultados de investigación',
+            'selected-outputs-intro'=>'Publicaciones, proyectos, software de investigación y conjuntos de datos derivados de la agenda de investigación.',
+            'academic-identifiers-heading'=>'Perfiles académicos',
+            'latest-insights-heading'=>'Notas de investigación',
             'final-cta-heading'=>'Investigación y colaboración',
-            'final-cta-body'=>'Explora la agenda de investigación, los resultados y los artefactos reproducibles.',
+            'final-cta-body'=>'Explora las líneas de investigación, las preguntas que las orientan y los métodos planteados para su desarrollo.',
             'final-cta-button'=>'Explorar investigación',
             'final-cta-target'=>'contact',
         );
@@ -54,17 +54,17 @@ function eduardo_research_default_model(?string $language = null): array {
         'hero-eyebrow'=>'Research profile',
         'researcher-name'=>$name,
         'researcher-headline'=>$headline,
-        'hero-lead'=>'A structured research profile designed for scholarly discovery, reproducibility and machine-readable academic context.',
+        'hero-lead'=>'Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.',
         'hero-primary-target'=>'research',
         'hero-secondary-target'=>'cv',
         'research-lines-heading'=>'Research agenda',
-        'research-lines-intro'=>'Active research lines, questions and methods are published here with clear provenance.',
-        'selected-outputs-heading'=>'Selected outputs',
-        'selected-outputs-intro'=>'Scholarly and research outputs are represented as first-class research objects.',
-        'academic-identifiers-heading'=>'Verified academic identity',
-        'latest-insights-heading'=>'Latest research notes',
+        'research-lines-intro'=>'The research agenda focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.',
+        'selected-outputs-heading'=>'Research outputs',
+        'selected-outputs-intro'=>'Publications, projects, research software and datasets developed from the research agenda.',
+        'academic-identifiers-heading'=>'Academic profiles',
+        'latest-insights-heading'=>'Research notes',
         'final-cta-heading'=>'Research and collaboration',
-        'final-cta-body'=>'Explore the research agenda, outputs and reproducible artefacts.',
+        'final-cta-body'=>'Explore the research lines, the questions that guide them and the methods proposed for their development.',
         'final-cta-button'=>'Explore research',
         'final-cta-target'=>'contact',
     );
@@ -74,31 +74,31 @@ function eduardo_research_surface_models(?string $language = null): array {
     $language = $language ?: eduardo_research_current_language();
     if ('es' === $language) {
         return array(
-            'about'=>array('eyebrow'=>'Perfil','lead'=>'Perfil del investigador, trayectoria y contexto profesional o académico verificado.','sections'=>array('Perfil','Trayectoria','Identidad verificada')),
-            'research'=>array('eyebrow'=>'Agenda de investigación','lead'=>'Líneas, preguntas, métodos y trabajo reproducible organizado para personas y máquinas.','sections'=>array('Líneas de investigación','Métodos','Preguntas actuales')),
-            'publications'=>array('eyebrow'=>'Resultados de investigación','lead'=>'Resultados académicos y de investigación con estado, procedencia y orientación de citación explícitos.'),
-            'projects'=>array('eyebrow'=>'Proyectos','lead'=>'Proyectos de investigación con objetivos, métodos, colaboradores y resultados verificables.'),
-            'software'=>array('eyebrow'=>'Software de investigación','lead'=>'Software y artefactos técnicos que apoyan la investigación y la experimentación reproducibles.'),
-            'datasets'=>array('eyebrow'=>'Datos','lead'=>'Datos de investigación con procedencia, alcance, condiciones de acceso y contexto de reutilización.'),
-            'cv'=>array('eyebrow'=>'Currículum vitae','lead'=>'Currículum académico y de investigación generado a partir de evidencia estructurada y verificada.','sections'=>array('Experiencia','Formación','Resultados de investigación','Proyectos seleccionados')),
-            'insights'=>array('eyebrow'=>'Notas','lead'=>'Notas de investigación, explicaciones e ideas de trabajo dentro de una superficie editorial controlada por el Theme.'),
-            'contact'=>array('eyebrow'=>'Contacto','lead'=>'Canales de contacto de investigación e identificadores de perfil académico verificados.','sections'=>array('Consultas de investigación','Perfiles académicos')),
-            'privacy-policy'=>array('eyebrow'=>'Legal','lead'=>'Información de privacidad de este sitio web de investigación.','sections'=>array('Tratamiento de datos','Contacto')),
-            'legal-notice'=>array('eyebrow'=>'Legal','lead'=>'Información legal y de titularidad de este sitio web de investigación.','sections'=>array('Titularidad del sitio','Condiciones de uso')),
+            'about'=>array('eyebrow'=>'Perfil de investigación','lead'=>'Eduardo Jose Yauri Luna desarrolla una agenda de investigación aplicada sobre sistemas empresariales habilitados por IA, apoyada en más de diez años de experiencia profesional en estrategia digital, tecnologías web, automatización y sistemas empresariales basados en software.','sections'=>array('Perfil de investigación','Trayectoria profesional','Perfiles académicos')),
+            'research'=>array('eyebrow'=>'Agenda de investigación','lead'=>'La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.','sections'=>array('Líneas de investigación','Preguntas de investigación','Métodos')),
+            'publications'=>array('eyebrow'=>'Publicaciones','lead'=>'Publicaciones y otros resultados académicos de Eduardo Jose Yauri Luna.'),
+            'projects'=>array('eyebrow'=>'Proyectos de investigación','lead'=>'Proyectos vinculados a la agenda de investigación de Eduardo Jose Yauri Luna.'),
+            'software'=>array('eyebrow'=>'Software de investigación','lead'=>'Software y artefactos técnicos desarrollados en relación con la investigación.'),
+            'datasets'=>array('eyebrow'=>'Datos de investigación','lead'=>'Conjuntos de datos y recursos de investigación asociados a trabajos y proyectos publicados.'),
+            'cv'=>array('eyebrow'=>'Currículum vitae','lead'=>'Trayectoria académica y profesional de Eduardo Jose Yauri Luna, con especial atención a la experiencia relevante para su agenda de investigación en inteligencia artificial, transformación digital y sistemas autónomos.','sections'=>array('Experiencia','Formación','Afiliaciones','Reconocimientos')),
+            'insights'=>array('eyebrow'=>'Notas de investigación','lead'=>'Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación.'),
+            'contact'=>array('eyebrow'=>'Contacto de investigación','lead'=>'Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.','sections'=>array('Contacto','Perfiles académicos')),
+            'privacy-policy'=>array('eyebrow'=>'Privacidad','lead'=>'Información de privacidad de eduardoyauriluna.com.','sections'=>array('Tratamiento de datos','Contacto')),
+            'legal-notice'=>array('eyebrow'=>'Aviso legal','lead'=>'Información legal y de titularidad de eduardoyauriluna.com.','sections'=>array('Titularidad del sitio','Condiciones de uso')),
         );
     }
     return array(
-        'about'=>array('eyebrow'=>'Profile','lead'=>'Researcher profile, background and verified professional or academic context.','sections'=>array('Profile','Background','Verified identity')),
-        'research'=>array('eyebrow'=>'Research agenda','lead'=>'Research lines, questions, methods and reproducible work organised for people and machines.','sections'=>array('Research lines','Methods','Current questions')),
-        'publications'=>array('eyebrow'=>'Research outputs','lead'=>'Scholarly and research outputs with explicit status, provenance and citation guidance.'),
-        'projects'=>array('eyebrow'=>'Projects','lead'=>'Research projects with objectives, methods, collaborators and verifiable outcomes.'),
-        'software'=>array('eyebrow'=>'Research software','lead'=>'Software and technical artefacts supporting reproducible research and experimentation.'),
-        'datasets'=>array('eyebrow'=>'Datasets','lead'=>'Research datasets with provenance, scope, access conditions and reuse context.'),
-        'cv'=>array('eyebrow'=>'Curriculum vitae','lead'=>'Academic and research curriculum generated from verified structured evidence.','sections'=>array('Experience','Education','Research outputs','Selected projects')),
-        'insights'=>array('eyebrow'=>'Insights','lead'=>'Research notes, explainers and working ideas inside a Theme-owned editorial surface.'),
-        'contact'=>array('eyebrow'=>'Contact','lead'=>'Research contact channels and verified academic profile identifiers.','sections'=>array('Research enquiries','Academic profiles')),
-        'privacy-policy'=>array('eyebrow'=>'Legal','lead'=>'Privacy information for this research website.','sections'=>array('Data handling','Contact')),
-        'legal-notice'=>array('eyebrow'=>'Legal','lead'=>'Legal and ownership information for this research website.','sections'=>array('Site ownership','Terms of use')),
+        'about'=>array('eyebrow'=>'Research profile','lead'=>'Eduardo Jose Yauri Luna develops an applied research agenda around AI-enabled business systems, drawing on more than ten years of professional experience in digital strategy, web technologies, automation and software-based business systems.','sections'=>array('Research profile','Professional background','Academic profiles')),
+        'research'=>array('eyebrow'=>'Research agenda','lead'=>'The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.','sections'=>array('Research lines','Research questions','Methods')),
+        'publications'=>array('eyebrow'=>'Publications','lead'=>'Publications and other scholarly outputs by Eduardo Jose Yauri Luna.'),
+        'projects'=>array('eyebrow'=>'Research projects','lead'=>'Projects connected to the research agenda of Eduardo Jose Yauri Luna.'),
+        'software'=>array('eyebrow'=>'Research software','lead'=>'Software and technical artefacts developed in connection with the research agenda.'),
+        'datasets'=>array('eyebrow'=>'Research datasets','lead'=>'Datasets and research resources associated with published work and projects.'),
+        'cv'=>array('eyebrow'=>'Curriculum vitae','lead'=>'Academic and professional background of Eduardo Jose Yauri Luna, with particular focus on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems.','sections'=>array('Experience','Education','Affiliations','Awards')),
+        'insights'=>array('eyebrow'=>'Research notes','lead'=>'Working notes, explainers and methodological observations related to the research agenda.'),
+        'contact'=>array('eyebrow'=>'Research contact','lead'=>'Contact for academic conversations, collaboration and enquiries related to the research agenda.','sections'=>array('Contact','Academic profiles')),
+        'privacy-policy'=>array('eyebrow'=>'Privacy','lead'=>'Privacy information for eduardoyauriluna.com.','sections'=>array('Data handling','Contact')),
+        'legal-notice'=>array('eyebrow'=>'Legal notice','lead'=>'Legal and ownership information for eduardoyauriluna.com.','sections'=>array('Site ownership','Terms of use')),
     );
 }
 
@@ -123,7 +123,7 @@ function eduardo_research_slot(string $key): string {
 function eduardo_research_surface_model(string $key): array {
     $language = eduardo_research_current_language();
     $models = eduardo_research_surface_models($language);
-    $defaults = $models[$key] ?? array('eyebrow'=>('es' === $language ? 'Investigación' : 'Research'),'lead'=>('es' === $language ? 'Superficie de perfil de investigación.' : 'Research profile surface.'));
+    $defaults = $models[$key] ?? array('eyebrow'=>('es' === $language ? 'Investigación' : 'Research'),'lead'=>('es' === $language ? 'Perfil de investigación de Eduardo Jose Yauri Luna.' : 'Research profile of Eduardo Jose Yauri Luna.'));
     $option = 'eduardo_research_surface_' . sanitize_key($key) . ('es' === $language ? '_es' : '');
     $stored = get_option($option, array());
     return is_array($stored) ? array_replace($defaults, array_intersect_key($stored, $defaults)) : $defaults;
