@@ -28,7 +28,7 @@ jobs:
       (github.event_name != 'workflow_run' && github.actor == 'Emmakex') ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.id == 39604098242 &&
-       github.event.workflow_run.run_attempt == 3 &&
+       github.event.workflow_run.run_attempt == 4 &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.triggering_actor.login == 'Emmakex')
     runs-on: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
             command_path='${{ inputs.command_path }}'
             files=("$command_path")
           elif [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
-            command_path='commands/phase2d/pending/cmd-home-outputs-en-20261021-r2.json'
+            command_path='commands/phase2d/pending/cmd-home-outputs-es-20261021-r2.json'
             files=("$command_path")
           else
             mapfile -t files < <(git diff-tree --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" -- 'commands/phase2d/pending/*.json')
