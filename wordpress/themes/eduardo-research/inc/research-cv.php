@@ -10,7 +10,7 @@ function eduardo_research_cv_record_period(array $record): string {
     $start = isset($record['start_date']) && is_scalar($record['start_date']) ? trim((string) $record['start_date']) : '';
     $end = isset($record['end_date']) && is_scalar($record['end_date']) ? trim((string) $record['end_date']) : '';
     if ('' === $start && '' === $end) { return ''; }
-    return trim($start . ('es' === eduardo_research_current_language() ? ' — ' : ' — ') . ($end ?: ('es' === eduardo_research_current_language() ? 'Actualidad' : 'Present')));
+    return trim($start . ' — ' . ($end ?: ('es' === eduardo_research_current_language() ? 'Actualidad' : 'Present')));
 }
 
 function eduardo_research_cv_record_context(array $record): string {
@@ -62,7 +62,7 @@ function eduardo_research_render_cv_surface(): void {
     ?>
     <div class="research-cv-surface">
       <div class="research-cv-toolbar" aria-label="<?php echo esc_attr($es ? 'Acciones del currículum' : 'CV actions'); ?>">
-        <p><?php echo esc_html($es ? 'Vista web preparada para impresión o guardado como PDF desde el navegador.' : 'Web view prepared for printing or saving as PDF from the browser.'); ?></p>
+        <p><?php echo esc_html($es ? 'Versión web preparada para imprimir o guardar como PDF.' : 'Web version prepared for printing or saving as PDF.'); ?></p>
         <button class="research-button research-cv-print" type="button" data-research-print><?php echo esc_html($es ? 'Imprimir / Guardar PDF' : 'Print / Save PDF'); ?></button>
       </div>
 
@@ -95,7 +95,7 @@ function eduardo_research_render_cv_surface(): void {
       <?php else : wp_reset_postdata(); endif; ?>
 
       <?php if (0 === $position) : ?>
-        <div class="research-interior-empty"><div class="research-verification-mark" aria-hidden="true">✓</div><div><h3><?php echo esc_html($es ? 'Currículum preparado para evidencia verificada' : 'CV ready for verified evidence'); ?></h3><p><?php echo esc_html($es ? 'No se publicará experiencia, formación, afiliaciones ni reconocimientos hasta que exista evidencia verificada.' : 'Experience, education, affiliations and awards remain unpublished until verified evidence exists.'); ?></p></div></div>
+        <div class="research-interior-empty"><div><h3><?php echo esc_html($es ? 'Currículum en desarrollo' : 'Curriculum in development'); ?></h3><p><?php echo esc_html($es ? 'Esta sección se ampliará con la trayectoria académica y profesional relevante para la agenda de investigación.' : 'This section will expand with academic and professional background relevant to the research agenda.'); ?></p></div></div>
       <?php endif; ?>
     </div>
     <?php
