@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-home-eyebrow-en-20261021",
+  "command_sha256": "865aca81fc77f52379269af10f900f647eb6e8e695709aaa7444b9ec328f0fa2",
+  "correlation": {
+    "operation_id": "erm-operation-9ac402ab53c54718a1e58f51f479047a",
+    "plan_id": "erm-remote-plan-6a62428d8711c7bf6b36-c35a880f"
+  },
+  "resource": {
+    "key": "home",
+    "language": "en",
+    "slot": "hero-eyebrow"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
