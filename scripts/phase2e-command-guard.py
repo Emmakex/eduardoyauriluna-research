@@ -66,6 +66,7 @@ PHASE2E_VALIDATORS = {
     manager_read.LIST_ACTION: manager_read,
     manager_read.DESCRIBE_ACTION: manager_read,
     manager_read.PAGE_INSPECT_PAIR_ACTION: manager_read,
+    manager_read.EVIDENCE_ABOUT_AUDIT_ACTION: manager_read,
 }
 
 
