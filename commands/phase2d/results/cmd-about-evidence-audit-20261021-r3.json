@@ -1,0 +1,48 @@
+{
+  "action": "manager.evidence.about.audit",
+  "command_id": "cmd-about-evidence-audit-20261021-r3",
+  "command_sha256": "b2765ad835f80a384f53e28c0ea10a05f93489f8ae1e4711959c9e3837dba055",
+  "groups": {
+    "affiliations": {
+      "count": 0,
+      "group": "affiliations",
+      "items": [],
+      "label": "Affiliations",
+      "surfaces": [
+        "about",
+        "cv"
+      ]
+    },
+    "identifiers": {
+      "count": 0,
+      "group": "identifiers",
+      "items": [],
+      "label": "Academic identifiers",
+      "surfaces": [
+        "about",
+        "contact"
+      ]
+    },
+    "profile": {
+      "count": 0,
+      "group": "profile",
+      "items": [],
+      "label": "Research profile",
+      "surfaces": [
+        "about"
+      ]
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "groups": [
+      "profile",
+      "affiliations",
+      "identifiers"
+    ],
+    "surface": "about"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
