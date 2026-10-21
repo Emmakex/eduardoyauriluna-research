@@ -137,7 +137,7 @@ function eduardo_research_dictionary(): array {
         'publications'=>array('en'=>'Publications','es'=>'Publicaciones'),
         'projects'=>array('en'=>'Projects','es'=>'Proyectos'),
         'verified_evidence'=>array('en'=>'Profile information','es'=>'Información del perfil'),
-        'open_source'=>array('en'=>'View source','es'=>'Ver fuente'),
+        'open_source'=>array('en'=>'View record','es'=>'Ver registro'),
         'no_verified_evidence'=>array('en'=>'No entries have been published in this section yet.','es'=>'Todavía no se han publicado elementos en esta sección.'),
         'evidence_index'=>array('en'=>'Research index','es'=>'Índice de investigación'),
         'no_records'=>array('en'=>'No research records have been published yet.','es'=>'Todavía no se han publicado registros de investigación.'),
