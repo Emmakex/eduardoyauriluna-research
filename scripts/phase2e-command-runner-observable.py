@@ -43,6 +43,7 @@ RUNNERS = {
     "research.line.create": RESEARCH_LINE_CREATE_RUNNER,
     "research.line.update": RESEARCH_LINE_UPDATE_RUNNER,
     "manager.tools.list": MANAGER_READ_RUNNER,
+    "manager.tool.describe": MANAGER_READ_RUNNER,
 }
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Execute bounded read-only Manager inspection commands through production MCP.
 
-This runner intentionally exposes no mutation lifecycle. It is limited to authenticated
-MCP tool discovery so ChatGPT can resolve the real read surface before inspecting live
-WordPress resources. Only sanitized tool names are persisted.
+This runner exposes authenticated discovery/inspection only. It never invokes a mutation
+tool. Persisted output is deliberately limited to tool names or the public MCP schema of
+an explicitly allowlisted read tool.
 """
 from __future__ import annotations
 
@@ -16,7 +16,11 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
-ACTION = "manager.tools.list"
+LIST_ACTION = "manager.tools.list"
+DESCRIBE_ACTION = "manager.tool.describe"
+ACTION = LIST_ACTION
+ACTIONS = {LIST_ACTION, DESCRIBE_ACTION}
+DESCRIBABLE_TOOLS = {"site_page_inspect"}
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_manager_read_base", BASE_RUNNER)
 if spec is None or spec.loader is None:
@@ -40,18 +44,35 @@ def validate_command(command: dict[str, Any]) -> None:
         raise CommandError("invalid command_id")
     if command.get("tenant") != "eduardo-research":
         raise CommandError("Manager read tenant is not registered")
-    if command.get("action") != ACTION:
+    action = command.get("action")
+    if action not in ACTIONS:
         raise CommandError("unsupported Manager read action")
     if command.get("requested_by") != "chatgpt":
         raise CommandError("requested_by must be chatgpt")
-    if command.get("payload") != {}:
-        raise CommandError("manager.tools.list payload must be empty")
+    payload = command.get("payload")
+    if not isinstance(payload, dict):
+        raise CommandError("payload must be an object")
+    if action == LIST_ACTION:
+        if payload != {}:
+            raise CommandError("manager.tools.list payload must be empty")
+    elif action == DESCRIBE_ACTION:
+        if set(payload) != {"tool"} or payload.get("tool") not in DESCRIBABLE_TOOLS:
+            raise CommandError("manager.tool.describe is limited to the reviewed read-tool allowlist")
 
 
 def load_validated_command(path: Path) -> dict[str, Any]:
     command = load_json(path)
     validate_command(command)
     return command
+
+
+def tool_inventory(client: Any) -> list[dict[str, Any]]:
+    payload = client.run(["--method", "tools/list"])
+    result_obj = payload.get("result") if isinstance(payload, dict) else None
+    tools = result_obj.get("tools") if isinstance(result_obj, dict) else None
+    if not isinstance(tools, list):
+        raise CommandError("MCP tools/list returned no tool inventory")
+    return [item for item in tools if isinstance(item, dict)]
 
 
 def execute(command_path: Path, result_dir: Path) -> int:
@@ -70,27 +91,43 @@ def execute(command_path: Path, result_dir: Path) -> int:
         raise CommandError("Manager read execution only permits the production MCP base URL")
 
     tenant = str(command["tenant"])
+    action = str(command["action"])
     client = base.McpClient(f"{base_url}/{tenant}", token)
     try:
         client.initialize()
         client.call("research_capabilities")
-        payload = client.run(["--method", "tools/list"])
-        result_obj = payload.get("result") if isinstance(payload, dict) else None
-        tools = result_obj.get("tools") if isinstance(result_obj, dict) else None
-        if not isinstance(tools, list):
-            raise CommandError("MCP tools/list returned no tool inventory")
-        names = sorted({item.get("name") for item in tools if isinstance(item, dict) and isinstance(item.get("name"), str)})
-        if not names:
-            raise CommandError("MCP tools/list returned an empty tool inventory")
-        result = {
+        tools = tool_inventory(client)
+        result: dict[str, Any] = {
             "version": "1",
             "status": "success",
             "tenant": tenant,
-            "action": ACTION,
+            "action": action,
             "command_id": command_id,
             "read_only": True,
-            "tools": names,
         }
+        if action == LIST_ACTION:
+            names = sorted({item.get("name") for item in tools if isinstance(item.get("name"), str)})
+            if not names:
+                raise CommandError("MCP tools/list returned an empty tool inventory")
+            result["tools"] = names
+        else:
+            requested = str(command["payload"]["tool"])
+            matches = [item for item in tools if item.get("name") == requested]
+            if len(matches) != 1:
+                raise CommandError("requested MCP tool was not uniquely present")
+            item = matches[0]
+            safe: dict[str, Any] = {"name": requested}
+            description = item.get("description")
+            if isinstance(description, str):
+                safe["description"] = description
+            input_schema = item.get("inputSchema")
+            if not isinstance(input_schema, dict):
+                raise CommandError("requested MCP tool exposes no input schema")
+            safe["inputSchema"] = input_schema
+            output_schema = item.get("outputSchema")
+            if isinstance(output_schema, dict):
+                safe["outputSchema"] = output_schema
+            result["tool"] = safe
         path = write_result(result_dir, command_id, result)
         print(f"SUCCESS {path}")
         return 0
@@ -99,12 +136,12 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "version": "1",
             "status": "failed",
             "tenant": tenant,
-            "action": ACTION,
+            "action": action,
             "command_id": command_id,
             "read_only": True,
             "error": {
                 "code": "execution_failed",
-                "message": "The bounded Manager read discovery did not complete successfully.",
+                "message": "The bounded Manager read operation did not complete successfully.",
             },
         }
         path = write_result(result_dir, command_id, result)

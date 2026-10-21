@@ -63,7 +63,8 @@ PHASE2E_VALIDATORS = {
     research_update.ACTION: research_update,
     research_line_create.ACTION: research_line_create,
     research_line_update.ACTION: research_line_update,
-    manager_read.ACTION: manager_read,
+    manager_read.LIST_ACTION: manager_read,
+    manager_read.DESCRIBE_ACTION: manager_read,
 }
 
 
