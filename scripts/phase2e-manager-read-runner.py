@@ -19,8 +19,15 @@ LIST_ACTION = "manager.tools.list"
 DESCRIBE_ACTION = "manager.tool.describe"
 PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
 EVIDENCE_ABOUT_AUDIT_ACTION = "manager.evidence.about.audit"
+RESEARCH_LINES_LIST_PAIR_ACTION = "manager.research.lines.list.pair"
 ACTION = LIST_ACTION
-ACTIONS = {LIST_ACTION, DESCRIBE_ACTION, PAGE_INSPECT_PAIR_ACTION, EVIDENCE_ABOUT_AUDIT_ACTION}
+ACTIONS = {
+    LIST_ACTION,
+    DESCRIBE_ACTION,
+    PAGE_INSPECT_PAIR_ACTION,
+    EVIDENCE_ABOUT_AUDIT_ACTION,
+    RESEARCH_LINES_LIST_PAIR_ACTION,
+}
 DESCRIBABLE_TOOLS = {
     "site_page_inspect",
     "site_evidence_list",
@@ -99,6 +106,9 @@ def validate_command(command: dict[str, Any]) -> None:
     elif action == EVIDENCE_ABOUT_AUDIT_ACTION:
         if payload != {}:
             raise CommandError("manager.evidence.about.audit payload must be empty")
+    elif action == RESEARCH_LINES_LIST_PAIR_ACTION:
+        if payload != {}:
+            raise CommandError("manager.research.lines.list.pair payload must be empty")
 
 
 def load_validated_command(path: Path) -> dict[str, Any]:
@@ -164,6 +174,15 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 groups[group] = sanitize_read_value(listed)
             result["resource"] = {"surface": "about", "groups": list(ABOUT_EVIDENCE_GROUPS)}
             result["groups"] = groups
+        elif action == RESEARCH_LINES_LIST_PAIR_ACTION:
+            lines: dict[str, Any] = {}
+            for language in ("en", "es"):
+                listed = client.call("site_research_lines_list", {"language": language})
+                if not isinstance(listed, (dict, list)):
+                    raise CommandError("site_research_lines_list returned an unsupported result")
+                lines[language] = sanitize_read_value(listed)
+            result["resource"] = {"type": "research-lines", "languages": ["en", "es"]}
+            result["lines"] = lines
         else:
             tools = tool_inventory(client)
             if action == LIST_ACTION:
