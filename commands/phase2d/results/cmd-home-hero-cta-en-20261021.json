@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-home-hero-cta-en-20261021",
+  "command_sha256": "8399116dae4e013fdbd4adae40409a51fd2383ddf66dc883ee97898a640293f5",
+  "correlation": {
+    "operation_id": "erm-operation-24867c0112404fec97e402a16806ab55",
+    "plan_id": "erm-remote-plan-56b752d403404a11052c-a4a0eada"
+  },
+  "resource": {
+    "key": "home",
+    "language": "en",
+    "slot": "final-cta-button"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
