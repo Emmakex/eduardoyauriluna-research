@@ -34,21 +34,65 @@ $title = eduardo_research_page_label($key);
  <?php elseif ('research' === $key) :
    $lines = new WP_Query(eduardo_research_verified_line_query_args($language, 24));
    $layout = eduardo_research_surface_layout('research');
-   $sections = is_array($layout['sections'] ?? null) ? $layout['sections'] : array(); ?>
+   $sections = is_array($layout['sections'] ?? null) ? $layout['sections'] : array();
+   $es = 'es' === $language; ?>
   <section class="research-interior" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell research-interior-stack">
-    <section class="research-interior-block research-lines-index" data-evidence-group="research_lines">
+    <section class="research-interior-block research-agenda-overview" data-research-agenda-status="planned">
      <header class="research-interior-block-heading">
       <span class="research-section-number">01</span>
-      <div><div class="research-eyebrow"><?php echo esc_html('es' === $language ? 'Agenda de investigación' : 'Research agenda'); ?></div><h2><?php echo esc_html('es' === $language ? 'Líneas de investigación' : 'Research lines'); ?></h2><p><?php echo esc_html('es' === $language ? 'Líneas, preguntas centrales y métodos propuestos para desarrollar la agenda de investigación.' : 'Research lines, central questions and proposed methods that shape the research agenda.'); ?></p></div>
+      <div>
+       <div class="research-eyebrow"><?php echo esc_html($es ? 'Agenda de investigación planificada' : 'Planned research agenda'); ?></div>
+       <h2><?php echo esc_html($es ? 'Pregunta principal de investigación' : 'Core research question'); ?></h2>
+       <p><?php echo esc_html($es
+         ? '¿Cómo pueden diseñarse, integrarse y evaluarse sistemas de IA autónomos y semiautónomos para mejorar procesos empresariales manteniendo fiabilidad, trazabilidad, supervisión humana y gobernanza?'
+         : 'How can autonomous and semi-autonomous AI systems be designed, integrated and evaluated to improve business processes while remaining reliable, traceable, governable and subject to appropriate human oversight?'); ?></p>
+      </div>
+     </header>
+     <div class="research-grid research-grid-editorial">
+      <article class="research-card">
+       <p class="research-card-kicker"><?php echo esc_html($es ? 'Alcance' : 'Scope'); ?></p>
+       <h3><?php echo esc_html($es ? 'Cuatro líneas conectadas' : 'Four connected research lines'); ?></h3>
+       <p><?php echo esc_html($es
+         ? 'La agenda se estructura en agentes autónomos de IA para procesos empresariales, colaboración humano–IA y autonomía responsable, transformación digital y adopción de IA en pymes, y descubrimiento de información mediado por IA y búsqueda generativa.'
+         : 'The agenda is structured around autonomous AI agents for business processes, human–AI collaboration and responsible autonomy, digital transformation and AI adoption in SMEs, and AI-mediated information discovery and generative search.'); ?></p>
+      </article>
+      <article class="research-card">
+       <p class="research-card-kicker"><?php echo esc_html($es ? 'Métodos previstos' : 'Planned methods'); ?></p>
+       <h3><?php echo esc_html($es ? 'Evaluación aplicada y reproducible' : 'Applied and reproducible evaluation'); ?></h3>
+       <p><?php echo esc_html($es
+         ? 'Según la pregunta concreta, se prevé combinar Design Science Research, prototipado de software, experimentos controlados, evaluación cuantitativa, estudios de caso comparativos, encuestas, entrevistas y métodos mixtos.'
+         : 'Depending on the question, the planned approach may combine Design Science Research, software prototyping, controlled experiments, quantitative evaluation, comparative case studies, surveys, interviews and mixed methods.'); ?></p>
+      </article>
+      <article class="research-card">
+       <p class="research-card-kicker"><?php echo esc_html($es ? 'Evolución' : 'Evolution'); ?></p>
+       <h3><?php echo esc_html($es ? 'De agenda amplia a preguntas acotadas' : 'From broad agenda to bounded questions'); ?></h3>
+       <p><?php echo esc_html($es
+         ? 'La agenda se irá acotando a medida que se obtenga evidencia, se definan estudios concretos y una futura investigación doctoral se alinee con un grupo y una supervisión académica adecuados.'
+         : 'The agenda is expected to narrow as evidence accumulates, specific studies are defined and a future doctoral project is aligned with an appropriate research group and academic supervision.'); ?></p>
+      </article>
+      <article class="research-card">
+       <p class="research-card-kicker"><?php echo esc_html($es ? 'Estado de la investigación' : 'Research status'); ?></p>
+       <h3><?php echo esc_html($es ? 'Agenda no equivale a resultados' : 'Agenda is not the same as results'); ?></h3>
+       <p><?php echo esc_html($es
+         ? 'Esta página describe direcciones, preguntas y métodos previstos. Las publicaciones, proyectos, software, datos y demás resultados solo se presentan como resultados cuando existe evidencia real y verificable.'
+         : 'This page describes intended directions, questions and methods. Publications, projects, software, datasets and other outputs are presented as research results only when real, verifiable evidence exists.'); ?></p>
+      </article>
+     </div>
+    </section>
+
+    <section class="research-interior-block research-lines-index" data-evidence-group="research_lines">
+     <header class="research-interior-block-heading">
+      <span class="research-section-number">02</span>
+      <div><div class="research-eyebrow"><?php echo esc_html($es ? 'Agenda de investigación' : 'Research agenda'); ?></div><h2><?php echo esc_html($es ? 'Líneas de investigación' : 'Research lines'); ?></h2><p><?php echo esc_html($es ? 'Líneas, preguntas centrales y métodos propuestos para desarrollar la agenda de investigación.' : 'Research lines, central questions and proposed methods that shape the research agenda.'); ?></p></div>
      </header>
      <div class="research-grid research-grid-editorial">
       <?php if ($lines->have_posts()) : while ($lines->have_posts()) : $lines->the_post(); eduardo_research_render_research_line_card(get_the_ID()); endwhile; else : ?>
-       <article class="research-card research-empty research-empty-wide"><h3><?php echo esc_html('es' === $language ? 'Agenda de investigación en desarrollo' : 'Research agenda in development'); ?></h3><p><?php echo esc_html('es' === $language ? 'Las líneas de investigación se incorporarán aquí a medida que avance la agenda.' : 'Research lines will be added here as the agenda develops.'); ?></p></article>
+       <article class="research-card research-empty research-empty-wide"><h3><?php echo esc_html($es ? 'Agenda de investigación en desarrollo' : 'Research agenda in development'); ?></h3><p><?php echo esc_html($es ? 'Las líneas de investigación se incorporarán aquí a medida que avance la agenda.' : 'Research lines will be added here as the agenda develops.'); ?></p></article>
       <?php endif; wp_reset_postdata(); ?>
      </div>
     </section>
-    <?php $position = 1; foreach (array_slice($sections, 1) as $section) { if (! is_array($section)) { continue; } $group = sanitize_key((string) ($section['group'] ?? '')); if (! eduardo_research_verified_localized_evidence($group)) { continue; } $position++; eduardo_research_render_evidence_section($section, $position); } ?>
+    <?php $position = 2; foreach (array_slice($sections, 1) as $section) { if (! is_array($section)) { continue; } $group = sanitize_key((string) ($section['group'] ?? '')); if (! eduardo_research_verified_localized_evidence($group)) { continue; } $position++; eduardo_research_render_evidence_section($section, $position); } ?>
     <?php eduardo_research_render_surface_links(is_array($layout['links'] ?? null) ? $layout['links'] : array()); ?>
    </div>
   </section>
