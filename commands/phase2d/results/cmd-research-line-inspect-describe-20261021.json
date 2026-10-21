@@ -1,0 +1,27 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-research-line-inspect-describe-20261021",
+  "command_sha256": "47d49fd9bf511998b2838f4d171f92624d83240a5755fe35b3ec5e04a3f6fa20",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect one Research Line by positive post ID.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "postId": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "postId"
+      ],
+      "type": "object"
+    },
+    "name": "site_research_line_inspect"
+  },
+  "version": "1"
+}
