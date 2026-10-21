@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-research-lines-list-pair-20261021",
+  "tenant": "eduardo-research",
+  "action": "manager.research.lines.list.pair",
+  "requested_by": "chatgpt",
+  "payload": {}
+}
