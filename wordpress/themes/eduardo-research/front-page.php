@@ -34,7 +34,7 @@ $section_number = 1;
     <a class="research-text-link" href="<?php echo esc_url(eduardo_research_page_url($hero_secondary_target)); ?>"><?php echo esc_html(eduardo_research_t('view_cv')); ?> <span aria-hidden="true">↗</span></a>
    </div>
    <div class="research-capabilities">
-    <span><?php echo esc_html(eduardo_research_t('evidence_aware')); ?></span><span><?php echo esc_html(eduardo_research_t('machine_readable')); ?></span><span><?php echo esc_html(eduardo_research_t('repro_first')); ?></span>
+    <span><?php echo esc_html(eduardo_research_t('ai_agents')); ?></span><span><?php echo esc_html(eduardo_research_t('human_ai')); ?></span><span><?php echo esc_html(eduardo_research_t('smes')); ?></span><span><?php echo esc_html(eduardo_research_t('ai_search')); ?></span>
    </div>
   </div>
   <div class="research-hero-visual" aria-hidden="true">
