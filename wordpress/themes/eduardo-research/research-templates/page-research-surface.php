@@ -106,14 +106,21 @@ $title = eduardo_research_page_label($key);
    $query = eduardo_research_collection_query($key, $language); ?>
   <section class="research-section research-object-index" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell">
-    <?php eduardo_research_render_collection_filters($key); ?>
-    <?php eduardo_research_render_collection_summary($key, $query); ?>
-    <div class="research-grid research-grid-editorial">
-     <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_collection_card(get_the_ID(), $key); endwhile; else : ?>
-      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'Todavía no hay elementos publicados' : 'No entries have been published yet'); ?></h2><p><?php echo esc_html('es' === $language ? 'Esta colección se completará a medida que se publiquen resultados vinculados a la agenda de investigación.' : 'This collection will grow as outputs connected to the research agenda are published.'); ?></p></article>
-     <?php endif; wp_reset_postdata(); ?>
-    </div>
-    <?php eduardo_research_render_collection_pagination($key, $query); ?>
+    <?php if ($query->have_posts()) : ?>
+     <?php eduardo_research_render_collection_filters($key); ?>
+     <?php eduardo_research_render_collection_summary($key, $query); ?>
+     <div class="research-grid research-grid-editorial">
+      <?php while ($query->have_posts()) : $query->the_post(); eduardo_research_render_collection_card(get_the_ID(), $key); endwhile; wp_reset_postdata(); ?>
+     </div>
+     <?php eduardo_research_render_collection_pagination($key, $query); ?>
+    <?php else : ?>
+     <div class="research-grid research-grid-editorial">
+      <article class="research-card research-empty research-empty-wide">
+       <h2><?php echo esc_html('es' === $language ? 'Todavía no hay elementos publicados' : 'No entries have been published yet'); ?></h2>
+       <p><?php echo esc_html('es' === $language ? 'Esta colección se completará a medida que se publiquen resultados vinculados a la agenda de investigación.' : 'This collection will grow as outputs connected to the research agenda are published.'); ?></p>
+      </article>
+     </div>
+    <?php endif; ?>
    </div>
   </section>
  <?php elseif ('insights' === $key) : $query = eduardo_research_insight_query($language); ?>
