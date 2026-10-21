@@ -17,10 +17,12 @@
       "required": ["key", "language", "slot", "value"],
       "properties": {
         "key": {
-          "enum": ["about", "research", "publications", "projects", "software", "datasets", "cv", "insights", "contact", "privacy-policy", "legal-notice"]
+          "enum": ["home", "about", "research", "publications", "projects", "software", "datasets", "cv", "insights", "contact", "privacy-policy", "legal-notice"]
         },
         "language": {"enum": ["en", "es"]},
-        "slot": {"enum": ["eyebrow", "lead"]},
+        "slot": {
+          "enum": ["eyebrow", "lead", "hero-eyebrow", "hero-lead", "research-lines-heading", "research-lines-intro", "selected-outputs-heading", "selected-outputs-intro", "academic-identifiers-heading", "latest-insights-heading", "final-cta-heading", "final-cta-body", "final-cta-button"]
+        },
         "value": {
           "type": "string",
           "minLength": 1,
