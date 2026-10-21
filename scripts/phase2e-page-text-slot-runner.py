@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Execute bounded Phase 2E text-slot updates on Theme-owned interior Pages.
+"""Execute bounded Phase 2E text-slot updates on Theme-owned Pages.
 
-This slice deliberately excludes Home, array-valued sections, navigation targets,
-page state, slugs and arbitrary MCP tools. It permits only scalar eyebrow/lead
-text on the reviewed interior Page contract in EN/ES, through the already accepted
-Page Plan -> Apply -> rendered Verify -> Rollback lifecycle.
+Interior Pages remain limited to scalar eyebrow/lead copy. Home is permitted only
+for an explicit reviewed set of scalar editorial slots exposed by the active Theme
+contract. Researcher identity fields, navigation targets, arrays, page state, slugs
+and arbitrary MCP tools remain outside this command surface.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
 REGISTRY_PATH = ROOT / "config" / "phase2e-page-text-slot-registry.json"
 SCHEMA_PATH = ROOT / "schemas" / "phase2e-page-text-slot-v1.schema.json"
 ACTION = "page.slot.update"
-ALLOWED_KEYS = (
+INTERIOR_KEYS = (
     "about",
     "research",
     "publications",
@@ -34,8 +34,23 @@ ALLOWED_KEYS = (
     "privacy-policy",
     "legal-notice",
 )
+ALLOWED_KEYS = ("home",) + INTERIOR_KEYS
 ALLOWED_LANGUAGES = ("en", "es")
-ALLOWED_SLOTS = ("eyebrow", "lead")
+INTERIOR_SLOTS = ("eyebrow", "lead")
+HOME_SLOTS = (
+    "hero-eyebrow",
+    "hero-lead",
+    "research-lines-heading",
+    "research-lines-intro",
+    "selected-outputs-heading",
+    "selected-outputs-intro",
+    "academic-identifiers-heading",
+    "latest-insights-heading",
+    "final-cta-heading",
+    "final-cta-body",
+    "final-cta-button",
+)
+ALL_SLOTS = INTERIOR_SLOTS + HOME_SLOTS
 VALUE_MAX = 200
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_page_text_base", BASE_RUNNER)
@@ -49,6 +64,10 @@ load_json = base.load_json
 sanitized_message = base.sanitized_message
 write_result = base.write_result
 subprocess = base.subprocess
+
+
+def allowed_slots_for_key(key: str) -> tuple[str, ...]:
+    return HOME_SLOTS if key == "home" else INTERIOR_SLOTS
 
 
 def validate_registry(registry: dict[str, Any]) -> None:
@@ -76,8 +95,11 @@ def validate_registry(registry: dict[str, Any]) -> None:
         raise CommandError("Page text-slot key allowlist changed unexpectedly")
     if action.get("allowed_languages") != list(ALLOWED_LANGUAGES):
         raise CommandError("Page text-slot language allowlist changed unexpectedly")
-    if action.get("allowed_slots") != list(ALLOWED_SLOTS):
-        raise CommandError("Page text-slot slot allowlist changed unexpectedly")
+    if action.get("allowed_slots_by_key") != {
+        "home": list(HOME_SLOTS),
+        "interior": list(INTERIOR_SLOTS),
+    }:
+        raise CommandError("Page text-slot per-page slot allowlist changed unexpectedly")
     if action.get("value_max") != VALUE_MAX:
         raise CommandError("Page text-slot value bound changed unexpectedly")
 
@@ -90,11 +112,11 @@ def validate_payload(payload: dict[str, Any]) -> None:
     slot = payload.get("slot")
     value = payload.get("value")
     if key not in ALLOWED_KEYS:
-        raise CommandError("page.slot.update key is outside the reviewed interior Page allowlist")
+        raise CommandError("page.slot.update key is outside the reviewed Page allowlist")
     if language not in ALLOWED_LANGUAGES:
         raise CommandError("page.slot.update language is outside the reviewed EN/ES allowlist")
-    if slot not in ALLOWED_SLOTS:
-        raise CommandError("page.slot.update slot is outside the reviewed scalar text-slot allowlist")
+    if slot not in allowed_slots_for_key(str(key)):
+        raise CommandError("page.slot.update slot is outside the reviewed allowlist for this Page")
     if (
         not isinstance(value, str)
         or not value.strip()
@@ -166,7 +188,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
         client.initialize()
         client.call(tools["capabilities"])
         payload = command["payload"]
-        reason = f"Kairoseth command {command_id}: bounded interior Page text slot"
+        reason = f"Kairoseth command {command_id}: bounded Page text slot"
         plan = client.call(
             tools["plan"],
             {
@@ -243,13 +265,13 @@ def self_test() -> int:
         raise CommandError("Page text-slot schema key allowlist does not match the runner")
     if payload_props.get("language", {}).get("enum") != list(ALLOWED_LANGUAGES):
         raise CommandError("Page text-slot schema language allowlist does not match the runner")
-    if payload_props.get("slot", {}).get("enum") != list(ALLOWED_SLOTS):
+    if payload_props.get("slot", {}).get("enum") != list(ALL_SLOTS):
         raise CommandError("Page text-slot schema slot allowlist does not match the runner")
     value_schema = payload_props.get("value", {})
     if value_schema.get("maxLength") != VALUE_MAX or value_schema.get("pattern") != "^[^<>\\r\\n]+$":
         raise CommandError("Page text-slot schema value bound does not match the runner")
 
-    good = {
+    interior = {
         "version": "1",
         "command_id": "cmd-selftest-page-text-0001",
         "tenant": "eduardo-research",
@@ -257,14 +279,19 @@ def self_test() -> int:
         "requested_by": "chatgpt",
         "payload": {"key": "about", "language": "es", "slot": "lead", "value": "Perfil del investigador."},
     }
-    validate_command(good, registry)
+    validate_command(interior, registry)
+    home = json.loads(json.dumps(interior))
+    home["command_id"] = "cmd-selftest-home-text-0001"
+    home["payload"] = {"key": "home", "language": "en", "slot": "hero-lead", "value": "Research profile."}
+    validate_command(home, registry)
 
     variants = []
-    bad = json.loads(json.dumps(good)); bad["payload"]["key"] = "home"; variants.append(bad)
-    bad = json.loads(json.dumps(good)); bad["payload"]["language"] = "fr"; variants.append(bad)
-    bad = json.loads(json.dumps(good)); bad["payload"]["slot"] = "sections"; variants.append(bad)
-    bad = json.loads(json.dumps(good)); bad["payload"]["value"] = "<strong>unsafe</strong>"; variants.append(bad)
-    bad = json.loads(json.dumps(good)); bad["payload"]["value"] = "line one\nline two"; variants.append(bad)
+    bad = json.loads(json.dumps(interior)); bad["payload"]["key"] = "unknown"; variants.append(bad)
+    bad = json.loads(json.dumps(interior)); bad["payload"]["language"] = "fr"; variants.append(bad)
+    bad = json.loads(json.dumps(interior)); bad["payload"]["slot"] = "hero-lead"; variants.append(bad)
+    bad = json.loads(json.dumps(home)); bad["payload"]["slot"] = "lead"; variants.append(bad)
+    bad = json.loads(json.dumps(interior)); bad["payload"]["value"] = "<strong>unsafe</strong>"; variants.append(bad)
+    bad = json.loads(json.dumps(interior)); bad["payload"]["value"] = "line one\nline two"; variants.append(bad)
     for bad in variants:
         try:
             validate_command(bad, registry)
