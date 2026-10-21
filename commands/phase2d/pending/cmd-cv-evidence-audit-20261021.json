@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-cv-evidence-audit-20261021",
+  "tenant": "eduardo-research",
+  "action": "manager.evidence.cv.audit",
+  "requested_by": "chatgpt",
+  "payload": {}
+}
