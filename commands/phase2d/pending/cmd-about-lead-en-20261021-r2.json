@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-about-lead-en-20261021-r2",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "about",
+    "language": "en",
+    "slot": "lead",
+    "value": "Eduardo Jose Yauri Luna is a researcher focused on autonomous AI agents, human–AI collaboration, SME digital transformation and AI-mediated information discovery."
+  }
+}
