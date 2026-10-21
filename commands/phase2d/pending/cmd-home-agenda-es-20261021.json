@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-agenda-es-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "es",
+    "slot": "research-lines-intro",
+    "value": "La agenda de investigación se articula en torno a agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA."
+  }
+}
