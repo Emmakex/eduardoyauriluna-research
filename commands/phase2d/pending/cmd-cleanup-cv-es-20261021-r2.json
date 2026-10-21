@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-cleanup-cv-es-20261021-r2",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "cv",
+    "language": "es",
+    "slot": "lead",
+    "value": "Trayectoria académica y profesional de Eduardo Jose Yauri Luna, centrada en experiencia relevante para su agenda de investigación en IA, transformación digital y sistemas autónomos."
+  }
+}
