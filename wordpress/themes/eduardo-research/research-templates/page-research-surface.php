@@ -40,15 +40,15 @@ $title = eduardo_research_page_label($key);
     <section class="research-interior-block research-lines-index" data-evidence-group="research_lines">
      <header class="research-interior-block-heading">
       <span class="research-section-number">01</span>
-      <div><div class="research-eyebrow"><?php echo esc_html('es' === $language ? 'Objeto de investigación' : 'Research object'); ?></div><h2><?php echo esc_html('es' === $language ? 'Líneas de investigación' : 'Research lines'); ?></h2><p><?php echo esc_html('es' === $language ? 'Líneas verificadas con pregunta central, temas, métodos y URL estable.' : 'Verified lines with a central question, topics, methods and a stable URL.'); ?></p></div>
+      <div><div class="research-eyebrow"><?php echo esc_html('es' === $language ? 'Agenda de investigación' : 'Research agenda'); ?></div><h2><?php echo esc_html('es' === $language ? 'Líneas de investigación' : 'Research lines'); ?></h2><p><?php echo esc_html('es' === $language ? 'Líneas, preguntas centrales y métodos propuestos para desarrollar la agenda de investigación.' : 'Research lines, central questions and proposed methods that shape the research agenda.'); ?></p></div>
      </header>
      <div class="research-grid research-grid-editorial">
       <?php if ($lines->have_posts()) : while ($lines->have_posts()) : $lines->the_post(); eduardo_research_render_research_line_card(get_the_ID()); endwhile; else : ?>
-       <article class="research-card research-empty research-empty-wide"><p class="research-card-kicker"><?php echo esc_html('es' === $language ? 'Preparado para evidencia' : 'Evidence ready'); ?></p><h3><?php echo esc_html('es' === $language ? 'Las líneas verificadas aparecerán aquí' : 'Verified research lines will appear here'); ?></h3><p><?php echo esc_html('es' === $language ? 'No se publica ninguna línea hasta que su estado de evidencia sea verified.' : 'No research line is published here until its evidence status is verified.'); ?></p></article>
+       <article class="research-card research-empty research-empty-wide"><h3><?php echo esc_html('es' === $language ? 'Agenda de investigación en desarrollo' : 'Research agenda in development'); ?></h3><p><?php echo esc_html('es' === $language ? 'Las líneas de investigación se incorporarán aquí a medida que avance la agenda.' : 'Research lines will be added here as the agenda develops.'); ?></p></article>
       <?php endif; wp_reset_postdata(); ?>
      </div>
     </section>
-    <?php foreach (array_slice($sections, 1) as $index => $section) { if (is_array($section)) { eduardo_research_render_evidence_section($section, $index + 2); } } ?>
+    <?php $position = 1; foreach (array_slice($sections, 1) as $section) { if (! is_array($section)) { continue; } $group = sanitize_key((string) ($section['group'] ?? '')); if (! eduardo_research_verified_localized_evidence($group)) { continue; } $position++; eduardo_research_render_evidence_section($section, $position); } ?>
     <?php eduardo_research_render_surface_links(is_array($layout['links'] ?? null) ? $layout['links'] : array()); ?>
    </div>
   </section>
@@ -62,12 +62,11 @@ $title = eduardo_research_page_label($key);
    $query = eduardo_research_collection_query($key, $language); ?>
   <section class="research-section research-object-index" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell">
-    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Registros estructurados' : 'Structured records'); ?></span><p><?php echo esc_html('es' === $language ? 'Filtra por línea de investigación y metadatos académicos sin alterar la URL canónica de la colección.' : 'Filter by Research Line and academic metadata without changing the collection canonical URL.'); ?></p></div>
     <?php eduardo_research_render_collection_filters($key); ?>
     <?php eduardo_research_render_collection_summary($key, $query); ?>
     <div class="research-grid research-grid-editorial">
      <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_collection_card(get_the_ID(), $key); endwhile; else : ?>
-      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'No hay resultados para estos filtros' : 'No records match these filters'); ?></h2><p><?php echo esc_html('es' === $language ? 'Prueba a limpiar uno o más filtros. El Theme nunca crea registros para rellenar un resultado vacío.' : 'Clear one or more filters. The Theme never invents records to fill an empty result set.'); ?></p></article>
+      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'Todavía no hay elementos publicados' : 'No entries have been published yet'); ?></h2><p><?php echo esc_html('es' === $language ? 'Esta colección se completará a medida que se publiquen resultados vinculados a la agenda de investigación.' : 'This collection will grow as outputs connected to the research agenda are published.'); ?></p></article>
      <?php endif; wp_reset_postdata(); ?>
     </div>
     <?php eduardo_research_render_collection_pagination($key, $query); ?>
@@ -76,12 +75,12 @@ $title = eduardo_research_page_label($key);
  <?php elseif ('insights' === $key) : $query = eduardo_research_insight_query($language); ?>
   <section class="research-section research-insight-index" aria-label="<?php echo esc_attr($title); ?>">
    <div class="research-shell">
-    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Sistema editorial' : 'Editorial system'); ?></span><p><?php echo esc_html('es' === $language ? 'Notas de investigación, explicadores, métodos y comentarios con URL propia y separación estricta por idioma.' : 'Research notes, explainers, methods and commentary with stable URLs and strict language separation.'); ?></p></div>
+    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Notas de investigación' : 'Research notes'); ?></span><p><?php echo esc_html('es' === $language ? 'Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación.' : 'Working notes, explainers and methodological observations related to the research agenda.'); ?></p></div>
     <?php eduardo_research_render_insight_filters(); ?>
-    <div class="research-collection-summary"><strong><?php echo esc_html(sprintf('es' === $language ? '%d notas' : '%d notes', (int) $query->found_posts)); ?></strong><span><?php echo esc_html('es' === $language ? 'Resultados editoriales publicados.' : 'Published editorial results.'); ?></span></div>
+    <div class="research-collection-summary"><strong><?php echo esc_html(sprintf('es' === $language ? '%d notas' : '%d notes', (int) $query->found_posts)); ?></strong><span><?php echo esc_html('es' === $language ? 'Notas publicadas.' : 'Published notes.'); ?></span></div>
     <div class="research-grid research-grid-editorial research-insight-grid">
      <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_insight_card(get_the_ID()); endwhile; else : ?>
-      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'No hay notas para esta búsqueda' : 'No research notes match this search'); ?></h2><p><?php echo esc_html('es' === $language ? 'Prueba con otro término o limpia el tipo editorial seleccionado.' : 'Try another term or clear the selected editorial type.'); ?></p></article>
+      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'Todavía no hay notas publicadas' : 'No research notes have been published yet'); ?></h2><p><?php echo esc_html('es' === $language ? 'Las nuevas notas aparecerán aquí a medida que se publiquen.' : 'New research notes will appear here as they are published.'); ?></p></article>
      <?php endif; wp_reset_postdata(); ?>
     </div>
     <?php eduardo_research_render_insight_pagination($query); ?>
