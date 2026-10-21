@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-outputs-en-20261021-r2",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "en",
+    "slot": "selected-outputs-intro",
+    "value": "Research outputs will be listed here as publications, projects, software or datasets become available and are verified."
+  }
+}
