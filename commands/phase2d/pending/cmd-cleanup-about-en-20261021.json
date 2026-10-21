@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "command_id": "cmd-cleanup-about-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "about",
+    "language": "en",
+    "slot": "sections",
+    "value": [
+      "Research focus",
+      "Professional background"
+    ]
+  }
+}
