@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-agenda-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "en",
+    "slot": "research-lines-intro",
+    "value": "The research agenda focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery."
+  }
+}
