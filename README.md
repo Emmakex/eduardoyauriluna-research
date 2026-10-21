@@ -8,6 +8,18 @@ Build a coherent and verifiable research presence around artificial intelligence
 
 The public website is exclusively about **Eduardo Jose Yauri Luna as a researcher**. Internal implementation, verification and management mechanisms must not become part of the visitor-facing narrative.
 
+## Global engineering rule
+
+All normal website content, structure and SEO/GEO operations follow this mandatory production flow:
+
+```text
+Conversation → governance → Preview/validation → Apply directly in WordPress production → Verify → result
+```
+
+A repository commit is **not** evidence that a normal website-content change is live. Repository changes are reserved for code, architecture, schemas, tests, infrastructure and engineering documentation.
+
+Canonical repository-wide rule: [`ENGINEERING_RULES.md`](ENGINEERING_RULES.md).
+
 ## Current operating model
 
 The site currently runs on WordPress with the Research Theme + Research Manager architecture. This is a transitional implementation while the reusable management capabilities are progressively extracted into the separate **Site Manager** product.
@@ -80,8 +92,9 @@ Empty collections, internal evidence states, implementation terminology and prod
 
 ## Repository structure
 
+- `ENGINEERING_RULES.md` — mandatory repository-wide operating rule for production website changes
 - `docs/` — current architecture, roadmap, integrations and transition decisions
-- `content/` — source content for biography, research, projects and publications
+- `content/` — source/reference content; not the normal publishing path for production site mutations
 - `config/` — non-secret site and connector configuration
 - `wordpress/` — current website implementation and transitional Research Manager code
 
@@ -89,12 +102,13 @@ Empty collections, internal evidence states, implementation terminology and prod
 
 Until the Site Manager extraction is complete, use this order when deciding implementation work:
 
-1. [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md)
-2. [`docs/10-decisions.md`](docs/10-decisions.md)
-3. [`docs/15-manager-control-plane.md`](docs/15-manager-control-plane.md)
-4. [`docs/19-manager-productization.md`](docs/19-manager-productization.md)
-5. [`docs/09-roadmap.md`](docs/09-roadmap.md)
-6. [`docs/21-product-vision-backlog.md`](docs/21-product-vision-backlog.md)
+1. [`ENGINEERING_RULES.md`](ENGINEERING_RULES.md)
+2. [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md)
+3. [`docs/10-decisions.md`](docs/10-decisions.md)
+4. [`docs/15-manager-control-plane.md`](docs/15-manager-control-plane.md)
+5. [`docs/19-manager-productization.md`](docs/19-manager-productization.md)
+6. [`docs/09-roadmap.md`](docs/09-roadmap.md)
+7. [`docs/21-product-vision-backlog.md`](docs/21-product-vision-backlog.md)
 
 ## Licensing
 
