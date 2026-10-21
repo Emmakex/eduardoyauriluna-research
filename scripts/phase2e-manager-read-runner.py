@@ -19,6 +19,7 @@ LIST_ACTION = "manager.tools.list"
 DESCRIBE_ACTION = "manager.tool.describe"
 PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
 EVIDENCE_ABOUT_AUDIT_ACTION = "manager.evidence.about.audit"
+CV_EVIDENCE_AUDIT_ACTION = "manager.evidence.cv.audit"
 RESEARCH_LINES_LIST_PAIR_ACTION = "manager.research.lines.list.pair"
 ACTION = LIST_ACTION
 ACTIONS = {
@@ -26,6 +27,7 @@ ACTIONS = {
     DESCRIBE_ACTION,
     PAGE_INSPECT_PAIR_ACTION,
     EVIDENCE_ABOUT_AUDIT_ACTION,
+    CV_EVIDENCE_AUDIT_ACTION,
     RESEARCH_LINES_LIST_PAIR_ACTION,
 }
 DESCRIBABLE_TOOLS = {
@@ -39,6 +41,7 @@ DESCRIBABLE_TOOLS = {
 }
 PAGE_INSPECT_KEYS = ("about", "research", "cv")
 ABOUT_EVIDENCE_GROUPS = ("profile", "affiliations", "identifiers")
+CV_EVIDENCE_GROUPS = ("experience", "education", "affiliations", "awards")
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "authorization", "cookie", "nonce")
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_manager_read_base", BASE_RUNNER)
@@ -106,6 +109,9 @@ def validate_command(command: dict[str, Any]) -> None:
     elif action == EVIDENCE_ABOUT_AUDIT_ACTION:
         if payload != {}:
             raise CommandError("manager.evidence.about.audit payload must be empty")
+    elif action == CV_EVIDENCE_AUDIT_ACTION:
+        if payload != {}:
+            raise CommandError("manager.evidence.cv.audit payload must be empty")
     elif action == RESEARCH_LINES_LIST_PAIR_ACTION:
         if payload != {}:
             raise CommandError("manager.research.lines.list.pair payload must be empty")
@@ -173,6 +179,15 @@ def execute(command_path: Path, result_dir: Path) -> int:
                     raise CommandError("site_evidence_list returned an unsupported result")
                 groups[group] = sanitize_read_value(listed)
             result["resource"] = {"surface": "about", "groups": list(ABOUT_EVIDENCE_GROUPS)}
+            result["groups"] = groups
+        elif action == CV_EVIDENCE_AUDIT_ACTION:
+            groups: dict[str, Any] = {}
+            for group in CV_EVIDENCE_GROUPS:
+                listed = client.call("site_evidence_list", {"group": group})
+                if not isinstance(listed, (dict, list)):
+                    raise CommandError("site_evidence_list returned an unsupported result")
+                groups[group] = sanitize_read_value(listed)
+            result["resource"] = {"surface": "cv", "groups": list(CV_EVIDENCE_GROUPS)}
             result["groups"] = groups
         elif action == RESEARCH_LINES_LIST_PAIR_ACTION:
             lines: dict[str, Any] = {}
