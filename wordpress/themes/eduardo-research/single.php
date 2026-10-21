@@ -9,6 +9,7 @@ get_header(); ?>
  $language = eduardo_research_current_language();
  $es = 'es' === $language;
  $type = get_post_type();
+ $line_question = 'research_line' === $type ? eduardo_research_meta_value($post_id, '_research_central_question') : '';
  $media_target = 'research_line' === $type
      || in_array($type, eduardo_research_relation_object_types(), true)
      || ('post' === $type && function_exists('eduardo_research_is_managed_insight') && eduardo_research_is_managed_insight($post_id));
@@ -24,11 +25,10 @@ get_header(); ?>
 
   <?php if ($media_target) { eduardo_research_render_primary_media($post_id); } ?>
 
-  <?php if ('research_line' === $type) :
-      $question = eduardo_research_meta_value($post_id, '_research_central_question'); ?>
+  <?php if ('research_line' === $type && '' !== $line_question) : ?>
    <section class="research-section research-section-soft"><div class="research-shell research-object-focus">
     <div><span class="research-section-number">01</span><div class="research-eyebrow"><?php echo esc_html($es ? 'Pregunta central' : 'Central question'); ?></div><h2><?php echo esc_html($es ? 'Pregunta de investigación' : 'Research question'); ?></h2></div>
-    <p class="research-object-focus-question"><?php echo esc_html($question ?: ($es ? 'La pregunta central se publicará cuando exista evidencia verificada.' : 'The central question will be published when verified evidence exists.')); ?></p>
+    <p class="research-object-focus-question"><?php echo esc_html($line_question); ?></p>
    </div></section>
   <?php endif; ?>
 
@@ -40,7 +40,7 @@ get_header(); ?>
   <?php endif; ?>
 
   <section class="research-section research-object-body"><div class="research-shell research-object-body-grid">
-   <div><span class="research-section-number"><?php echo esc_html('research_line' === $type || 'research_output' === $type ? '02' : '01'); ?></span><div class="research-eyebrow"><?php echo esc_html($es ? 'Registro' : 'Record'); ?></div><h2><?php echo esc_html($es ? 'Descripción' : 'Description'); ?></h2></div>
+   <div><span class="research-section-number"><?php echo esc_html(('research_line' === $type && '' !== $line_question) || 'research_output' === $type ? '02' : '01'); ?></span><div class="research-eyebrow"><?php echo esc_html($es ? 'Registro' : 'Record'); ?></div><h2><?php echo esc_html($es ? 'Descripción' : 'Description'); ?></h2></div>
    <div class="research-prose"><?php the_content(); ?></div>
   </div></section>
 
