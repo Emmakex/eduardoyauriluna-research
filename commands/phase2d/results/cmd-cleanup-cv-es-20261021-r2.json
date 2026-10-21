@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-cleanup-cv-es-20261021-r2",
+  "command_sha256": "fc546a5b769f71ee24c95b4a839f6e4a77f9ba9125e4f8fddbca1ef906d3aea1",
+  "correlation": {
+    "operation_id": "erm-operation-c4eddbdd94ad46199e60bbf131670676",
+    "plan_id": "erm-remote-plan-2a1379bca8354e0d55fa-acb4ac31"
+  },
+  "resource": {
+    "key": "cv",
+    "language": "es",
+    "slot": "lead"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
