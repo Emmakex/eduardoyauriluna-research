@@ -145,12 +145,12 @@ function eduardo_research_dictionary(): array {
         'editorial_ready_body'=>array('en'=>'Research notes will appear here when published.','es'=>'Las notas de investigación aparecerán aquí cuando se publiquen.'),
         'structured_ready'=>array('en'=>'More information will be added as the research agenda develops.','es'=>'Se añadirá más información a medida que avance la agenda de investigación.'),
         'insight'=>array('en'=>'Research note','es'=>'Nota de investigación'),
-        'ai_agents'=>array('en'=>'AI agents','es'=>'Agentes IA'),
-        'human_ai'=>array('en'=>'Human + AI','es'=>'Humano + IA'),
-        'smes'=>array('en'=>'SMEs','es'=>'Pymes'),
-        'ai_search'=>array('en'=>'AI search','es'=>'Búsqueda IA'),
+        'ai_agents'=>array('en'=>'Autonomous agents','es'=>'Agentes autónomos'),
+        'human_ai'=>array('en'=>'Human–AI collaboration','es'=>'Colaboración humano–IA'),
+        'smes'=>array('en'=>'SME transformation','es'=>'Transformación de pymes'),
+        'ai_search'=>array('en'=>'AI-mediated discovery','es'=>'Descubrimiento mediado por IA'),
         'research_agenda'=>array('en'=>'Research agenda','es'=>'Agenda de investigación'),
-        'applied_ai_systems'=>array('en'=>'Applied AI systems','es'=>'Sistemas de IA aplicada'),
+        'applied_ai_systems'=>array('en'=>'Four research lines','es'=>'Cuatro líneas de investigación'),
     );
 }
 
