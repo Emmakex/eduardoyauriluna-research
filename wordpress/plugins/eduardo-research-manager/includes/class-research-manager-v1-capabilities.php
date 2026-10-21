@@ -7,9 +7,11 @@ if (! defined('ABSPATH')) { exit; }
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-profile.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-baseline.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-portability.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-discovery.php';
 
 final class Eduardo_Research_Manager_V1_Capabilities {
     public function register(): void {
+        (new Eduardo_Research_Manager_Site_Discovery())->register();
         (new Eduardo_Research_Manager_Portability())->register();
         add_action('admin_menu', static function (): void {
             if (! (new Eduardo_Research_Manager_Site_Profile())->research_available()) {
@@ -69,12 +71,13 @@ final class Eduardo_Research_Manager_V1_Capabilities {
         $payload['data']=$data;$response->set_data($payload);return $response;
     }
 
-    /** Capability discovery is site.read; diagnostics must never piggyback on it. */
+    /** Capability discovery is site.read; diagnostic baseline data must never piggyback on it. */
     public function strip_diagnostic_payload_from_capabilities(mixed $response,mixed $handler,WP_REST_Request $request): mixed {
         if('/'.Eduardo_Research_Manager_Remote_REST::NAMESPACE.'/capabilities'!==$request->get_route()||is_wp_error($response)||!$response instanceof WP_REST_Response){return $response;}
         $payload=$response->get_data();
         if(!is_array($payload)||!is_array($payload['data']??null)){return $response;}
         unset($payload['data']['site_baseline']);
+        $payload['data']['site_discovery']=(new Eduardo_Research_Manager_Site_Discovery())->capability_payload();
         $response->set_data($payload);
         return $response;
     }
