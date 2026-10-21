@@ -32,7 +32,7 @@ Researcher in Artificial Intelligence, Digital Transformation and Autonomous Sys
 - AI Governance
 - Generative Search
 - Information Retrieval
-- Generative Engine Optimization
+- AI-mediated Information Discovery
 - Research Software
 
 ## 3. Education
