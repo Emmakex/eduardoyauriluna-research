@@ -54,11 +54,36 @@ function eduardo_research_surface_record_title(array $record, string $fallback):
     return $fallback;
 }
 
+function eduardo_research_surface_records(string $group): array {
+    $records = eduardo_research_verified_localized_evidence($group);
+    if ('identifiers' !== $group) { return $records; }
+
+    return array_values(array_filter($records, static function ($record): bool {
+        if (! is_array($record) || empty($record['url']) || ! is_scalar($record['url'])) { return false; }
+        $host = strtolower((string) wp_parse_url((string) $record['url'], PHP_URL_HOST));
+        $host = preg_replace('/^www\./', '', $host);
+        return 'orcid.org' === $host
+            || 'openalex.org' === $host
+            || 0 === strpos($host, 'scholar.google.');
+    }));
+}
+
+function eduardo_research_surface_record_link_label(string $group): string {
+    $es = 'es' === eduardo_research_current_language();
+    $labels = array(
+        'identifiers' => $es ? 'Abrir perfil académico' : 'Open academic profile',
+        'affiliations' => $es ? 'Visitar sitio' : 'Visit website',
+        'profile' => $es ? 'Ver perfil' : 'View profile',
+        'contact' => $es ? 'Contactar' : 'Contact',
+    );
+    return $labels[$group] ?? ($es ? 'Ver registro' : 'View record');
+}
+
 function eduardo_research_render_evidence_section(array $section, int $position): void {
     $group = sanitize_key((string) ($section['group'] ?? ''));
     $label = (string) ($section['label'] ?? $group);
     $intro = (string) ($section['intro'] ?? '');
-    $records = eduardo_research_verified_localized_evidence($group);
+    $records = eduardo_research_surface_records($group);
     if (! $records) { return; }
     ?>
     <section class="research-interior-block" data-evidence-group="<?php echo esc_attr($group); ?>">
@@ -82,7 +107,7 @@ function eduardo_research_render_evidence_section(array $section, int $position)
             <div>
               <h3><?php echo esc_html($title); ?></h3>
               <?php if ('' !== $summary) : ?><p><?php echo esc_html($summary); ?></p><?php elseif ('' !== $value && $value !== $title) : ?><p><?php echo esc_html($value); ?></p><?php endif; ?>
-              <?php if ('' !== $url) : ?><a class="research-text-link" href="<?php echo $url; ?>" rel="noopener"><?php echo esc_html(eduardo_research_t('open_source')); ?> <span aria-hidden="true">↗</span></a><?php endif; ?>
+              <?php if ('' !== $url) : ?><a class="research-text-link" href="<?php echo $url; ?>" rel="noopener"><?php echo esc_html(eduardo_research_surface_record_link_label($group)); ?> <span aria-hidden="true">↗</span></a><?php endif; ?>
             </div>
           </article>
         <?php endforeach; ?>
@@ -120,7 +145,7 @@ function eduardo_research_render_structured_surface(string $key): void {
     foreach ($sections as $section) {
         if (! is_array($section)) { continue; }
         $group = sanitize_key((string) ($section['group'] ?? ''));
-        if (! eduardo_research_verified_localized_evidence($group)) { continue; }
+        if (! eduardo_research_surface_records($group)) { continue; }
         $position++;
         eduardo_research_render_evidence_section($section, $position);
     }
