@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-about-eyebrow-en-20261021",
+  "command_sha256": "6f605d98285e74f1a90ec9690d059ac8309b20d72a1249f7c3561b0c8697363f",
+  "correlation": {
+    "operation_id": "erm-operation-415367d218b64886a63a1907dd95931d",
+    "plan_id": "erm-remote-plan-622459c04fb17db22707-f9ab3964"
+  },
+  "resource": {
+    "key": "about",
+    "language": "en",
+    "slot": "eyebrow"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
