@@ -116,6 +116,12 @@ function eduardo_research_review_status_label(string $status, ?string $language 
     return $labels[$status] ?? '';
 }
 
+function eduardo_research_line_status_label(string $status, ?string $language = null): string {
+    $status = sanitize_key($status);
+    $labels = eduardo_research_line_statuses($language);
+    return isset($labels[$status]) ? (string) $labels[$status] : '';
+}
+
 function eduardo_research_object_badges(int $post_id): array {
     $type = get_post_type($post_id);
     $badges = array();
@@ -143,7 +149,8 @@ function eduardo_research_object_badges(int $post_id): array {
         if ($access) { $badges[] = ucwords(str_replace('_',' ',$access)); }
     } elseif ('research_line' === $type) {
         $status = eduardo_research_meta_value($post_id, '_research_status');
-        if ($status) { $badges[] = ucwords(str_replace('_',' ',$status)); }
+        $label = eduardo_research_line_status_label($status);
+        if ($label) { $badges[] = $label; }
     }
     return array_values(array_unique(array_filter($badges)));
 }
@@ -207,7 +214,8 @@ function eduardo_research_object_meta_rows(int $post_id): array {
         $add($rows, $es?'Formatos':'Formats', implode(', ', $formats));
         $add($rows, 'DOI', '1' === eduardo_research_meta_value($post_id, '_research_doi_verified') ? eduardo_research_meta_value($post_id, '_research_doi') : '');
     } elseif ('research_line' === $type) {
-        $add($rows, $es?'Estado':'Status', ucwords(str_replace('_',' ',eduardo_research_meta_value($post_id, '_research_status'))));
+        $status = eduardo_research_meta_value($post_id, '_research_status');
+        $add($rows, $es?'Estado':'Status', eduardo_research_line_status_label($status));
         $topics = eduardo_research_meta_list($post_id, '_research_topics');
         $add($rows, $es?'Temas':'Topics', implode(', ', $topics));
         $methods = eduardo_research_meta_list($post_id, '_research_methods');
@@ -241,7 +249,7 @@ function eduardo_research_render_research_line_card(int $post_id): void {
     $question = eduardo_research_meta_value($post_id, '_research_central_question');
     ?>
     <article class="research-card research-card-feature research-line-card">
-      <p class="research-card-kicker"><?php echo esc_html('es' === eduardo_research_current_language() ? 'Línea de investigación verificada' : 'Verified research line'); ?></p>
+      <p class="research-card-kicker"><?php echo esc_html('es' === eduardo_research_current_language() ? 'Línea de investigación' : 'Research line'); ?></p>
       <h3><a href="<?php echo esc_url((string) get_permalink($post_id)); ?>"><?php echo esc_html(get_the_title($post_id)); ?></a></h3>
       <?php eduardo_research_render_badges($post_id); ?>
       <?php if ($question) : ?><p class="research-line-question"><?php echo esc_html($question); ?></p><?php elseif (get_the_excerpt($post_id)) : ?><p><?php echo esc_html(get_the_excerpt($post_id)); ?></p><?php endif; ?>
