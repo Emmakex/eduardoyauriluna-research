@@ -1,0 +1,14 @@
+{
+  "action": "manager.evidence.about.audit",
+  "command_id": "cmd-about-evidence-audit-20261021-r2",
+  "command_sha256": "7b9c84d66964f0b86b564160579be4902b7dd57783c780fe5b1a8fa4ddda6185",
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_evidence_list' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Commercial entitlement denied: evidence.read (principal_not_granted)\"}],\"isError\":true}}",
+    "message": "The bounded Manager read operation did not complete successfully."
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
