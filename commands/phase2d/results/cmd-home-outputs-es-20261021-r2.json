@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-home-outputs-es-20261021-r2",
+  "command_sha256": "7c6944cd6dca4722b2d5b96cc22e9cb8ba5484e04e576b552a8217a9010893ab",
+  "correlation": {
+    "operation_id": "erm-operation-37bb7911b4bc4b278e8f0bf32df6d0de",
+    "plan_id": "erm-remote-plan-c6260459d5120d8c124d-64f4b02d"
+  },
+  "resource": {
+    "key": "home",
+    "language": "es",
+    "slot": "selected-outputs-intro"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
