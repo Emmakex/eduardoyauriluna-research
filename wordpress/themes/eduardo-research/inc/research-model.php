@@ -9,8 +9,7 @@ function eduardo_research_canonical_identity_name(): string {
         $name = trim((string) $stored['name']);
         if ('' !== $name) { return $name; }
     }
-    $fallback = trim((string) get_bloginfo('name'));
-    return '' !== $fallback ? $fallback : 'Eduardo Jose Yauri Luna';
+    return 'Eduardo Jose Yauri Luna';
 }
 
 function eduardo_research_canonical_identity_headline(?string $language = null): string {
