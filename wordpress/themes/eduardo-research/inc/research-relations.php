@@ -123,12 +123,12 @@ function eduardo_research_render_research_context(int $post_id): void {
       <div class="research-shell">
         <div class="research-section-heading">
           <div><div class="research-eyebrow"><?php echo esc_html($es ? 'Contexto de investigación' : 'Research context'); ?></div><h2><?php echo esc_html($es ? 'Líneas relacionadas' : 'Related research lines'); ?></h2></div>
-          <p><?php echo esc_html($es ? 'Este registro está vinculado únicamente a líneas de investigación verificadas.' : 'This record is linked only to verified research lines.'); ?></p>
+          <p><?php echo esc_html($es ? 'Este trabajo está vinculado a las siguientes líneas de la agenda de investigación.' : 'This work is connected to the following lines in the research agenda.'); ?></p>
         </div>
         <div class="research-grid research-relation-line-grid">
           <?php foreach ($line_ids as $line_id) : $line = get_post($line_id); if (! $line instanceof WP_Post) { continue; } ?>
             <a class="research-relation-line-card" data-research-line-id="<?php echo esc_attr((string) $line_id); ?>" href="<?php echo esc_url((string) get_permalink($line_id)); ?>">
-              <span class="research-card-kicker"><?php echo esc_html($es ? 'Línea verificada' : 'Verified line'); ?></span>
+              <span class="research-card-kicker"><?php echo esc_html($es ? 'Línea de investigación' : 'Research line'); ?></span>
               <strong><?php echo esc_html(get_the_title($line_id)); ?></strong>
               <?php $question = eduardo_research_meta_value($line_id, '_research_central_question'); if ($question) : ?><span><?php echo esc_html($question); ?></span><?php endif; ?>
               <span class="research-card-arrow" aria-hidden="true">↗</span>
@@ -156,7 +156,7 @@ function eduardo_research_render_related_objects(int $post_id): void {
       <div class="research-shell">
         <div class="research-section-heading">
           <div><div class="research-eyebrow"><?php echo esc_html($es ? 'Red de investigación' : 'Research network'); ?></div><h2><?php echo esc_html($es ? 'Trabajos relacionados' : 'Related research objects'); ?></h2></div>
-          <p><?php echo esc_html($es ? 'Relaciones derivadas de líneas de investigación verificadas compartidas.' : 'Relationships derived from shared verified research lines.'); ?></p>
+          <p><?php echo esc_html($es ? 'Trabajos conectados a través de líneas de investigación compartidas.' : 'Work connected through shared research lines.'); ?></p>
         </div>
         <div class="research-grid research-grid-editorial">
           <?php while ($query->have_posts()) : $query->the_post(); $related_id = get_the_ID(); $surface_key = eduardo_research_surface_key_for_type((string) get_post_type($related_id)); eduardo_research_render_collection_card($related_id, $surface_key); endwhile; ?>
