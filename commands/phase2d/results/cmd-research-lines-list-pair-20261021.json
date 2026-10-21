@@ -1,0 +1,14 @@
+{
+  "action": "manager.research.lines.list.pair",
+  "command_id": "cmd-research-lines-list-pair-20261021",
+  "command_sha256": "4d71f7f2f49f9237aee9b9ef2a9d897b335e3117b52f03591f332ec427466e08",
+  "error": {
+    "code": "execution_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_research_lines_list' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Commercial entitlement denied: research.read (principal_not_granted)\"}],\"isError\":true}}",
+    "message": "The bounded Manager read operation did not complete successfully."
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
