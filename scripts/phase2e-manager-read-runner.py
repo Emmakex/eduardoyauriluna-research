@@ -20,7 +20,13 @@ DESCRIBE_ACTION = "manager.tool.describe"
 PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
 ACTION = LIST_ACTION
 ACTIONS = {LIST_ACTION, DESCRIBE_ACTION, PAGE_INSPECT_PAIR_ACTION}
-DESCRIBABLE_TOOLS = {"site_page_inspect"}
+DESCRIBABLE_TOOLS = {
+    "site_page_inspect",
+    "site_evidence_list",
+    "site_evidence_inspect",
+    "site_evidence_inventory",
+    "site_evidence_identity",
+}
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "authorization", "cookie", "nonce")
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_manager_read_base", BASE_RUNNER)
