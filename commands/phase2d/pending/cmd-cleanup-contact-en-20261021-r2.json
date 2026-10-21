@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-cleanup-contact-en-20261021-r2",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "contact",
+    "language": "en",
+    "slot": "lead",
+    "value": "Contact for academic conversations, collaboration and enquiries related to the research agenda."
+  }
+}
