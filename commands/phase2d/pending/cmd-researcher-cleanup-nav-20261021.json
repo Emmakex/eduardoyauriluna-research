@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-researcher-cleanup-nav-20261021",
+  "tenant": "eduardo-research",
+  "action": "navigation.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "location": "primary",
+    "items": ["about", "research", "cv", "insights", "contact"]
+  }
+}
