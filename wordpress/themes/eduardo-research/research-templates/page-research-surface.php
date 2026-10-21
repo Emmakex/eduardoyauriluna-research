@@ -124,19 +124,19 @@ $title = eduardo_research_page_label($key);
    </div>
   </section>
  <?php elseif ('insights' === $key) : $query = eduardo_research_insight_query($language); ?>
-  <section class="research-section research-insight-index" aria-label="<?php echo esc_attr($title); ?>">
-   <div class="research-shell">
-    <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Notas de investigación' : 'Research notes'); ?></span><p><?php echo esc_html('es' === $language ? 'Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación.' : 'Working notes, explainers and methodological observations related to the research agenda.'); ?></p></div>
-    <?php eduardo_research_render_insight_filters(); ?>
-    <div class="research-collection-summary"><strong><?php echo esc_html(sprintf('es' === $language ? '%d notas' : '%d notes', (int) $query->found_posts)); ?></strong><span><?php echo esc_html('es' === $language ? 'Notas publicadas.' : 'Published notes.'); ?></span></div>
-    <div class="research-grid research-grid-editorial research-insight-grid">
-     <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); eduardo_research_render_insight_card(get_the_ID()); endwhile; else : ?>
-      <article class="research-card research-empty research-empty-wide"><h2><?php echo esc_html('es' === $language ? 'Todavía no hay notas publicadas' : 'No research notes have been published yet'); ?></h2><p><?php echo esc_html('es' === $language ? 'Las nuevas notas aparecerán aquí a medida que se publiquen.' : 'New research notes will appear here as they are published.'); ?></p></article>
-     <?php endif; wp_reset_postdata(); ?>
+  <?php if ($query->have_posts()) : ?>
+   <section class="research-section research-insight-index" aria-label="<?php echo esc_attr($title); ?>">
+    <div class="research-shell">
+     <div class="research-object-index-note"><span><?php echo esc_html('es' === $language ? 'Notas de investigación' : 'Research notes'); ?></span><p><?php echo esc_html('es' === $language ? 'Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación.' : 'Working notes, explainers and methodological observations related to the research agenda.'); ?></p></div>
+     <?php eduardo_research_render_insight_filters(); ?>
+     <div class="research-collection-summary"><strong><?php echo esc_html(sprintf('es' === $language ? '%d notas' : '%d notes', (int) $query->found_posts)); ?></strong><span><?php echo esc_html('es' === $language ? 'Notas publicadas.' : 'Published notes.'); ?></span></div>
+     <div class="research-grid research-grid-editorial research-insight-grid">
+      <?php while ($query->have_posts()) : $query->the_post(); eduardo_research_render_insight_card(get_the_ID()); endwhile; wp_reset_postdata(); ?>
+     </div>
+     <?php eduardo_research_render_insight_pagination($query); ?>
     </div>
-    <?php eduardo_research_render_insight_pagination($query); ?>
-   </div>
-  </section>
+   </section>
+  <?php else : wp_reset_postdata(); endif; ?>
  <?php endif; ?>
 </main>
 <?php get_footer();
