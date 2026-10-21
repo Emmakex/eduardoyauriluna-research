@@ -14,9 +14,12 @@
         "rollback": "site_page_slots_rollback"
       },
       "verify_rendered": true,
-      "allowed_keys": ["about", "research", "publications", "projects", "software", "datasets", "cv", "insights", "contact", "privacy-policy", "legal-notice"],
+      "allowed_keys": ["home", "about", "research", "publications", "projects", "software", "datasets", "cv", "insights", "contact", "privacy-policy", "legal-notice"],
       "allowed_languages": ["en", "es"],
-      "allowed_slots": ["eyebrow", "lead"],
+      "allowed_slots_by_key": {
+        "home": ["hero-eyebrow", "hero-lead", "research-lines-heading", "research-lines-intro", "selected-outputs-heading", "selected-outputs-intro", "academic-identifiers-heading", "latest-insights-heading", "final-cta-heading", "final-cta-body", "final-cta-button"],
+        "interior": ["eyebrow", "lead"]
+      },
       "value_max": 200
     }
   }
