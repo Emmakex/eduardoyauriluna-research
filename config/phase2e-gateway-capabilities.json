@@ -17,6 +17,7 @@
     "navigation.write",
     "media.read",
     "media.write",
-    "design.write"
+    "design.write",
+    "evidence.read"
   ]
 }
