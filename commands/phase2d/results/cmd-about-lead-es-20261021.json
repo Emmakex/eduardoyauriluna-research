@@ -1,0 +1,18 @@
+{
+  "action": "page.slot.update",
+  "command_id": "cmd-about-lead-es-20261021",
+  "command_sha256": "2afdfe2b60a520ae671fba363000bc10cc23b480e1d83cca0865d59ec3d8fcfe",
+  "correlation": {
+    "operation_id": "erm-operation-ebb26d343a8546dc813ed26c64d70968",
+    "plan_id": "erm-remote-plan-722546bc063f935309f4-c00d78b0"
+  },
+  "resource": {
+    "key": "about",
+    "language": "es",
+    "slot": "lead"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
