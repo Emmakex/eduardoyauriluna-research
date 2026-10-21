@@ -37,7 +37,7 @@ DESCRIBABLE_TOOLS = {
     "site_research_lines_list",
     "site_research_line_inspect",
 }
-PAGE_INSPECT_KEYS = ("about", "research")
+PAGE_INSPECT_KEYS = ("about", "research", "cv")
 ABOUT_EVIDENCE_GROUPS = ("profile", "affiliations", "identifiers")
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "authorization", "cookie", "nonce")
 
@@ -102,7 +102,7 @@ def validate_command(command: dict[str, Any]) -> None:
         if set(payload) != {"key", "languages"}:
             raise CommandError("manager.page.inspect.pair payload keys are invalid")
         if payload.get("key") not in PAGE_INSPECT_KEYS or payload.get("languages") != ["en", "es"]:
-            raise CommandError("manager.page.inspect.pair is currently bounded to reviewed About/Research EN/ES pairs")
+            raise CommandError("manager.page.inspect.pair is currently bounded to reviewed About/Research/CV EN/ES pairs")
     elif action == EVIDENCE_ABOUT_AUDIT_ACTION:
         if payload != {}:
             raise CommandError("manager.evidence.about.audit payload must be empty")
