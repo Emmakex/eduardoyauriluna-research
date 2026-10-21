@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-cleanup-insights-es-20261021-r2",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "insights",
+    "language": "es",
+    "slot": "lead",
+    "value": "Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación."
+  }
+}
