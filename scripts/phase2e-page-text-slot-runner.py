@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Execute bounded Phase 2E text-slot updates on Theme-owned Pages.
+"""Execute bounded Phase 2E Page slot updates on Theme-owned Pages.
 
-Interior Pages remain limited to scalar eyebrow/lead copy. Home is permitted only
-for an explicit reviewed set of scalar editorial slots exposed by the active Theme
-contract. Researcher identity fields, navigation targets, arrays, page state, slugs
-and arbitrary MCP tools remain outside this command surface.
+Interior Pages remain limited to scalar eyebrow/lead copy, except About where the
+existing Theme-owned `sections` array may be reduced/reordered only within the exact
+reviewed EN/ES section labels. Home keeps its explicit scalar editorial slot set.
+Every mutation retains Preview -> Apply -> rendered Verify -> Rollback semantics.
 """
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ INTERIOR_KEYS = (
 ALLOWED_KEYS = ("home",) + INTERIOR_KEYS
 ALLOWED_LANGUAGES = ("en", "es")
 INTERIOR_SLOTS = ("eyebrow", "lead")
+ABOUT_SLOTS = INTERIOR_SLOTS + ("sections",)
 HOME_SLOTS = (
     "hero-eyebrow",
     "hero-lead",
@@ -50,8 +51,15 @@ HOME_SLOTS = (
     "final-cta-body",
     "final-cta-button",
 )
-ALL_SLOTS = INTERIOR_SLOTS + HOME_SLOTS
+ALL_SLOTS = INTERIOR_SLOTS + ("sections",) + HOME_SLOTS
 VALUE_MAX = 200
+ARRAY_MIN_ITEMS = 1
+ARRAY_MAX_ITEMS = 3
+ARRAY_ITEM_MAX = 100
+ABOUT_SECTION_VALUES = {
+    "en": ("Research focus", "Professional background", "Identity and evidence"),
+    "es": ("Enfoque de investigación", "Trayectoria profesional", "Identidad y evidencia"),
+}
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_page_text_base", BASE_RUNNER)
 if spec is None or spec.loader is None:
@@ -67,7 +75,11 @@ subprocess = base.subprocess
 
 
 def allowed_slots_for_key(key: str) -> tuple[str, ...]:
-    return HOME_SLOTS if key == "home" else INTERIOR_SLOTS
+    if key == "home":
+        return HOME_SLOTS
+    if key == "about":
+        return ABOUT_SLOTS
+    return INTERIOR_SLOTS
 
 
 def validate_registry(registry: dict[str, Any]) -> None:
@@ -97,11 +109,48 @@ def validate_registry(registry: dict[str, Any]) -> None:
         raise CommandError("Page text-slot language allowlist changed unexpectedly")
     if action.get("allowed_slots_by_key") != {
         "home": list(HOME_SLOTS),
+        "about": list(ABOUT_SLOTS),
         "interior": list(INTERIOR_SLOTS),
     }:
         raise CommandError("Page text-slot per-page slot allowlist changed unexpectedly")
     if action.get("value_max") != VALUE_MAX:
         raise CommandError("Page text-slot value bound changed unexpectedly")
+    if action.get("array_slots_by_key") != {"about": ["sections"]}:
+        raise CommandError("Page array-slot allowlist changed unexpectedly")
+    if action.get("array_min_items") != ARRAY_MIN_ITEMS:
+        raise CommandError("Page array minimum changed unexpectedly")
+    if action.get("array_max_items") != ARRAY_MAX_ITEMS:
+        raise CommandError("Page array maximum changed unexpectedly")
+    if action.get("array_item_max") != ARRAY_ITEM_MAX:
+        raise CommandError("Page array item bound changed unexpectedly")
+
+
+def valid_plain_text(value: Any, max_length: int) -> bool:
+    return (
+        isinstance(value, str)
+        and bool(value.strip())
+        and len(value) <= max_length
+        and "<" not in value
+        and ">" not in value
+        and "\n" not in value
+        and "\r" not in value
+        and "\x00" not in value
+    )
+
+
+def validate_about_sections(value: Any, language: str) -> None:
+    if not isinstance(value, list) or not (ARRAY_MIN_ITEMS <= len(value) <= ARRAY_MAX_ITEMS):
+        raise CommandError("about.sections must contain between 1 and 3 reviewed section labels")
+    if len(set(value)) != len(value):
+        raise CommandError("about.sections must not contain duplicate labels")
+    allowed = ABOUT_SECTION_VALUES[language]
+    positions: list[int] = []
+    for item in value:
+        if not valid_plain_text(item, ARRAY_ITEM_MAX) or item not in allowed:
+            raise CommandError("about.sections contains a label outside the reviewed language allowlist")
+        positions.append(allowed.index(item))
+    if positions != sorted(positions):
+        raise CommandError("about.sections must preserve the reviewed Theme section order")
 
 
 def validate_payload(payload: dict[str, Any]) -> None:
@@ -117,16 +166,12 @@ def validate_payload(payload: dict[str, Any]) -> None:
         raise CommandError("page.slot.update language is outside the reviewed EN/ES allowlist")
     if slot not in allowed_slots_for_key(str(key)):
         raise CommandError("page.slot.update slot is outside the reviewed allowlist for this Page")
-    if (
-        not isinstance(value, str)
-        or not value.strip()
-        or len(value) > VALUE_MAX
-        or "<" in value
-        or ">" in value
-        or "\n" in value
-        or "\r" in value
-        or "\x00" in value
-    ):
+    if slot == "sections":
+        if key != "about":
+            raise CommandError("array Page slots are only reviewed for About")
+        validate_about_sections(value, str(language))
+        return
+    if not valid_plain_text(value, VALUE_MAX):
         raise CommandError("page.slot.update value must be bounded single-line plain text without markup")
 
 
@@ -188,7 +233,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
         client.initialize()
         client.call(tools["capabilities"])
         payload = command["payload"]
-        reason = f"Kairoseth command {command_id}: bounded Page text slot"
+        reason = f"Kairoseth command {command_id}: bounded Page slot"
         plan = client.call(
             tools["plan"],
             {
@@ -206,7 +251,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             {"operationId": operation_id, "rendered": True},
         )
         if not base.verified(verification):
-            raise CommandError("Page text-slot rendered verification did not report verified=true")
+            raise CommandError("Page slot rendered verification did not report verified=true")
 
         result = {
             "version": "1",
@@ -241,7 +286,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "verified": False,
             "error": {
                 "code": "execution_failed",
-                "message": "The bounded Page text-slot lifecycle did not complete successfully.",
+                "message": "The bounded Page slot lifecycle did not complete successfully.",
             },
             "correlation": {"plan_id": plan_id, "operation_id": operation_id},
             "rollback": {"attempted": operation_id is not None, "verified": rollback_ok},
@@ -268,8 +313,18 @@ def self_test() -> int:
     if payload_props.get("slot", {}).get("enum") != list(ALL_SLOTS):
         raise CommandError("Page text-slot schema slot allowlist does not match the runner")
     value_schema = payload_props.get("value", {})
-    if value_schema.get("maxLength") != VALUE_MAX or value_schema.get("pattern") != "^[^<>\\r\\n]+$":
-        raise CommandError("Page text-slot schema value bound does not match the runner")
+    choices = value_schema.get("oneOf")
+    if not isinstance(choices, list) or len(choices) != 2:
+        raise CommandError("Page slot schema must expose scalar and bounded-array values")
+    scalar = choices[0]
+    array = choices[1]
+    if scalar.get("maxLength") != VALUE_MAX or scalar.get("pattern") != "^[^<>\\r\\n]+$":
+        raise CommandError("Page scalar value bound does not match the runner")
+    if array.get("minItems") != ARRAY_MIN_ITEMS or array.get("maxItems") != ARRAY_MAX_ITEMS or array.get("uniqueItems") is not True:
+        raise CommandError("Page array bounds do not match the runner")
+    items = array.get("items", {})
+    if items.get("maxLength") != ARRAY_ITEM_MAX or items.get("pattern") != "^[^<>\\r\\n]+$":
+        raise CommandError("Page array item bound does not match the runner")
 
     interior = {
         "version": "1",
@@ -280,6 +335,17 @@ def self_test() -> int:
         "payload": {"key": "about", "language": "es", "slot": "lead", "value": "Perfil del investigador."},
     }
     validate_command(interior, registry)
+
+    sections = json.loads(json.dumps(interior))
+    sections["command_id"] = "cmd-selftest-about-sections-0001"
+    sections["payload"] = {
+        "key": "about",
+        "language": "en",
+        "slot": "sections",
+        "value": ["Research focus", "Professional background"],
+    }
+    validate_command(sections, registry)
+
     home = json.loads(json.dumps(interior))
     home["command_id"] = "cmd-selftest-home-text-0001"
     home["payload"] = {"key": "home", "language": "en", "slot": "hero-lead", "value": "Research profile."}
@@ -292,13 +358,17 @@ def self_test() -> int:
     bad = json.loads(json.dumps(home)); bad["payload"]["slot"] = "lead"; variants.append(bad)
     bad = json.loads(json.dumps(interior)); bad["payload"]["value"] = "<strong>unsafe</strong>"; variants.append(bad)
     bad = json.loads(json.dumps(interior)); bad["payload"]["value"] = "line one\nline two"; variants.append(bad)
+    bad = json.loads(json.dumps(sections)); bad["payload"]["value"] = ["Research focus", "Commercial services"]; variants.append(bad)
+    bad = json.loads(json.dumps(sections)); bad["payload"]["value"] = ["Professional background", "Research focus"]; variants.append(bad)
+    bad = json.loads(json.dumps(sections)); bad["payload"]["value"] = ["Research focus", "Research focus"]; variants.append(bad)
+    bad = json.loads(json.dumps(sections)); bad["payload"]["key"] = "research"; variants.append(bad)
     for bad in variants:
         try:
             validate_command(bad, registry)
         except CommandError:
             pass
         else:
-            raise CommandError("self-test: unsafe Page text-slot command did not fail closed")
+            raise CommandError("self-test: unsafe Page slot command did not fail closed")
 
     print("phase2e-page-text-slot-runner self-test: OK")
     return 0
