@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-hero-eyebrow-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "en",
+    "slot": "hero-eyebrow",
+    "value": "Research profile"
+  }
+}
