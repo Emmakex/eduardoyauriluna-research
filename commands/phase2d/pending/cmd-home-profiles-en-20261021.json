@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-home-profiles-en-20261021",
+  "tenant": "eduardo-research",
+  "action": "page.slot.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "home",
+    "language": "en",
+    "slot": "academic-identifiers-heading",
+    "value": "Academic profiles"
+  }
+}
