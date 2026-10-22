@@ -18,11 +18,14 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "config" / "research-gateway-v2-action-registry.json"
+ROLLBACK_REGISTRY_PATH = ROOT / "config" / "research-gateway-v2-rollback-registry.json"
+REQUEST_DIR = ROOT / "commands" / "gateway-v2" / "requests"
 SCRIPTS_DIR = ROOT / "scripts"
 ACTION_RE = re.compile(r"^[a-z][a-z0-9._-]{2,96}$")
 CAPABILITY_RE = re.compile(r"^[a-z][a-z0-9._-]{2,96}$")
 MODULE_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*\.py$")
-SUPPORTED_RESOLVERS = {"manager_resource_read"}
+COMMAND_ID_RE = re.compile(r"^cmd-[a-z0-9][a-z0-9-]{7,63}$")
+SUPPORTED_RESOLVERS = {"manager_resource_read", "operation_rollback"}
 RESOURCE_READ_CAPABILITIES = {
     "insight": "insights.read",
     "research_object": "research.read",
@@ -145,13 +148,72 @@ def validator_path(action: str, registry: dict[str, Any] | None = None) -> Path 
     return _module_path(str(action_contract(action, registry)["validator"]))
 
 
+def _validated_rollback_registry() -> dict[str, Any]:
+    registry = load_json(ROLLBACK_REGISTRY_PATH)
+    if set(registry) != {"version", "tenant", "actions"}:
+        raise ContractError("rollback registry top-level keys changed unexpectedly")
+    if registry.get("version") != "1" or registry.get("tenant") != "eduardo-research":
+        raise ContractError("rollback registry identity changed unexpectedly")
+    actions = registry.get("actions")
+    if not isinstance(actions, dict) or not actions:
+        raise ContractError("rollback registry exposes no actions")
+    for action, cfg in actions.items():
+        if not isinstance(action, str) or ACTION_RE.fullmatch(action) is None or not isinstance(cfg, dict):
+            raise ContractError("rollback registry contains an invalid action mapping")
+        required = cfg.get("required_capabilities")
+        if (
+            not isinstance(required, list)
+            or not required
+            or any(not isinstance(item, str) or CAPABILITY_RE.fullmatch(item) is None for item in required)
+            or len(set(required)) != len(required)
+        ):
+            raise ContractError(f"rollback registry action {action} has invalid required_capabilities")
+    return registry
+
+
+def _rollback_required_capabilities(
+    command: dict[str, Any],
+    registry: dict[str, Any],
+    request_dir: Path | None = None,
+) -> list[str]:
+    payload = command.get("payload")
+    if not isinstance(payload, dict) or set(payload) != {"source_command_id"}:
+        raise ContractError("operation.rollback payload must contain only source_command_id")
+    source_id = payload.get("source_command_id")
+    if not isinstance(source_id, str) or COMMAND_ID_RE.fullmatch(source_id) is None:
+        raise ContractError("operation.rollback source_command_id is invalid")
+    directory = request_dir or REQUEST_DIR
+    source_path = directory / f"{source_id}.json"
+    source = load_json(source_path)
+    if source.get("command_id") != source_id or source.get("tenant") != command.get("tenant"):
+        raise ContractError("operation.rollback source identity mismatch")
+    source_action = source.get("action")
+    if not isinstance(source_action, str):
+        raise ContractError("operation.rollback source action is invalid")
+
+    source_contract = action_contract(source_action, registry)
+    if source_contract.get("read_only") is not False or source_action == "operation.rollback":
+        raise ContractError("operation.rollback source is not a registered mutable action")
+
+    rollback_registry = _validated_rollback_registry()
+    cfg = rollback_registry["actions"].get(source_action)
+    if not isinstance(cfg, dict):
+        raise ContractError("operation.rollback source action has no rollback mapping")
+    required = cfg.get("required_capabilities")
+    return list(required)
+
+
 def required_capabilities(
-    command: dict[str, Any], registry: dict[str, Any] | None = None
+    command: dict[str, Any],
+    registry: dict[str, Any] | None = None,
+    *,
+    request_dir: Path | None = None,
 ) -> list[str]:
     action = command.get("action")
     if not isinstance(action, str):
         raise ContractError("command action is invalid")
-    cfg = action_contract(action, registry)
+    source_registry = registry or load_registry()
+    cfg = action_contract(action, source_registry)
     static = cfg.get("required_capabilities")
     if isinstance(static, list):
         return list(static)
@@ -166,6 +228,8 @@ def required_capabilities(
         if capability is not None:
             return [capability]
         raise ContractError("manager resource command has no bounded capability mapping")
+    if resolver == "operation_rollback":
+        return _rollback_required_capabilities(command, source_registry, request_dir)
 
     raise ContractError("Gateway v2 action has no resolvable capability contract")
 
