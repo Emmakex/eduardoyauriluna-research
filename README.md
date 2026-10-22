@@ -23,10 +23,11 @@ Canonical rules:
 - [`ENGINEERING_RULES.md`](ENGINEERING_RULES.md) — repository-wide authority and production governance.
 - [`ENGINEERING_GREENFIELD_RULE.md`](ENGINEERING_GREENFIELD_RULE.md) — Greenfield architecture: build from zero with known deterministic contracts.
 - [`docs/63-greenfield-hardcode-coupling-audit.md`](docs/63-greenfield-hardcode-coupling-audit.md) — current hardcode/coupling classification and remediation order.
+- [`docs/66-site-architect-client-website-lifecycle.md`](docs/66-site-architect-client-website-lifecycle.md) — canonical Site Architect lifecycle from client brief to continuous governed operation.
 
-## Current operating model — Greenfield
+## Current operating model — Site Architect / Greenfield
 
-The site runs on WordPress with the Research Theme + Research Manager architecture. Research Manager is a provisional product name; the current implementation is the independent **Greenfield** governance track for a WordPress site designed and built by us from zero.
+The site runs on WordPress with the Research Theme + **Site Architect** architecture. Site Architect is the independent **Greenfield** governance track for a WordPress site designed and built by us from zero.
 
 ```text
 Eduardo
@@ -34,7 +35,7 @@ Eduardo
 → GitHub connector
 → GitHub Actions / Command Gateway
 → production MCP
-→ Research Manager
+→ Site Architect
 → WordPress
 → Research Theme
 → Verify
@@ -44,15 +45,17 @@ Eduardo
 For the managed Eduardo workflow:
 
 - **ChatGPT is the primary instruction surface**;
-- **Research Manager is the current authoritative Greenfield execution/control plane**;
+- **Site Architect is the current authoritative Greenfield execution/control plane**;
 - **Research Theme is the current frontend rendering authority**;
 - **WordPress is the live content/runtime source of truth**;
 - **WordPress Admin is the local/fallback/self-service surface**;
 - **WP-CLI and SSH are bootstrap/recovery/development transports**, not normal operating dependencies.
 
-The Greenfield track evolves independently from `Emmakex/Site-Manager`. Site Manager is the separate **Brownfield** track for discovering, understanding and adapting to pre-existing client websites. Neither is the predetermined replacement for the other. They may be compared and crossed later only after sufficient independent production evidence.
+Site Architect evolves independently from `Emmakex/Site-Manager`. Site Manager is the separate **Brownfield** track for discovering, understanding and adapting to pre-existing client websites. Neither is the predetermined replacement for the other. They may be compared and crossed later only after sufficient independent production evidence.
 
 Canonical governance specification: [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md).
+
+Canonical Greenfield client lifecycle: [`docs/66-site-architect-client-website-lifecycle.md`](docs/66-site-architect-client-website-lifecycle.md).
 
 ## Canonical identity
 
@@ -86,7 +89,7 @@ Any external profile data used on the website must be checked before publication
 - Academic SEO and structured metadata
 - Connections with ORCID, Google Scholar, OpenAlex, Zenodo, Crossref and GitHub
 - Preparation for doctoral applications and future research activity
-- ChatGPT-governed website operation through the current authenticated Greenfield Manager path
+- ChatGPT-governed website operation through the current authenticated Site Architect Greenfield path
 
 ## Public content principle
 
@@ -126,14 +129,46 @@ The current classification is:
 - **KEEP SECURITY** — closed allowlists, scopes and fail-closed behavior;
 - **EXTRACT LATER** — patterns to compare with Brownfield only after independent evidence.
 
+## Site Architect product model
+
+The generalized Greenfield lifecycle proven from this reference implementation is:
+
+```text
+client brief
+→ Instance Blueprint
+→ Vertical/Profile Contract + Theme Contract
+→ clean WordPress provisioning
+→ compile desired state
+→ Plan
+→ Preview
+→ Apply
+→ readback / Verify
+→ launch
+→ continuous governance and optimization
+```
+
+The intended responsibility split is:
+
+```text
+Site Architect engine
+→ Greenfield Theme Contract
+→ Vertical/Profile semantics and registries
+→ Instance Blueprint
+→ WordPress production state
+```
+
+This repository remains exclusively the Eduardo Research reference/production implementation. Other customer Blueprints and customer production sites must not be added here. Reusable Site Architect code may later be extracted to a dedicated repository only through an explicit, evidence-based extraction plan.
+
+See [`docs/66-site-architect-client-website-lifecycle.md`](docs/66-site-architect-client-website-lifecycle.md).
+
 ## Repository structure
 
 - `ENGINEERING_RULES.md` — mandatory repository-wide operating rule
 - `ENGINEERING_GREENFIELD_RULE.md` — mandatory Greenfield architecture rule
-- `docs/` — current architecture, decisions, acceptance evidence and audits
+- `docs/` — current architecture, decisions, acceptance evidence, lifecycle specifications and audits
 - `content/` — source/reference content; not the normal publishing path for production site mutations
 - `config/` — non-secret site and connector configuration
-- `wordpress/` — current Greenfield Theme and Research Manager implementation
+- `wordpress/` — current Greenfield Research Theme and Site Architect implementation
 - `bridge/`, `scripts/`, `commands/` — governed ChatGPT/GitHub/MCP production path
 
 ## Architecture sources of truth
@@ -143,10 +178,11 @@ Use this order when deciding implementation work:
 1. [`ENGINEERING_RULES.md`](ENGINEERING_RULES.md)
 2. [`ENGINEERING_GREENFIELD_RULE.md`](ENGINEERING_GREENFIELD_RULE.md)
 3. [`docs/63-greenfield-hardcode-coupling-audit.md`](docs/63-greenfield-hardcode-coupling-audit.md)
-4. [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md)
-5. [`docs/10-decisions.md`](docs/10-decisions.md)
-6. [`docs/15-manager-control-plane.md`](docs/15-manager-control-plane.md)
-7. [`docs/09-roadmap.md`](docs/09-roadmap.md)
+4. [`docs/66-site-architect-client-website-lifecycle.md`](docs/66-site-architect-client-website-lifecycle.md)
+5. [`docs/22-chat-governed-manager-contract.md`](docs/22-chat-governed-manager-contract.md)
+6. [`docs/10-decisions.md`](docs/10-decisions.md)
+7. [`docs/15-manager-control-plane.md`](docs/15-manager-control-plane.md)
+8. [`docs/09-roadmap.md`](docs/09-roadmap.md)
 
 Historical documents remain evidence/history when they conflict with later mandatory engineering rules.
 
@@ -160,13 +196,14 @@ A future decision to reuse or extract proven patterns elsewhere does not change 
 
 ## Security
 
-Never commit API keys, OAuth client secrets, tokens, passwords or private credentials. The remote Manager must use site-specific, revocable, scoped credentials and must not expose arbitrary PHP, SQL, REST proxying, filesystem or shell execution.
+Never commit API keys, OAuth client secrets, tokens, passwords or private credentials. Site Architect must use site-specific, revocable, scoped credentials and must not expose arbitrary PHP, SQL, REST proxying, filesystem or shell execution.
 
 ## Current direction
 
 - Research identity foundation: implemented and being refined for researcher-only presentation.
 - Research Theme: operational and remains the deterministic frontend authority.
-- Research Manager: current authoritative Greenfield governance implementation; product name is provisional.
+- Site Architect: current authoritative Greenfield governance implementation.
+- Site Architect lifecycle: documented from client brief → Blueprint/contracts → provision/compile → Preview/Apply/Verify → launch → continuous optimization.
 - Greenfield hardcode/coupling cleanup: active, preserving production compatibility and security boundaries.
 - Site Manager: separate Brownfield project; it does not define this repository's roadmap or architecture.
 - Academic profile priority: **ORCID → Google Scholar → OpenAlex → additional research profiles**.
