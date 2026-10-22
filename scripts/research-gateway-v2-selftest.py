@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline invariants for the Research Gateway v2 durable queue, preflight and writes."""
+"""Offline invariants for the Research Gateway v2 durable queue, preflight and bounded runners."""
 from __future__ import annotations
 
 import importlib.util
@@ -12,7 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKER_PATH = ROOT / "scripts" / "research-gateway-v2-worker.py"
 LIFECYCLE_PATH = ROOT / "scripts" / "research-gateway-v2-lifecycle.py"
-MIGRATED_WRITE_RUNNERS = (
+RUNNER_SELFTESTS = (
+    ROOT / "scripts" / "research-gateway-v2-resource-read.py",
     ROOT / "scripts" / "phase2e-navigation-runner.py",
     ROOT / "scripts" / "phase2e-design-runner.py",
     ROOT / "scripts" / "phase2e-media-metadata-runner.py",
@@ -49,8 +50,8 @@ def assert_contract_invariants() -> None:
     actions = registry["actions"]
     assert "manager.resource.list" in actions
     assert "navigation.update" in actions
-    assert worker.contract.runner_path("manager.resource.list", registry).name == "phase2e-manager-read-runner.py"
-    assert worker.contract.validator_path("manager.resource.list", registry).name == "phase2e-manager-read-runner.py"
+    assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
+    assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.runner_path("insight.create", registry) is None
     assert worker.contract.validator_path("insight.create", registry) is None
 
@@ -62,9 +63,24 @@ def assert_contract_invariants() -> None:
         "action": "manager.resource.inspect",
         "payload": {"resource": "research_object", "kind": "software", "id": 100},
     }
+    research_line_read = {
+        "action": "manager.resource.list",
+        "payload": {"resource": "research_line", "filters": {"language": "en"}},
+    }
+    evidence_read = {
+        "action": "manager.resource.list",
+        "payload": {"resource": "evidence", "filters": {"group": "identifiers"}},
+    }
+    page_read = {
+        "action": "manager.resource.inspect",
+        "payload": {"resource": "page", "key": "research", "language": "es"},
+    }
     nav_write = {"action": "navigation.update", "payload": {}}
     assert worker.contract.required_capabilities(insight_read, registry) == ["insights.read"]
     assert worker.contract.required_capabilities(research_read, registry) == ["research.read"]
+    assert worker.contract.required_capabilities(research_line_read, registry) == ["research.read"]
+    assert worker.contract.required_capabilities(evidence_read, registry) == ["evidence.read"]
+    assert worker.contract.required_capabilities(page_read, registry) == ["pages.read"]
     assert worker.contract.required_capabilities(nav_write, registry) == [
         "navigation.write",
         "operations.rollback",
@@ -101,8 +117,8 @@ def assert_contract_invariants() -> None:
         raise AssertionError("ambiguous capability payload did not fail closed")
 
 
-def assert_migrated_write_runner_invariants() -> None:
-    for runner in MIGRATED_WRITE_RUNNERS:
+def assert_runner_invariants() -> None:
+    for runner in RUNNER_SELFTESTS:
         completed = subprocess.run(
             [sys.executable, str(runner), "--self-test"],
             cwd=ROOT,
@@ -118,7 +134,7 @@ def assert_migrated_write_runner_invariants() -> None:
 def main() -> int:
     assert_contract_invariants()
     assert lifecycle.self_test() == 0
-    assert_migrated_write_runner_invariants()
+    assert_runner_invariants()
 
     with tempfile.TemporaryDirectory(prefix="research-gateway-v2-selftest-") as temp:
         root = Path(temp)
