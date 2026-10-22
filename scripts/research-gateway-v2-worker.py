@@ -4,8 +4,9 @@
 Requests are immutable JSON files. A request is unresolved when no matching result
 exists. Each workflow run drains every unresolved request visible in its checkout in a
 deterministic order. Before any business runner executes, the worker resolves the
-bounded action contract and checks the authenticated production principal's live
-Manager granted_scopes. Missing capabilities fail closed before plan/apply.
+bounded action contract and checks the live Research Manager credential scopes exposed
+by /capabilities. Missing Manager scopes fail closed before plan/apply. Commercial MCP
+capabilities remain an independent inner authorization boundary enforced by the MCP.
 """
 from __future__ import annotations
 
@@ -137,10 +138,10 @@ def persist_preflight_failure(
     code, stage, message = contract.classify_failure(diagnostic)
     if isinstance(exc, contract.ScopeDenied):
         code, stage = "scope_denied", "authorization"
-        message = "The production principal is not granted the required capability or scope."
+        message = "The live Research Manager credential is not granted the required scope."
     elif isinstance(exc, contract.ContractError):
         code, stage = "capability_unavailable", "authorization"
-        message = "The live capability preflight could not establish the required authorization contract."
+        message = "The live Manager-scope preflight could not establish the required authorization contract."
 
     result = {
         "version": "1",
