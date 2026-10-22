@@ -1,0 +1,27 @@
+{
+  "action": "operation.rollback",
+  "command_id": "cmd-v2-generic-rollback-design-20261022-01",
+  "command_sha256": "f5493bab2990b6bc538bef20f2a64fd84f3fbb16a5566a43521b87392b0c13e1",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "operations.rollback"
+    ]
+  },
+  "rollback": {
+    "attempted": true,
+    "verified": true
+  },
+  "source": {
+    "action": "design.preset.update",
+    "command_id": "cmd-v2-generic-rollback-design-seed-20261022-01"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
