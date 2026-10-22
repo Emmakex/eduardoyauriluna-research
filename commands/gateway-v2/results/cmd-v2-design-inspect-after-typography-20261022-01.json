@@ -1,0 +1,194 @@
+{
+  "action": "manager.design.inspect",
+  "command_id": "cmd-v2-design-inspect-after-typography-20261022-01",
+  "command_sha256": "af6b7eaf4859fa48cd1eb37073c378604ec82d1f1d97f6ec0e9ba108c43dc3c2",
+  "data": {
+    "constraints": {
+      "arbitrary_css": false,
+      "arbitrary_font_url": false,
+      "palette_wcag_contract": true
+    },
+    "presets": {
+      "density": {
+        "airy": {
+          "grid_gap": "1.25rem",
+          "label": "Airy",
+          "radius": "1.5rem",
+          "section_padding": "clamp(5.5rem,10vw,10rem)",
+          "shell_gutter": "4rem"
+        },
+        "balanced": {
+          "grid_gap": "1rem",
+          "label": "Balanced",
+          "radius": "1.2rem",
+          "section_padding": "clamp(4.5rem,8vw,8rem)",
+          "shell_gutter": "3rem"
+        },
+        "compact": {
+          "grid_gap": ".8rem",
+          "label": "Compact",
+          "radius": ".9rem",
+          "section_padding": "clamp(3.5rem,6vw,6rem)",
+          "shell_gutter": "2rem"
+        }
+      },
+      "palette": {
+        "graphite-academic": {
+          "accessibility": {
+            "accessible": true,
+            "checks": {
+              "accent_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 6.02
+              },
+              "grey_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 4.66
+              },
+              "ink_on_bg": {
+                "minimum": 7,
+                "passes": true,
+                "ratio": 15.9
+              },
+              "mint_on_ink": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 9.39
+              },
+              "surface_on_ink": {
+                "minimum": 7,
+                "passes": true,
+                "ratio": 17.2
+              },
+              "text_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 10.33
+              }
+            },
+            "minimum_ratio": 4.66
+          },
+          "label": "Graphite Academic"
+        },
+        "ocean-lab": {
+          "accessibility": {
+            "accessible": true,
+            "checks": {
+              "accent_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 6.23
+              },
+              "grey_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 4.79
+              },
+              "ink_on_bg": {
+                "minimum": 7,
+                "passes": true,
+                "ratio": 16.27
+              },
+              "mint_on_ink": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 9.49
+              },
+              "surface_on_ink": {
+                "minimum": 7,
+                "passes": true,
+                "ratio": 17.31
+              },
+              "text_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 11.3
+              }
+            },
+            "minimum_ratio": 4.79
+          },
+          "label": "Ocean Lab"
+        },
+        "researcher": {
+          "accessibility": {
+            "accessible": true,
+            "checks": {
+              "accent_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 4.95
+              },
+              "grey_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 4.59
+              },
+              "ink_on_bg": {
+                "minimum": 7,
+                "passes": true,
+                "ratio": 16.47
+              },
+              "mint_on_ink": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 10.24
+              },
+              "surface_on_ink": {
+                "minimum": 7,
+                "passes": true,
+                "ratio": 17.54
+              },
+              "text_on_bg": {
+                "minimum": 4.5,
+                "passes": true,
+                "ratio": 11.44
+              }
+            },
+            "minimum_ratio": 4.59
+          },
+          "label": "Researcher Teal"
+        }
+      },
+      "typography": {
+        "academic-mixed": {
+          "body": "ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif",
+          "display": "Georgia,\"Times New Roman\",serif",
+          "label": "Academic Mixed"
+        },
+        "humanist-sans": {
+          "body": "\"Avenir Next\",Avenir,\"Segoe UI\",ui-sans-serif,system-ui,sans-serif",
+          "display": "\"Avenir Next\",Avenir,\"Segoe UI\",ui-sans-serif,system-ui,sans-serif",
+          "label": "Humanist Sans"
+        },
+        "modern-sans": {
+          "body": "Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif",
+          "display": "Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif",
+          "label": "Modern Sans"
+        }
+      }
+    },
+    "state": {
+      "density": "balanced",
+      "palette": "researcher",
+      "typography": "modern-sans"
+    },
+    "version": 1
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "design.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "design"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
