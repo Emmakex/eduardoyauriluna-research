@@ -95,10 +95,7 @@ def assert_contract_invariants() -> None:
         "payload": {"resource": "versions"},
     }
     nav_write = {"action": "navigation.update", "payload": {}}
-    rollback = {
-        "action": "operation.rollback",
-        "payload": {"source_command_id": "cmd-source-navigation-0001"},
-    }
+
     assert worker.contract.required_capabilities(insight_read, registry) == ["insights.read"]
     assert worker.contract.required_capabilities(research_read, registry) == ["research.read"]
     assert worker.contract.required_capabilities(research_line_read, registry) == ["research.read"]
@@ -114,11 +111,37 @@ def assert_contract_invariants() -> None:
         "operations.apply",
         "operations.rollback",
     ]
-    assert worker.contract.required_capabilities(rollback, registry) == [
-        "pages.read",
-        "pages.write",
-        "operations.rollback",
-    ]
+
+    with tempfile.TemporaryDirectory(prefix="rollback-capability-selftest-") as temp:
+        request_dir = Path(temp)
+        source = {
+            "version": "1",
+            "command_id": "cmd-source-design-0001",
+            "tenant": "eduardo-research",
+            "action": "design.preset.update",
+            "requested_by": "chatgpt",
+            "payload": {"changes": {"typography": "academic-mixed"}},
+        }
+        (request_dir / f"{source['command_id']}.json").write_text(json.dumps(source), encoding="utf-8")
+        rollback = {
+            "tenant": "eduardo-research",
+            "action": "operation.rollback",
+            "payload": {"source_command_id": source["command_id"]},
+        }
+        assert worker.contract.required_capabilities(
+            rollback,
+            registry,
+            request_dir=request_dir,
+        ) == ["design.read", "operations.rollback", "design.write"]
+
+        source["action"] = "manager.design.inspect"
+        (request_dir / f"{source['command_id']}.json").write_text(json.dumps(source), encoding="utf-8")
+        try:
+            worker.contract.required_capabilities(rollback, registry, request_dir=request_dir)
+        except worker.contract.ContractError as exc:
+            assert "mutable action" in str(exc)
+        else:
+            raise AssertionError("rollback capability resolver accepted a read-only source")
 
     ok = worker.contract.preflight(
         insight_read,
