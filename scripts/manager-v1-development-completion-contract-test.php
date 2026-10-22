@@ -37,8 +37,14 @@ foreach(array('hero-primary-target','hero-secondary-target','final-cta-target') 
 check(str_contains($front,'eduardo_research_page_url($hero_primary_target)'),'Hero primary CTA must resolve through Theme Page routing');
 check(str_contains($front,'eduardo_research_page_url($final_cta_target)'),'Final CTA must resolve through Theme Page routing');
 
+$contract=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php');
 $identity=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php');
-foreach(array("'name'","'headline'","'headline_es'") as $field){check(str_contains($identity,$field),'Identity profile field missing: '.$field);}
+check(str_contains($identity,"'name'=>\$name"),'Identity profile must expose canonical name');
+check(str_contains($identity,'$contract->identity_headline_field($language)'),'Identity profile must resolve language-bound headline fields through the Greenfield Theme Contract');
+check(str_contains($identity,"'identity_language_map'=>\$identity_language_map"),'Identity profile must expose its runtime language/field compatibility map');
+check(str_contains($contract,"'identity_headline_field'=>'headline'"),'Greenfield Theme Contract must preserve the primary headline storage field');
+check(str_contains($contract,"'identity_headline_field'=>'headline_es'"),'Greenfield Theme Contract must preserve the Spanish headline storage field');
+check(str_contains($contract,'private const LEGACY_LANGUAGE_STORAGE'),'Legacy EN/ES physical storage compatibility must have one contract owner');
 check(str_contains($identity,'preview_update'),'Identity profile must expose Preview');
 check(str_contains($identity,'apply_preview'),'Identity profile must expose Apply');
 check(str_contains($identity,'public function verify'),'Identity profile must expose Verify');
@@ -73,10 +79,20 @@ check(str_contains($line,"'slug'=>'post_name'"),'Research Line slug update must 
 check(str_contains($line,'research_manager_line_slug_required'),'Research Line slug must reject empty values');
 
 $resource=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php');
-foreach(array("'pages'=>array('scope'=>'pages.read'","'insights'=>array('scope'=>'insights.read'","'outputs'=>array('scope'=>'research.read'","'projects'=>array('scope'=>'research.read'","'software'=>array('scope'=>'research.read'","'datasets'=>array('scope'=>'research.read'") as $needle){check(str_contains($resource,$needle),'Resource inventory scope contract missing: '.$needle);}
+$registry=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php');
+foreach(array('lines','outputs','projects','software','datasets') as $key){check(str_contains($registry,"'inventory_key'=>'{$key}'"),'Research Resource Registry inventory key missing: '.$key);}
+foreach(array('research_line','research_output','research_project','research_software','research_dataset') as $postType){check(str_contains($registry,"'post_type'=>'{$postType}'"),'Research Resource Registry post type missing: '.$postType);}
+check(str_contains($registry,"'read_scope'=>'research.read'"),'Research Resource Registry must retain the bounded Research read scope');
+check(str_contains($resource,'Eduardo_Research_Manager_Resource_Registry::inventory_specs()'),'Resource inventory must derive structured Research type/scope facts from the Registry');
+check(str_contains($resource,'Eduardo_Research_Manager_Resource_Registry::by_inventory_key($type)'),'Resource inventory must resolve Research post types through the Registry');
+check(str_contains($resource,'default_language()'),'Resource inventory must use the Theme Contract default language rather than its own EN fallback');
 check(str_contains($resource,"'language'=>\$language"),'Resource inventory must preserve language filters');
-check(str_contains($resource,"pages()->inspect(sanitize_key(\$identifier),''!==\$language?\$language:'en')"),'Page get_resource must be language-aware');
 check(false===stripos($resource,'wp/v2'),'Resource inventory must not proxy arbitrary WordPress REST');
+
+$executor=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php');
+check(str_contains($executor,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),'Executor must resolve Research execution specs from the Registry');
+foreach(array('research_manager_line_creation_conflict','research_manager_output_creation_conflict','research_manager_project_creation_conflict','research_manager_software_creation_conflict','research_manager_dataset_creation_conflict') as $duplicate){check(false===str_contains($executor,$duplicate),'Executor must not duplicate Registry conflict mapping: '.$duplicate);}
+check(str_contains($executor,'Eduardo_Research_Manager_Plan::validate($plan)'),'Executor must continue validating the fail-closed Plan before execution');
 
 $connections=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php');
 foreach(array('orcid','google_scholar','crossref','zenodo','openalex','github') as $provider){check(str_contains($connections,$provider),'Academic connection provider missing: '.$provider);}
@@ -125,6 +141,6 @@ check(str_contains($remoteRest,'$this->audit_failure($request, $semantic_scope, 
 check(str_contains($semantic,"'scope_check_order'] = 'authenticate-once-then-semantic-scopes'"),'Capabilities must advertise authenticate-once semantic scope ordering');
 
 $bootstrap=source('wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php');
-foreach(array('Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST','Remote_Identity_Profile_REST','V1_Controls_Admin','V1_Capabilities') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
+foreach(array('class-research-manager-resource-registry.php','Remote_Page_State_REST','Remote_Resource_Inventory_REST','Remote_Connections_REST','Remote_Operation_Inventory_REST','Remote_Identity_Profile_REST','V1_Controls_Admin','V1_Capabilities') as $class){check(str_contains($bootstrap,$class),'Plugin bootstrap missing '.$class);}
 
 fwrite(STDOUT,"Manager v1 development/production closeout source contract: PASS\n");
