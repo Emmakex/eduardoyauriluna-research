@@ -204,13 +204,14 @@ final class Eduardo_Research_Manager_Plan {
         if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_insight_types')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required for Insight creation.'); }
         $preset = eduardo_research_preset();
         $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $types = eduardo_research_insight_types('en');
+        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $types = eduardo_research_insight_types($default_language);
         $types = is_array($types) ? $types : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
         $content = wp_kses_post((string) ($action['content'] ?? ''));
-        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $language = sanitize_key((string) ($action['language'] ?? $default_language));
         $insight_type = sanitize_key((string) ($action['insight_type'] ?? 'research_note'));
         $status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $creation_token = sanitize_text_field((string) ($action['creation_token'] ?? ''));
@@ -228,13 +229,14 @@ final class Eduardo_Research_Manager_Plan {
         }
         $preset = eduardo_research_preset();
         $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $statuses = eduardo_research_line_statuses('en');
-        $evidence_statuses = eduardo_research_line_evidence_statuses('en');
+        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $statuses = eduardo_research_line_statuses($default_language);
+        $evidence_statuses = eduardo_research_line_evidence_statuses($default_language);
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
         $content = wp_kses_post((string) ($action['content'] ?? ''));
-        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $language = sanitize_key((string) ($action['language'] ?? $default_language));
         $post_status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $evidence_status = sanitize_key((string) ($action['evidence_status'] ?? 'unverified'));
         $research_status = sanitize_key((string) ($action['research_status'] ?? 'planned'));
@@ -264,14 +266,15 @@ final class Eduardo_Research_Manager_Plan {
         if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme publication contract is required.'); }
         $preset = eduardo_research_preset();
         $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $options = eduardo_research_collection_options('publications', 'en');
+        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $options = eduardo_research_collection_options('publications', $default_language);
         $output_types = is_array($options['output_type'] ?? null) ? $options['output_type'] : array();
         $review_statuses = is_array($options['review_status'] ?? null) ? $options['review_status'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
         $content = wp_kses_post((string) ($action['content'] ?? ''));
-        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $language = sanitize_key((string) ($action['language'] ?? $default_language));
         $status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $output_type = sanitize_key((string) ($action['output_type'] ?? ''));
         $review_status = sanitize_key((string) ($action['review_status'] ?? ''));
@@ -303,13 +306,14 @@ final class Eduardo_Research_Manager_Plan {
         if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme project contract is required.'); }
         $preset = eduardo_research_preset();
         $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $options = eduardo_research_collection_options('projects', 'en');
+        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $options = eduardo_research_collection_options('projects', $default_language);
         $project_statuses = is_array($options['project_status'] ?? null) ? $options['project_status'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
         $content = wp_kses_post((string) ($action['content'] ?? ''));
-        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $language = sanitize_key((string) ($action['language'] ?? $default_language));
         $status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $project_status = sanitize_key((string) ($action['project_status'] ?? ''));
         $question = sanitize_textarea_field((string) ($action['question'] ?? ''));
@@ -343,13 +347,14 @@ final class Eduardo_Research_Manager_Plan {
         if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.'); }
         $preset = eduardo_research_preset();
         $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $options = eduardo_research_collection_options('software', 'en');
+        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $options = eduardo_research_collection_options('software', $default_language);
         $software_statuses = is_array($options['software_status'] ?? null) ? $options['software_status'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
         $content = wp_kses_post((string) ($action['content'] ?? ''));
-        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $language = sanitize_key((string) ($action['language'] ?? $default_language));
         $status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $software_status = sanitize_key((string) ($action['software_status'] ?? ''));
         $version = sanitize_text_field((string) ($action['version'] ?? ''));
@@ -386,13 +391,14 @@ final class Eduardo_Research_Manager_Plan {
         if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.'); }
         $preset = eduardo_research_preset();
         $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $options = eduardo_research_collection_options('datasets', 'en');
+        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $options = eduardo_research_collection_options('datasets', $default_language);
         $access_levels = is_array($options['access_level'] ?? null) ? $options['access_level'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
         $content = wp_kses_post((string) ($action['content'] ?? ''));
-        $language = sanitize_key((string) ($action['language'] ?? 'en'));
+        $language = sanitize_key((string) ($action['language'] ?? $default_language));
         $status = sanitize_key((string) ($action['status'] ?? 'draft'));
         $version = sanitize_text_field((string) ($action['version'] ?? ''));
         $publication_date = self::normalize_date((string) ($action['publication_date'] ?? ''));
