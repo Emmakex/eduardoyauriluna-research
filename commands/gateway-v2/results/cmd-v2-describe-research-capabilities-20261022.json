@@ -1,0 +1,17 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-research-capabilities-20261022",
+  "command_sha256": "42256ade35db43422a8aec296b6cb272ebceef658adb99e05fc3e0e8ceaebcc4",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Read bounded backend capability and scope inventory.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "research_capabilities"
+  },
+  "version": "1"
+}
