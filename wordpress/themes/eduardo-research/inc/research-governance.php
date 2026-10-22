@@ -53,6 +53,13 @@ function eduardo_research_governance_contract(): array {
                 'arbitrary_html'=>false,
                 'gutenberg_layout_authority'=>false,
             ),
+            'ui_copy'=>array(
+                'available'=>function_exists('eduardo_research_ui_copy_public_contract'),
+                'mode'=>'registered-bilingual-copy',
+                'contract'=>function_exists('eduardo_research_ui_copy_public_contract') ? eduardo_research_ui_copy_public_contract() : array(),
+                'arbitrary_key'=>false,
+                'html'=>false,
+            ),
             'navigation'=>array(
                 'available'=>function_exists('eduardo_research_navigation_contract'),
                 'contract'=>function_exists('eduardo_research_navigation_contract') ? eduardo_research_navigation_contract() : array(),
@@ -102,6 +109,7 @@ function eduardo_research_governance_snapshot(): array {
             'available'=>! empty($contract['surfaces']['page_content']['available']),
             'page_keys'=>array_keys((array) ($contract['surfaces']['page_content']['pages'] ?? array())),
         ),
+        'ui_copy'=>function_exists('eduardo_research_ui_copy_state') ? eduardo_research_ui_copy_state() : array(),
         'navigation'=>(array) ($contract['surfaces']['navigation']['state'] ?? array()),
         'design'=>function_exists('eduardo_research_design_state') ? eduardo_research_design_state() : array(),
         'variants'=>function_exists('eduardo_research_design_variant_state') ? eduardo_research_design_variant_state() : array(),

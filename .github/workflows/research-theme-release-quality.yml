@@ -60,8 +60,11 @@ jobs:
           grep -F "research-navigation.js" "$THEME/functions.php"
           grep -F 'aria-controls="research-header-actions"' "$THEME/header.php"
           grep -F 'aria-expanded="false"' "$THEME/header.php"
+          grep -F "eduardo_research_t('menu_open')" "$THEME/header.php"
+          grep -F "eduardo_research_t('menu_close')" "$THEME/header.php"
           grep -F 'Escape' "$THEME/assets/research-navigation.js"
           grep -F "function eduardo_research_governance_contract" "$THEME/inc/research-governance.php"
+          grep -F "function eduardo_research_ui_copy_contract" "$THEME/inc/research-language.php"
           grep -F "wordpress_editor_not_layout_authority" "$THEME/inc/research-governance.php"
           grep -F "arbitrary_php" "$THEME/inc/research-governance.php"
           grep -F "arbitrary_rest_route" "$THEME/inc/research-governance.php"
@@ -70,6 +73,8 @@ jobs:
           test -s "$THEME/inc/research-governance.php"
           php -l "$THEME/inc/research-hardening.php"
           php -l "$THEME/inc/research-governance.php"
+          php -l "$THEME/inc/research-language.php"
+          php -l "$THEME/header.php"
 
       - name: Install clean WordPress and Theme
         shell: bash
@@ -91,7 +96,14 @@ jobs:
           set -euo pipefail
           cd /tmp/research-release-wp
           test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.1.0"
-          wp eval '$theme=wp_get_theme("eduardo-research"); if ("Emmake by Kairoseth" !== $theme->get("Author")) { fwrite(STDERR, $theme->get("Author") . "\n"); exit(1); } if ("https://kairoseth.com/" !== $theme->get("AuthorURI")) { exit(1); } $contract=eduardo_research_governance_contract(); if (1 !== (int)($contract["version"]??0)) { exit(1); } if (6 !== (int)($contract["theme"]["preset_version"]??0)) { exit(1); } if (empty($contract["surfaces"]["page_content"]["available"]) || empty($contract["surfaces"]["navigation"]["available"]) || empty($contract["surfaces"]["design"]["available"]) || empty($contract["surfaces"]["variants"]["available"])) { exit(1); } if (empty($contract["constraints"]["wordpress_editor_not_layout_authority"]) || ! empty($contract["constraints"]["arbitrary_php"]) || ! empty($contract["constraints"]["arbitrary_rest_route"])) { exit(1); }' --allow-root
+          wp eval '$theme=wp_get_theme("eduardo-research"); if ("Emmake by Kairoseth" !== $theme->get("Author")) { fwrite(STDERR, $theme->get("Author") . "\n"); exit(1); } if ("https://kairoseth.com/" !== $theme->get("AuthorURI")) { exit(1); } $contract=eduardo_research_governance_contract(); if (1 !== (int)($contract["version"]??0)) { exit(1); } if (6 !== (int)($contract["theme"]["preset_version"]??0)) { exit(1); } foreach (["page_content","ui_copy","navigation","design","variants"] as $surface) { if (empty($contract["surfaces"][$surface]["available"])) { exit(1); } } if (empty($contract["constraints"]["wordpress_editor_not_layout_authority"]) || ! empty($contract["constraints"]["arbitrary_php"]) || ! empty($contract["constraints"]["arbitrary_rest_route"])) { exit(1); }' --allow-root
+
+      - name: Verify bounded bilingual UI copy overrides
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-release-wp
+          wp eval '$contract=eduardo_research_ui_copy_public_contract(); if (empty($contract["constraints"]["registered_keys_only"]) || ! empty($contract["constraints"]["html"]) || ! empty($contract["constraints"]["arbitrary_option"])) { exit(1); } update_option("eduardo_research_ui_copy", ["menu_open"=>["en"=>"Navigation"]], false); if ("Navigation" !== eduardo_research_t("menu_open","en")) { exit(1); } if ("Menú" !== eduardo_research_t("menu_open","es")) { exit(1); } update_option("eduardo_research_ui_copy", ["not_registered"=>["en"=>"Unsafe"]], false); $state=eduardo_research_ui_copy_state(); if (isset($state["not_registered"])) { exit(1); } delete_option("eduardo_research_ui_copy");' --allow-root
 
       - name: Verify public academic evidence gate
         shell: bash

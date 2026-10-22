@@ -14,7 +14,7 @@
    <span class="research-brand-mark" aria-hidden="true">EY</span>
    <span class="research-brand-name"><?php echo esc_html(eduardo_research_canonical_identity_name()); ?></span>
   </a>
-  <?php $menu_open_label = 'es' === eduardo_research_current_language() ? 'Menú' : 'Menu'; $menu_close_label = 'es' === eduardo_research_current_language() ? 'Cerrar' : 'Close'; ?>
+  <?php $menu_open_label = eduardo_research_t('menu_open'); $menu_close_label = eduardo_research_t('menu_close'); ?>
   <button class="research-menu-toggle" type="button" aria-expanded="false" aria-controls="research-header-actions" data-research-menu-toggle data-open-label="<?php echo esc_attr($menu_open_label); ?>" data-close-label="<?php echo esc_attr($menu_close_label); ?>">
    <span class="research-menu-toggle-icon" aria-hidden="true"><span></span></span>
    <span class="research-menu-toggle-label"><?php echo esc_html($menu_open_label); ?></span>

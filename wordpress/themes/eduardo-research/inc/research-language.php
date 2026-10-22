@@ -1,5 +1,5 @@
 <?php
-/** Native bilingual runtime for the Research Theme. */
+/** Native bilingual runtime and bounded UI copy contract for the Research Theme. */
 declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
@@ -102,6 +102,8 @@ function eduardo_research_dictionary(): array {
         'primary_nav'=>array('en'=>'Primary navigation','es'=>'Navegación principal'),
         'legal_nav'=>array('en'=>'Legal navigation','es'=>'Navegación legal'),
         'language_nav'=>array('en'=>'Language','es'=>'Idioma'),
+        'menu_open'=>array('en'=>'Menu','es'=>'Menú'),
+        'menu_close'=>array('en'=>'Close','es'=>'Cerrar'),
         'view_cv'=>array('en'=>'View CV','es'=>'Ver CV'),
         'evidence_aware'=>array('en'=>'Autonomous AI','es'=>'IA autónoma'),
         'machine_readable'=>array('en'=>'Human–AI collaboration','es'=>'Colaboración humano–IA'),
@@ -154,9 +156,73 @@ function eduardo_research_dictionary(): array {
     );
 }
 
+function eduardo_research_ui_copy_contract(): array {
+    $keys = array();
+    foreach (eduardo_research_dictionary() as $key => $translations) {
+        if (! is_array($translations)) { continue; }
+        $keys[(string) $key] = array(
+            'languages'=>array('en','es'),
+            'max_length'=>str_ends_with((string) $key, '_body') ? 500 : 160,
+        );
+    }
+    return array(
+        'version'=>1,
+        'option'=>'eduardo_research_ui_copy',
+        'keys'=>$keys,
+        'constraints'=>array(
+            'registered_keys_only'=>true,
+            'languages'=>array('en','es'),
+            'html'=>false,
+            'shortcodes'=>false,
+            'arbitrary_option'=>false,
+            'empty_override'=>false,
+        ),
+    );
+}
+
+function eduardo_research_ui_copy_sanitize_state($value): array {
+    $value = is_array($value) ? $value : array();
+    $contract = eduardo_research_ui_copy_contract();
+    $clean = array();
+    foreach ((array) $contract['keys'] as $key => $spec) {
+        if (! is_array($value[$key] ?? null)) { continue; }
+        $limit = max(1, (int) ($spec['max_length'] ?? 160));
+        foreach ((array) ($spec['languages'] ?? array()) as $language) {
+            if (! isset($value[$key][$language]) || ! is_scalar($value[$key][$language])) { continue; }
+            $text = trim(sanitize_text_field((string) $value[$key][$language]));
+            if ('' === $text) { continue; }
+            if (function_exists('mb_substr')) { $text = mb_substr($text, 0, $limit); }
+            else { $text = substr($text, 0, $limit); }
+            $clean[(string) $key][(string) $language] = $text;
+        }
+    }
+    return $clean;
+}
+
+function eduardo_research_ui_copy_state(): array {
+    $contract = eduardo_research_ui_copy_contract();
+    $stored = get_option((string) $contract['option'], array());
+    return eduardo_research_ui_copy_sanitize_state($stored);
+}
+
+function eduardo_research_ui_copy_public_contract(): array {
+    $contract = eduardo_research_ui_copy_contract();
+    return array(
+        'version'=>(int) $contract['version'],
+        'state'=>eduardo_research_ui_copy_state(),
+        'editable_keys'=>(array) $contract['keys'],
+        'constraints'=>(array) $contract['constraints'],
+    );
+}
+
 function eduardo_research_t(string $key, ?string $language = null): string {
     $language = $language ?: eduardo_research_current_language();
     $dictionary = eduardo_research_dictionary();
+    $overrides = eduardo_research_ui_copy_state();
+    if (isset($overrides[$key][$language]) && is_scalar($overrides[$key][$language])) {
+        $override = trim((string) $overrides[$key][$language]);
+        if ('' !== $override) { return $override; }
+    }
     return (string) ($dictionary[$key][$language] ?? $dictionary[$key]['en'] ?? $key);
 }
 
