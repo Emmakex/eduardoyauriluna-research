@@ -16,6 +16,7 @@ MIGRATED_WRITE_RUNNERS = (
     ROOT / "scripts" / "phase2e-navigation-runner.py",
     ROOT / "scripts" / "phase2e-design-runner.py",
     ROOT / "scripts" / "phase2e-media-metadata-runner.py",
+    ROOT / "scripts" / "phase2e-research-object-update-runner.py",
 )
 
 
