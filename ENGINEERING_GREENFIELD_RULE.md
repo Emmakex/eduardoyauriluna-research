@@ -1,4 +1,4 @@
-# Greenfield Engineering Rule — Managed WordPress from Zero
+# Greenfield Engineering Rule — Site Architect / Managed WordPress from Zero
 
 ## Status
 
@@ -10,17 +10,17 @@ If a historical roadmap, implementation shortcut, portability experiment or old 
 
 ## 1. Canonical Greenfield definition
 
-This repository develops and operates the **Greenfield** approach to governed WordPress:
+This repository develops and operates **Site Architect**, the Greenfield approach to governed WordPress:
 
 > Start from a new WordPress installation that we design and build ourselves, so the Theme, information architecture, content model, SEO/GEO model, performance strategy and governance contracts are known from the beginning and can be optimized for safe operation from ChatGPT.
 
 The current real production case is `eduardoyauriluna.com`.
 
-Greenfield does **not** mean generic discovery of an arbitrary pre-existing WordPress site. The system is allowed to know the architecture that we deliberately created.
+Greenfield does **not** mean generic discovery of an arbitrary pre-existing WordPress site. Site Architect is allowed to know the architecture that we deliberately created.
 
 ## 2. Greenfield product assumptions
 
-A Greenfield site is one where we control the initial architecture, including as applicable:
+A Site Architect / Greenfield site is one where we control the initial architecture, including as applicable:
 
 - WordPress installation and baseline configuration;
 - Theme and frontend authority;
@@ -59,7 +59,7 @@ The Theme may remain frontend authority when that produces better performance, S
 
 ## 4. Specialization is allowed and often desirable
 
-Greenfield must not be made artificially generic merely to resemble Site Manager.
+Site Architect must not be made artificially generic merely to resemble Site Manager.
 
 Domain-aware behavior is valid when it serves the site type we intentionally built. For the current researcher implementation this includes, where genuine and useful:
 
@@ -72,7 +72,7 @@ Domain-aware behavior is valid when it serves the site type we intentionally bui
 - multilingual research content;
 - research-specific SEO/GEO semantics.
 
-A future Greenfield implementation may use other site blueprints or vertical contracts, but it should still benefit from knowing its architecture in advance.
+A future Site Architect implementation may use other site blueprints or vertical contracts, but it should still benefit from knowing its architecture in advance.
 
 ## 5. Hardcode rule
 
@@ -100,13 +100,13 @@ Patterns worth comparing with Site Manager after both tracks have independent pr
 The current site is Eduardo-specific, but there is a distinction between:
 
 ```text
-Greenfield architecture
+Site Architect / Greenfield architecture
 ≠ Eduardo's instance data
 ```
 
-Names, biography, domain, specific research agenda, concrete content and other instance data may be required for `eduardoyauriluna.com`, but they should not be confused with the fundamental Greenfield governance model when separation is practical and useful.
+Names, biography, domain, specific research agenda, concrete content and other instance data may be required for `eduardoyauriluna.com`, but they should not be confused with the fundamental Site Architect governance model when separation is practical and useful.
 
-This does **not** require turning the current Research Manager into a generic multi-client product inside this repository.
+This does **not** require turning Site Architect into a generic Brownfield multi-client discovery product inside this repository.
 
 ## 7. No Brownfield discovery requirement here
 
@@ -127,9 +127,9 @@ That problem belongs to the Brownfield / Site Manager track.
 
 ## 8. Independent evolution from Site Manager
 
-Greenfield and Brownfield are deliberately separate engineering experiments.
+Site Architect / Greenfield and Site Manager / Brownfield are deliberately separate engineering experiments.
 
-Greenfield asks:
+Site Architect asks:
 
 > **How should we build WordPress from zero if we want excellent performance, SEO/GEO and safe AI governance from the first day?**
 
@@ -157,8 +157,39 @@ Only after both tracks have sufficient real production evidence should we compar
 
 Potential shared concepts may later include authentication, scopes, audit, operation lifecycle, verification, rollback and normalized capability reporting, but any convergence must be evidence-driven rather than assumed in advance.
 
-## 10. Current authority
+## 10. Canonical product name and compatibility rule
 
-For `eduardoyauriluna.com`, Research Manager (name provisional) and this repository's Gateway remain the current Greenfield production governance implementation until Eduardo explicitly approves a replacement.
+The canonical Greenfield product name is now **Site Architect**.
 
-The product name may change later. The **Greenfield architectural role** defined by this rule remains independent of that naming decision.
+**Research Manager** is a legacy product name and may remain temporarily inside technical identifiers that are already part of the accepted production contract, including PHP classes, option/meta keys, text domain, REST namespace, request headers, plugin directory/file names and historical evidence.
+
+Do not perform a mass technical rename merely to make internal identifiers visually match the new product name. Any such migration requires an explicit compatibility plan and independent production acceptance.
+
+From this decision forward:
+
+- new human-facing documentation uses **Site Architect**;
+- new UI labels use **Site Architect**;
+- new product-level commands use **Site Architect** naming;
+- new architecture decisions refer to **Site Architect / Greenfield**;
+- `Research Manager` is used only when referring to a legacy compatibility identifier or historical implementation state.
+
+## 11. Current authority
+
+For `eduardoyauriluna.com`, **Site Architect** and this repository's Gateway remain the current Greenfield production governance implementation until Eduardo explicitly approves a replacement after real evidence.
+
+The canonical production role is:
+
+```text
+Eduardo
+→ ChatGPT
+→ GitHub connector
+→ GitHub Actions / Command Gateway
+→ production MCP (`eduardo-research`)
+→ Site Architect
+→ WordPress
+→ Verify
+→ sanitized result
+→ ChatGPT
+```
+
+The **Greenfield architectural role** defined by this rule is independent from the legacy technical identifiers retained for compatibility.
