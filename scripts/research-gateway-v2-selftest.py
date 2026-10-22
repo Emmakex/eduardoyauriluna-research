@@ -14,6 +14,7 @@ WORKER_PATH = ROOT / "scripts" / "research-gateway-v2-worker.py"
 LIFECYCLE_PATH = ROOT / "scripts" / "research-gateway-v2-lifecycle.py"
 RUNNER_SELFTESTS = (
     ROOT / "scripts" / "research-gateway-v2-resource-read.py",
+    ROOT / "scripts" / "research-gateway-v2-capability-check.py",
     ROOT / "scripts" / "research-gateway-v2-operation-rollback.py",
     ROOT / "scripts" / "phase2e-navigation-runner.py",
     ROOT / "scripts" / "phase2e-design-runner.py",
@@ -50,10 +51,12 @@ def assert_contract_invariants() -> None:
     registry = worker.contract.load_registry()
     actions = registry["actions"]
     assert "manager.resource.list" in actions
+    assert "manager.capability.check" in actions
     assert "navigation.update" in actions
     assert "operation.rollback" in actions
     assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
+    assert worker.contract.runner_path("manager.capability.check", registry).name == "research-gateway-v2-capability-check.py"
     assert worker.contract.runner_path("operation.rollback", registry).name == "research-gateway-v2-operation-rollback.py"
     assert worker.contract.validator_path("operation.rollback", registry).name == "research-gateway-v2-operation-rollback.py"
     assert worker.contract.runner_path("insight.create", registry) is None
@@ -93,13 +96,17 @@ def assert_contract_invariants() -> None:
     assert worker.contract.required_capabilities(research_line_read, registry) == ["research.read"]
     assert worker.contract.required_capabilities(evidence_read, registry) == ["evidence.read"]
     assert worker.contract.required_capabilities(page_read, registry) == ["pages.read"]
-    assert worker.contract.required_capabilities(navigation_read, registry) == ["navigation.read"]
+    assert worker.contract.required_capabilities(navigation_read, registry) == ["pages.read"]
     assert worker.contract.required_capabilities(nav_write, registry) == [
-        "navigation.write",
+        "pages.read",
+        "pages.write",
+        "site.diagnostics",
+        "operations.apply",
         "operations.rollback",
     ]
     assert worker.contract.required_capabilities(rollback, registry) == [
-        "navigation.write",
+        "pages.read",
+        "pages.write",
         "operations.rollback",
     ]
 
@@ -114,6 +121,14 @@ def assert_contract_invariants() -> None:
         "required_capabilities": ["insights.read"],
         "granted": True,
     }
+
+    navigation_ok = worker.contract.preflight(
+        navigation_read,
+        {"granted_scopes": ["site.read", "pages.read"]},
+        registry,
+    )
+    assert navigation_ok["required_capabilities"] == ["pages.read"]
+    assert navigation_ok["granted"] is True
 
     try:
         worker.contract.preflight(
