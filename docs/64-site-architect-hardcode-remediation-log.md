@@ -28,14 +28,23 @@ Legacy production identifiers such as `Eduardo_Research_Manager_*`, `eduardo_res
 | Theme stylesheet repeated as literal in contract | CENTRALIZE | DONE at contract boundary | `d45a593d9c1c2fa2e96a6cfadbee7c0a223df881` centralizes `EXPECTED_STYLESHEET`. |
 | Runtime WordPress URL conflated with blueprint-declared canonical domain in remote status | CENTRALIZE / REMOVE ambiguity | DONE in repository | `9e928ec1b897f8392e41414aeb04ff458fa9ed2c` preserves legacy `canonical_domain` and adds `runtime_url`, `declared_canonical_domain`, match state and source. Production readback still required after deployment. |
 | Scattered `'en'` defaults in Page/Admin/other services | CENTRALIZE | IN PROGRESS | `6898a5550f0b107e4c5701daa8810e0c5022dba7` moves Page Resource default/creation/verification language selection to `contract()->default_language()`. Admin and any remaining callers still require incremental review. |
-| `_es` storage suffix reconstruction across services | CENTRALIZE | PENDING P1 | Keep physical keys unchanged; introduce one compatibility storage-key resolver before migrating callers. |
 
-## Current architecture after P0 work
+## P1 contract-consolidation status
+
+| P1 finding | Status | Evidence |
+| --- | --- | --- |
+| Physical EN/ES storage rules reconstructed by consumers | DONE at central contract boundary | `9db6b9f535174bd54daed98a44f0015755e2ab55` adds the compatibility-only `LEGACY_LANGUAGE_STORAGE` map plus resolvers. No option/meta key is migrated. |
+| Page option keys reconstruct `_es` locally | DONE for Page Resource | `2572abd709440bcaffbf9cd39d792b9d9d38b3fb` routes Page storage resolution through the Greenfield Theme Contract while keeping the public string wrapper compatible. |
+| Identity fields reconstruct `headline` / `headline_es` locally | DONE for Identity Profile | `8c746dccfa61c24a6ad6deddeeb916eea7bed779` resolves physical headline fields through the contract and derives allowed/verifiable identity fields from that mapping. |
+| Remaining direct `_es` / language-storage assumptions | IN PROGRESS | Search and migrate only when they represent storage ownership; do not change genuine bilingual content/data. |
+| Research resource mappings repeated across services | NEXT | Build one exact Research Resource Registry without weakening mutation allowlists or Research semantics. |
+
+## Current architecture after P0/P1 work
 
 ```text
 Site Architect engine
 → Greenfield Theme Contract
-→ Research vertical semantics
+→ Research vertical semantics / registries
 → active instance blueprint
 → stored WordPress state
 → production
@@ -59,11 +68,21 @@ WordPress runtime URL
 
 The legacy `canonical_domain` field remains for existing Gateway/MCP consumers while new consumers can reason about runtime and declared state independently.
 
+The active language model and physical storage compatibility are now distinct concepts:
+
+```text
+Theme Contract languages/default language
+→ compatibility storage resolver
+→ existing EN/ES physical option/meta fields
+```
+
+The physical names remain unchanged. Centralizing their ownership is not a data migration.
+
 No reusable identity service should invent Eduardo's name or biography as a final fallback.
 
 ## Compatibility boundary
 
-The following remain unchanged by the current P0 work:
+The following remain unchanged by the current P0/P1 work:
 
 - plugin directory;
 - PHP class names;
@@ -80,9 +99,10 @@ These are intentionally preserved while architecture boundaries are cleaned up.
 ## Next safe sequence
 
 1. Finish behavior-preserving default-language caller migration where `'en'` is still used as an operational default rather than as real bilingual content.
-2. Introduce a compatibility storage-key resolver for existing EN/ES option/meta names; do not migrate stored data.
-3. Migrate Page/identity/navigation callers to that resolver while proving exact key parity.
-4. Then begin P1 consolidation of the Research Resource Registry and broader Theme Contract facade.
+2. Find remaining direct `_es`/storage assumptions and move only true storage ownership behind the compatibility contract.
+3. Inventory repeated Research resource mappings in Contract / Resource Inventory / Plan / Executor.
+4. Introduce an exact fail-closed Research Resource Registry and migrate callers incrementally.
+5. Then continue broader Theme Contract/capability derivation consolidation.
 
 ## CI / production rule
 
