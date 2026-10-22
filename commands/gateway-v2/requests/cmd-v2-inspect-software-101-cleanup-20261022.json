@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-inspect-software-101-cleanup-20261022",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "research_object",
+    "kind": "software",
+    "id": 101
+  }
+}
