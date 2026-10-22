@@ -40,6 +40,9 @@ jobs:
         run: |
           set -euo pipefail
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-operations.php
@@ -97,7 +100,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -F "function eduardo_research_canonical_identity_headline" wordpress/themes/eduardo-research/inc/research-model.php
-          grep -F "'headline_es'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
+          grep -F "private const LEGACY_LANGUAGE_STORAGE" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
+          grep -F "'identity_headline_field'=>'headline_es'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
+          grep -F "\$contract->identity_headline_field(\$language)" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
           grep -F "Eduardo_Research_Manager_Identity_Profile" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
           grep -F "Eduardo_Research_Manager_Page_State_Editor" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
           grep -F "'identity.write'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
