@@ -132,9 +132,14 @@ jobs:
           git config user.name 'kairoseth-command-gateway[bot]'
           git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
 
+          # Generated result files are safely staged in /tmp. Remove the worker copy
+          # before checking out a newer main so untracked files can never block refresh.
+          rm -rf commands/gateway-v2/results
+
           for attempt in 1 2 3 4 5; do
             git fetch origin main
-            git checkout -B main origin/main
+            git reset --hard origin/main
+            git clean -fd -- commands/gateway-v2/results
             mkdir -p commands/gateway-v2/results
             cp /tmp/research-gateway-v2-results/*.json commands/gateway-v2/results/
             git add commands/gateway-v2/results
