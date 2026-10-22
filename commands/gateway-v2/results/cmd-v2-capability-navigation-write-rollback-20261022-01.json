@@ -1,0 +1,22 @@
+{
+  "action": "manager.capability.check",
+  "all_granted": false,
+  "checks": {
+    "navigation.write": false,
+    "operations.rollback": true
+  },
+  "command_id": "cmd-v2-capability-navigation-write-rollback-20261022-01",
+  "command_sha256": "4fe0315fea70459e1da3a59da2fb6bc966c1b69cb6704bdfd7cc2a94db3e50d8",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
