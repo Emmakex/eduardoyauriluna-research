@@ -1,0 +1,35 @@
+{
+  "action": "navigation.update",
+  "command_id": "cmd-v2-live-theme-navigation-write-verify-20261022-01",
+  "command_sha256": "23843eb6cb5bca923cb9c333a5b722fced87cc2a44935e30437cb75947bf8be8",
+  "correlation": {
+    "operation_id": null,
+    "plan_id": null
+  },
+  "error": {
+    "code": "mcp_refused",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_navigation_update_plan' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /navigation/plan with HTTP 409: research_manager_remediation_not_needed\"}],\"isError\":true}}",
+    "message": "The production MCP or Research Manager refused the bounded operation.",
+    "stage": "execution"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "site.diagnostics",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  },
+  "rollback": {
+    "attempted": false,
+    "verified": null
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
