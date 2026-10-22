@@ -1,0 +1,27 @@
+{
+  "action": "design.preset.update",
+  "command_id": "cmd-v2-generic-rollback-design-seed-20261022-01",
+  "command_sha256": "643461689809d4c80bcbe1d04a82c34767827b3c47018fce22c9a2dfc8e03db5",
+  "correlation": {
+    "operation_id": "erm-design-op-54a191f6f72c4d9a8ec1ac91ee00dad1",
+    "plan_id": "erm-design-plan-8aa5dfbd0faaa83c92-07d850c9"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "design.write",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "changed_fields": [
+      "typography"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
