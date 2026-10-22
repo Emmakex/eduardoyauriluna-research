@@ -100,6 +100,16 @@ final class Eduardo_Research_Manager_Contract {
         return isset($languages[0]) ? (string) $languages[0] : '';
     }
 
+    public function insight_types(string $language = ''): array|WP_Error {
+        if (! $this->theme_available() || ! function_exists('eduardo_research_insight_types')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required for Insight creation.');
+        }
+        $language = sanitize_key($language);
+        if ('' === $language) { $language = $this->default_language(); }
+        $types = eduardo_research_insight_types($language);
+        return is_array($types) ? $types : array();
+    }
+
     public function language_storage(string $language): array|WP_Error {
         $language = sanitize_key($language);
         if (! in_array($language, $this->languages(), true)) {
