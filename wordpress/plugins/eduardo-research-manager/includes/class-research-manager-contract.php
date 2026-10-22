@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-resource-registry.php';
+
 final class Eduardo_Research_Manager_Contract {
     public const EXPECTED_PRESET = 'research';
     public const EXPECTED_STYLESHEET = 'eduardo-research';
@@ -81,7 +83,7 @@ final class Eduardo_Research_Manager_Contract {
     }
 
     public function research_post_types(): array {
-        return array('research_line','research_output','research_project','research_software','research_dataset');
+        return Eduardo_Research_Manager_Resource_Registry::post_types();
     }
 
     public function languages(): array {
