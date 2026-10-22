@@ -1,0 +1,102 @@
+{
+  "action": "manager.design.variants.inspect",
+  "command_id": "cmd-v2-design-variants-inspect-20261022-01",
+  "command_sha256": "c20947f488e4c5d91337ad1c55c1869539fc141a2ad5bbec8eb415d9db4acd84",
+  "data": {
+    "body_classes": [
+      "research-variant-hero-orbit",
+      "research-variant-sections-layered",
+      "research-variant-cards-bordered",
+      "research-variant-collections-editorial-grid"
+    ],
+    "constraints": {
+      "arbitrary_class": false,
+      "arbitrary_css": false,
+      "arbitrary_html": false,
+      "content_order_unchanged": true,
+      "reduced_motion_respected": true,
+      "section_hiding": false,
+      "semantic_markup_unchanged": true
+    },
+    "presets": {
+      "cards": {
+        "bordered": {
+          "description": "Current bounded card surface with line and subtle depth.",
+          "label": "Bordered"
+        },
+        "lifted": {
+          "description": "Stronger depth and hover lift without changing card content or links.",
+          "label": "Lifted"
+        },
+        "quiet": {
+          "description": "Low-chrome card treatment using borders and transparent surfaces.",
+          "label": "Quiet"
+        }
+      },
+      "collections": {
+        "compact-grid": {
+          "description": "Denser bounded grid for scanning larger research collections.",
+          "label": "Compact Grid"
+        },
+        "editorial-grid": {
+          "description": "Current editorial multi-column research collection grid.",
+          "label": "Editorial Grid"
+        },
+        "list": {
+          "description": "Single-column list presentation while retaining the same article/card markup.",
+          "label": "Research List"
+        }
+      },
+      "hero": {
+        "compact": {
+          "description": "Focused text-first hero; the decorative aria-hidden orbit is suppressed.",
+          "label": "Compact"
+        },
+        "editorial": {
+          "description": "Single-column editorial reading flow with the orbit visual below the copy.",
+          "label": "Editorial"
+        },
+        "orbit": {
+          "description": "Two-column hero with the Theme-owned research-system orbit visual.",
+          "label": "Research Orbit"
+        }
+      },
+      "sections": {
+        "bands": {
+          "description": "Alternating bounded tonal bands while preserving section order and semantics.",
+          "label": "Bands"
+        },
+        "layered": {
+          "description": "Current layered Theme treatment with soft tonal sections.",
+          "label": "Layered"
+        },
+        "plain": {
+          "description": "Restrained white-space-led sections with borders instead of tonal blocks.",
+          "label": "Plain"
+        }
+      }
+    },
+    "state": {
+      "cards": "bordered",
+      "collections": "editorial-grid",
+      "hero": "orbit",
+      "sections": "layered"
+    },
+    "version": 1
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "design.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "design-variants"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
