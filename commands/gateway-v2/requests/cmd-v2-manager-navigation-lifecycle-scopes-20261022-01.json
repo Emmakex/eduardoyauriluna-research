@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-manager-navigation-lifecycle-scopes-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "manager.capability.check",
+  "requested_by": "chatgpt",
+  "payload": {
+    "capabilities": [
+      "pages.read",
+      "pages.write",
+      "site.diagnostics",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  }
+}
