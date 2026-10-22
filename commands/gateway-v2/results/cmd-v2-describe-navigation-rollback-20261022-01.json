@@ -1,0 +1,40 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-navigation-rollback-20261022-01",
+  "command_sha256": "aeaff7a4327bf48214c0560bc4e6bcd0c26305b6e7bafa52088bab7f3e0062ad",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Restore the exact navigation baseline for one navigation-update operation, subject to connection ownership and stale-revision protection.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "confirm": {
+          "const": true,
+          "type": "boolean"
+        },
+        "operationId": {
+          "pattern": "^erm-nav-op-[a-f0-9]{32}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "confirm"
+      ],
+      "type": "object"
+    },
+    "name": "site_navigation_rollback"
+  },
+  "version": "1"
+}
