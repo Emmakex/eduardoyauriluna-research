@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-describe-research-objects-list-20261022",
+  "tenant": "eduardo-research",
+  "action": "manager.tool.describe",
+  "requested_by": "chatgpt",
+  "payload": {
+    "tool": "site_research_objects_list"
+  }
+}
