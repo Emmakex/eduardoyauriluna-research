@@ -174,9 +174,9 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_page_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required for Page creation.'); }
-        $preset = eduardo_research_preset();
-        $pages = is_array($preset['pages'] ?? null) ? $preset['pages'] : array();
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available()) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required for Page creation.'); }
+        $pages = $theme_contract->pages();
         $page_key = sanitize_key((string) ($action['page_key'] ?? ''));
         $contract = is_array($pages[$page_key] ?? null) ? $pages[$page_key] : array();
         if (! $contract) { return new WP_Error('research_manager_page_key_not_allowed', 'This Page key is outside the active Research preset creation contract.'); }
