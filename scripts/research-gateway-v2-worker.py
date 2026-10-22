@@ -93,7 +93,10 @@ def unresolved_requests(request_dir: Path, result_dir: Path) -> list[tuple[Path,
         # audit record and must not be invalidated by future validator/schema evolution.
         raw = load_json(path)
         command_id = raw.get("command_id")
-        if not isinstance(command_id, str) or guard.guard.COMMAND_ID_RE.fullmatch(command_id) is None:
+        if (
+            not isinstance(command_id, str)
+            or guard.guard.runner.COMMAND_ID_RE.fullmatch(command_id) is None
+        ):
             raise WorkerError(f"historical request has invalid command_id: {path.name}")
         result_path = result_dir / f"{command_id}.json"
         if result_path.exists():
