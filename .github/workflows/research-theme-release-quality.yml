@@ -45,23 +45,31 @@ jobs:
         shell: bash
         run: bash .github/scripts/ensure-wp-cli.sh
 
-      - name: Verify 1.0 product metadata and release assets
+      - name: Verify 1.1 product metadata, governance and release assets
         shell: bash
         run: |
           set -euo pipefail
           THEME=wordpress/themes/eduardo-research
           grep -F 'Author: Emmake by Kairoseth' "$THEME/style.css"
           grep -F 'Author URI: https://kairoseth.com/' "$THEME/style.css"
-          grep -F 'Version: 1.0.0' "$THEME/style.css"
+          grep -F 'Version: 1.1.0' "$THEME/style.css"
+          grep -F "'version' => 6" "$THEME/inc/research-preset.php" || grep -F "'version'=>6" "$THEME/inc/research-preset.php"
           grep -F "research-hardening.php" "$THEME/functions.php"
+          grep -F "research-governance.php" "$THEME/functions.php"
           grep -F "research-navigation.css" "$THEME/functions.php"
           grep -F "research-navigation.js" "$THEME/functions.php"
           grep -F 'aria-controls="research-header-actions"' "$THEME/header.php"
           grep -F 'aria-expanded="false"' "$THEME/header.php"
           grep -F 'Escape' "$THEME/assets/research-navigation.js"
+          grep -F "function eduardo_research_governance_contract" "$THEME/inc/research-governance.php"
+          grep -F "wordpress_editor_not_layout_authority" "$THEME/inc/research-governance.php"
+          grep -F "arbitrary_php" "$THEME/inc/research-governance.php"
+          grep -F "arbitrary_rest_route" "$THEME/inc/research-governance.php"
           test -s "$THEME/assets/research-navigation.css"
           test -s "$THEME/inc/research-hardening.php"
+          test -s "$THEME/inc/research-governance.php"
           php -l "$THEME/inc/research-hardening.php"
+          php -l "$THEME/inc/research-governance.php"
 
       - name: Install clean WordPress and Theme
         shell: bash
@@ -77,13 +85,13 @@ jobs:
           cp -R "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
           wp theme activate eduardo-research --allow-root
 
-      - name: Verify installed Theme reports 1.0.0 ownership
+      - name: Verify installed Theme reports 1.1.0 governance and ownership
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/research-release-wp
-          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.0.0"
-          wp eval '$theme=wp_get_theme("eduardo-research"); if ("Emmake by Kairoseth" !== $theme->get("Author")) { fwrite(STDERR, $theme->get("Author") . "\n"); exit(1); } if ("https://kairoseth.com/" !== $theme->get("AuthorURI")) { exit(1); }' --allow-root
+          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.1.0"
+          wp eval '$theme=wp_get_theme("eduardo-research"); if ("Emmake by Kairoseth" !== $theme->get("Author")) { fwrite(STDERR, $theme->get("Author") . "\n"); exit(1); } if ("https://kairoseth.com/" !== $theme->get("AuthorURI")) { exit(1); } $contract=eduardo_research_governance_contract(); if (1 !== (int)($contract["version"]??0)) { exit(1); } if (6 !== (int)($contract["theme"]["preset_version"]??0)) { exit(1); } if (empty($contract["surfaces"]["page_content"]["available"]) || empty($contract["surfaces"]["navigation"]["available"]) || empty($contract["surfaces"]["design"]["available"]) || empty($contract["surfaces"]["variants"]["available"])) { exit(1); } if (empty($contract["constraints"]["wordpress_editor_not_layout_authority"]) || ! empty($contract["constraints"]["arbitrary_php"]) || ! empty($contract["constraints"]["arbitrary_rest_route"])) { exit(1); }' --allow-root
 
       - name: Verify public academic evidence gate
         shell: bash
@@ -147,11 +155,11 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cd wordpress/themes
-          zip -r ../../dist/eduardo-research-1.0.0.zip eduardo-research -x '*/.DS_Store' '*.map'
-          test -s ../../dist/eduardo-research-1.0.0.zip
+          zip -r ../../dist/eduardo-research-1.1.0.zip eduardo-research -x '*/.DS_Store' '*.map'
+          test -s ../../dist/eduardo-research-1.1.0.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: eduardo-research-theme-1.0.0
-          path: dist/eduardo-research-1.0.0.zip
+          name: eduardo-research-theme-1.1.0
+          path: dist/eduardo-research-1.1.0.zip
           if-no-files-found: error
