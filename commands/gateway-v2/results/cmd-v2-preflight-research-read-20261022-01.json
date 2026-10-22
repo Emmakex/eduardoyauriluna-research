@@ -1,0 +1,29 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-preflight-research-read-20261022-01",
+  "command_sha256": "eb8c8520291d3dd73d02c4b776a60add3985699b5fa6abcbbf65ef261c8441f6",
+  "data": {
+    "count": 0,
+    "items": [],
+    "kind": "software",
+    "language": ""
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "research.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "kind": "software"
+    },
+    "type": "research_object"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
