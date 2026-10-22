@@ -14,6 +14,7 @@ WORKER_PATH = ROOT / "scripts" / "research-gateway-v2-worker.py"
 LIFECYCLE_PATH = ROOT / "scripts" / "research-gateway-v2-lifecycle.py"
 RUNNER_SELFTESTS = (
     ROOT / "scripts" / "research-gateway-v2-resource-read.py",
+    ROOT / "scripts" / "research-gateway-v2-operation-rollback.py",
     ROOT / "scripts" / "phase2e-navigation-runner.py",
     ROOT / "scripts" / "phase2e-design-runner.py",
     ROOT / "scripts" / "phase2e-media-metadata-runner.py",
@@ -50,8 +51,11 @@ def assert_contract_invariants() -> None:
     actions = registry["actions"]
     assert "manager.resource.list" in actions
     assert "navigation.update" in actions
+    assert "operation.rollback" in actions
     assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
+    assert worker.contract.runner_path("operation.rollback", registry).name == "research-gateway-v2-operation-rollback.py"
+    assert worker.contract.validator_path("operation.rollback", registry).name == "research-gateway-v2-operation-rollback.py"
     assert worker.contract.runner_path("insight.create", registry) is None
     assert worker.contract.validator_path("insight.create", registry) is None
 
@@ -75,13 +79,26 @@ def assert_contract_invariants() -> None:
         "action": "manager.resource.inspect",
         "payload": {"resource": "page", "key": "research", "language": "es"},
     }
+    navigation_read = {
+        "action": "manager.resource.inspect",
+        "payload": {"resource": "navigation"},
+    }
     nav_write = {"action": "navigation.update", "payload": {}}
+    rollback = {
+        "action": "operation.rollback",
+        "payload": {"source_command_id": "cmd-source-navigation-0001"},
+    }
     assert worker.contract.required_capabilities(insight_read, registry) == ["insights.read"]
     assert worker.contract.required_capabilities(research_read, registry) == ["research.read"]
     assert worker.contract.required_capabilities(research_line_read, registry) == ["research.read"]
     assert worker.contract.required_capabilities(evidence_read, registry) == ["evidence.read"]
     assert worker.contract.required_capabilities(page_read, registry) == ["pages.read"]
+    assert worker.contract.required_capabilities(navigation_read, registry) == ["navigation.read"]
     assert worker.contract.required_capabilities(nav_write, registry) == [
+        "navigation.write",
+        "operations.rollback",
+    ]
+    assert worker.contract.required_capabilities(rollback, registry) == [
         "navigation.write",
         "operations.rollback",
     ]
