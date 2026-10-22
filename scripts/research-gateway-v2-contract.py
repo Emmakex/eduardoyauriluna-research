@@ -25,6 +25,7 @@ RESOURCE_READ_CAPABILITIES = {
     "research_line": "research.read",
     "evidence": "evidence.read",
     "page": "pages.read",
+    "navigation": "navigation.read",
 }
 
 
