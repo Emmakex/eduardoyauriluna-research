@@ -1,0 +1,60 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-lifecycle-selftest-retry-20261022-02",
+  "command_sha256": "a9b916209d5f79c46b4e79e5c47b96b515846c5fb7a3723a8e9772082851e632",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Plan bounded attachment metadata changes limited to title, alt text, caption and description.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "attachmentId": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "type": "integer"
+        },
+        "changes": {
+          "additionalProperties": false,
+          "properties": {
+            "altText": {
+              "maxLength": 500,
+              "type": "string"
+            },
+            "caption": {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            "description": {
+              "maxLength": 12000,
+              "type": "string"
+            },
+            "title": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "attachmentId",
+        "changes"
+      ],
+      "type": "object"
+    },
+    "name": "site_media_metadata_update_plan"
+  },
+  "version": "1"
+}

@@ -1,0 +1,65 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-lifecycle-selftest-acceptance-20261022-01",
+  "command_sha256": "28084b261505ef106ecbd79effa009ed99e1ce399b6f76c45a86307f15e6af2e",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Plan an exact navigation state for a registered Research Theme location using only registered Theme page targets. Arbitrary URLs and generic WordPress menu payloads are not accepted.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "maxLength": 256,
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "enum": [
+              "home",
+              "about",
+              "research",
+              "publications",
+              "projects",
+              "software",
+              "datasets",
+              "cv",
+              "insights",
+              "contact",
+              "privacy-policy",
+              "legal-notice"
+            ],
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "type": "array"
+        },
+        "location": {
+          "enum": [
+            "primary",
+            "footer"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "location",
+        "items"
+      ],
+      "type": "object"
+    },
+    "name": "site_navigation_update_plan"
+  },
+  "version": "1"
+}
