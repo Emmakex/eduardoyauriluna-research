@@ -2,9 +2,9 @@
 """Bounded source-command rollback for Research Gateway v2.
 
 The public command exposes only a previous successful Gateway v2 command id. It never
-accepts an operation id, MCP tool, URL or backend payload. The trusted rollback registry
-maps the original business action to its accepted rollback tool. This first slice is
-intentionally limited to navigation.update.
+accepts an operation id, MCP tool, URL or backend payload. A trusted rollback registry
+maps the original business action to its accepted rollback tool, operation-id pattern
+and Manager scope contract.
 """
 from __future__ import annotations
 
@@ -25,6 +25,89 @@ REQUEST_DIR = ROOT / "commands" / "gateway-v2" / "requests"
 RESULT_DIR = ROOT / "commands" / "gateway-v2" / "results"
 ACTION = "operation.rollback"
 TOOL_RE = re.compile(r"^site_[a-z0-9_]{3,96}$")
+
+EXPECTED_ROLLBACKS: dict[str, dict[str, Any]] = {
+    "insight.create": {
+        "rollback_tool": "site_insight_rollback",
+        "operation_id_pattern": r"^erm-operation-[a-f0-9]{32}$",
+        "required_capabilities": ["site.read", "operations.rollback"],
+    },
+    "insight.update": {
+        "rollback_tool": "site_insight_rollback",
+        "operation_id_pattern": r"^erm-operation-[a-f0-9]{32}$",
+        "required_capabilities": ["site.read", "operations.rollback"],
+    },
+    "insight.translation.pair": {
+        "rollback_tool": "site_insight_pairing_rollback",
+        "operation_id_pattern": r"^erm-insight-pair-op-[a-f0-9]{32}$",
+        "required_capabilities": ["site.read", "operations.rollback", "insights.write", "translations.write"],
+    },
+    "insight.translation.unpair": {
+        "rollback_tool": "site_insight_pairing_rollback",
+        "operation_id_pattern": r"^erm-insight-pair-op-[a-f0-9]{32}$",
+        "required_capabilities": ["site.read", "operations.rollback", "insights.write", "translations.write"],
+    },
+    "page.slot.update": {
+        "rollback_tool": "site_page_slots_rollback",
+        "operation_id_pattern": r"^erm-operation-[a-f0-9]{32}$",
+        "required_capabilities": ["site.read", "operations.rollback"],
+    },
+    "navigation.update": {
+        "rollback_tool": "site_navigation_rollback",
+        "operation_id_pattern": r"^erm-nav-op-[a-f0-9]{32}$",
+        "required_capabilities": ["pages.read", "operations.rollback", "pages.write"],
+    },
+    "media.metadata.update": {
+        "rollback_tool": "site_media_metadata_rollback",
+        "operation_id_pattern": r"^erm-media-op-[a-f0-9]{32}$",
+        "required_capabilities": ["media.read", "operations.rollback", "media.write"],
+    },
+    "design.preset.update": {
+        "rollback_tool": "site_design_preset_rollback",
+        "operation_id_pattern": r"^erm-design-op-[a-f0-9]{32}$",
+        "required_capabilities": ["design.read", "operations.rollback", "design.write"],
+    },
+    "design.variant.update": {
+        "rollback_tool": "site_design_variant_rollback",
+        "operation_id_pattern": r"^erm-design-variant-op-[a-f0-9]{32}$",
+        "required_capabilities": ["design.read", "operations.rollback", "design.write"],
+    },
+    "insight.research-lines.update": {
+        "rollback_tool": "site_insight_rollback",
+        "operation_id_pattern": r"^erm-operation-[a-f0-9]{32}$",
+        "required_capabilities": ["site.read", "operations.rollback"],
+    },
+    "research.translation.pair": {
+        "rollback_tool": "site_translation_rollback",
+        "operation_id_pattern": r"^erm-translation-op-[a-f0-9]{32}$",
+        "required_capabilities": ["translations.read", "operations.rollback", "translations.write"],
+    },
+    "research.translation.unpair": {
+        "rollback_tool": "site_translation_rollback",
+        "operation_id_pattern": r"^erm-translation-op-[a-f0-9]{32}$",
+        "required_capabilities": ["translations.read", "operations.rollback", "translations.write"],
+    },
+    "research.object.create": {
+        "rollback_tool": "site_research_object_rollback",
+        "operation_id_pattern": r"^erm-object-op-[a-f0-9]{32}$",
+        "required_capabilities": ["research.read", "operations.rollback", "research.write"],
+    },
+    "research.object.update": {
+        "rollback_tool": "site_research_object_rollback",
+        "operation_id_pattern": r"^erm-object-op-[a-f0-9]{32}$",
+        "required_capabilities": ["research.read", "operations.rollback", "research.write"],
+    },
+    "research.line.create": {
+        "rollback_tool": "site_research_line_rollback",
+        "operation_id_pattern": r"^erm-line-op-[a-f0-9]{32}$",
+        "required_capabilities": ["research.read", "operations.rollback", "research.write"],
+    },
+    "research.line.update": {
+        "rollback_tool": "site_research_line_rollback",
+        "operation_id_pattern": r"^erm-line-op-[a-f0-9]{32}$",
+        "required_capabilities": ["research.read", "operations.rollback", "research.write"],
+    },
+}
 
 
 def load_module(name: str, path: Path):
@@ -50,21 +133,21 @@ def validate_registry(registry: dict[str, Any]) -> None:
     if registry.get("version") != "1" or registry.get("tenant") != "eduardo-research":
         raise CommandError("unsupported rollback registry identity")
     actions = registry.get("actions")
-    if not isinstance(actions, dict) or set(actions) != {"navigation.update"}:
-        raise CommandError("rollback registry first slice must expose navigation.update only")
-    cfg = actions["navigation.update"]
-    if set(cfg) != {"rollback_tool", "operation_id_pattern", "required_capabilities"}:
-        raise CommandError("rollback registry navigation contract changed unexpectedly")
-    if cfg.get("rollback_tool") != "site_navigation_rollback":
-        raise CommandError("rollback registry tool changed unexpectedly")
-    if not isinstance(cfg.get("rollback_tool"), str) or TOOL_RE.fullmatch(cfg["rollback_tool"]) is None:
-        raise CommandError("rollback registry tool is invalid")
-    try:
-        re.compile(str(cfg.get("operation_id_pattern")))
-    except re.error as exc:
-        raise CommandError("rollback registry operation id pattern is invalid") from exc
-    if cfg.get("required_capabilities") != ["navigation.write", "operations.rollback"]:
-        raise CommandError("rollback registry capability contract changed unexpectedly")
+    if not isinstance(actions, dict) or set(actions) != set(EXPECTED_ROLLBACKS):
+        raise CommandError("rollback registry action set changed unexpectedly")
+    for action, expected in EXPECTED_ROLLBACKS.items():
+        cfg = actions.get(action)
+        if not isinstance(cfg, dict) or set(cfg) != {"rollback_tool", "operation_id_pattern", "required_capabilities"}:
+            raise CommandError(f"rollback registry contract changed unexpectedly for {action}")
+        if cfg != expected:
+            raise CommandError(f"rollback registry mapping changed unexpectedly for {action}")
+        tool = cfg.get("rollback_tool")
+        if not isinstance(tool, str) or TOOL_RE.fullmatch(tool) is None:
+            raise CommandError(f"rollback registry tool is invalid for {action}")
+        try:
+            re.compile(str(cfg.get("operation_id_pattern")))
+        except re.error as exc:
+            raise CommandError(f"rollback registry operation id pattern is invalid for {action}") from exc
 
 
 def validate_command(command: dict[str, Any]) -> None:
@@ -95,6 +178,21 @@ def load_validated_command(path: Path) -> dict[str, Any]:
     return command
 
 
+def validate_historical_source(source_command: dict[str, Any], source_id: str, tenant: str) -> str:
+    if set(source_command) != {"version", "command_id", "tenant", "action", "requested_by", "payload"}:
+        raise CommandError("rollback source request envelope is invalid")
+    if source_command.get("version") != "1" or source_command.get("command_id") != source_id:
+        raise CommandError("rollback source request identity mismatch")
+    if source_command.get("tenant") != tenant or source_command.get("requested_by") != "chatgpt":
+        raise CommandError("rollback source request tenant/requester mismatch")
+    if not isinstance(source_command.get("payload"), dict):
+        raise CommandError("rollback source request payload is invalid")
+    action = source_command.get("action")
+    if not isinstance(action, str) or action not in EXPECTED_ROLLBACKS:
+        raise CommandError("rollback source action is not registered for rollback")
+    return action
+
+
 def validated_source(command: dict[str, Any], registry: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str]:
     source_id = str(command["payload"]["source_command_id"])
     request_path = REQUEST_DIR / f"{source_id}.json"
@@ -102,17 +200,9 @@ def validated_source(command: dict[str, Any], registry: dict[str, Any]) -> tuple
     if not request_path.is_file() or not result_path.is_file():
         raise CommandError("rollback source command is not a persisted Gateway v2 success")
 
-    try:
-        source_command = guard_module.guard.load_validated_command(request_path)
-    except Exception as exc:  # noqa: BLE001
-        raise CommandError("rollback source request no longer validates") from exc
+    source_command = load_json(request_path)
+    source_action = validate_historical_source(source_command, source_id, str(command["tenant"]))
     source_result = load_json(result_path)
-    if source_command.get("tenant") != command.get("tenant"):
-        raise CommandError("rollback source tenant mismatch")
-    source_action = source_command.get("action")
-    actions = registry["actions"]
-    if source_action not in actions:
-        raise CommandError("rollback source action is not registered for rollback")
     if source_result.get("status") != "success" or source_result.get("verified") is not True:
         raise CommandError("rollback source result is not a verified success")
     if (
@@ -130,7 +220,7 @@ def validated_source(command: dict[str, Any], registry: dict[str, Any]) -> tuple
     if not isinstance(correlation, dict):
         raise CommandError("rollback source result contains no correlation object")
     operation_id = correlation.get("operation_id")
-    cfg = actions[source_action]
+    cfg = registry["actions"][source_action]
     pattern = re.compile(str(cfg["operation_id_pattern"]))
     if not isinstance(operation_id, str) or pattern.fullmatch(operation_id) is None:
         raise CommandError("rollback source result contains an invalid operation id")
@@ -163,10 +253,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
     client = base.McpClient(f"{base_url}/{tenant}", token)
     try:
         client.initialize()
-        rolled = client.call(
-            str(cfg["rollback_tool"]),
-            {"operationId": operation_id, "confirm": True},
-        )
+        rolled = client.call(str(cfg["rollback_tool"]), {"operationId": operation_id, "confirm": True})
         if not rollback_verified(rolled):
             raise CommandError("rollback did not report a verified restoration")
         result = {
@@ -215,13 +302,26 @@ def self_test() -> int:
         "tenant": "eduardo-research",
         "action": ACTION,
         "requested_by": "chatgpt",
-        "payload": {"source_command_id": "cmd-selftest-navigation-source-0001"},
+        "payload": {"source_command_id": "cmd-selftest-design-source-0001"},
     }
     validate_command(good)
+    source = {
+        "version": "1",
+        "command_id": "cmd-selftest-design-source-0001",
+        "tenant": "eduardo-research",
+        "action": "design.preset.update",
+        "requested_by": "chatgpt",
+        "payload": {"changes": {"typography": "academic-mixed"}},
+    }
+    if validate_historical_source(source, source["command_id"], source["tenant"]) != "design.preset.update":
+        raise CommandError("operation.rollback self-test did not resolve Design source action")
+    for action, expected in EXPECTED_ROLLBACKS.items():
+        if registry["actions"].get(action) != expected:
+            raise CommandError(f"operation.rollback self-test registry mismatch for {action}")
     for payload in (
         {"source_command_id": "bad"},
         {"source_command_id": good["command_id"]},
-        {"source_command_id": "cmd-selftest-navigation-source-0001", "operation_id": "erm-nav-op-deadbeef"},
+        {"source_command_id": "cmd-selftest-design-source-0001", "operation_id": "erm-design-op-deadbeef"},
     ):
         bad = json.loads(json.dumps(good))
         bad["payload"] = payload
@@ -231,7 +331,15 @@ def self_test() -> int:
             pass
         else:
             raise CommandError("operation.rollback self-test accepted an unsafe payload")
-    print("research-gateway-v2 operation rollback self-test: OK")
+    unsafe_source = dict(source)
+    unsafe_source["action"] = "unknown.write"
+    try:
+        validate_historical_source(unsafe_source, source["command_id"], source["tenant"])
+    except CommandError:
+        pass
+    else:
+        raise CommandError("operation.rollback self-test accepted an unregistered source action")
+    print(f"research-gateway-v2 operation rollback self-test: OK ({len(EXPECTED_ROLLBACKS)} actions)")
     return 0
 
 
