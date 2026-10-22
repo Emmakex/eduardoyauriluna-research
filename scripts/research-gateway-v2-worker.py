@@ -40,6 +40,7 @@ def load_module(name: str, path: Path):
 guard = load_module("research_gateway_v2_guard", GUARD_PATH)
 contract = load_module("research_gateway_v2_contract_worker", CONTRACT_PATH)
 registry = contract.load_registry()
+_capabilities_cache: dict[str, Any] = {}
 
 
 class WorkerError(RuntimeError):
@@ -92,7 +93,11 @@ def unresolved_requests(request_dir: Path, result_dir: Path) -> list[tuple[Path,
     return pending
 
 
-def live_preflight(command: dict[str, Any]) -> dict[str, Any]:
+def live_capabilities(tenant: str) -> Any:
+    cached = _capabilities_cache.get(tenant)
+    if cached is not None:
+        return cached
+
     token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
     if not token:
         raise WorkerError("PHASE2D_MCP_TOKEN is required")
@@ -102,14 +107,19 @@ def live_preflight(command: dict[str, Any]) -> dict[str, Any]:
     if base_url != guard.guard.runner.DEFAULT_BASE_URL:
         raise WorkerError("Gateway v2 preflight only permits the production MCP base URL")
 
-    tenant = str(command["tenant"])
     client = guard.guard.runner.McpClient(f"{base_url}/{tenant}", token)
     try:
         client.initialize()
         capabilities = client.call("research_capabilities")
-        return contract.preflight(command, capabilities, registry)
     finally:
         client.close()
+    _capabilities_cache[tenant] = capabilities
+    return capabilities
+
+
+def live_preflight(command: dict[str, Any]) -> dict[str, Any]:
+    tenant = str(command["tenant"])
+    return contract.preflight(command, live_capabilities(tenant), registry)
 
 
 def persist_preflight_failure(
