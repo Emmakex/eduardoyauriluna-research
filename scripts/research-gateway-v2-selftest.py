@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKER_PATH = ROOT / "scripts" / "research-gateway-v2-worker.py"
 LIFECYCLE_PATH = ROOT / "scripts" / "research-gateway-v2-lifecycle.py"
+MIGRATED_WRITE_RUNNERS = (
+    ROOT / "scripts" / "phase2e-navigation-runner.py",
+    ROOT / "scripts" / "phase2e-design-runner.py",
+    ROOT / "scripts" / "phase2e-media-metadata-runner.py",
+)
 
 
 def load_module(name: str, path: Path):
@@ -93,9 +100,24 @@ def assert_contract_invariants() -> None:
         raise AssertionError("ambiguous capability payload did not fail closed")
 
 
+def assert_migrated_write_runner_invariants() -> None:
+    for runner in MIGRATED_WRITE_RUNNERS:
+        completed = subprocess.run(
+            [sys.executable, str(runner), "--self-test"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
+            raise AssertionError(f"{runner.name} self-test failed: {diagnostic}")
+
+
 def main() -> int:
     assert_contract_invariants()
     assert lifecycle.self_test() == 0
+    assert_migrated_write_runner_invariants()
 
     with tempfile.TemporaryDirectory(prefix="research-gateway-v2-selftest-") as temp:
         root = Path(temp)
