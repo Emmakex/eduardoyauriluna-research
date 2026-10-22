@@ -1,0 +1,246 @@
+{
+  "action": "manager.research.lines.list.pair",
+  "command_id": "cmd-v2-research-lines-list-pair-auth-20261022",
+  "command_sha256": "6d5f41520a6786f9d3c535cb57f6e83c63704d1f71e09fcc8c781d68b014f56e",
+  "lines": {
+    "en": {
+      "count": 4,
+      "items": [
+        {
+          "central_question": "How can autonomous and semi-autonomous AI agents be designed and evaluated so they improve business processes while remaining reliable, traceable and governable?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Research direction on reliable, observable and governable autonomous and semi-autonomous AI agents operating in real business processes.",
+          "language": "en",
+          "methods": [
+            "Design Science Research",
+            "Software prototyping",
+            "Controlled experiments",
+            "Quantitative evaluation"
+          ],
+          "order": "10",
+          "post_id": 29,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "autonomous-ai-agents-business-processes",
+          "status": "publish",
+          "title": "Autonomous AI agents for business processes",
+          "topics": [
+            "Autonomous AI agents",
+            "Agentic AI",
+            "Business process automation",
+            "AI governance"
+          ],
+          "url": "https://eduardoyauriluna.com/research/lines/autonomous-ai-agents-business-processes/"
+        },
+        {
+          "central_question": "How should autonomy, human oversight and recovery mechanisms be calibrated so AI systems remain useful without making organisational processes opaque or uncontrollable?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Research direction on calibrated autonomy, human oversight and responsible collaboration between people and AI systems.",
+          "language": "en",
+          "methods": [
+            "Mixed methods",
+            "Controlled experiments",
+            "Surveys and interviews",
+            "Comparative case studies"
+          ],
+          "order": "20",
+          "post_id": 31,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "human-ai-collaboration-responsible-autonomy",
+          "status": "publish",
+          "title": "Human–AI collaboration and responsible autonomy",
+          "topics": [
+            "Human–AI collaboration",
+            "Responsible automation",
+            "Calibrated autonomy",
+            "Human oversight"
+          ],
+          "url": "https://eduardoyauriluna.com/research/lines/human-ai-collaboration-responsible-autonomy/"
+        },
+        {
+          "central_question": "Which technical, organisational and governance conditions enable SMEs to adopt AI-enabled automation effectively and sustainably?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Applied research on the organisational, technical and operational conditions that shape successful AI-enabled digital transformation in SMEs.",
+          "language": "en",
+          "methods": [
+            "Comparative case studies",
+            "Surveys and interviews",
+            "Mixed methods",
+            "Design Science Research"
+          ],
+          "order": "30",
+          "post_id": 33,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "digital-transformation-ai-adoption-smes",
+          "status": "publish",
+          "title": "Digital transformation and AI adoption in SMEs",
+          "topics": [
+            "Digital transformation",
+            "SME digitalisation",
+            "AI adoption",
+            "Business process redesign"
+          ],
+          "url": "https://eduardoyauriluna.com/research/lines/digital-transformation-ai-adoption-smes/"
+        },
+        {
+          "central_question": "How do generative search and AI-mediated discovery reshape information retrieval, evaluation and visibility for organisations and users?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Complementary research direction on how generative and AI-mediated search systems change information retrieval, discovery and digital visibility.",
+          "language": "en",
+          "methods": [
+            "Information retrieval evaluation",
+            "Comparative experiments",
+            "Quantitative analysis",
+            "Reproducible datasets"
+          ],
+          "order": "40",
+          "post_id": 35,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "ai-mediated-information-discovery-generative-search",
+          "status": "publish",
+          "title": "AI-mediated information discovery and generative search",
+          "topics": [
+            "Generative search",
+            "Information retrieval",
+            "AI-mediated discovery",
+            "Generative Engine Optimisation"
+          ],
+          "url": "https://eduardoyauriluna.com/research/lines/ai-mediated-information-discovery-generative-search/"
+        }
+      ],
+      "language": "en"
+    },
+    "es": {
+      "count": 4,
+      "items": [
+        {
+          "central_question": "¿Cómo pueden diseñarse y evaluarse agentes de IA autónomos y semiautónomos para mejorar procesos empresariales manteniendo fiabilidad, trazabilidad y gobernanza?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Línea de investigación sobre agentes de IA autónomos y semiautónomos fiables, observables y gobernables en procesos empresariales reales.",
+          "language": "es",
+          "methods": [
+            "Design Science Research",
+            "Prototipado de software",
+            "Experimentos controlados",
+            "Evaluación cuantitativa"
+          ],
+          "order": "10",
+          "post_id": 30,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "agentes-autonomos-ia-procesos-empresariales",
+          "status": "publish",
+          "title": "Agentes autónomos de IA para procesos empresariales",
+          "topics": [
+            "Agentes autónomos de IA",
+            "IA agéntica",
+            "Automatización de procesos empresariales",
+            "Gobernanza de IA"
+          ],
+          "url": "https://eduardoyauriluna.com/es/investigacion/lineas/agentes-autonomos-ia-procesos-empresariales/"
+        },
+        {
+          "central_question": "¿Cómo deben calibrarse la autonomía, la supervisión humana y los mecanismos de recuperación para que los sistemas de IA sean útiles sin volver opacos o incontrolables los procesos organizativos?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Línea de investigación sobre autonomía calibrada, supervisión humana y colaboración responsable entre personas y sistemas de IA.",
+          "language": "es",
+          "methods": [
+            "Métodos mixtos",
+            "Experimentos controlados",
+            "Encuestas y entrevistas",
+            "Estudios de caso comparativos"
+          ],
+          "order": "20",
+          "post_id": 32,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "colaboracion-humano-ia-autonomia-responsable",
+          "status": "publish",
+          "title": "Colaboración humano–IA y autonomía responsable",
+          "topics": [
+            "Colaboración humano–IA",
+            "Automatización responsable",
+            "Autonomía calibrada",
+            "Supervisión humana"
+          ],
+          "url": "https://eduardoyauriluna.com/es/investigacion/lineas/colaboracion-humano-ia-autonomia-responsable/"
+        },
+        {
+          "central_question": "¿Qué condiciones técnicas, organizativas y de gobernanza permiten a las pymes adoptar automatización basada en IA de forma eficaz y sostenible?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Investigación aplicada sobre las condiciones organizativas, técnicas y operativas que determinan una transformación digital con IA eficaz en las pymes.",
+          "language": "es",
+          "methods": [
+            "Estudios de caso comparativos",
+            "Encuestas y entrevistas",
+            "Métodos mixtos",
+            "Design Science Research"
+          ],
+          "order": "30",
+          "post_id": 34,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "transformacion-digital-adopcion-ia-pymes",
+          "status": "publish",
+          "title": "Transformación digital y adopción de IA en pymes",
+          "topics": [
+            "Transformación digital",
+            "Digitalización de pymes",
+            "Adopción de IA",
+            "Rediseño de procesos empresariales"
+          ],
+          "url": "https://eduardoyauriluna.com/es/investigacion/lineas/transformacion-digital-adopcion-ia-pymes/"
+        },
+        {
+          "central_question": "¿Cómo transforman la búsqueda generativa y el descubrimiento mediado por IA la recuperación, evaluación y visibilidad de la información para organizaciones y usuarios?",
+          "content": "",
+          "evidence_status": "verified",
+          "excerpt": "Línea complementaria sobre cómo los sistemas de búsqueda generativa y mediada por IA cambian la recuperación, el descubrimiento y la visibilidad de la información.",
+          "language": "es",
+          "methods": [
+            "Evaluación de recuperación de información",
+            "Experimentos comparativos",
+            "Análisis cuantitativo",
+            "Datos reproducibles"
+          ],
+          "order": "40",
+          "post_id": 36,
+          "post_type": "research_line",
+          "research_status": "planned",
+          "slug": "descubrimiento-informacion-ia-busqueda-generativa",
+          "status": "publish",
+          "title": "Descubrimiento de información mediado por IA y búsqueda generativa",
+          "topics": [
+            "Búsqueda generativa",
+            "Recuperación de información",
+            "Descubrimiento mediado por IA",
+            "Generative Engine Optimisation"
+          ],
+          "url": "https://eduardoyauriluna.com/es/investigacion/lineas/descubrimiento-informacion-ia-busqueda-generativa/"
+        }
+      ],
+      "language": "es"
+    }
+  },
+  "read_only": true,
+  "resource": {
+    "languages": [
+      "en",
+      "es"
+    ],
+    "type": "research-lines"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}

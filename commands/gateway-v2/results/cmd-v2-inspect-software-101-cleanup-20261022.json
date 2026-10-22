@@ -1,0 +1,15 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-inspect-software-101-cleanup-20261022",
+  "command_sha256": "6e0d2e2e6e89e713be07e605822f0136779339104975ac65dec53b70693894f6",
+  "error": {
+    "code": "mcp_refused",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_research_object_inspect' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /research-objects/software/101 with HTTP 404: research_manager_software_missing\"}],\"isError\":true}}",
+    "message": "The production MCP or Research Manager refused the bounded operation.",
+    "stage": "execution"
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}

@@ -1,0 +1,15 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-inspect-insight-94-cleanup-20261022",
+  "command_sha256": "376d1d938911e0709d8666c789d0cf1af35eddc998c26e58034e542f69f95deb",
+  "error": {
+    "code": "mcp_refused",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_insight_inspect' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Research Manager rejected /insights/94 with HTTP 500: research_manager_insight_missing\"}],\"isError\":true}}",
+    "message": "The production MCP or Research Manager refused the bounded operation.",
+    "stage": "execution"
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
