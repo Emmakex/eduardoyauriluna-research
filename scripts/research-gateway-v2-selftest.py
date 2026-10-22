@@ -203,6 +203,32 @@ def main() -> int:
         queue = worker.unresolved_requests(requests, results)
         assert [item[1]["command_id"] for item in queue] == ["cmd-v2-selftest-two-0002"]
 
+        # A sealed historical request may no longer satisfy the current action-specific
+        # schema. Identity + fingerprint + terminal result keep it valid as audit history.
+        legacy = {
+            "version": "1",
+            "command_id": "cmd-v2-selftest-legacy-0003",
+            "tenant": "eduardo-research",
+            "action": "manager.capability.check",
+            "requested_by": "chatgpt",
+            "payload": {"capabilities": ["navigation.write"]},
+        }
+        legacy_path = requests / f"{legacy['command_id']}.json"
+        legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
+        legacy_result = {
+            "version": "1",
+            "status": "success",
+            "tenant": legacy["tenant"],
+            "action": legacy["action"],
+            "command_id": legacy["command_id"],
+            "command_sha256": worker.guard.guard.command_sha256(legacy),
+        }
+        (results / f"{legacy['command_id']}.json").write_text(
+            json.dumps(legacy_result), encoding="utf-8"
+        )
+        queue = worker.unresolved_requests(requests, results)
+        assert [item[1]["command_id"] for item in queue] == ["cmd-v2-selftest-two-0002"]
+
         tampered = json.loads(json.dumps(first))
         tampered["payload"]["tool"] = "site_media_list"
         first_path.write_text(json.dumps(tampered), encoding="utf-8")
