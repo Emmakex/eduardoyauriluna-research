@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-navigation-footer-rollback-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "operation.rollback",
+  "requested_by": "chatgpt",
+  "payload": {
+    "source_command_id": "cmd-v2-navigation-footer-reversible-20261022-01"
+  }
+}
