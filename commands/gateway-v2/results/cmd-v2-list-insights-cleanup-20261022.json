@@ -1,0 +1,15 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-list-insights-cleanup-20261022",
+  "command_sha256": "f8fb16051f3d200e483a9e9bb82e350acf173c6a63ce1bdd9ebefeb0cccd7738",
+  "error": {
+    "code": "scope_denied",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_insights_list' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Commercial entitlement denied: insights.read (principal_not_granted)\"}],\"isError\":true}}",
+    "message": "The production principal is not granted the required capability or scope.",
+    "stage": "authorization"
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
