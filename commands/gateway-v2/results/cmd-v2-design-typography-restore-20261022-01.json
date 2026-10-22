@@ -1,0 +1,27 @@
+{
+  "action": "design.preset.update",
+  "command_id": "cmd-v2-design-typography-restore-20261022-01",
+  "command_sha256": "6d695351a1d9bb5eb4f9e586ae88161eb6d1611f8f02f6284007c273b4ded7f1",
+  "correlation": {
+    "operation_id": "erm-design-op-e4740a414d5b493f9ebfb0a19ade724d",
+    "plan_id": "erm-design-plan-fcc37d062403444e41-931715bf"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "design.write",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "changed_fields": [
+      "typography"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
