@@ -1,5 +1,5 @@
 <?php
-/** Versioned authenticated REST bridge for the Research Manager. */
+/** Versioned authenticated REST bridge for Site Architect. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
@@ -72,7 +72,16 @@ final class Eduardo_Research_Manager_Remote_REST {
         $diagnostics = Eduardo_Research_Manager::diagnostics()->run();
         $preset = Eduardo_Research_Manager::contract()->preset();
         $metadata = Eduardo_Research_Manager::blueprint_store()->metadata();
-        $domain = is_wp_error($metadata) ? home_url('/') : (string) ($metadata['canonical_domain'] ?? home_url('/'));
+        $runtime_url = home_url('/');
+        $declared_canonical_domain = is_wp_error($metadata)
+            ? ''
+            : trim((string) ($metadata['canonical_domain'] ?? ''));
+        $legacy_canonical_domain = '' !== $declared_canonical_domain
+            ? $declared_canonical_domain
+            : $runtime_url;
+        $runtime_matches_declared = '' !== $declared_canonical_domain
+            ? untrailingslashit($runtime_url) === untrailingslashit($declared_canonical_domain)
+            : null;
         $connection = $this->credentials->state();
 
         return $this->response($request, array(
@@ -84,7 +93,12 @@ final class Eduardo_Research_Manager_Remote_REST {
                 'compatible' => Eduardo_Research_Manager::contract()->compatible(),
             ),
             'mode' => Eduardo_Research_Manager::mode(),
-            'canonical_domain' => $domain,
+            // Legacy alias retained for existing Gateway/MCP consumers.
+            'canonical_domain' => $legacy_canonical_domain,
+            'runtime_url' => $runtime_url,
+            'declared_canonical_domain' => $declared_canonical_domain,
+            'runtime_matches_declared_canonical' => $runtime_matches_declared,
+            'canonical_domain_source' => '' !== $declared_canonical_domain ? 'active-instance-blueprint' : 'runtime-fallback',
             'languages' => Eduardo_Research_Manager::contract()->languages(),
             'readiness' => array(
                 'ready' => (bool) ($diagnostics['ready'] ?? false),
