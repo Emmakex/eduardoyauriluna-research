@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Bounded live capability check for Research Gateway v2.
+"""Bounded live Research Manager scope check for Gateway v2.
 
-The caller may ask only about a closed set of registered Gateway capabilities. The
-result exposes booleans for the requested scopes and never returns the principal's full
-scope inventory.
+The caller may ask only about a closed set of registered WordPress Research Manager
+scopes. The result exposes booleans for the requested scopes and never returns the
+credential's full granted-scope inventory. Commercial MCP capabilities are a separate
+inner authorization boundary and are not represented here.
 """
 from __future__ import annotations
 
@@ -24,13 +25,13 @@ CHECKABLE_CAPABILITIES = {
     "insights.read",
     "insights.write",
     "media.write",
-    "navigation.read",
-    "navigation.write",
+    "operations.apply",
     "operations.rollback",
     "pages.read",
     "pages.write",
     "research.read",
     "research.write",
+    "site.diagnostics",
     "site.read",
     "translations.write",
 }
@@ -62,15 +63,15 @@ def validate_command(command: dict[str, Any]) -> None:
     if not isinstance(command_id, str) or base.COMMAND_ID_RE.fullmatch(command_id) is None:
         raise CommandError("invalid command_id")
     if command.get("tenant") != "eduardo-research":
-        raise CommandError("capability check tenant is not registered")
+        raise CommandError("Manager scope check tenant is not registered")
     if command.get("action") != ACTION:
-        raise CommandError("unsupported capability check action")
+        raise CommandError("unsupported Manager scope check action")
     if command.get("requested_by") != "chatgpt":
         raise CommandError("requested_by must be chatgpt")
 
     payload = command.get("payload")
     if not isinstance(payload, dict) or set(payload) != {"capabilities"}:
-        raise CommandError("capability check payload must contain only capabilities")
+        raise CommandError("Manager scope check payload must contain only capabilities")
     requested = payload.get("capabilities")
     if (
         not isinstance(requested, list)
@@ -79,7 +80,7 @@ def validate_command(command: dict[str, Any]) -> None:
         or len(set(requested)) != len(requested)
         or any(item not in CHECKABLE_CAPABILITIES for item in requested)
     ):
-        raise CommandError("capability check contains an unregistered or invalid capability")
+        raise CommandError("Manager scope check contains an unregistered or invalid scope")
 
 
 def load_validated_command(path: Path) -> dict[str, Any]:
@@ -101,7 +102,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
         raise CommandError("PHASE2D_MCP_TOKEN is required")
     base_url = os.environ.get("PHASE2D_MCP_BASE_URL", base.DEFAULT_BASE_URL).strip().rstrip("/")
     if base_url != base.DEFAULT_BASE_URL:
-        raise CommandError("capability check only permits the production MCP base URL")
+        raise CommandError("Manager scope check only permits the production MCP base URL")
 
     tenant = str(command["tenant"])
     requested = list(command["payload"]["capabilities"])
@@ -118,6 +119,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "action": ACTION,
             "command_id": command_id,
             "read_only": True,
+            "scope_source": "research-manager-read-credential",
             "checks": checks,
             "all_granted": all(checks.values()),
         }
@@ -132,9 +134,10 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "action": ACTION,
             "command_id": command_id,
             "read_only": True,
+            "scope_source": "research-manager-read-credential",
             "error": {
                 "code": "execution_failed",
-                "message": "The bounded capability check did not complete successfully.",
+                "message": "The bounded Manager scope check did not complete successfully.",
             },
         }
         path = write_result(result_dir, command_id, result)
@@ -151,20 +154,28 @@ def self_test() -> int:
         "tenant": "eduardo-research",
         "action": ACTION,
         "requested_by": "chatgpt",
-        "payload": {"capabilities": ["navigation.write", "operations.rollback"]},
+        "payload": {
+            "capabilities": [
+                "pages.read",
+                "pages.write",
+                "site.diagnostics",
+                "operations.apply",
+                "operations.rollback",
+            ]
+        },
     }
     validate_command(good)
 
     bad = dict(good)
-    bad["payload"] = {"capabilities": ["arbitrary.admin"]}
+    bad["payload"] = {"capabilities": ["navigation.write"]}
     try:
         validate_command(bad)
     except CommandError:
         pass
     else:
-        raise CommandError("capability check self-test accepted an unregistered scope")
+        raise CommandError("Manager scope check self-test accepted a commercial MCP capability")
 
-    print("research-gateway-v2 capability check self-test: OK")
+    print("research-gateway-v2 Manager scope check self-test: OK")
     return 0
 
 
