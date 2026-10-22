@@ -1,0 +1,25 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-design-inspect-20261022-01",
+  "command_sha256": "ee36f980d7f15df7f54665228953d482f7ea34b53b5bb2fa247a1add477f5429",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Read bounded Theme design state for palette, typography and density.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "site_design_inspect"
+  },
+  "version": "1"
+}
