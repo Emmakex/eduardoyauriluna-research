@@ -26,8 +26,8 @@ Legacy production identifiers such as `Eduardo_Research_Manager_*`, `eduardo_res
 | EN/ES array hardcoded in Identity Profile | CENTRALIZE | DONE for Identity Profile | `d92b287a4c10310db4493255ffd9b5af500f9266` reads languages from the Greenfield Theme Contract. |
 | Default language not exposed by Theme Contract | CENTRALIZE | DONE at contract boundary | `d45a593d9c1c2fa2e96a6cfadbee7c0a223df881` adds `default_language()` and exposes it in contract snapshots. |
 | Theme stylesheet repeated as literal in contract | CENTRALIZE | DONE at contract boundary | `d45a593d9c1c2fa2e96a6cfadbee7c0a223df881` centralizes `EXPECTED_STYLESHEET`. |
-| Runtime WordPress URL conflated with blueprint-declared canonical domain in remote status | CENTRALIZE / REMOVE ambiguity | PENDING | Must preserve legacy `canonical_domain` while adding explicit runtime versus declared-canonical fields. |
-| Scattered `'en'` defaults in Page/Admin/other services | CENTRALIZE | IN PROGRESS | Contract boundary now exposes the default language; callers still need incremental migration. |
+| Runtime WordPress URL conflated with blueprint-declared canonical domain in remote status | CENTRALIZE / REMOVE ambiguity | DONE in repository | `9e928ec1b897f8392e41414aeb04ff458fa9ed2c` preserves legacy `canonical_domain` and adds `runtime_url`, `declared_canonical_domain`, match state and source. Production readback still required after deployment. |
+| Scattered `'en'` defaults in Page/Admin/other services | CENTRALIZE | IN PROGRESS | `6898a5550f0b107e4c5701daa8810e0c5022dba7` moves Page Resource default/creation/verification language selection to `contract()->default_language()`. Admin and any remaining callers still require incremental review. |
 | `_es` storage suffix reconstruction across services | CENTRALIZE | PENDING P1 | Keep physical keys unchanged; introduce one compatibility storage-key resolver before migrating callers. |
 
 ## Current architecture after P0 work
@@ -50,6 +50,15 @@ verified/stored WordPress identity state
 → explicit missing-state error
 ```
 
+Canonical-domain reporting is now explicitly split as:
+
+```text
+WordPress runtime URL
+≠ blueprint-declared canonical domain
+```
+
+The legacy `canonical_domain` field remains for existing Gateway/MCP consumers while new consumers can reason about runtime and declared state independently.
+
 No reusable identity service should invent Eduardo's name or biography as a final fallback.
 
 ## Compatibility boundary
@@ -70,10 +79,10 @@ These are intentionally preserved while architecture boundaries are cleaned up.
 
 ## Next safe sequence
 
-1. Separate runtime WordPress URL from blueprint-declared canonical domain in status/capability output without removing legacy fields.
-2. Replace behavior-preserving caller defaults of `'en'` with `contract()->default_language()`.
-3. Introduce a compatibility storage-key resolver for existing EN/ES option/meta names; do not migrate stored data.
-4. Then begin P1 consolidation of the Greenfield Theme Contract and Research Resource Registry.
+1. Finish behavior-preserving default-language caller migration where `'en'` is still used as an operational default rather than as real bilingual content.
+2. Introduce a compatibility storage-key resolver for existing EN/ES option/meta names; do not migrate stored data.
+3. Migrate Page/identity/navigation callers to that resolver while proving exact key parity.
+4. Then begin P1 consolidation of the Research Resource Registry and broader Theme Contract facade.
 
 ## CI / production rule
 
