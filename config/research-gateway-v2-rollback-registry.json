@@ -2,10 +2,85 @@
   "version": "1",
   "tenant": "eduardo-research",
   "actions": {
+    "insight.create": {
+      "rollback_tool": "site_insight_rollback",
+      "operation_id_pattern": "^erm-operation-[a-f0-9]{32}$",
+      "required_capabilities": ["site.read", "operations.rollback"]
+    },
+    "insight.update": {
+      "rollback_tool": "site_insight_rollback",
+      "operation_id_pattern": "^erm-operation-[a-f0-9]{32}$",
+      "required_capabilities": ["site.read", "operations.rollback"]
+    },
+    "insight.translation.pair": {
+      "rollback_tool": "site_insight_pairing_rollback",
+      "operation_id_pattern": "^erm-insight-pair-op-[a-f0-9]{32}$",
+      "required_capabilities": ["site.read", "operations.rollback", "insights.write", "translations.write"]
+    },
+    "insight.translation.unpair": {
+      "rollback_tool": "site_insight_pairing_rollback",
+      "operation_id_pattern": "^erm-insight-pair-op-[a-f0-9]{32}$",
+      "required_capabilities": ["site.read", "operations.rollback", "insights.write", "translations.write"]
+    },
+    "page.slot.update": {
+      "rollback_tool": "site_page_slots_rollback",
+      "operation_id_pattern": "^erm-operation-[a-f0-9]{32}$",
+      "required_capabilities": ["site.read", "operations.rollback"]
+    },
     "navigation.update": {
       "rollback_tool": "site_navigation_rollback",
       "operation_id_pattern": "^erm-nav-op-[a-f0-9]{32}$",
-      "required_capabilities": ["navigation.write", "operations.rollback"]
+      "required_capabilities": ["pages.read", "operations.rollback", "pages.write"]
+    },
+    "media.metadata.update": {
+      "rollback_tool": "site_media_metadata_rollback",
+      "operation_id_pattern": "^erm-media-op-[a-f0-9]{32}$",
+      "required_capabilities": ["media.read", "operations.rollback", "media.write"]
+    },
+    "design.preset.update": {
+      "rollback_tool": "site_design_preset_rollback",
+      "operation_id_pattern": "^erm-design-op-[a-f0-9]{32}$",
+      "required_capabilities": ["design.read", "operations.rollback", "design.write"]
+    },
+    "design.variant.update": {
+      "rollback_tool": "site_design_variant_rollback",
+      "operation_id_pattern": "^erm-design-variant-op-[a-f0-9]{32}$",
+      "required_capabilities": ["design.read", "operations.rollback", "design.write"]
+    },
+    "insight.research-lines.update": {
+      "rollback_tool": "site_insight_rollback",
+      "operation_id_pattern": "^erm-operation-[a-f0-9]{32}$",
+      "required_capabilities": ["site.read", "operations.rollback"]
+    },
+    "research.translation.pair": {
+      "rollback_tool": "site_translation_rollback",
+      "operation_id_pattern": "^erm-translation-op-[a-f0-9]{32}$",
+      "required_capabilities": ["translations.read", "operations.rollback", "translations.write"]
+    },
+    "research.translation.unpair": {
+      "rollback_tool": "site_translation_rollback",
+      "operation_id_pattern": "^erm-translation-op-[a-f0-9]{32}$",
+      "required_capabilities": ["translations.read", "operations.rollback", "translations.write"]
+    },
+    "research.object.create": {
+      "rollback_tool": "site_research_object_rollback",
+      "operation_id_pattern": "^erm-object-op-[a-f0-9]{32}$",
+      "required_capabilities": ["research.read", "operations.rollback", "research.write"]
+    },
+    "research.object.update": {
+      "rollback_tool": "site_research_object_rollback",
+      "operation_id_pattern": "^erm-object-op-[a-f0-9]{32}$",
+      "required_capabilities": ["research.read", "operations.rollback", "research.write"]
+    },
+    "research.line.create": {
+      "rollback_tool": "site_research_line_rollback",
+      "operation_id_pattern": "^erm-line-op-[a-f0-9]{32}$",
+      "required_capabilities": ["research.read", "operations.rollback", "research.write"]
+    },
+    "research.line.update": {
+      "rollback_tool": "site_research_line_rollback",
+      "operation_id_pattern": "^erm-line-op-[a-f0-9]{32}$",
+      "required_capabilities": ["research.read", "operations.rollback", "research.write"]
     }
   }
 }
