@@ -1,0 +1,23 @@
+{
+  "action": "manager.design.inspect",
+  "command_id": "cmd-v2-design-inspect-state-20261022-01",
+  "command_sha256": "18dac1e1911225e92e248f7202191943406d201915305b79073c5a0af5bcde52",
+  "error": {
+    "code": "scope_denied",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_design_inspect' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Commercial entitlement denied: design.read (principal_not_granted)\"}],\"isError\":true}}",
+    "message": "The production authorization contract does not grant the required capability or scope.",
+    "stage": "authorization"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "design.read"
+    ]
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
