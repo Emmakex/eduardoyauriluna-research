@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline invariants for the Research Gateway v2 durable queue and preflight."""
+"""Offline invariants for the Research Gateway v2 durable queue, preflight and writes."""
 from __future__ import annotations
 
 import importlib.util
@@ -9,12 +9,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKER_PATH = ROOT / "scripts" / "research-gateway-v2-worker.py"
+LIFECYCLE_PATH = ROOT / "scripts" / "research-gateway-v2-lifecycle.py"
 
-spec = importlib.util.spec_from_file_location("research_gateway_v2_worker_selftest", WORKER_PATH)
-if spec is None or spec.loader is None:
-    raise SystemExit("unable to load Gateway v2 worker")
-worker = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(worker)
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"unable to load {path.name}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+worker = load_module("research_gateway_v2_worker_selftest", WORKER_PATH)
+lifecycle = load_module("research_gateway_v2_lifecycle_selftest", LIFECYCLE_PATH)
 
 
 def command(command_id: str, tool: str) -> dict:
@@ -87,6 +95,7 @@ def assert_contract_invariants() -> None:
 
 def main() -> int:
     assert_contract_invariants()
+    assert lifecycle.self_test() == 0
 
     with tempfile.TemporaryDirectory(prefix="research-gateway-v2-selftest-") as temp:
         root = Path(temp)
