@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-source-aware-rollback-design-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "operation.rollback",
+  "requested_by": "chatgpt",
+  "payload": {
+    "source_command_id": "cmd-v2-source-aware-rollback-design-seed-20261022-01"
+  }
+}
