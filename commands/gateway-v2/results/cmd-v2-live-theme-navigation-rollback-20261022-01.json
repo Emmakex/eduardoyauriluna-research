@@ -1,0 +1,27 @@
+{
+  "action": "operation.rollback",
+  "command_id": "cmd-v2-live-theme-navigation-rollback-20261022-01",
+  "command_sha256": "3965e9f411e0fe17d1a6ba6870330d084d5ef6dfaed7053314ab8bebab6632b0",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "operations.rollback"
+    ]
+  },
+  "rollback": {
+    "attempted": true,
+    "verified": true
+  },
+  "source": {
+    "action": "navigation.update",
+    "command_id": "cmd-v2-live-theme-navigation-temp-change-20261022-01"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
