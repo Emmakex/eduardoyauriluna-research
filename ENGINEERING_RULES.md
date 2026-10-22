@@ -1,233 +1,232 @@
-# Global Engineering Rules — Eduardo Research
+# Global Engineering Rules — Eduardo Jose Yauri Luna Research
 
 ## Status
 
 **Mandatory repository-wide engineering rule.**
 
-This file defines the default operating rule for all work on the live website `eduardoyauriluna.com`. If a roadmap, implementation note, issue, command fixture, content source file or historical workflow conflicts with this rule, **this rule wins** unless Eduardo explicitly approves a replacement architecture decision.
+This file defines the governing scope and operating architecture for this project. If a roadmap, issue, historical document, command fixture, old implementation, experiment or previous architecture statement conflicts with this file, **this file wins** unless Eduardo explicitly replaces it with a later architecture decision.
 
-## 0. Exclusive project scope — Eduardo Jose Yauri Luna website only
+# 0. Project authority — Eduardo only
 
-This repository and this project exist **exclusively** to build, operate, govern, improve and maintain the website `eduardoyauriluna.com` for **Eduardo Jose Yauri Luna** and his researcher identity.
+This project exists **only for Eduardo Jose Yauri Luna**.
 
-Everything in this repository must have a direct, defensible relationship to that website.
+Its two allowed purposes are:
 
-### In scope
+1. build, operate, govern, improve and maintain `eduardoyauriluna.com` as Eduardo's researcher website; and
+2. create the digital, research and academic infrastructure that Eduardo genuinely needs for his doctoral/research trajectory.
 
-- the public website `eduardoyauriluna.com`;
-- Eduardo Jose Yauri Luna's researcher identity and public research presence;
-- content, navigation, multilingual, media, SEO/GEO, schema, research outputs and other website capabilities specifically required by this installation;
-- the production control path required to govern this website safely from ChatGPT;
-- the integration/cutover work required to make **Site Manager** the operational control plane for this website;
-- infrastructure, tests, contracts and operational tooling required to run or verify this website safely;
-- preservation, compatibility and migration handling for historical Theme / Research Manager code only as defined by the legacy rule below.
+No other company, client, generic product or unrelated website has authority over this project.
 
-### Explicitly out of scope
+## 0.1 In scope
 
-The following do **not** belong in this project unless they are strictly necessary to support `eduardoyauriluna.com` itself:
+Work is in scope when it directly serves Eduardo's website, researcher identity, research activity or doctoral work, including:
+
+- `eduardoyauriluna.com` and its WordPress installation;
+- Eduardo's researcher identity and public academic presence;
+- Home, About, Research, CV, Insights / Research Notes and Contact;
+- research lines, questions, hypotheses and research agenda;
+- publications and publication metadata when genuine;
+- research projects, software, datasets and reproducibility material when genuine;
+- academic identifiers and verified profiles such as ORCID, OpenAlex, Google Scholar, Crossref/DOI or equivalent sources when applicable;
+- bibliography, citations, research-output records and machine-readable scholarly metadata;
+- research notes, literature-related content and other website structures useful for the doctorate;
+- academic SEO/GEO, schema, canonical, hreflang, knowledge-graph and researcher discoverability;
+- multilingual EN/ES website operation;
+- media, navigation, internal linking and presentation required by Eduardo's website;
+- Research Manager, its production MCP path and Command Gateway while they are the accepted production governance system;
+- the gradual migration from Research Manager to Site Manager;
+- Eduardo-specific adapters, contracts, tests and acceptance needed for that migration;
+- infrastructure required to operate, secure, verify or recover Eduardo's website and doctoral/research digital assets;
+- tooling created specifically because Eduardo's doctoral/research workflow needs it.
+
+The test for new work is:
+
+> **Does this directly help operate Eduardo's website or advance/support Eduardo's real researcher/doctoral work?**
+
+If the answer is no, it does not belong in this project.
+
+## 0.2 Explicitly out of scope
+
+The following are outside this project unless a narrowly bounded dependency is genuinely required by Eduardo's website or doctoral work:
 
 - generic Site Manager product development;
-- development for other WordPress sites;
-- client websites or acceptance environments unrelated to Eduardo's website;
-- multi-site or multi-client productization;
-- generic WordPress portability work whose purpose is another installation;
-- Kairoseth Platform product work;
-- IA Empleado or other unrelated products;
-- EMMake, Barcelona Confort or any other business/site project;
-- generic MCP, gateway or infrastructure work that is not required by Eduardo's production control path;
-- roadmap items whose primary purpose is proving applicability to other sites rather than improving or safely governing this website.
+- development or acceptance for unrelated WordPress installations;
+- client websites;
+- EMMake, Kairoseth Platform, IA Empleado, Barcelona Confort or any other business/product project;
+- multi-client or multi-site productization;
+- generic WordPress portability whose purpose is another site;
+- generic MCP/gateway infrastructure unrelated to Eduardo's production path;
+- using this repository as the backlog or proving ground for `Emmakex/Site-Manager`;
+- consultancy/service marketing unrelated to Eduardo's researcher identity;
+- invented academic output, affiliation, degree, grant, award, publication or identifier.
 
-If a capability developed here later proves reusable, it may be extracted or ported to another repository, but **reusability is not a reason to expand the scope of this project**.
+Reusable work may later be extracted to another repository, but **reusability does not expand this project's scope**.
 
-Any generic Site Manager or cross-site product work must be tracked and implemented in its own repository/project, currently `Emmakex/Site-Manager` where applicable. This project must not become its development backlog, acceptance environment or product roadmap.
+# 1. Current production authority — Research Manager
 
-When there is doubt, apply this test:
+Until Site Manager has demonstrated and accepted production parity for the required capability, **Research Manager remains the authoritative operational control plane for `eduardoyauriluna.com`.**
 
-> **Would we still need this work if the only website that existed were `eduardoyauriluna.com`?**
+This is not merely a compatibility fallback. It is the currently accepted system used to govern the live site.
 
-If the answer is no, the work is outside this project's scope and must be moved elsewhere.
-
-This scope rule has priority over historical issues, documents, roadmap items or experiments that attempted to turn the Eduardo Research repository into a generic Site Manager product repository.
-
-## 0.1 Legacy preservation rule — Theme and Research Manager must no longer drive the project
-
-The historical **Research Theme**, **Research Manager plugin**, their MCP-specific implementation, fixtures, compatibility code, scripts and related architecture are now treated as **legacy implementation assets**.
-
-They may remain physically present in this repository while Site Manager becomes operational, but their presence **must not influence new product, architecture, content or roadmap decisions**.
-
-Mandatory rules:
-
-1. **Preserve before removing.** Historical Theme/Research Manager code must be kept until the equivalent Site Manager-controlled behaviour has been accepted for `eduardoyauriluna.com`. Cleanup is gradual and evidence-based; do not destroy useful migration/reference history prematurely.
-2. **Legacy is not the target architecture.** Do not design a new capability merely because the old Theme or Research Manager implemented it in a certain way.
-3. **No legacy feature expansion.** Do not add new Theme/Research Manager product features, generic abstractions or new architectural dependencies unless a narrowly bounded change is required to keep the live Eduardo site safe and operational during migration.
-4. **Production continuity is allowed.** Bug fixes, security fixes and minimum compatibility changes to legacy code are permitted only when needed to prevent breakage or to enable the Site Manager cutover.
-5. **Site Manager is the destination.** New governance capability for this website should be implemented through Site Manager, or through the smallest temporary compatibility adapter necessary to reach Site Manager safely.
-6. **Generic Site Manager development stays elsewhere.** Reusable/core Site Manager work belongs in `Emmakex/Site-Manager`; this repository may contain only the Eduardo-specific integration, acceptance and cutover work needed by this website.
-7. **Historical names do not define current ownership.** A file, endpoint, command, issue or document containing `Research Manager`, `Research Theme`, `Phase 2`, research-specific MCP tool names or similar historical terminology does not automatically make that mechanism canonical.
-8. **Do not reactivate legacy by convenience.** When both a legacy path and an accepted Site Manager path can perform an operation, the Site Manager path wins.
-9. **Migration must reduce legacy influence over time.** Every relevant migration step should leave less operational dependence on Research Theme/Research Manager-specific control logic, not more.
-10. **Public website behaviour is the requirement; old implementation is not.** Preserve the visitor-facing behaviour, data and verified website semantics that remain valuable. Do not preserve obsolete implementation mechanics merely for architectural compatibility.
-
-The practical transition model is therefore:
-
-```text
-TODAY / TRANSITION
-eduardoyauriluna.com
-    ↑
-legacy Theme / Research Manager may still contain production dependencies
-    ↑
-preserved only for continuity and migration evidence
-
-TARGET
-Eduardo → ChatGPT → GitHub Command Gateway → production MCP → Site Manager → WordPress → Verify → ChatGPT
-```
-
-Until the Site Manager path has production acceptance for a capability, the existing legacy path may continue to execute that capability if required to operate the site. That temporary operational use **does not grant legacy code architectural authority**.
-
-Once Site Manager has accepted parity for a capability, the corresponding legacy control path should be retired, isolated or archived progressively while retaining enough source/history for audit and recovery.
-
-## 1. Canonical operating flow for website changes
-
-For all normal website content, structure, SEO/GEO, research-profile and presentation operations, the mandatory governance lifecycle is:
-
-```text
-Conversation
-    ↓
-Governance
-    ↓
-Preview / validation
-    ↓
-Apply directly in WordPress production
-    ↓
-Verify
-    ↓
-Result reported back in the conversation
-```
-
-The **target canonical production transport from this ChatGPT conversation** is:
+The current canonical production path is:
 
 ```text
 Eduardo
 → ChatGPT
 → GitHub connector
 → GitHub Actions / Command Gateway
-→ production MCP
-→ Site Manager
+→ production MCP (`eduardo-research`)
+→ Research Manager
 → WordPress
 → Verify
 → sanitized result to GitHub
 → ChatGPT
 ```
 
-During the controlled transition, Research Manager may remain behind the gateway for capabilities not yet accepted in Site Manager. This is a temporary compatibility implementation, not the target control plane.
+For capabilities already governed safely by Research Manager, continue using Research Manager until the corresponding Site Manager capability has passed explicit production acceptance for Eduardo's site.
 
-Expanded target lifecycle:
+Research Manager may therefore continue to receive:
 
-```text
-Eduardo → ChatGPT conversation
-        → governed command through the GitHub connector
-        → GitHub Actions / Command Gateway
-        → production MCP
-        → Site Manager capability
-        → read actual production state
-        → bounded Preview / validation
-        → authorised Apply against the real production WordPress resource
-        → stored-state verification
-        → rendered production verification when applicable
-        → sanitized execution result returned through GitHub
-        → ChatGPT reports the real outcome to Eduardo
-```
+- bug fixes;
+- security fixes;
+- operational fixes;
+- narrowly scoped capability work genuinely required by Eduardo's website or doctoral/research workflow;
+- changes required to preserve safe governance during the transition.
 
-A direct `ChatGPT → MCP` channel may be used in the future when explicitly available and authorised, but it is **not required** for the canonical managed flow above.
+Do **not** freeze or weaken Eduardo's live website merely because Site Manager is planned for the future.
 
-## 2. Production is the normal target
+# 2. Site Manager is the replacement target, not the current authority
 
-Normal managed website work is performed against the **real production WordPress site**.
+**Site Manager is the intended future control plane**, but it does not become authoritative merely because code exists in `Emmakex/Site-Manager`.
 
-This includes, when supported by the active governed capability:
-
-- pages and page sections;
-- Home / About / Research / CV / Insights / Contact;
-- Research Lines;
-- Insights / Research Notes;
-- Publications;
-- Projects;
-- Research Software;
-- Datasets;
-- researcher profile fields;
-- academic identifiers and profile links;
-- navigation;
-- translations and EN/ES relationships;
-- media metadata and bounded media assignments;
-- internal linking;
-- SEO titles and descriptions;
-- canonical / hreflang relationships;
-- Schema and other machine-readable SEO/GEO state;
-- approved presentation/design variants exposed through the governed control plane.
-
-A change is **not complete** because a repository file was changed or a commit passed CI. For normal website operations, completion requires a successful production Apply and Verify result.
-
-## 3. GitHub is the governed transport, not an editorial staging layer
-
-GitHub has two distinct roles and they must never be confused.
-
-### 3.1 Allowed and canonical role: execution bridge
-
-For operations initiated from this conversation, GitHub is the controlled transport between ChatGPT and the production control plane:
+A capability moves from Research Manager to Site Manager only after Site Manager proves on `eduardoyauriluna.com` that it can provide equivalent or stronger governance, including the applicable parts of:
 
 ```text
-ChatGPT
-→ GitHub connector
-→ GitHub Actions / Command Gateway
-→ production MCP
-→ Site Manager (target)
-→ WordPress production
+Read actual state
+→ Plan / Preview
+→ explicit authorization where required
+→ Apply
+→ Verify stored state
+→ Verify rendered state where applicable
+→ Rollback / recovery where applicable
+→ audit/result readback
 ```
 
-During migration, an explicitly bounded legacy Research Manager adapter may temporarily occupy the Site Manager position only for capabilities not yet cut over.
+Migration is **capability by capability**, not a big-bang replacement.
 
-The bridge may carry validated command envelopes, invoke bounded actions, enforce tenant/capability rules, preserve idempotency and return sanitized verification results.
-
-### 3.2 Forbidden normal-content role: repository staging
-
-Do **not** use Git commits, repository content files, command fixtures or CI as an intermediate publishing store for ordinary website updates.
-
-The repository may document intent, architecture, contracts, engineering rules, schemas, tests and implementation code, but the normal content lifecycle must not become:
+For every capability:
 
 ```text
-Conversation → edit repo content → commit → deploy that content to WordPress
+Research Manager authoritative
+        ↓
+Site Manager parity implementation
+        ↓
+Eduardo-site production acceptance
+        ↓
+Site Manager becomes authoritative for that capability
+        ↓
+old Research Manager path retired/isolated
 ```
 
-That is **not** the operating model for `eduardoyauriluna.com`.
+Until that final acceptance occurs, Research Manager remains authoritative for that capability.
 
-Therefore:
+Generic/core Site Manager development belongs in `Emmakex/Site-Manager`. This repository contains only the Eduardo-specific integration, acceptance, compatibility and cutover work required to adopt it safely.
 
-> **GitHub is part of the command transport, but the repository is not the source of truth or staging area for normal WordPress content.**
+# 3. Historical code and residue rule
 
-The source of truth for live content is the governed production WordPress state verified through the active production control plane.
+The repository contains historical Theme, plugin, MCP, fixture, script and earlier architecture code accumulated while building the current system.
 
-## 4. Repository changes are reserved for Eduardo website code / architecture
+That material must be handled carefully.
 
-Use the repository when the requested outcome requires an actual software change **for `eduardoyauriluna.com`**, for example:
+## 3.1 Preserve first
 
-- Eduardo-specific integration or compatibility code required during the Site Manager cutover;
-- command/gateway implementation for Eduardo's governed production path;
-- schemas / contracts used specifically by this installation;
-- automated tests protecting this installation;
-- CI/CD infrastructure required by this website;
-- website-specific or research-site code that directly serves this installation;
-- engineering documentation for this project;
-- minimum legacy bug/security/compatibility fixes permitted by section 0.1.
+Do not mass-delete historical code simply because a newer architecture exists.
 
-Do **not** use this repository as the implementation location for generic Site Manager product work merely because code originated here or could be reused elsewhere. Generic extraction, portability, multi-site support and other-site acceptance belong in the dedicated Site Manager/product project.
+Keep it while it may still be needed for:
 
-Do **not** extend Research Theme or Research Manager as an alternative future architecture. Their source may be retained for production continuity, reference, migration, rollback and historical evidence while their operational influence is progressively removed.
+- live production behaviour;
+- rollback;
+- migration parity analysis;
+- recovery;
+- audit/history;
+- extracting valuable contracts or behaviour.
 
-Even then, a code change must not be confused with a completed production-content change. After code reaches production, any content operation still follows the governed production flow above.
+## 3.2 Residue must not steer new decisions
 
-## 5. Mandatory mutation lifecycle
+Historical code that is **not part of the current accepted production path** must not influence roadmap or architecture simply because it exists.
 
-Material production mutations use the following lifecycle:
+Old fixtures, abandoned experiments, superseded Phase code, obsolete scripts and replaced abstractions are evidence/history — not requirements.
+
+## 3.3 Research Manager is not residue while it governs production
+
+Do not classify the active Research Manager control plane itself as irrelevant legacy while it still governs `eduardoyauriluna.com`.
+
+The distinction is mandatory:
+
+- **Research Manager active production capabilities:** authoritative until individually replaced by accepted Site Manager capabilities.
+- **obsolete or superseded Research Manager/Theme implementation residue:** preserve temporarily but do not let it drive new design.
+- **Research Theme rendering still required by the live site:** maintain only as needed for Eduardo's live visitor-facing behaviour until safely replaced/refactored.
+
+## 3.4 Gradual retirement
+
+As Site Manager assumes accepted capabilities, retire the corresponding obsolete code progressively.
+
+Every migration step should reduce unnecessary historical coupling while preserving:
+
+- Eduardo's data;
+- URLs;
+- SEO/GEO value;
+- researcher semantics;
+- production availability;
+- rollback/recovery evidence.
+
+# 4. Website source of truth
+
+The real governed WordPress production state is the source of truth for live website content.
+
+A normal website task is **not complete** because a repository file changed or CI passed.
+
+For normal site operations, completion requires the applicable production Apply and Verify evidence.
+
+GitHub is the governed command transport and engineering repository; it is not the editorial source of truth for WordPress content.
+
+Do not turn normal editing into:
+
+```text
+Conversation → edit repository content → commit → publish repository content to WordPress
+```
+
+The normal model is:
+
+```text
+Conversation
+→ governed control plane
+→ actual WordPress production state
+→ Apply
+→ Verify
+→ result
+```
+
+# 5. Conversation is the primary operating surface
+
+Eduardo should be able to govern the site from this ChatGPT conversation.
+
+The expected operation is:
+
+1. understand Eduardo's requested outcome;
+2. inspect actual production state when necessary;
+3. use the currently authoritative capability (Research Manager today; Site Manager after accepted cutover);
+4. produce a bounded plan/preview where appropriate;
+5. apply the authorised operation to production;
+6. verify actual stored/rendered state;
+7. return the sanitized result through the governed path;
+8. report what really happened.
+
+WordPress Admin remains a fallback/admin surface. SSH, direct SQL, arbitrary PHP, FTP and ad-hoc WP-CLI writes are not normal website-operation paths.
+
+# 6. Mandatory mutation lifecycle
+
+For material mutations, use the applicable lifecycle:
 
 ```text
 REQUESTED
@@ -241,7 +240,7 @@ REQUESTED
 → COMPLETED
 ```
 
-Allowed non-success outcomes include:
+Permitted non-success outcomes include:
 
 ```text
 BLOCKED
@@ -251,83 +250,86 @@ PARTIALLY_VERIFIED
 REQUIRES_HUMAN_REVIEW
 ```
 
-A task must not be reported as completed unless the applicable verification has succeeded.
+Never report completion when the required verification has not succeeded.
 
-## 6. Conversation is the primary operating surface
+# 7. Researcher and doctorate-first content rule
 
-The ChatGPT conversation is the primary control surface for Eduardo.
+The public website must tell one coherent story:
 
-The target behaviour is:
+> **Eduardo Jose Yauri Luna — researcher.**
 
-1. understand the requested outcome;
-2. inspect actual production state through the governed production path when needed;
-3. translate intent into a bounded command/action;
-4. send it through the GitHub connector and Command Gateway to the production MCP;
-5. preview/validate material mutations through Site Manager;
-6. apply directly to WordPress production;
-7. verify stored and rendered state;
-8. read the sanitized result returned through GitHub;
-9. report what actually changed, including failures or partial results.
+The site and supporting digital research infrastructure should increasingly support Eduardo's doctoral trajectory through genuine, evidence-based academic material.
 
-During migration, step 5 may use a bounded Research Manager capability only when the equivalent Site Manager capability has not yet passed production acceptance.
+Prioritise:
 
-WordPress Admin remains a fallback/admin surface. SSH, direct database edits, arbitrary PHP, FTP and ad-hoc WP-CLI writes are not normal content-operation paths.
+- research identity;
+- research agenda and questions;
+- relevant methodology and theoretical framing when developed;
+- research lines;
+- academic/research CV;
+- genuine Research Notes;
+- genuine publications/projects/software/datasets as they arise;
+- verified academic profiles/identifiers;
+- reproducibility, citations and scholarly metadata where useful;
+- research collaboration/contact;
+- trustworthy machine-readable researcher identity.
 
-## 7. Researcher-only public-content rule
+Professional experience may be used as relevant background/evidence for the research agenda, but the website must not become a consultancy or services portfolio.
 
-The public website exists exclusively to present **Eduardo Jose Yauri Luna as a researcher**.
+Never fabricate:
 
-Public-facing content must therefore prioritise:
+- publications;
+- affiliations;
+- degrees;
+- doctoral status beyond what is actually true at that point in time;
+- grants;
+- awards;
+- research appointments;
+- DOI/ORCID/Scholar/OpenAlex or other identifiers;
+- empirical results or research evidence.
 
-- researcher identity;
-- research agenda and research questions;
-- relevant academic and professional background;
-- genuine publications and research outputs when they exist;
-- Research Notes / Insights with genuine research value;
-- academic profiles and identifiers when verified;
-- contact and research collaboration information.
+# 8. Internal engineering must not leak into the public narrative
 
-Do not expose as public narrative:
+Do not expose as visitor-facing researcher content:
 
-- Site Manager / Research Manager / MCP / gateway mechanics;
-- CI/CD or deployment evidence;
-- tenants, command IDs or verification lifecycles;
-- acceptance fixtures or test content;
-- product/consultancy/service marketing;
-- unsupported affiliations, degrees, publications, grants, awards or academic identifiers.
+- Research Manager / Site Manager mechanics;
+- MCP details;
+- gateway details;
+- command IDs;
+- CI/CD evidence;
+- tenant/scopes;
+- acceptance fixtures;
+- implementation tests;
+- migration internals.
 
-## 8. Evidence rule
+Those are engineering mechanisms, not Eduardo's research output.
 
-For normal production operations, the authoritative completion evidence is the governed operation result plus verification of the actual production state.
+# 9. Engineering repository rule
 
-The target readback chain is:
+Use this repository for engineering changes that directly support Eduardo's website or doctoral/research infrastructure, including:
 
-```text
-WordPress production
-→ Site Manager Verify
-→ production MCP
-→ Command Gateway / GitHub Actions
-→ sanitized GitHub result
-→ ChatGPT
-→ Eduardo
-```
+- Research Manager changes while it remains authoritative;
+- Eduardo-specific Site Manager integration/cutover code;
+- current Theme fixes required by the live site;
+- command/gateway code for Eduardo's governed production path;
+- academic/research data contracts needed by Eduardo;
+- tests protecting Eduardo's production behaviour;
+- CI/CD required by this project;
+- documentation of Eduardo-specific architecture and operations.
 
-During transition, Research Manager verification is acceptable only for capabilities not yet migrated to Site Manager.
+Do not implement generic Site Manager product expansion here. Put generic/core work in `Emmakex/Site-Manager` and consume it here only when Eduardo's site needs it.
 
-Repository commits are authoritative only for code/documentation changes, not as proof that a normal content update is live.
+# 10. Decision priority
 
-## 9. Related canonical contracts
+When deciding what to build or fix next, use this order:
 
-Historical contracts remain useful as migration/reference evidence but do not override the scope and legacy rules in this file.
+1. keep `eduardoyauriluna.com` safe and operational;
+2. improve Eduardo's real researcher website and doctoral/research infrastructure;
+3. use Research Manager to govern production while it remains the accepted authority;
+4. migrate capabilities safely to Site Manager when parity is proven;
+5. remove obsolete code only after its production/migration value is no longer needed;
+6. ignore unrelated generic-product ambitions in this project.
 
-The accepted Phase 2D ChatGPT/GitHub Command Bridge may be reused as a proven transport pattern while Site Manager replaces the legacy control layer.
+The final test is simple:
 
-Where there is ambiguity about ordinary website operation, these rules win:
-
-> **Project scope:** this project is only `eduardoyauriluna.com` and Eduardo Jose Yauri Luna's researcher website.
-
-> **Legacy rule:** preserve Theme/Research Manager source while needed, but do not let it influence new architecture, roadmap or feature decisions.
-
-> **Governance lifecycle:** Conversation → governance → Preview/validation → Apply directly in WordPress production → Verify → result.
-
-> **Target transport:** Eduardo → ChatGPT → GitHub connector → GitHub Actions / Command Gateway → production MCP → Site Manager → WordPress → Verify → result to GitHub → ChatGPT.
+> **Eduardo's website and doctoral/research needs define this project. The tooling serves them; the tooling does not define the project.**
