@@ -27,7 +27,7 @@ Legacy production identifiers such as `Eduardo_Research_Manager_*`, `eduardo_res
 | Default language not exposed by Theme Contract | CENTRALIZE | DONE at contract boundary | `d45a593d9c1c2fa2e96a6cfadbee7c0a223df881` adds `default_language()` and exposes it in contract snapshots. |
 | Theme stylesheet repeated as literal in contract | CENTRALIZE | DONE at contract boundary | `d45a593d9c1c2fa2e96a6cfadbee7c0a223df881` centralizes `EXPECTED_STYLESHEET`. |
 | Runtime WordPress URL conflated with blueprint-declared canonical domain in remote status | CENTRALIZE / REMOVE ambiguity | DONE in repository | `9e928ec1b897f8392e41414aeb04ff458fa9ed2c` preserves legacy `canonical_domain` and adds `runtime_url`, `declared_canonical_domain`, match state and source. Production readback still required after deployment. |
-| Scattered `'en'` defaults in Page/Admin/other services | CENTRALIZE | IN PROGRESS | `6898a5550f0b107e4c5701daa8810e0c5022dba7` moves Page Resource default/creation/verification language selection to `contract()->default_language()`. Admin and any remaining callers still require incremental review. |
+| Scattered `'en'` defaults in Page/Admin/other services | CENTRALIZE | IN PROGRESS | `6898a5550f0b107e4c5701daa8810e0c5022dba7` moves Page Resource defaults to `contract()->default_language()`; `cb249a8badbdd1d60f59c46c7c77f07996ed57d6` removes equivalent inventory defaults. The Admin selector still has one explicit fallback to review separately. |
 
 ## P1 contract-consolidation status
 
@@ -37,14 +37,15 @@ Legacy production identifiers such as `Eduardo_Research_Manager_*`, `eduardo_res
 | Page option keys reconstruct `_es` locally | DONE for Page Resource | `2572abd709440bcaffbf9cd39d792b9d9d38b3fb` routes Page storage resolution through the Greenfield Theme Contract while keeping the public string wrapper compatible. |
 | Identity fields reconstruct `headline` / `headline_es` locally | DONE for Identity Profile | `8c746dccfa61c24a6ad6deddeeb916eea7bed779` resolves physical headline fields through the contract and derives allowed/verifiable identity fields from that mapping. |
 | Remaining direct `_es` / language-storage assumptions | IN PROGRESS | Search and migrate only when they represent storage ownership; do not change genuine bilingual content/data. |
-| Research resource mappings repeated across services | NEXT | Build one exact Research Resource Registry without weakening mutation allowlists or Research semantics. |
+| Research resource mapping design | DONE | `0ff750696c3aaa237f7593526f1b2432c624829b` documents the exact Registry boundary and security rule. |
+| Research Resource Registry implementation | PARTIAL / IN PROGRESS | `63b3b77a4285bb4a4d6d4f4827e4c99bd97f3c0a` adds the exact descriptive Registry; `601b8112dfead8ab5f02996dc4ef55c21dde4382` makes the Theme Contract derive Research post types from it; `cb249a8badbdd1d60f59c46c7c77f07996ed57d6` makes Resource Inventory derive structured inventory type/post-type/scope facts from it. Executor and Plan are intentionally still unchanged pending CI evidence. |
 
 ## Current architecture after P0/P1 work
 
 ```text
 Site Architect engine
 → Greenfield Theme Contract
-→ Research vertical semantics / registries
+→ Research vertical semantics / Research Resource Registry
 → active instance blueprint
 → stored WordPress state
 → production
@@ -78,6 +79,16 @@ Theme Contract languages/default language
 
 The physical names remain unchanged. Centralizing their ownership is not a data migration.
 
+The Research Registry is descriptive rather than permissive:
+
+```text
+Research Resource Registry = vertical facts
+Plan = security / validation boundary
+Executor = execution of validated actions
+```
+
+Adding a Registry entry must never authorize a new mutation automatically.
+
 No reusable identity service should invent Eduardo's name or biography as a final fallback.
 
 ## Compatibility boundary
@@ -92,17 +103,18 @@ The following remain unchanged by the current P0/P1 work:
 - remote credential/scopes vocabulary;
 - existing Preview → Apply → Verify → Rollback behavior;
 - current Eduardo blueprint path and contents;
-- current EN/ES physical storage layout.
+- current EN/ES physical storage layout;
+- current Research post types, public resource keys and read scopes.
 
 These are intentionally preserved while architecture boundaries are cleaned up.
 
 ## Next safe sequence
 
-1. Finish behavior-preserving default-language caller migration where `'en'` is still used as an operational default rather than as real bilingual content.
-2. Find remaining direct `_es`/storage assumptions and move only true storage ownership behind the compatibility contract.
-3. Inventory repeated Research resource mappings in Contract / Resource Inventory / Plan / Executor.
-4. Introduce an exact fail-closed Research Resource Registry and migrate callers incrementally.
-5. Then continue broader Theme Contract/capability derivation consolidation.
+1. Let the current Registry/Inventory cut complete CI before touching Executor.
+2. Migrate `Executor::research_object_spec()` to consume the Registry only if exact metadata/default/conflict parity is proven.
+3. Let Plan consume only safe descriptive subsets later; keep explicit action/schema validation fail-closed.
+4. Finish the isolated Admin default-language fallback and remaining true storage assumptions.
+5. Continue broader Theme Contract/capability derivation consolidation.
 
 ## CI / production rule
 
