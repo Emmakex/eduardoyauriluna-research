@@ -1,0 +1,21 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-list-research-software-20261022",
+  "command_sha256": "2d191e057b4513de9e17aaea0017c8ff530b86a8c59c1c8eea29677a2a848f94",
+  "data": {
+    "count": 0,
+    "items": [],
+    "kind": "software",
+    "language": ""
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "kind": "software"
+    },
+    "type": "research_object"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
