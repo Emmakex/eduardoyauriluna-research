@@ -1,0 +1,31 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-research-lines-list-20261022-01",
+  "command_sha256": "5fc18ac0360946584c4898805f218badf1d0aea28974e75a87a384f5f3239144",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "List first-class Research Lines.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "language": {
+          "pattern": "^[a-z][a-z0-9-]{1,15}$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "site_research_lines_list"
+  },
+  "version": "1"
+}
