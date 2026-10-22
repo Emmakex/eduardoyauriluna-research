@@ -16,13 +16,13 @@
           "researcher-headline": "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
           "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
           "research-lines-heading": "Research agenda",
-          "research-lines-intro": "Current work focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.",
+          "research-lines-intro": "The planned research agenda is organised around four directions: autonomous AI agents for business processes, human–AI collaboration and responsible autonomy, digital transformation and AI adoption in SMEs, and AI-mediated information discovery and generative search.",
           "selected-outputs-heading": "Research outputs",
-          "selected-outputs-intro": "Publications, projects, research software and datasets are separated by type, status and evidence so intended research directions are not presented as completed results.",
-          "academic-identifiers-heading": "Academic identity",
+          "selected-outputs-intro": "Publications, projects, research software and datasets developed from the research agenda.",
+          "academic-identifiers-heading": "Academic profiles",
           "latest-insights-heading": "Research notes",
           "final-cta-heading": "Research and collaboration",
-          "final-cta-body": "Explore the research agenda, methods, projects and reproducible artefacts as they are developed and verified.",
+          "final-cta-body": "Explore the research lines, the questions that guide them and the methods proposed for their development.",
           "final-cta-button": "Explore research"
         },
         "es": {
@@ -31,13 +31,13 @@
           "researcher-headline": "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales",
           "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
           "research-lines-heading": "Agenda de investigación",
-          "research-lines-intro": "El trabajo actual se centra en agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.",
+          "research-lines-intro": "La agenda de investigación planificada se organiza en cuatro líneas: agentes autónomos de IA para procesos empresariales, colaboración humano–IA y autonomía responsable, transformación digital y adopción de IA en pymes, y descubrimiento de información mediado por IA y búsqueda generativa.",
           "selected-outputs-heading": "Resultados de investigación",
-          "selected-outputs-intro": "Publicaciones, proyectos, software de investigación y datos se separan por tipo, estado y evidencia para no presentar líneas de trabajo previstas como resultados ya completados.",
-          "academic-identifiers-heading": "Identidad académica",
+          "selected-outputs-intro": "Publicaciones, proyectos, software de investigación y conjuntos de datos derivados de la agenda de investigación.",
+          "academic-identifiers-heading": "Perfiles académicos",
           "latest-insights-heading": "Notas de investigación",
           "final-cta-heading": "Investigación y colaboración",
-          "final-cta-body": "Explora la agenda de investigación, los métodos, los proyectos y los artefactos reproducibles a medida que se desarrollan y verifican.",
+          "final-cta-body": "Explora las líneas de investigación, las preguntas que las orientan y los métodos planteados para su desarrollo.",
           "final-cta-button": "Explorar investigación"
         }
       }
@@ -48,12 +48,12 @@
         "en": {
           "eyebrow": "Research profile",
           "lead": "Eduardo Jose Yauri Luna develops an applied research agenda around AI-enabled business systems, drawing on more than ten years of professional experience in digital strategy, web technologies, automation and software-based business systems.",
-          "sections": ["Research profile", "Professional background", "Verified identity"]
+          "sections": ["Research profile", "Professional background", "Academic profiles"]
         },
         "es": {
           "eyebrow": "Perfil de investigación",
           "lead": "Eduardo Jose Yauri Luna desarrolla una agenda de investigación aplicada sobre sistemas empresariales habilitados por IA, apoyada en más de diez años de experiencia profesional en estrategia digital, tecnologías web, automatización y sistemas empresariales basados en software.",
-          "sections": ["Perfil de investigación", "Trayectoria profesional", "Identidad verificada"]
+          "sections": ["Perfil de investigación", "Trayectoria profesional", "Perfiles académicos"]
         }
       }
     },
@@ -75,29 +75,29 @@
     {
       "key": "publications",
       "slots": {
-        "en": {"eyebrow": "Research outputs", "lead": "Scholarly outputs will be listed here by publication type and verified status. No peer-reviewed publications are currently recorded in the controlled academic CV source."},
-        "es": {"eyebrow": "Resultados de investigación", "lead": "Los resultados académicos se listarán aquí por tipo de publicación y estado verificado. Actualmente no constan publicaciones revisadas por pares en la fuente controlada del CV académico."}
+        "en": {"eyebrow": "Publications", "lead": "Publications and other scholarly outputs by Eduardo Jose Yauri Luna will be listed here as they become available."},
+        "es": {"eyebrow": "Publicaciones", "lead": "Las publicaciones y otros resultados académicos de Eduardo Jose Yauri Luna se incorporarán aquí a medida que estén disponibles."}
       }
     },
     {
       "key": "projects",
       "slots": {
-        "en": {"eyebrow": "Research projects", "lead": "Research projects will be added only when their research question, methodology, role, dates and outputs can be represented with clear provenance."},
-        "es": {"eyebrow": "Proyectos de investigación", "lead": "Los proyectos de investigación se añadirán únicamente cuando su pregunta de investigación, metodología, rol, fechas y resultados puedan representarse con procedencia clara."}
+        "en": {"eyebrow": "Research projects", "lead": "Projects connected to the research agenda of Eduardo Jose Yauri Luna will be presented here."},
+        "es": {"eyebrow": "Proyectos de investigación", "lead": "Aquí se presentarán los proyectos vinculados a la agenda de investigación de Eduardo Jose Yauri Luna."}
       }
     },
     {
       "key": "software",
       "slots": {
-        "en": {"eyebrow": "Research software", "lead": "Research software and technical artefacts will be published with version, repository, licence, contribution and links to related research when those records are verified."},
-        "es": {"eyebrow": "Software de investigación", "lead": "El software de investigación y los artefactos técnicos se publicarán con versión, repositorio, licencia, contribución y relación con la investigación cuando esos registros estén verificados."}
+        "en": {"eyebrow": "Research software", "lead": "Software and technical artefacts developed in connection with the research agenda will be presented here."},
+        "es": {"eyebrow": "Software de investigación", "lead": "Aquí se presentarán el software y los artefactos técnicos desarrollados en relación con la agenda de investigación."}
       }
     },
     {
       "key": "datasets",
       "slots": {
-        "en": {"eyebrow": "Research datasets", "lead": "Datasets will be documented with provenance, version, repository, access conditions, licence, generation method and related research context."},
-        "es": {"eyebrow": "Datos de investigación", "lead": "Los conjuntos de datos se documentarán con procedencia, versión, repositorio, condiciones de acceso, licencia, método de generación y contexto de investigación relacionado."}
+        "en": {"eyebrow": "Research datasets", "lead": "Datasets and research resources associated with published work and projects will be documented here."},
+        "es": {"eyebrow": "Datos de investigación", "lead": "Aquí se documentarán los conjuntos de datos y recursos de investigación asociados a trabajos y proyectos publicados."}
       }
     },
     {
@@ -105,28 +105,28 @@
       "slots": {
         "en": {
           "eyebrow": "Academic CV",
-          "lead": "A controlled academic CV that separates verified evidence from planned research activity and does not invent degrees, affiliations, publications, grants or identifiers.",
-          "sections": ["Identity and research profile", "Education", "Research-relevant professional experience", "Research outputs", "Projects and software", "Skills and methods"]
+          "lead": "Academic and professional background of Eduardo Jose Yauri Luna, with particular focus on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems.",
+          "sections": ["Research profile", "Education", "Research-relevant professional experience", "Research outputs", "Projects and software", "Skills and methods"]
         },
         "es": {
           "eyebrow": "CV académico",
-          "lead": "Un CV académico controlado que separa la evidencia verificada de la actividad investigadora prevista y no inventa titulaciones, afiliaciones, publicaciones, ayudas ni identificadores.",
-          "sections": ["Identidad y perfil de investigación", "Formación", "Experiencia profesional relevante para investigación", "Resultados de investigación", "Proyectos y software", "Competencias y métodos"]
+          "lead": "Trayectoria académica y profesional de Eduardo Jose Yauri Luna, con especial atención a la experiencia relevante para su agenda de investigación en inteligencia artificial, transformación digital y sistemas autónomos.",
+          "sections": ["Perfil de investigación", "Formación", "Experiencia profesional relevante para investigación", "Resultados de investigación", "Proyectos y software", "Competencias y métodos"]
         }
       }
     },
     {
       "key": "insights",
       "slots": {
-        "en": {"eyebrow": "Research notes", "lead": "Working notes, explainers and methodological observations are published here as editorial content, clearly separated from peer-reviewed research outputs."},
-        "es": {"eyebrow": "Notas de investigación", "lead": "Las notas de trabajo, explicaciones y observaciones metodológicas se publican aquí como contenido editorial, claramente separado de los resultados revisados por pares."}
+        "en": {"eyebrow": "Research notes", "lead": "Working notes, explainers and methodological observations related to the research agenda."},
+        "es": {"eyebrow": "Notas de investigación", "lead": "Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación."}
       }
     },
     {
       "key": "contact",
       "slots": {
-        "en": {"eyebrow": "Research contact", "lead": "Contact channels and academic identifiers are published here only when they are current and verified.", "sections": ["Research enquiries", "Academic profiles"]},
-        "es": {"eyebrow": "Contacto de investigación", "lead": "Los canales de contacto y los identificadores académicos se publican aquí únicamente cuando están actualizados y verificados.", "sections": ["Consultas de investigación", "Perfiles académicos"]}
+        "en": {"eyebrow": "Research contact", "lead": "Contact for academic conversations, collaboration and enquiries related to the research agenda.", "sections": ["Contact", "Academic profiles"]},
+        "es": {"eyebrow": "Contacto de investigación", "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.", "sections": ["Contacto", "Perfiles académicos"]}
       }
     },
     {

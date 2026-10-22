@@ -99,7 +99,7 @@ jobs:
           assert manifest['schema_version'] == 1
           assert manifest['bundle'] == 'eduardo-research-greenfield'
           assert manifest['theme']['slug'] == 'eduardo-research'
-          assert manifest['theme']['version'] == '1.0.0'
+          assert manifest['theme']['version'] == '1.1.0'
           assert manifest['manager']['slug'] == 'eduardo-research-manager'
           assert manifest['manager']['version'] == '0.11.0'
           assert manifest['blueprint']['languages'] == ['en', 'es']
@@ -134,7 +134,7 @@ jobs:
           cd /tmp/research-greenfield-target
           test "$(wp theme get eduardo-research --field=status --allow-root)" = "active"
           test "$(wp plugin get eduardo-research-manager --field=status --allow-root)" = "active"
-          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.0.0"
+          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.1.0"
           test "$(wp plugin get eduardo-research-manager --field=version --allow-root)" = "0.11.0"
           test "$(wp post list --post_type=research_line --post_status=publish --format=count --allow-root)" = "8"
           wp eval '
