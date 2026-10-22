@@ -1,0 +1,30 @@
+{
+  "action": "navigation.update",
+  "command_id": "cmd-v2-navigation-footer-reversible-20261022-01",
+  "command_sha256": "58d2e6f6635a8e5790f031e6028d8284c58a27a6b2c846f1aa0d1c476d0b368c",
+  "correlation": {
+    "operation_id": "erm-nav-op-fa0d7c149eec48e2bfe685b651abc99d",
+    "plan_id": "erm-nav-plan-2bf9dffd0effec5474-a58dade7"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "site.diagnostics",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "item_count": 2,
+    "location": "footer",
+    "registered_targets_only": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
