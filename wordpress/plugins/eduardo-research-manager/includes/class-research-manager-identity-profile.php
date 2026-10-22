@@ -21,14 +21,40 @@ final class Eduardo_Research_Manager_Identity_Profile {
         if (! is_array($stored)) {
             return new WP_Error('research_manager_identity_invalid', 'The canonical Researcher Identity has an invalid stored shape.');
         }
+
+        $defaults = Eduardo_Research_Manager::blueprint_store()->instance_defaults();
+        $defaults = is_wp_error($defaults) ? array() : $defaults;
+        $default_identity = is_array($defaults['identity'] ?? null) ? $defaults['identity'] : array();
+        $default_headlines = is_array($default_identity['headlines'] ?? null) ? $default_identity['headlines'] : array();
+        $languages = array_values(Eduardo_Research_Manager::contract()->languages());
+        if (! $languages) {
+            return new WP_Error('research_manager_identity_languages_missing', 'The active Greenfield Theme contract does not expose an identity language.');
+        }
+        $default_language = sanitize_key((string) $languages[0]);
+        $secondary_language = isset($languages[1]) ? sanitize_key((string) $languages[1]) : '';
+
         $name = $this->text($stored['name'] ?? '');
+        if ('' === $name) { $name = $this->text($default_identity['name'] ?? ''); }
         if ('' === $name) { $name = trim((string) get_bloginfo('name')); }
-        if ('' === $name) { $name = 'Eduardo Jose Yauri Luna'; }
+        if ('' === $name) {
+            return new WP_Error('research_manager_identity_name_missing', 'The Researcher Identity name is missing from stored state, the active instance blueprint and WordPress site identity.');
+        }
+
         $headline = $this->text($stored['headline'] ?? '');
+        if ('' === $headline) { $headline = $this->text($default_headlines[$default_language] ?? ''); }
         if ('' === $headline) { $headline = trim((string) get_bloginfo('description')); }
-        if ('' === $headline) { $headline = 'Research, software and evidence-driven digital systems'; }
+        if ('' === $headline) {
+            return new WP_Error('research_manager_identity_headline_missing', 'The primary Researcher Identity headline is missing from stored state, the active instance blueprint and WordPress site identity.');
+        }
+
         $headline_es = $this->text($stored['headline_es'] ?? '');
-        if ('' === $headline_es) { $headline_es = 'Investigación, software y sistemas digitales basados en evidencia'; }
+        if ('' === $headline_es && '' !== $secondary_language) {
+            $headline_es = $this->text($default_headlines[$secondary_language] ?? '');
+        }
+        if ('' === $headline_es) {
+            return new WP_Error('research_manager_identity_secondary_headline_missing', 'The secondary Researcher Identity headline is missing from stored state and the active instance blueprint.');
+        }
+
         return array(
             'name'=>$name,
             'headline'=>$headline,
@@ -39,7 +65,11 @@ final class Eduardo_Research_Manager_Identity_Profile {
             'stored'=>$stored,
             'revision'=>$this->revision($stored),
             'fields'=>array('name','headline','headline_es'),
-            'languages'=>array('en','es'),
+            'languages'=>$languages,
+            'identity_language_map'=>array(
+                'headline'=>$default_language,
+                'headline_es'=>$secondary_language,
+            ),
             'arbitrary_wordpress_profile_proxy'=>false,
         );
     }
