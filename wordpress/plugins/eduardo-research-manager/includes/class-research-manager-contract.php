@@ -110,6 +110,22 @@ final class Eduardo_Research_Manager_Contract {
         return is_array($types) ? $types : array();
     }
 
+    public function line_catalogs(string $language = ''): array|WP_Error {
+        if (! $this->theme_available()
+            || ! function_exists('eduardo_research_line_statuses')
+            || ! function_exists('eduardo_research_line_evidence_statuses')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
+        }
+        $language = sanitize_key($language);
+        if ('' === $language) { $language = $this->default_language(); }
+        $statuses = eduardo_research_line_statuses($language);
+        $evidence_statuses = eduardo_research_line_evidence_statuses($language);
+        return array(
+            'statuses'=>is_array($statuses) ? $statuses : array(),
+            'evidence_statuses'=>is_array($evidence_statuses) ? $evidence_statuses : array(),
+        );
+    }
+
     public function language_storage(string $language): array|WP_Error {
         $language = sanitize_key($language);
         if (! in_array($language, $this->languages(), true)) {
