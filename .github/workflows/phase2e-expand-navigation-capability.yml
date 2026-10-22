@@ -1,10 +1,12 @@
 name: Phase 2E Expand Navigation Capability
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'ops/phase2e/gateway-navigation-capability.json'
+      - '.github/workflows/phase2e-expand-navigation-capability.yml'
 
 permissions:
   contents: read
