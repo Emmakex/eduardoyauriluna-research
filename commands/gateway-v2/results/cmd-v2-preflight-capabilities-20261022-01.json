@@ -1,0 +1,25 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-preflight-capabilities-20261022-01",
+  "command_sha256": "9e4df05f0775408c66ba15a6dc1b076a865843c7e0a9be3c0a327c888234fc10",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Read bounded backend capability and scope inventory.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "research_capabilities"
+  },
+  "version": "1"
+}
