@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-preflight-capabilities-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "manager.tool.describe",
+  "requested_by": "chatgpt",
+  "payload": {
+    "tool": "research_capabilities"
+  }
+}
