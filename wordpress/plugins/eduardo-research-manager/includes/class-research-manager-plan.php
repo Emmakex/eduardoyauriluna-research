@@ -9,9 +9,6 @@ final class Eduardo_Research_Manager_Plan {
         'eduardo_research_evidence','eduardo_research_model','eduardo_research_model_es',
         'eduardo_research_identity','eduardo_research_native_languages',
     );
-    private const ALLOWED_SURFACE_KEYS = array(
-        'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
-    );
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order','post_status');
     private const MAX_TITLE_BYTES = 200;
     private const MAX_EXCERPT_BYTES = 1000;
@@ -511,8 +508,13 @@ final class Eduardo_Research_Manager_Plan {
 
     private static function allowed_option_key(string $key): bool {
         if (in_array($key, self::ALLOWED_OPTIONS, true)) { return true; }
-        foreach (self::ALLOWED_SURFACE_KEYS as $surface) {
-            if ('eduardo_research_surface_' . $surface === $key || 'eduardo_research_surface_' . $surface . '_es' === $key) { return true; }
+        $contract = new Eduardo_Research_Manager_Contract();
+        foreach (array_keys($contract->pages()) as $page_key) {
+            if ('home' === $page_key) { continue; }
+            foreach ($contract->languages() as $language) {
+                $option_key = $contract->page_option_key((string) $page_key, (string) $language);
+                if (! is_wp_error($option_key) && $option_key === $key) { return true; }
+            }
         }
         return false;
     }
@@ -540,29 +542,18 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function is_theme_owned_page(int $post_id): bool {
-        if ($post_id <= 0 || ! function_exists('eduardo_research_preset')) { return false; }
+        if ($post_id <= 0) { return false; }
         $post = get_post($post_id);
         if (! $post instanceof WP_Post || 'page' !== $post->post_type) { return false; }
-        $pages = (array) (eduardo_research_preset()['pages'] ?? array());
-        foreach ($pages as $key => $contract) {
-            if (! is_array($contract)) { continue; }
-            $path = sanitize_title((string) ($contract['wp_slug'] ?? $contract['slug'] ?? $key));
-            if ('' === $path) { continue; }
-            $page = get_page_by_path($path, OBJECT, 'page');
-            if ($page instanceof WP_Post && (int) $page->ID === $post_id) { return true; }
+        $contract = new Eduardo_Research_Manager_Contract();
+        foreach (array_keys($contract->pages()) as $key) {
+            if ($contract->page_id((string) $key) === $post_id) { return true; }
         }
         return false;
     }
 
     private static function theme_home_page_id(): int {
-        if (! function_exists('eduardo_research_preset')) { return 0; }
-        $pages = (array) (eduardo_research_preset()['pages'] ?? array());
-        $contract = is_array($pages['home'] ?? null) ? $pages['home'] : array();
-        if (! $contract) { return 0; }
-        $path = sanitize_title((string) ($contract['wp_slug'] ?? $contract['slug'] ?? 'home'));
-        if ('' === $path) { return 0; }
-        $page = get_page_by_path($path, OBJECT, 'page');
-        return $page instanceof WP_Post ? (int) $page->ID : 0;
+        return (new Eduardo_Research_Manager_Contract())->page_id('home');
     }
 
     private static function target_signature(array $action): string {
