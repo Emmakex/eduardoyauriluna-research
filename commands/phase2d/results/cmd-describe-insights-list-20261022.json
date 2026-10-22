@@ -1,0 +1,23 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-describe-insights-list-20261022",
+  "command_sha256": "2cf48c3dadb07e13dfcde3538cff2d3ab889dcc6d629c8ff218be63e7b0bd967",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "List managed Research Insights.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "language": {
+          "pattern": "^[a-z][a-z0-9-]{1,15}$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "site_insights_list"
+  },
+  "version": "1"
+}
