@@ -1,124 +1,130 @@
-# Research Manager / Site Manager
+# Site Architect
 
-Portable WordPress control plane by Emmake / Kairoseth.
+**Site Architect** is the Greenfield WordPress architecture and governance control plane used by this repository.
+
+It is designed for sites that we build from zero under a known, deterministic architecture. It is not the Brownfield discovery product; that role belongs to the separate `Emmakex/Site-Manager` project.
+
+## Product model
+
+```text
+Client / Site Identity
+→ Blueprint
+→ Site Profile
+→ Theme Contract
+→ Site Model
+→ Site Architect governance
+→ WordPress
+```
+
+For `eduardoyauriluna.com`, the current implementation is:
+
+```text
+Eduardo Yauri Blueprint
+→ Research Profile
+→ Eduardo Research Theme Contract
+→ Research Site Model
+→ Site Architect
+→ WordPress production
+```
+
+The Research specialization remains intentional. Eduardo-specific identity and content belong to the instance blueprint/site state; reusable Greenfield execution logic must not depend on embedded Eduardo-specific literals when a clean contract boundary exists.
+
+## Greenfield principles
+
+Site Architect assumes that we control the site architecture from the beginning. Therefore it may safely know and enforce:
+
+- the Theme contract;
+- the supported pages and structured content slots;
+- languages and routing contract;
+- Research resources and relationships for the Research Profile;
+- bounded Design and component variants;
+- navigation targets;
+- SEO/GEO surfaces;
+- media ownership;
+- mutation schemas and capability boundaries.
+
+This deterministic knowledge is a product strength, not a portability defect.
+
+The normal mutation lifecycle remains:
+
+```text
+Preview → Apply → Verify → Rollback
+```
+
+Material mutations must remain bounded, auditable, stale-state protected and fail-closed.
+
+## Site Architect versus Site Manager
+
+```text
+Site Architect / Greenfield
+known architecture → build → optimize → govern
+
+Site Manager / Brownfield
+unknown existing site → discover → understand → adapt → govern
+```
+
+Both products evolve independently. Neither is the predetermined replacement for the other. Reusable patterns may be compared or extracted only after both tracks have meaningful real-world evidence.
+
+## Current production role
+
+Site Architect is the authoritative WordPress governance plugin for `eduardoyauriluna.com` while this repository remains the accepted production control plane.
+
+Current path:
+
+```text
+Eduardo
+→ ChatGPT
+→ GitHub connector
+→ GitHub Actions / Command Gateway
+→ production MCP (`eduardo-research`)
+→ Site Architect
+→ WordPress
+→ Verify
+→ sanitized result
+→ ChatGPT
+```
+
+## Compatibility identifiers
+
+The product name changed from **Research Manager** to **Site Architect** without performing a destructive technical rename.
+
+The following legacy identifiers are intentionally retained for production compatibility until a dedicated migration is designed and accepted:
+
+- plugin directory `eduardo-research-manager`;
+- main file `eduardo-research-manager.php`;
+- PHP classes `Eduardo_Research_Manager_*`;
+- constants `EDUARDO_RESEARCH_MANAGER_*`;
+- WordPress option/meta/transient keys using `eduardo_research_*` or `eduardo_research_manager_*`;
+- text domain `eduardo-research-manager`;
+- REST namespace `/wp-json/research-manager/v1`;
+- request headers and protocol identifiers already used by production integrations;
+- the legacy WP-CLI command `research-manager greenfield`.
+
+New human-facing documentation, UI and commands should use **Site Architect**. The canonical WP-CLI command is now:
+
+```text
+wp site-architect greenfield
+```
+
+The legacy command remains an alias so existing automation does not break.
 
 ## Current version
 
 `0.11.0`
 
-Version 0.11 introduces a compatibility layer that lets the same plugin run safely in two automatic product profiles without renaming the already accepted internal PHP classes or stored option keys.
-
-## Product profiles
-
-### `generic-wordpress`
-
-Activated automatically when the Eduardo Research Theme contract is not present.
-
-This profile is deliberately read-only and portable. It provides:
-
-- local **Tools → Site Manager** onboarding;
-- a production credential fixed to `site.read + site.diagnostics`;
-- token generation/rotation/revocation with the raw token shown once;
-- authenticated `status`, `versions`, `capabilities`, `readiness` and `diagnostics`;
-- `GET /wp-json/research-manager/v1/audit/baseline`;
-- a portable Site Baseline Audit over WordPress/runtime/theme/plugin/content/indexability/routing/discovery/remote state;
-- MCP-side bounded external measurement of DNS, TLS, HTTPS status/redirects, selected security/cache headers, public HTML SEO signals, `robots.txt`, the native WordPress sitemap and basic synthetic HTTP transport timing;
-- explicit `not_measured` states for Lighthouse/Core Web Vitals, rendered Axe/WCAG, Search Console, analytics and external search visibility until those dedicated probes/connectors are connected.
-
-Research-only REST routes are removed from the exposed endpoint inventory in this profile. Generic installations do not advertise or permit Research mutations.
-
-### `research-theme`
-
-Activated automatically when the compatible Eduardo Research Theme contract is present.
-
-This keeps the complete accepted Research Manager control plane:
-
-- checksummed `Preview → Apply → Verify → Rollback`;
-- Theme-owned Page hydration and bounded slot/state mutation;
-- EN/ES Insights and translations;
-- Research Lines;
-- evidence-aware Publications, Projects, Software and Datasets;
-- Navigation, Media, SEO/GEO and Design surfaces;
-- HTTP-level rendered frontend verification;
-- scoped authenticated remote bridge and audit trail;
-- v1 production-accepted mutation lifecycles.
-
-The Site Baseline Audit is also available to Research tenants after the Manager side is upgraded to a version exposing `/audit/baseline`; it uses the same `diagnostics.read` + `site.diagnostics` boundary.
-
-## Remote namespace
-
-`/wp-json/research-manager/v1`
-
-Universal read endpoints:
-
-- `GET /status` — `site.read`;
-- `GET /versions` — `site.read`;
-- `GET /capabilities` — `site.read`;
-- `GET /readiness` — `site.diagnostics`;
-- `GET /diagnostics` — `site.diagnostics`;
-- `GET /audit/baseline` — `site.diagnostics`.
-
-The generic profile exposes only those routes. The Research profile expands the namespace with the previously accepted bounded Research resources and write lifecycles.
-
-## Authentication and request protection
-
-Remote credentials are site-specific and bound to a local WordPress administrator. The raw bearer token is shown only when generated or rotated; WordPress persists only its password hash and a non-secret prefix.
-
-Authenticated calls require:
-
-- `Authorization: Bearer <token>`;
-- `X-Research-Manager-Request-Id`;
-- `X-Research-Manager-Nonce`;
-- `X-Research-Manager-Timestamp`.
-
-The bridge enforces revocable/rotatable credentials, explicit scopes, local administrator capability validation, HTTPS outside local/development environments, timestamp validity, nonce replay protection, rate limiting, idempotency primitives and bounded audit records without bearer tokens or credential hashes.
-
-## MCP gateway
-
-The shared Site Control MCP remains multi-tenant and deny-by-default:
-
-```text
-ChatGPT project → mcp.kairoseth.com/mcp/{tenant-id} → Site Control MCP → scoped Manager credential → WordPress
-```
-
-Manager 0.11 adds MCP tool `site_baseline_audit`. The outer MCP principal must have commercial capability `diagnostics.read`; the site Manager credential must include `site.diagnostics`. Diagnostic baseline data never piggybacks on `site_capabilities`, which remains a `site.read` surface.
-
-The external probe accepts no arbitrary target. Its origin comes only from the configured tenant base URL; it probes fixed discovery paths and follows only bounded HTTPS redirects that remain on the configured hostname.
-
-Tenant configuration remains explicit. Each tenant has its own base URL, Manager token secret reference, product profile, languages and commercial entitlements. Principals independently declare which tenants and capabilities they may access.
-
-For `profile=generic-wordpress`, the MCP tool inventory is intentionally limited to:
-
-- `site_status`;
-- `site_versions`;
-- `site_capabilities`;
-- `site_baseline_audit`.
-
-## First portable acceptance target
-
-The first unrelated WordPress acceptance target is `emmake/nuevaweb`. Its installation, connection and operational testing are intentionally performed from the separate ChatGPT project **Nueva web Emmake** so the acceptance does not depend on Research-project conversation context.
-
-Acceptance sequence:
-
-1. install the 0.11.0 ZIP;
-2. activate under the unrelated Emmake theme/site;
-3. confirm profile `generic-wordpress`;
-4. generate the fixed `site.read + site.diagnostics` credential from Tools → Site Manager;
-5. register a dedicated MCP tenant with `profile=generic-wordpress`;
-6. register a dedicated project principal and verify tenant isolation;
-7. confirm `tools/list` exposes exactly the four generic tools;
-8. call status/capabilities and `site_baseline_audit` from MCP;
-9. verify internal WordPress evidence plus external DNS/TLS/HTTP/HTML/robots/sitemap evidence;
-10. persist sanitized acceptance evidence;
-11. only then define future generic write modules.
+The version number is not bumped merely by repository naming work. A release/version change should happen with the next packaged and tested Site Architect build.
 
 ## Safety boundaries
 
-- No arbitrary WordPress REST proxy.
-- No arbitrary PHP, SQL, filesystem or shell execution.
-- No Research mutation capability on a generic site.
-- Existing Research behavior remains backward compatible.
-- Site Baseline Audit is read-only.
-- Credentials remain scoped, revocable and generation-bound.
-- External probes are tenant-bound, same-host, HTTPS-only, timeout-bounded and response-size-bounded.
-- Browser CWV/accessibility/Search Console/analytics measurements are never fabricated; unavailable probes remain `not_measured`.
+Site Architect must not expose:
+
+- arbitrary PHP, JavaScript, SQL, shell or filesystem execution;
+- arbitrary REST proxying;
+- arbitrary WordPress option/meta mutation;
+- arbitrary CSS/class injection;
+- arbitrary navigation URLs;
+- caller-selected backend routes or MCP tools;
+- mutation completion without required verification;
+- bypasses around evidence-sensitive Research validation.
+
+The controlled Greenfield architecture is deliberate.
