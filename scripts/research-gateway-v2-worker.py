@@ -3,13 +3,9 @@
 
 Requests are immutable JSON files. A request is unresolved when no matching result
 exists. Each workflow run drains every unresolved request visible in its checkout in a
-deterministic order. GitHub concurrency may cancel intermediate pending workflow runs,
-but the newest surviving run still sees every committed request and therefore cannot
-lose an accepted command merely because several pushes arrived quickly.
-
-The worker deliberately reuses the already-accepted Phase 2E validators, replay guard,
-production MCP isolation check and observable command runner. It changes transport
-queue semantics, not the Research Manager authority or tool contracts.
+deterministic order. Before any business runner executes, the worker resolves the
+bounded action contract and checks the authenticated production principal's live
+Manager granted_scopes. Missing capabilities fail closed before plan/apply.
 """
 from __future__ import annotations
 
@@ -25,16 +21,25 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 GUARD_PATH = ROOT / "scripts" / "phase2e-command-guard.py"
 RUNNER_PATH = ROOT / "scripts" / "phase2e-command-runner-observable.py"
+CONTRACT_PATH = ROOT / "scripts" / "research-gateway-v2-contract.py"
 DEFAULT_REQUEST_DIR = ROOT / "commands" / "gateway-v2" / "requests"
 DEFAULT_RESULT_DIR = ROOT / "commands" / "gateway-v2" / "results"
 DEFAULT_MANIFEST = ROOT / ".gateway-v2-produced.json"
 MAX_DEFAULT = 25
 
-spec = importlib.util.spec_from_file_location("research_gateway_v2_guard", GUARD_PATH)
-if spec is None or spec.loader is None:
-    raise SystemExit("unable to load Phase 2E command guard")
-guard = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(guard)
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"unable to load {path.name}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+guard = load_module("research_gateway_v2_guard", GUARD_PATH)
+contract = load_module("research_gateway_v2_contract_worker", CONTRACT_PATH)
+registry = contract.load_registry()
 
 
 class WorkerError(RuntimeError):
@@ -87,9 +92,89 @@ def unresolved_requests(request_dir: Path, result_dir: Path) -> list[tuple[Path,
     return pending
 
 
+def live_preflight(command: dict[str, Any]) -> dict[str, Any]:
+    token = os.environ.get("PHASE2D_MCP_TOKEN", "").strip()
+    if not token:
+        raise WorkerError("PHASE2D_MCP_TOKEN is required")
+    base_url = os.environ.get(
+        "PHASE2D_MCP_BASE_URL", guard.guard.runner.DEFAULT_BASE_URL
+    ).strip().rstrip("/")
+    if base_url != guard.guard.runner.DEFAULT_BASE_URL:
+        raise WorkerError("Gateway v2 preflight only permits the production MCP base URL")
+
+    tenant = str(command["tenant"])
+    client = guard.guard.runner.McpClient(f"{base_url}/{tenant}", token)
+    try:
+        client.initialize()
+        capabilities = client.call("research_capabilities")
+        return contract.preflight(command, capabilities, registry)
+    finally:
+        client.close()
+
+
+def persist_preflight_failure(
+    command: dict[str, Any], result_dir: Path, exc: Exception
+) -> tuple[Path, int]:
+    command_id = str(command["command_id"])
+    action = str(command["action"])
+    required: list[str] = []
+    try:
+        required = contract.required_capabilities(command, registry)
+    except contract.ContractError:
+        pass
+
+    diagnostic = str(exc)
+    code, stage, message = contract.classify_failure(diagnostic)
+    if isinstance(exc, contract.ScopeDenied):
+        code, stage = "scope_denied", "authorization"
+        message = "The production principal is not granted the required capability or scope."
+    elif isinstance(exc, contract.ContractError):
+        code, stage = "capability_unavailable", "authorization"
+        message = "The live capability preflight could not establish the required authorization contract."
+
+    result = {
+        "version": "1",
+        "status": "failed",
+        "tenant": str(command["tenant"]),
+        "action": action,
+        "command_id": command_id,
+        "verified": False,
+        "preflight": {
+            "checked": True,
+            "read_only": bool(contract.action_contract(action, registry)["read_only"]),
+            "required_capabilities": required,
+            "granted": False,
+        },
+        "error": {
+            "code": code,
+            "stage": stage,
+            "message": message,
+        },
+    }
+    path = guard.guard.runner.write_result(result_dir, command_id, result)
+    return path, 1
+
+
+def attach_preflight(result_path: Path, preflight: dict[str, Any]) -> None:
+    result = load_json(result_path)
+    result["preflight"] = preflight
+    result_path.write_text(
+        json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def execute_one(path: Path, command: dict[str, Any], result_dir: Path) -> tuple[Path, int]:
     command_id = str(command["command_id"])
     result_path = result_dir / f"{command_id}.json"
+    try:
+        preflight = live_preflight(command)
+    except Exception as exc:  # noqa: BLE001
+        result_path, exit_code = persist_preflight_failure(command, result_dir, exc)
+        guard.guard.stamp_result(path, result_dir)
+        resolved_result_is_safe(command, result_path)
+        return result_path, exit_code
+
     completed = subprocess.run(
         [
             sys.executable,
@@ -105,6 +190,7 @@ def execute_one(path: Path, command: dict[str, Any], result_dir: Path) -> tuple[
     )
     if not result_path.is_file():
         raise WorkerError(f"execution produced no sanitized result for {command_id}")
+    attach_preflight(result_path, preflight)
     guard.guard.stamp_result(path, result_dir)
     resolved_result_is_safe(command, result_path)
     return result_path, int(completed.returncode)
@@ -169,9 +255,7 @@ def run(request_dir: Path, result_dir: Path, manifest: Path, max_commands: int) 
             print(f"GATEWAY_V2_COMMAND_OK {command_id}")
 
     write_manifest(manifest, produced, failures)
-    print(
-        f"GATEWAY_V2_DRAINED produced={len(produced)} failures={len(failures)}"
-    )
+    print(f"GATEWAY_V2_DRAINED produced={len(produced)} failures={len(failures)}")
     return 1 if failures else 0
 
 
@@ -184,7 +268,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         return run(args.request_dir, args.result_dir, args.manifest, args.max_commands)
-    except (WorkerError, guard.guard.GuardError, guard.guard.runner.CommandError) as exc:
+    except (
+        WorkerError,
+        contract.ContractError,
+        guard.guard.GuardError,
+        guard.guard.runner.CommandError,
+    ) as exc:
         print(f"GATEWAY_V2_ERROR: {exc}", file=sys.stderr)
         return 2
 
