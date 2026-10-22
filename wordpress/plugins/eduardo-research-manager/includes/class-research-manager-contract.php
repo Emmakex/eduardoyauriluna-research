@@ -93,7 +93,10 @@ final class Eduardo_Research_Manager_Contract {
     }
 
     public function default_language(): string {
+        $preset = $this->preset();
         $languages = $this->languages();
+        $declared = sanitize_key((string) ($preset['default_language'] ?? ''));
+        if ('' !== $declared && in_array($declared, $languages, true)) { return $declared; }
         return isset($languages[0]) ? (string) $languages[0] : '';
     }
 
