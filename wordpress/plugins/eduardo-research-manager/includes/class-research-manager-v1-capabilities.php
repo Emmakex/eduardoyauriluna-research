@@ -54,7 +54,7 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             'production_acceptance_frozen'=>false,
             'production_acceptance_status'=>'complete',
             'production_pair'=>array(
-                'theme'=>'1.0.0',
+                'theme'=>Eduardo_Research_Manager::contract()->theme_version(),
                 'manager'=>defined('EDUARDO_RESEARCH_MANAGER_VERSION')?EDUARDO_RESEARCH_MANAGER_VERSION:'',
             ),
             'site_scope'=>'single-site',
