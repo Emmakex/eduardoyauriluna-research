@@ -18,7 +18,7 @@
     "research.object.update": {"runner": "phase2e-research-object-update-runner.py", "validator": "phase2e-research-object-update-runner.py", "read_only": false, "required_capabilities": ["research.write", "operations.rollback"]},
     "research.line.create": {"runner": "phase2e-research-line-create-runner.py", "validator": "phase2e-research-line-create-runner.py", "read_only": false, "required_capabilities": ["research.write", "operations.rollback"]},
     "research.line.update": {"runner": "phase2e-research-line-update-runner.py", "validator": "phase2e-research-line-update-runner.py", "read_only": false, "required_capabilities": ["research.write", "operations.rollback"]},
-    "operation.rollback": {"runner": "research-gateway-v2-operation-rollback.py", "validator": "research-gateway-v2-operation-rollback.py", "read_only": false, "required_capabilities": ["pages.read", "pages.write", "operations.rollback"]},
+    "operation.rollback": {"runner": "research-gateway-v2-operation-rollback.py", "validator": "research-gateway-v2-operation-rollback.py", "read_only": false, "required_capabilities": ["operations.rollback"]},
     "manager.tools.list": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["site.read"]},
     "manager.tool.describe": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["site.read"]},
     "manager.capability.check": {"runner": "research-gateway-v2-capability-check.py", "validator": "research-gateway-v2-capability-check.py", "read_only": true, "required_capabilities": ["site.read"]},
