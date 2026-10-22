@@ -1,0 +1,62 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-live-status-design-20261022-01",
+  "command_sha256": "89e6bb181f34a4a205eb72521949f59baf6e3c61b7f734938303c90b0c002986",
+  "data": {
+    "canonical_domain": "https://eduardoyauriluna.com",
+    "languages": [
+      "en",
+      "es"
+    ],
+    "manager_version": "0.11.0",
+    "mode": {
+      "capabilities": {
+        "direct_contract_creation": true,
+        "legacy_discovery": false,
+        "legacy_mapping": false,
+        "legacy_url_preservation": false,
+        "migration_preview": false
+      },
+      "greenfield": true,
+      "migration": false,
+      "mode": "greenfield"
+    },
+    "preset": {
+      "compatible": true,
+      "id": "research",
+      "version": 6
+    },
+    "readiness": {
+      "generated_at": "2026-10-22T11:54:14+00:00",
+      "ready": true,
+      "summary": {
+        "fail": 0,
+        "pass": 22,
+        "warning": 0
+      }
+    },
+    "remote": {
+      "connection_id": "rmc_3cce882026084269bc0b366dbd6f641e",
+      "enabled": true,
+      "generation": 4,
+      "last_used_at": "2026-10-22T11:54:14+00:00",
+      "writes_enabled": true
+    },
+    "theme_version": "1.1.0"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "status"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
