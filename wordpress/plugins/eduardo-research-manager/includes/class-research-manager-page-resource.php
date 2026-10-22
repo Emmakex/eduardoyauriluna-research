@@ -28,6 +28,9 @@ final class Eduardo_Research_Manager_Page_Resource {
 
         $defaults = $this->slot_schema($key, $language);
         $option_key = $this->option_key($key, $language);
+        if ('' === $option_key) {
+            return new WP_Error('research_manager_page_storage_unmapped', 'The Theme Page language has no compatible production storage mapping.');
+        }
         $stored = get_option($option_key, array());
         $stored = is_array($stored) ? array_intersect_key($stored, $defaults) : array();
         $effective = array_replace($defaults, $stored);
@@ -113,7 +116,11 @@ final class Eduardo_Research_Manager_Page_Resource {
         return array();
     }
 
-    public function option_key(string $key,string $language): string { return 'home' === $key ? ('es' === $language ? 'eduardo_research_model_es' : 'eduardo_research_model') : 'eduardo_research_surface_' . sanitize_key($key) . ('es' === $language ? '_es' : ''); }
+    /** Legacy-compatible wrapper; authoritative mapping lives in the Greenfield Theme Contract. */
+    public function option_key(string $key,string $language): string {
+        $resolved = $this->contract->page_option_key($key, $language);
+        return is_wp_error($resolved) ? '' : $resolved;
+    }
 
     private function validate_target(string $key,string $language): bool|WP_Error {
         if (! $this->contract->compatible()) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required.'); }
