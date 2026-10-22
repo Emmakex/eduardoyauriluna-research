@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -32,15 +33,7 @@ ACTIONS = {
     CONTACT_EVIDENCE_AUDIT_ACTION,
     RESEARCH_LINES_LIST_PAIR_ACTION,
 }
-DESCRIBABLE_TOOLS = {
-    "site_page_inspect",
-    "site_evidence_list",
-    "site_evidence_inspect",
-    "site_evidence_inventory",
-    "site_evidence_identity",
-    "site_research_lines_list",
-    "site_research_line_inspect",
-}
+TOOL_NAME_RE = re.compile(r"^(?:site|research)_[a-z0-9_]{2,96}$")
 PAGE_INSPECT_KEYS = ("about", "research", "cv", "contact", "home")
 ABOUT_EVIDENCE_GROUPS = ("profile", "affiliations", "identifiers")
 CV_EVIDENCE_GROUPS = ("experience", "education", "affiliations", "awards")
@@ -102,8 +95,11 @@ def validate_command(command: dict[str, Any]) -> None:
         if payload != {}:
             raise CommandError("manager.tools.list payload must be empty")
     elif action == DESCRIBE_ACTION:
-        if set(payload) != {"tool"} or payload.get("tool") not in DESCRIBABLE_TOOLS:
-            raise CommandError("manager.tool.describe is limited to the reviewed read-tool allowlist")
+        if set(payload) != {"tool"}:
+            raise CommandError("manager.tool.describe payload must contain only tool")
+        tool = payload.get("tool")
+        if not isinstance(tool, str) or TOOL_NAME_RE.fullmatch(tool) is None:
+            raise CommandError("manager.tool.describe tool name is invalid")
     elif action == PAGE_INSPECT_PAIR_ACTION:
         if set(payload) != {"key", "languages"}:
             raise CommandError("manager.page.inspect.pair payload keys are invalid")
@@ -233,10 +229,10 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 input_schema = item.get("inputSchema")
                 if not isinstance(input_schema, dict):
                     raise CommandError("requested MCP tool exposes no input schema")
-                safe["inputSchema"] = input_schema
+                safe["inputSchema"] = sanitize_read_value(input_schema)
                 output_schema = item.get("outputSchema")
                 if isinstance(output_schema, dict):
-                    safe["outputSchema"] = output_schema
+                    safe["outputSchema"] = sanitize_read_value(output_schema)
                 result["tool"] = safe
         path = write_result(result_dir, command_id, result)
         print(f"SUCCESS {path}")
