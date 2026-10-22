@@ -20,6 +20,7 @@ define('EDUARDO_RESEARCH_MANAGER_FILE', __FILE__);
 define('EDUARDO_RESEARCH_MANAGER_DIR', plugin_dir_path(__FILE__));
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-mode.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-resource-registry.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-contract.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-diagnostics.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-plan.php';
