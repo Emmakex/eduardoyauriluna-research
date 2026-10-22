@@ -26,12 +26,11 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $defaults = is_wp_error($defaults) ? array() : $defaults;
         $default_identity = is_array($defaults['identity'] ?? null) ? $defaults['identity'] : array();
         $default_headlines = is_array($default_identity['headlines'] ?? null) ? $default_identity['headlines'] : array();
-        $languages = array_values(Eduardo_Research_Manager::contract()->languages());
+        $contract = Eduardo_Research_Manager::contract();
+        $languages = array_values($contract->languages());
         if (! $languages) {
             return new WP_Error('research_manager_identity_languages_missing', 'The active Greenfield Theme contract does not expose an identity language.');
         }
-        $default_language = sanitize_key((string) $languages[0]);
-        $secondary_language = isset($languages[1]) ? sanitize_key((string) $languages[1]) : '';
 
         $name = $this->text($stored['name'] ?? '');
         if ('' === $name) { $name = $this->text($default_identity['name'] ?? ''); }
@@ -40,55 +39,66 @@ final class Eduardo_Research_Manager_Identity_Profile {
             return new WP_Error('research_manager_identity_name_missing', 'The Researcher Identity name is missing from stored state, the active instance blueprint and WordPress site identity.');
         }
 
-        $headline = $this->text($stored['headline'] ?? '');
-        if ('' === $headline) { $headline = $this->text($default_headlines[$default_language] ?? ''); }
-        if ('' === $headline) { $headline = trim((string) get_bloginfo('description')); }
-        if ('' === $headline) {
-            return new WP_Error('research_manager_identity_headline_missing', 'The primary Researcher Identity headline is missing from stored state, the active instance blueprint and WordPress site identity.');
+        $identity_language_map = array();
+        $headline_values = array();
+        foreach ($languages as $index => $language) {
+            $language = sanitize_key((string) $language);
+            $field = $contract->identity_headline_field($language);
+            if (is_wp_error($field)) { return $field; }
+
+            $value = $this->text($stored[$field] ?? '');
+            if ('' === $value) { $value = $this->text($default_headlines[$language] ?? ''); }
+            if ('' === $value && 0 === $index) { $value = trim((string) get_bloginfo('description')); }
+            if ('' === $value) {
+                return new WP_Error(
+                    'research_manager_identity_headline_missing',
+                    sprintf('The Researcher Identity headline for language "%s" is missing from stored state and the active instance blueprint.', $language)
+                );
+            }
+
+            $identity_language_map[$field] = $language;
+            $headline_values[$field] = $value;
         }
 
-        $headline_es = $this->text($stored['headline_es'] ?? '');
-        if ('' === $headline_es && '' !== $secondary_language) {
-            $headline_es = $this->text($default_headlines[$secondary_language] ?? '');
-        }
-        if ('' === $headline_es) {
-            return new WP_Error('research_manager_identity_secondary_headline_missing', 'The secondary Researcher Identity headline is missing from stored state and the active instance blueprint.');
-        }
-
-        return array(
-            'name'=>$name,
-            'headline'=>$headline,
-            'headline_es'=>$headline_es,
-            'url'=>home_url('/'),
-            'evidence_reference'=>$this->text($stored['evidence_reference'] ?? ''),
-            'verified_at'=>$this->text($stored['verified_at'] ?? ''),
-            'stored'=>$stored,
-            'revision'=>$this->revision($stored),
-            'fields'=>array('name','headline','headline_es'),
-            'languages'=>$languages,
-            'identity_language_map'=>array(
-                'headline'=>$default_language,
-                'headline_es'=>$secondary_language,
+        return array_merge(
+            array(
+                'name'=>$name,
             ),
-            'arbitrary_wordpress_profile_proxy'=>false,
+            $headline_values,
+            array(
+                'url'=>home_url('/'),
+                'evidence_reference'=>$this->text($stored['evidence_reference'] ?? ''),
+                'verified_at'=>$this->text($stored['verified_at'] ?? ''),
+                'stored'=>$stored,
+                'revision'=>$this->revision($stored),
+                'fields'=>array_merge(array('name'), array_keys($identity_language_map)),
+                'languages'=>$languages,
+                'identity_language_map'=>$identity_language_map,
+                'arbitrary_wordpress_profile_proxy'=>false,
+            )
         );
     }
 
     public function preview_update(array $changes, bool $evidence_confirmed = false, string $evidence_reference = ''): array|WP_Error {
         if (! $changes) { return new WP_Error('research_manager_identity_empty', 'Identity update requires at least one bounded field.'); }
-        $unknown = array_diff(array_keys($changes), array('name','headline','headline_es'));
+
+        $current = $this->inspect();
+        if (is_wp_error($current)) { return $current; }
+        $allowed_fields = is_array($current['fields'] ?? null) ? $current['fields'] : array('name');
+        $unknown = array_diff(array_keys($changes), $allowed_fields);
         if ($unknown) {
             return new WP_Error('research_manager_identity_field_not_allowed', 'Unsupported identity field: ' . implode(', ', array_map('sanitize_key', $unknown)));
         }
-        $current = $this->inspect();
-        if (is_wp_error($current)) { return $current; }
+
         $store = $this->evidence->store();
         if (is_wp_error($store)) { return $store; }
 
         $next = is_array($current['stored'] ?? null) ? $current['stored'] : array();
-        $next['name'] = (string) $current['name'];
-        $next['headline'] = (string) $current['headline'];
-        $next['headline_es'] = (string) $current['headline_es'];
+        foreach ($allowed_fields as $field) {
+            $field = sanitize_key((string) $field);
+            if ('' === $field || ! array_key_exists($field, $current)) { continue; }
+            $next[$field] = (string) $current[$field];
+        }
         foreach ($changes as $field => $value) {
             if (! is_scalar($value)) {
                 return new WP_Error('research_manager_identity_value_invalid', sprintf('Identity field "%s" must be scalar text.', $field));
@@ -177,10 +187,12 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $current = $this->inspect();
         if (is_wp_error($current)) { return $current; }
         $stored = is_array($current['stored'] ?? null) ? $current['stored'] : array();
+        $identity_fields = is_array($current['fields'] ?? null) ? $current['fields'] : array('name');
+        $verifiable = array_merge($identity_fields, array('evidence_reference','verified_at'));
         $checks = array();
         foreach ($expected as $key => $value) {
-            if (! in_array($key, array('name','headline','headline_es','evidence_reference','verified_at'), true)) { continue; }
-            $actual = in_array($key, array('name','headline','headline_es'), true) ? ($current[$key] ?? '') : ($stored[$key] ?? '');
+            if (! in_array($key, $verifiable, true)) { continue; }
+            $actual = in_array($key, $identity_fields, true) ? ($current[$key] ?? '') : ($stored[$key] ?? '');
             $checks[$key] = $this->same($actual, $value);
         }
         return array('verified'=>! in_array(false, $checks, true),'checks'=>$checks,'actual'=>$current,'verified_at'=>gmdate(DATE_W3C));
