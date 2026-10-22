@@ -6,6 +6,50 @@
 
 This file defines the default operating rule for all work on the live website `eduardoyauriluna.com`. If a roadmap, implementation note, issue, command fixture, content source file or historical workflow conflicts with this rule, **this rule wins** unless Eduardo explicitly approves a replacement architecture decision.
 
+## 0. Exclusive project scope — Eduardo Jose Yauri Luna website only
+
+This repository and this project exist **exclusively** to build, operate, govern, improve and maintain the website `eduardoyauriluna.com` for **Eduardo Jose Yauri Luna** and his researcher identity.
+
+Everything in this repository must have a direct, defensible relationship to that website.
+
+### In scope
+
+- the public website `eduardoyauriluna.com`;
+- Eduardo Jose Yauri Luna's researcher identity and public research presence;
+- the Research Theme used by this website;
+- the Research Manager capabilities required to govern this website;
+- the production MCP tenant `eduardo-research` used to operate this website;
+- the GitHub Command Gateway path required to govern this website from ChatGPT;
+- content, navigation, multilingual, media, SEO/GEO, schema, research outputs and other website capabilities specifically required by this installation;
+- infrastructure, tests, contracts and operational tooling required to run or verify this website safely.
+
+### Explicitly out of scope
+
+The following do **not** belong in this project unless they are strictly necessary to support `eduardoyauriluna.com` itself:
+
+- generic Site Manager product development;
+- development for other WordPress sites;
+- client websites or acceptance environments unrelated to Eduardo's website;
+- multi-site or multi-client productization;
+- generic WordPress portability work whose purpose is another installation;
+- Kairoseth Platform product work;
+- IA Empleado or other unrelated products;
+- EMMake, Barcelona Confort or any other business/site project;
+- generic MCP, gateway or infrastructure work that is not required by the `eduardo-research` production path;
+- roadmap items whose primary purpose is proving applicability to other sites rather than improving or safely governing this website.
+
+If a capability developed here later proves reusable, it may be extracted or ported to another repository, but **reusability is not a reason to expand the scope of this project**.
+
+Any generic Site Manager or cross-site product work must be tracked and implemented in its own repository/project, currently `Emmakex/Site-Manager` where applicable. This project must not become its development backlog, acceptance environment or product roadmap.
+
+When there is doubt, apply this test:
+
+> **Would we still need this work if the only website that existed were `eduardoyauriluna.com`?**
+
+If the answer is no, the work is outside this project's scope and must be moved elsewhere.
+
+This scope rule has priority over historical issues, documents, roadmap items or experiments that attempted to turn the Eduardo Research repository into a generic Site Manager product repository.
+
 ## 1. Canonical operating flow for website changes
 
 For all normal website content, structure, SEO/GEO, research-profile and presentation operations, the mandatory governance lifecycle is:
@@ -124,18 +168,20 @@ Therefore:
 
 The source of truth for live content is the governed production WordPress state verified through Research Manager/MCP.
 
-## 4. Repository changes are reserved for code / architecture
+## 4. Repository changes are reserved for Eduardo website code / architecture
 
-Use the repository when the requested outcome requires an actual software change, for example:
+Use the repository when the requested outcome requires an actual software change **for `eduardoyauriluna.com`**, for example:
 
-- Research Theme code;
-- Research Manager capability or security changes;
-- command/gateway implementation;
-- schemas / contracts;
-- automated tests;
-- CI/CD infrastructure;
-- reusable code;
-- engineering documentation.
+- Research Theme code used by Eduardo's website;
+- Research Manager capability or security changes required by Eduardo's website;
+- command/gateway implementation for the `eduardo-research` governed path;
+- schemas / contracts used by this installation;
+- automated tests protecting this installation;
+- CI/CD infrastructure required by this website;
+- website-specific or research-site code that directly serves this installation;
+- engineering documentation for this project.
+
+Do **not** use this repository as the implementation location for generic Site Manager product work merely because code originated here or could be reused elsewhere. Generic extraction, portability, multi-site support and other-site acceptance belong in the dedicated Site Manager/product project.
 
 Even then, a code change must not be confused with a completed production-content change. After code reaches production, any content operation still follows the governed production flow above.
 
