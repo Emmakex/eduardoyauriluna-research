@@ -18,6 +18,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
+LIFECYCLE_PATH = Path(__file__).with_name("research-gateway-v2-lifecycle.py")
 REGISTRY_PATH = ROOT / "config" / "phase2e-navigation-command-registry.json"
 SCHEMA_PATH = ROOT / "schemas" / "phase2e-navigation-v1.schema.json"
 ACTION = "navigation.update"
@@ -39,11 +40,18 @@ ALLOWED_TARGETS = (
 NAV_PLAN_ID_RE = re.compile(r"^erm-nav-plan-[a-f0-9]{18}-[a-f0-9]{8}$")
 NAV_OP_ID_RE = re.compile(r"^erm-nav-op-[a-f0-9]{32}$")
 
-spec = importlib.util.spec_from_file_location("phase2d_command_runner_navigation_base", BASE_RUNNER)
-if spec is None or spec.loader is None:
-    raise SystemExit("unable to load Phase 2D command runner")
-base = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(base)
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"unable to load {path.name}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+base = load_module("phase2d_command_runner_navigation_base", BASE_RUNNER)
+lifecycle = load_module("research_gateway_v2_navigation_lifecycle", LIFECYCLE_PATH)
 
 CommandError = base.CommandError
 load_json = base.load_json
@@ -84,6 +92,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
         "rollback": "site_navigation_rollback",
     }:
         raise CommandError("Navigation tool mapping changed unexpectedly")
+    lifecycle.validate_tools(action["tools"])
     if action.get("verify_rendered") is not True:
         raise CommandError("Navigation must require rendered verification")
     if action.get("allowed_locations") != list(ALLOWED_LOCATIONS):
@@ -149,28 +158,24 @@ def execute(command_path: Path, result_dir: Path) -> int:
     payload = command["payload"]
     tools = registry["actions"][ACTION]["tools"]
     client = base.McpClient(f"{base_url}/{tenant}", token)
-    plan_id: str | None = None
-    operation_id: str | None = None
-    rollback_ok: bool | None = None
+    state = lifecycle.LifecycleState()
     try:
         client.initialize()
-        plan = client.call(
-            tools["plan"],
-            {
+        lifecycle.run(
+            client=client,
+            tools=tools,
+            plan_args={
                 "location": payload["location"],
                 "items": list(payload["items"]),
                 "intent": f"Phase 2E bounded navigation command {command_id}",
             },
+            parse_plan_id=lambda value: base.regex_string(value, NAV_PLAN_ID_RE),
+            parse_operation_id=lambda value: base.regex_string(value, NAV_OP_ID_RE),
+            is_verified=base.verified,
+            state=state,
+            verify_args={"rendered": True},
+            verification_error="Navigation verification did not report verified=true",
         )
-        plan_id = base.regex_string(plan, NAV_PLAN_ID_RE)
-        applied = client.call(tools["apply"], {"planId": plan_id, "confirm": True})
-        operation_id = base.regex_string(applied, NAV_OP_ID_RE)
-        verification = client.call(
-            tools["verify"],
-            {"operationId": operation_id, "rendered": True},
-        )
-        if not base.verified(verification):
-            raise CommandError("Navigation verification did not report verified=true")
 
         result = {
             "version": "1",
@@ -184,18 +189,18 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 "item_count": len(payload["items"]),
                 "registered_targets_only": True,
             },
-            "correlation": {"plan_id": plan_id, "operation_id": operation_id},
+            "correlation": state.correlation(),
         }
         path = write_result(result_dir, command_id, result)
         print(f"SUCCESS {path}")
         return 0
     except Exception as exc:  # noqa: BLE001
-        if operation_id is not None:
-            try:
-                rolled = client.call(tools["rollback"], {"operationId": operation_id, "confirm": True})
-                rollback_ok = base.rollback_verified(rolled)
-            except Exception:  # noqa: BLE001
-                rollback_ok = False
+        lifecycle.rollback(
+            client=client,
+            tools=tools,
+            state=state,
+            is_rollback_verified=base.rollback_verified,
+        )
         result = {
             "version": "1",
             "status": "failed",
@@ -207,8 +212,8 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 "code": "execution_failed",
                 "message": "The bounded Navigation lifecycle did not complete successfully.",
             },
-            "correlation": {"plan_id": plan_id, "operation_id": operation_id},
-            "rollback": {"attempted": operation_id is not None, "verified": rollback_ok},
+            "correlation": state.correlation(),
+            "rollback": state.rollback_result(),
         }
         path = write_result(result_dir, command_id, result)
         print(f"FAILED {path}: {sanitized_message(str(exc), token)}", file=__import__("sys").stderr)
@@ -281,7 +286,7 @@ def main() -> int:
         if args.command is None:
             parser.error("command is required unless --self-test is used")
         return execute(args.command, args.result_dir)
-    except CommandError as exc:
+    except (CommandError, lifecycle.LifecycleError) as exc:
         print(f"ERROR: {exc}", file=__import__("sys").stderr)
         return 2
 
