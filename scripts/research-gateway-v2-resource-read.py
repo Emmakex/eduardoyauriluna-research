@@ -33,7 +33,7 @@ EVIDENCE_GROUPS = {
 }
 PAGE_KEYS = {"home", "about", "research", "cv", "contact"}
 LIST_RESOURCES = {"insight", "research_object", "research_line", "evidence"}
-INSPECT_RESOURCES = {"insight", "research_object", "page"}
+INSPECT_RESOURCES = {"insight", "research_object", "page", "navigation"}
 SENSITIVE_KEY_PARTS = (
     "token",
     "secret",
@@ -130,6 +130,11 @@ def validate_inspect(payload: dict[str, Any]) -> None:
     if resource not in INSPECT_RESOURCES:
         raise CommandError("manager.resource.inspect resource is not supported")
 
+    if resource == "navigation":
+        if set(payload) != {"resource"}:
+            raise CommandError("Navigation inspect accepts no caller-selected parameters")
+        return
+
     if resource == "insight":
         if set(payload) != {"resource", "id"} or not valid_id(payload.get("id")):
             raise CommandError("Insight inspect requires resource and positive safe integer id")
@@ -218,7 +223,10 @@ def execute(command_path: Path, result_dir: Path) -> int:
             descriptor = {"type": resource, "filters": sanitize(filters)}
         else:
             resource = str(payload["resource"])
-            if resource == "insight":
+            if resource == "navigation":
+                data = client.call("site_navigation_inspect", {})
+                descriptor = {"type": resource}
+            elif resource == "insight":
                 post_id = int(payload["id"])
                 data = client.call("site_insight_inspect", {"postId": post_id})
                 descriptor = {"type": resource, "id": post_id}
@@ -305,6 +313,14 @@ def self_test() -> int:
             "requested_by": "chatgpt",
             "payload": {"resource": "page", "key": "research", "language": "en"},
         },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-navigation-0005",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "navigation"},
+        },
     ]
     for command in good_commands:
         validate_command(command)
@@ -317,6 +333,15 @@ def self_test() -> int:
         pass
     else:
         raise CommandError("resource read self-test accepted an arbitrary filter")
+
+    bad_navigation = dict(good_commands[-1])
+    bad_navigation["payload"] = {"resource": "navigation", "location": "primary"}
+    try:
+        validate_command(bad_navigation)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("resource read self-test accepted caller-selected navigation parameters")
 
     print("research-gateway-v2 resource read self-test: OK")
     return 0
