@@ -1,0 +1,26 @@
+{
+  "action": "manager.capability.check",
+  "all_granted": true,
+  "checks": {
+    "operations.apply": true,
+    "operations.rollback": true,
+    "pages.read": true,
+    "pages.write": true,
+    "site.diagnostics": true
+  },
+  "command_id": "cmd-v2-manager-navigation-lifecycle-scopes-20261022-01",
+  "command_sha256": "bac17ea3df7ce3db1d0a3a3ad6163e1a11b78c9038dbf99a591f533f74e3dece",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "scope_source": "research-manager-read-credential",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}

@@ -1,0 +1,25 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-navigation-inspect-contract-evolution-20261022-01",
+  "command_sha256": "76db76a11857b4e82b5c3eb10587f1a3872b5e7b3a9ae9f75bc1ba078f709687",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect registered Theme navigation for the tenant.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "site_navigation_inspect"
+  },
+  "version": "1"
+}
