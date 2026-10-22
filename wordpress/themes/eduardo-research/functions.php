@@ -27,6 +27,7 @@ require_once get_template_directory() . '/inc/research-install.php';
 require_once get_template_directory() . '/inc/research-hardening.php';
 require_once get_template_directory() . '/inc/research-design.php';
 require_once get_template_directory() . '/inc/research-design-variants.php';
+require_once get_template_directory() . '/inc/research-governance.php';
 
 function eduardo_research_setup(): void {
     load_theme_textdomain('eduardo-research', get_template_directory() . '/languages');
@@ -40,7 +41,7 @@ add_action('after_setup_theme', 'eduardo_research_setup');
 
 function eduardo_research_assets(): void {
     $path = get_stylesheet_directory() . '/style.css';
-    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '1.0.0';
+    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '1.1.0';
     wp_enqueue_style('eduardo-research', get_stylesheet_uri(), array(), $version);
 
     $styles = array(
