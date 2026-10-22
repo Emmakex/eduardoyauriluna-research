@@ -1,0 +1,33 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-live-theme-versions-20261022-01",
+  "command_sha256": "50758f157a020afed4559693ec698f20ca902e52cbf4fd1a12f7bfe889f3fbd0",
+  "data": {
+    "api": "v1",
+    "manager": "0.10.7",
+    "php": "8.5.11",
+    "preset": {
+      "compatible": true,
+      "id": "research",
+      "minimum_supported_version": 4,
+      "version": 6
+    },
+    "theme": "1.1.0",
+    "wordpress": "7.1.3"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "versions"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
