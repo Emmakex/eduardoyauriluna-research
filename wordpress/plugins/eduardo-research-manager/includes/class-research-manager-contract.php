@@ -1,11 +1,12 @@
 <?php
-/** Theme contract adapter for the Research Manager. */
+/** Greenfield Theme contract adapter for Site Architect. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Contract {
     public const EXPECTED_PRESET = 'research';
+    public const EXPECTED_STYLESHEET = 'eduardo-research';
     public const MIN_PRESET_VERSION = 4;
 
     public function theme_available(): bool {
@@ -27,8 +28,8 @@ final class Eduardo_Research_Manager_Contract {
 
     public function theme_version(): string {
         $theme = wp_get_theme();
-        if ('eduardo-research' !== $theme->get_stylesheet()) {
-            $theme = wp_get_theme('eduardo-research');
+        if (self::EXPECTED_STYLESHEET !== $theme->get_stylesheet()) {
+            $theme = wp_get_theme(self::EXPECTED_STYLESHEET);
         }
         return $theme->exists() ? (string) $theme->get('Version') : '';
     }
@@ -74,7 +75,12 @@ final class Eduardo_Research_Manager_Contract {
     public function languages(): array {
         $preset = $this->preset();
         $languages = $preset['languages'] ?? array();
-        return is_array($languages) ? array_values(array_map('sanitize_key', $languages)) : array();
+        return is_array($languages) ? array_values(array_filter(array_map('sanitize_key', $languages))) : array();
+    }
+
+    public function default_language(): string {
+        $languages = $this->languages();
+        return isset($languages[0]) ? (string) $languages[0] : '';
     }
 
     public function evidence_store(): array {
@@ -102,6 +108,7 @@ final class Eduardo_Research_Manager_Contract {
             'pages'=>$page_states,
             'post_types'=>$types,
             'languages'=>$this->languages(),
+            'default_language'=>$this->default_language(),
             'evidence_groups'=>array_keys($this->evidence_store()),
         );
     }
