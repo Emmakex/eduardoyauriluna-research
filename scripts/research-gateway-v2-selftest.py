@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline invariants for the Research Gateway v2 durable queue."""
+"""Offline invariants for the Research Gateway v2 durable queue and preflight."""
 from __future__ import annotations
 
 import importlib.util
@@ -28,7 +28,66 @@ def command(command_id: str, tool: str) -> dict:
     }
 
 
+def assert_contract_invariants() -> None:
+    registry = worker.contract.load_registry()
+    actions = registry["actions"]
+    assert "manager.resource.list" in actions
+    assert "navigation.update" in actions
+    assert worker.contract.runner_path("manager.resource.list", registry).name == "phase2e-manager-read-runner.py"
+    assert worker.contract.validator_path("manager.resource.list", registry).name == "phase2e-manager-read-runner.py"
+    assert worker.contract.runner_path("insight.create", registry) is None
+    assert worker.contract.validator_path("insight.create", registry) is None
+
+    insight_read = {
+        "action": "manager.resource.list",
+        "payload": {"resource": "insight", "filters": {}},
+    }
+    research_read = {
+        "action": "manager.resource.inspect",
+        "payload": {"resource": "research_object", "kind": "software", "id": 100},
+    }
+    nav_write = {"action": "navigation.update", "payload": {}}
+    assert worker.contract.required_capabilities(insight_read, registry) == ["insights.read"]
+    assert worker.contract.required_capabilities(research_read, registry) == ["research.read"]
+    assert worker.contract.required_capabilities(nav_write, registry) == [
+        "navigation.write",
+        "operations.rollback",
+    ]
+
+    ok = worker.contract.preflight(
+        insight_read,
+        {"granted_scopes": ["site.read", "insights.read"]},
+        registry,
+    )
+    assert ok == {
+        "checked": True,
+        "read_only": True,
+        "required_capabilities": ["insights.read"],
+        "granted": True,
+    }
+
+    try:
+        worker.contract.preflight(
+            research_read,
+            {"granted_scopes": ["site.read", "insights.read"]},
+            registry,
+        )
+    except worker.contract.ScopeDenied as exc:
+        assert exc.missing == ["research.read"]
+    else:
+        raise AssertionError("missing research.read did not fail closed")
+
+    try:
+        worker.contract.granted_scopes({"manager": {"status": "ok"}})
+    except worker.contract.ContractError as exc:
+        assert "granted_scopes" in str(exc)
+    else:
+        raise AssertionError("ambiguous capability payload did not fail closed")
+
+
 def main() -> int:
+    assert_contract_invariants()
+
     with tempfile.TemporaryDirectory(prefix="research-gateway-v2-selftest-") as temp:
         root = Path(temp)
         requests = root / "requests"
