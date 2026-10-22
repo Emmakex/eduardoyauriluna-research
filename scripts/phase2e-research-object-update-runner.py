@@ -19,6 +19,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
+LIFECYCLE_PATH = Path(__file__).with_name("research-gateway-v2-lifecycle.py")
 REGISTRY_PATH = ROOT / "config" / "phase2e-research-object-update-registry.json"
 SCHEMA_PATH = ROOT / "schemas" / "phase2e-research-object-update-v1.schema.json"
 ACTION = "research.object.update"
@@ -26,11 +27,18 @@ KIND = "software"
 OBJECT_PLAN_ID_RE = re.compile(r"^erm-object-plan-[a-f0-9]{18}-[a-f0-9]{8}$")
 OBJECT_OP_ID_RE = re.compile(r"^erm-object-op-[a-f0-9]{32}$")
 
-spec = importlib.util.spec_from_file_location("phase2d_command_runner_update_base", BASE_RUNNER)
-if spec is None or spec.loader is None:
-    raise SystemExit("unable to load Phase 2D command runner")
-base = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(base)
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"unable to load {path.name}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+base = load_module("phase2d_command_runner_update_base", BASE_RUNNER)
+lifecycle = load_module("research_gateway_v2_research_update_lifecycle", LIFECYCLE_PATH)
 
 CommandError = base.CommandError
 TENANT_RE = base.TENANT_RE
@@ -58,6 +66,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
         "rollback": "site_research_object_rollback",
     }:
         raise CommandError("Research update tool mapping changed unexpectedly")
+    lifecycle.validate_tools(action["tools"])
     if action.get("verify_rendered") is not False:
         raise CommandError("Research Software title update must use semantic verification")
     if action.get("allowed_kinds") != [KIND]:
@@ -146,29 +155,28 @@ def execute(command_path: Path, result_dir: Path) -> int:
     action = registry["actions"][ACTION]
     tools = action["tools"]
     client = base.McpClient(f"{base_url}/{tenant}", token)
-    plan_id: str | None = None
-    operation_id: str | None = None
-    rollback_ok: bool | None = None
+    state = lifecycle.LifecycleState()
     try:
         client.initialize()
         payload = command["payload"]
-        plan = client.call(
-            tools["plan"],
-            {
+        lifecycle.run(
+            client=client,
+            tools=tools,
+            plan_args={
                 "kind": KIND,
                 "postId": payload["post_id"],
                 "changes": dict(payload["changes"]),
                 "evidenceConfirmed": True,
                 "evidenceReference": payload["evidence_reference"],
             },
+            parse_plan_id=lambda value: base.regex_string(value, OBJECT_PLAN_ID_RE),
+            parse_operation_id=lambda value: base.regex_string(value, OBJECT_OP_ID_RE),
+            is_verified=base.verified,
+            state=state,
+            verify_args={"rendered": False},
+            verification_error="Research Software update verification did not report verified=true",
         )
-        plan_id = base.regex_string(plan, OBJECT_PLAN_ID_RE)
-        applied = client.call(tools["apply"], {"planId": plan_id, "confirm": True})
-        operation_id = base.regex_string(applied, OBJECT_OP_ID_RE)
-        verification = client.call(tools["verify"], {"operationId": operation_id, "rendered": False})
-        if not base.verified(verification):
-            raise CommandError("Research Software update verification did not report verified=true")
-        verified_post_id = base.first_post_id(verification, applied, plan)
+        verified_post_id = base.first_post_id(state.verification, state.applied, state.plan)
         if verified_post_id is None:
             verified_post_id = int(payload["post_id"])
         if verified_post_id != int(payload["post_id"]):
@@ -186,18 +194,18 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 "post_id": verified_post_id,
                 "changed_fields": ["title"],
             },
-            "correlation": {"plan_id": plan_id, "operation_id": operation_id},
+            "correlation": state.correlation(),
         }
         path = write_result(result_dir, command_id, result)
         print(f"SUCCESS {path}")
         return 0
     except Exception as exc:  # noqa: BLE001
-        if operation_id is not None:
-            try:
-                rolled = client.call(tools["rollback"], {"operationId": operation_id, "confirm": True})
-                rollback_ok = base.rollback_verified(rolled)
-            except Exception:  # noqa: BLE001
-                rollback_ok = False
+        lifecycle.rollback(
+            client=client,
+            tools=tools,
+            state=state,
+            is_rollback_verified=base.rollback_verified,
+        )
         result = {
             "version": "1",
             "status": "failed",
@@ -209,8 +217,8 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 "code": "execution_failed",
                 "message": "The bounded Research Software update lifecycle did not complete successfully.",
             },
-            "correlation": {"plan_id": plan_id, "operation_id": operation_id},
-            "rollback": {"attempted": operation_id is not None, "verified": rollback_ok},
+            "correlation": state.correlation(),
+            "rollback": state.rollback_result(),
         }
         path = write_result(result_dir, command_id, result)
         print(f"FAILED {path}: {sanitized_message(str(exc), token)}", file=sys.stderr)
@@ -280,7 +288,7 @@ def main() -> int:
         if args.command is None:
             parser.error("command is required unless --self-test is used")
         return execute(args.command, args.result_dir)
-    except CommandError as exc:
+    except (CommandError, lifecycle.LifecycleError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
