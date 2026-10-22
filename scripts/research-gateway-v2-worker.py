@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Durable serial worker for the Eduardo Research Gateway v2.
 
-Requests are immutable JSON files. A request is unresolved when no matching result
-exists. Each workflow run drains every unresolved request visible in its checkout in a
+Requests are immutable JSON files. A request is unresolved when no matching terminal
+result with the same identity and fingerprint exists. Sealed historical requests are
+not revalidated against newer action schemas; this lets bounded contracts evolve
+without invalidating the immutable audit ledger. Only unresolved requests must satisfy
+the current validators.
+
+Each workflow run drains every unresolved request visible in its checkout in a
 deterministic order. Before any business runner executes, the worker resolves the
 bounded action contract and checks the live Research Manager credential scopes exposed
 by /capabilities. Missing Manager scopes fail closed before plan/apply. Commercial MCP
@@ -69,13 +74,13 @@ def safe_result_identity(command: dict[str, Any], result: dict[str, Any]) -> boo
 def resolved_result_is_safe(command: dict[str, Any], result_path: Path) -> bool:
     result = load_json(result_path)
     if not safe_result_identity(command, result):
-        raise WorkerError(f"existing result identity mismatch for {command['command_id']}")
+        raise WorkerError(f"existing result identity mismatch for {command.get('command_id', 'unknown')}")
     recorded = result.get("command_sha256")
     expected = guard.guard.command_sha256(command)
     if recorded != expected:
-        raise WorkerError(f"existing result fingerprint mismatch for {command['command_id']}")
+        raise WorkerError(f"existing result fingerprint mismatch for {command.get('command_id', 'unknown')}")
     if result.get("status") not in {"success", "failed"}:
-        raise WorkerError(f"unsupported existing result status for {command['command_id']}")
+        raise WorkerError(f"unsupported existing result status for {command.get('command_id', 'unknown')}")
     return True
 
 
@@ -84,12 +89,19 @@ def unresolved_requests(request_dir: Path, result_dir: Path) -> list[tuple[Path,
     if not request_dir.exists():
         return pending
     for path in sorted(request_dir.glob("*.json"), key=lambda item: item.name):
-        command = guard.guard.load_validated_command(path)
-        command_id = str(command["command_id"])
+        # First inspect immutable identity/fingerprint only. A resolved request is a sealed
+        # audit record and must not be invalidated by future validator/schema evolution.
+        raw = load_json(path)
+        command_id = raw.get("command_id")
+        if not isinstance(command_id, str) or guard.guard.COMMAND_ID_RE.fullmatch(command_id) is None:
+            raise WorkerError(f"historical request has invalid command_id: {path.name}")
         result_path = result_dir / f"{command_id}.json"
         if result_path.exists():
-            resolved_result_is_safe(command, result_path)
+            resolved_result_is_safe(raw, result_path)
             continue
+
+        # Only unresolved work is admitted through the current bounded command contract.
+        command = guard.guard.load_validated_command(path)
         pending.append((path, command))
     return pending
 
