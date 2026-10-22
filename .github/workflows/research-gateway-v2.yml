@@ -1,0 +1,148 @@
+name: Research Gateway v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'commands/gateway-v2/requests/*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-gateway-v2
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    if: github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    environment: phase2d-production
+    env:
+      PHASE2D_MCP_BASE_URL: https://mcp.kairoseth.com/mcp
+      PHASE2D_GATEWAY_GENERATION: research-gateway-v2-20261022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Reject historical workflow reruns
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/phase2d-run-attempt-guard.py
+
+      - name: Validate immutable request trigger
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t added < <(git diff-tree -m --no-commit-id --name-only --diff-filter=A -r "$GITHUB_SHA" -- 'commands/gateway-v2/requests/*.json' | sort -u)
+          mapfile -t modified < <(git diff-tree -m --no-commit-id --name-only --diff-filter=M -r "$GITHUB_SHA" -- 'commands/gateway-v2/requests/*.json' | sort -u)
+          mapfile -t deleted < <(git diff-tree -m --no-commit-id --name-only --diff-filter=D -r "$GITHUB_SHA" -- 'commands/gateway-v2/requests/*.json' | sort -u)
+
+          if [[ ${#added[@]} -ne 1 || ${#modified[@]} -ne 0 || ${#deleted[@]} -ne 0 ]]; then
+            echo "Gateway v2 push must add exactly one immutable request; added=${#added[@]} modified=${#modified[@]} deleted=${#deleted[@]}" >&2
+            exit 1
+          fi
+
+          request="${added[0]}"
+          if [[ ! "$request" =~ ^commands/gateway-v2/requests/[A-Za-z0-9._-]+\.json$ ]]; then
+            echo 'Request path is outside the trusted Gateway v2 namespace' >&2
+            exit 1
+          fi
+
+      - name: Drain durable request queue
+        id: drain
+        shell: bash
+        env:
+          PHASE2D_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
+        run: |
+          set +e
+          python3 scripts/research-gateway-v2-worker.py \
+            --request-dir commands/gateway-v2/requests \
+            --result-dir commands/gateway-v2/results \
+            --manifest .gateway-v2-produced.json \
+            --max-commands 25
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Stage produced sanitized results
+        id: stage
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/research-gateway-v2-results
+          mkdir -p /tmp/research-gateway-v2-results
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import shutil
+
+          root = pathlib.Path('.')
+          manifest = root / '.gateway-v2-produced.json'
+          target = pathlib.Path('/tmp/research-gateway-v2-results')
+          if not manifest.is_file():
+              print('No Gateway v2 manifest exists')
+              raise SystemExit(0)
+          data = json.loads(manifest.read_text(encoding='utf-8'))
+          produced = data.get('produced', [])
+          if not isinstance(produced, list):
+              raise SystemExit('Invalid Gateway v2 manifest')
+          copied = 0
+          for value in produced:
+              if not isinstance(value, str):
+                  raise SystemExit('Invalid produced result path')
+              path = pathlib.Path(value)
+              if path.parent != pathlib.Path('commands/gateway-v2/results') or path.suffix != '.json':
+                  raise SystemExit(f'Unsafe produced result path: {value}')
+              source = root / path
+              if not source.is_file():
+                  raise SystemExit(f'Missing produced result: {value}')
+              shutil.copy2(source, target / path.name)
+              copied += 1
+          print(f'Gateway v2 staged results: {copied}')
+          PY
+          count="$(find /tmp/research-gateway-v2-results -maxdepth 1 -type f -name '*.json' | wc -l | tr -d ' ')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Upload sanitized execution results
+        if: ${{ always() && steps.stage.outputs.count != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-gateway-v2-${{ github.run_id }}
+          path: /tmp/research-gateway-v2-results/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Persist sanitized results for ChatGPT readback
+        if: ${{ always() && steps.stage.outputs.count != '0' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p commands/gateway-v2/results
+          cp /tmp/research-gateway-v2-results/*.json commands/gateway-v2/results/
+
+          git config user.name 'kairoseth-command-gateway[bot]'
+          git config user.email 'kairoseth-command-gateway[bot]@users.noreply.github.com'
+          git add commands/gateway-v2/results
+          if git diff --cached --quiet; then
+            echo 'Gateway v2 results already persisted'
+            exit 0
+          fi
+          git commit -m "gateway v2: persist run ${GITHUB_RUN_ID} results"
+          git push origin HEAD:main
+
+      - name: Enforce queue execution success
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ '${{ steps.drain.outcome }}' == 'success' ]]
+          [[ '${{ steps.stage.outcome }}' == 'success' ]]
+          [[ '${{ steps.drain.outputs.exit_code }}' == '0' ]]
