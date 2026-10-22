@@ -110,10 +110,19 @@ def execute_one(path: Path, command: dict[str, Any], result_dir: Path) -> tuple[
     return result_path, int(completed.returncode)
 
 
+def repo_relative(path: Path) -> str:
+    absolute = path if path.is_absolute() else ROOT / path
+    try:
+        relative = absolute.resolve().relative_to(ROOT.resolve())
+    except ValueError as exc:
+        raise WorkerError(f"produced path escaped repository: {path}") from exc
+    return relative.as_posix()
+
+
 def write_manifest(path: Path, produced: list[Path], failures: list[str]) -> None:
     payload = {
         "version": "1",
-        "produced": [str(item.relative_to(ROOT)) for item in produced],
+        "produced": [repo_relative(item) for item in produced],
         "failures": failures,
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
