@@ -33,6 +33,12 @@ jobs:
           set -euo pipefail
           python3 scripts/phase2d-run-attempt-guard.py
 
+      - name: Validate Gateway v2 queue invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/research-gateway-v2-selftest.py
+
       - name: Validate immutable request trigger
         if: ${{ github.event_name == 'push' }}
         shell: bash
