@@ -1,0 +1,25 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-navigation-inspect-20261022-01",
+  "command_sha256": "f05e899f646d5a604ce2d4a88584402a0ea1d3d6670f10fa91667a0a4be6283d",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect registered Theme navigation for the tenant.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "site_navigation_inspect"
+  },
+  "version": "1"
+}
