@@ -199,11 +199,10 @@ final class Eduardo_Research_Manager_Plan {
 
     private static function normalize_insight_creation(array $action): array|WP_Error {
         $theme_contract = new Eduardo_Research_Manager_Contract();
-        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_insight_types')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required for Insight creation.'); }
         $languages = $theme_contract->languages();
         $default_language = $theme_contract->default_language();
-        $types = eduardo_research_insight_types($default_language);
-        $types = is_array($types) ? $types : array();
+        $types = $theme_contract->insight_types($default_language);
+        if (is_wp_error($types)) { return $types; }
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
