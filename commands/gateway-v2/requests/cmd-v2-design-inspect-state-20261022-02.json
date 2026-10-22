@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-design-inspect-state-20261022-02",
+  "tenant": "eduardo-research",
+  "action": "manager.design.inspect",
+  "requested_by": "chatgpt",
+  "payload": {}
+}
