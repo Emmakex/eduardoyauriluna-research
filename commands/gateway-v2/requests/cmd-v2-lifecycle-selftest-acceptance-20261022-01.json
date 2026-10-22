@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-lifecycle-selftest-acceptance-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "manager.tool.describe",
+  "requested_by": "chatgpt",
+  "payload": {
+    "tool": "site_navigation_update_plan"
+  }
+}
