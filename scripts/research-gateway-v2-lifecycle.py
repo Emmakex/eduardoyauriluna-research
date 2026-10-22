@@ -8,7 +8,6 @@ orchestration after those boundaries have already been established.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
 from typing import Any, Callable
 
@@ -20,15 +19,17 @@ class LifecycleError(RuntimeError):
     """Fail-closed bounded lifecycle error."""
 
 
-@dataclass
 class LifecycleState:
-    plan_id: str | None = None
-    operation_id: str | None = None
-    plan: Any = None
-    applied: Any = None
-    verification: Any = None
-    rollback_attempted: bool = False
-    rollback_verified: bool | None = None
+    """Mutable correlation state retained across failures so rollback can be exact."""
+
+    def __init__(self) -> None:
+        self.plan_id: str | None = None
+        self.operation_id: str | None = None
+        self.plan: Any = None
+        self.applied: Any = None
+        self.verification: Any = None
+        self.rollback_attempted = False
+        self.rollback_verified: bool | None = None
 
     def correlation(self) -> dict[str, str | None]:
         return {"plan_id": self.plan_id, "operation_id": self.operation_id}
