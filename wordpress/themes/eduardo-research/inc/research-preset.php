@@ -7,7 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 function eduardo_research_preset(): array {
     return array(
         'id' => 'research',
-        'version' => 5,
+        'version' => 6,
         'frontend_authority' => 'theme',
         'default_language' => 'en',
         'languages' => array('en','es'),
