@@ -1,0 +1,27 @@
+{
+  "action": "design.preset.update",
+  "command_id": "cmd-v2-design-density-restore-20261022-01",
+  "command_sha256": "fdfca49800e8f463c98308135156de50ba63297a19107bf1545ae686b800162e",
+  "correlation": {
+    "operation_id": "erm-design-op-1f51ec5bec684871b684a80a786380c6",
+    "plan_id": "erm-design-plan-8c8a6ef48bfd87665f-2ab672b3"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "design.write",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "changed_fields": [
+      "density"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
