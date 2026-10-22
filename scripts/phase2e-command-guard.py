@@ -1,30 +1,19 @@
 #!/usr/bin/env python3
-"""Dispatch the proven Phase 2D replay/isolation guard across Phase 2E actions.
+"""Dispatch the proven replay/isolation guard through the Gateway v2 action contract.
 
-Existing actions keep the original validator unchanged. Bounded Page, Navigation,
-Media metadata, Design, Insight Research-Line relation, structured Research translation,
-Research Object, Research Line and read-only Manager inspection actions use dedicated
-strict validators, then reuse the same fingerprinting, replay semantics, result stamping
-and tenant-isolation probe. Binary Media ingest stays outside Git persistence.
+The declarative Gateway registry is the single dispatch source. Base Phase 2D actions
+retain their accepted validator; bounded Phase 2E actions resolve their dedicated
+validator module from the registry. No caller can select a module or MCP tool.
 """
 from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 BASE_GUARD = HERE / "phase2d-command-guard.py"
-PAGE_TEXT_SLOT_RUNNER = HERE / "phase2e-page-text-slot-runner.py"
-NAVIGATION_RUNNER = HERE / "phase2e-navigation-runner.py"
-MEDIA_METADATA_RUNNER = HERE / "phase2e-media-metadata-runner.py"
-DESIGN_RUNNER = HERE / "phase2e-design-runner.py"
-INSIGHT_RESEARCH_LINES_RUNNER = HERE / "phase2e-insight-research-lines-runner.py"
-RESEARCH_TRANSLATION_RUNNER = HERE / "phase2e-research-translation-runner.py"
-RESEARCH_CREATE_RUNNER = HERE / "phase2e-research-object-runner.py"
-RESEARCH_UPDATE_RUNNER = HERE / "phase2e-research-object-update-runner.py"
-RESEARCH_LINE_CREATE_RUNNER = HERE / "phase2e-research-line-create-runner.py"
-RESEARCH_LINE_UPDATE_RUNNER = HERE / "phase2e-research-line-update-runner.py"
-MANAGER_READ_RUNNER = HERE / "phase2e-manager-read-runner.py"
+CONTRACT_PATH = HERE / "research-gateway-v2-contract.py"
 
 
 def load_module(name: str, path: Path):
@@ -37,54 +26,40 @@ def load_module(name: str, path: Path):
 
 
 guard = load_module("phase2d_command_guard_base", BASE_GUARD)
-page_text_slot = load_module("phase2e_page_text_slot_guard", PAGE_TEXT_SLOT_RUNNER)
-navigation = load_module("phase2e_navigation_guard", NAVIGATION_RUNNER)
-media_metadata = load_module("phase2e_media_metadata_guard", MEDIA_METADATA_RUNNER)
-design = load_module("phase2e_design_guard", DESIGN_RUNNER)
-insight_research_lines = load_module("phase2e_insight_research_lines_guard", INSIGHT_RESEARCH_LINES_RUNNER)
-research_translation = load_module("phase2e_research_translation_guard", RESEARCH_TRANSLATION_RUNNER)
-research_create = load_module("phase2e_research_object_create_guard", RESEARCH_CREATE_RUNNER)
-research_update = load_module("phase2e_research_object_update_guard", RESEARCH_UPDATE_RUNNER)
-research_line_create = load_module("phase2e_research_line_create_guard", RESEARCH_LINE_CREATE_RUNNER)
-research_line_update = load_module("phase2e_research_line_update_guard", RESEARCH_LINE_UPDATE_RUNNER)
-manager_read = load_module("phase2e_manager_read_guard", MANAGER_READ_RUNNER)
+contract = load_module("research_gateway_v2_contract_guard", CONTRACT_PATH)
+registry = contract.load_registry()
 original_load_validated_command = guard.load_validated_command
+_validator_cache: dict[Path, Any] = {}
 
-PHASE2E_VALIDATORS = {
-    page_text_slot.ACTION: page_text_slot,
-    navigation.ACTION: navigation,
-    media_metadata.ACTION: media_metadata,
-    design.PRESET_ACTION: design,
-    design.VARIANT_ACTION: design,
-    insight_research_lines.ACTION: insight_research_lines,
-    research_translation.PAIR_ACTION: research_translation,
-    research_translation.UNPAIR_ACTION: research_translation,
-    research_create.ACTION: research_create,
-    research_update.ACTION: research_update,
-    research_line_create.ACTION: research_line_create,
-    research_line_update.ACTION: research_line_update,
-    manager_read.LIST_ACTION: manager_read,
-    manager_read.DESCRIBE_ACTION: manager_read,
-    manager_read.RESOURCE_LIST_ACTION: manager_read,
-    manager_read.RESOURCE_INSPECT_ACTION: manager_read,
-    manager_read.PAGE_INSPECT_PAIR_ACTION: manager_read,
-    manager_read.EVIDENCE_ABOUT_AUDIT_ACTION: manager_read,
-    manager_read.CV_EVIDENCE_AUDIT_ACTION: manager_read,
-    manager_read.CONTACT_EVIDENCE_AUDIT_ACTION: manager_read,
-    manager_read.RESEARCH_LINES_LIST_PAIR_ACTION: manager_read,
-}
+
+def validator_module(path: Path):
+    cached = _validator_cache.get(path)
+    if cached is not None:
+        return cached
+    module = load_module(f"gateway_validator_{path.stem.replace('-', '_')}", path)
+    if not callable(getattr(module, "load_validated_command", None)):
+        raise guard.GuardError(f"registered validator exposes no load_validated_command: {path.name}")
+    _validator_cache[path] = module
+    return module
 
 
 def dispatched_load_validated_command(path: Path):
     raw = guard.runner.load_json(path)
     action = raw.get("action")
-    validator = PHASE2E_VALIDATORS.get(action)
-    if validator is not None:
-        try:
-            return validator.load_validated_command(path)
-        except validator.CommandError as exc:
-            raise guard.GuardError(str(exc)) from exc
-    return original_load_validated_command(path)
+    if not isinstance(action, str):
+        raise guard.GuardError("command action is invalid")
+    try:
+        validator_path = contract.validator_path(action, registry)
+    except contract.ContractError as exc:
+        raise guard.GuardError(str(exc)) from exc
+    if validator_path is None:
+        return original_load_validated_command(path)
+
+    validator = validator_module(validator_path)
+    try:
+        return validator.load_validated_command(path)
+    except validator.CommandError as exc:
+        raise guard.GuardError(str(exc)) from exc
 
 
 guard.load_validated_command = dispatched_load_validated_command
