@@ -13,7 +13,6 @@ final class Eduardo_Research_Manager_Plan {
         'about','research','publications','projects','software','datasets','cv','insights','contact','privacy-policy','legal-notice',
     );
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order','post_status');
-    private const STRUCTURED_RESEARCH_POST_TYPES = array('research_line','research_output','research_project','research_software','research_dataset');
     private const MAX_TITLE_BYTES = 200;
     private const MAX_EXCERPT_BYTES = 1000;
     private const MAX_CONTENT_BYTES = 60000;
@@ -93,7 +92,7 @@ final class Eduardo_Research_Manager_Plan {
         $post_id = absint($action['post_id'] ?? 0);
         if ('post_field' === $type && 'post_title' === $key) {
             $post = get_post($post_id);
-            if ($post instanceof WP_Post && in_array((string) $post->post_type, self::STRUCTURED_RESEARCH_POST_TYPES, true)) {
+            if ($post instanceof WP_Post && in_array((string) $post->post_type, Eduardo_Research_Manager_Resource_Registry::post_types(), true)) {
                 return 'evidence-required';
             }
         }
