@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-navigation-footer-reversible-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "navigation.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "location": "footer",
+    "items": [
+      "legal-notice",
+      "privacy-policy"
+    ]
+  }
+}
