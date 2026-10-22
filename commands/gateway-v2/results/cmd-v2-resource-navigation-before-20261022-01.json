@@ -1,0 +1,22 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-navigation-before-20261022-01",
+  "command_sha256": "653b8df2164ec708b75bed0371673f627d511b25e9ec6a593e6a7db728d85cac",
+  "error": {
+    "code": "scope_denied",
+    "message": "The production principal is not granted the required capability or scope.",
+    "stage": "authorization"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": false,
+    "read_only": true,
+    "required_capabilities": [
+      "navigation.read"
+    ]
+  },
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "verified": false,
+  "version": "1"
+}
