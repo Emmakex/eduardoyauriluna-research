@@ -38,8 +38,8 @@ Legacy production identifiers such as `Eduardo_Research_Manager_*`, `eduardo_res
 | Identity fields reconstruct `headline` / `headline_es` locally | DONE for Identity Profile | `8c746dccfa61c24a6ad6deddeeb916eea7bed779` resolves physical headline fields through the contract and derives allowed/verifiable identity fields from that mapping. |
 | Remaining direct `_es` / language-storage assumptions | IN PROGRESS | Search and migrate only when they represent storage ownership; do not change genuine bilingual content/data. |
 | Research resource mapping design | DONE | `0ff750696c3aaa237f7593526f1b2432c624829b` documents the exact Registry boundary and security rule. |
-| Research Resource Registry implementation | DONE for Contract / Inventory / Executor | `63b3b77a4285bb4a4d6d4f4827e4c99bd97f3c0a` adds the descriptive Registry; `601b8112dfead8ab5f02996dc4ef55c21dde4382` derives Research post types from it; `cb249a8badbdd1d60f59c46c7c77f07996ed57d6` derives structured inventory facts; `998b0b2ae91d94c4d3bb6b08641661f984a25c1d` loads the Registry before consumers; `93404340c0e3fc204473978920dbdd3c46b27e7d` removes the duplicated Executor specification table and resolves execution metadata fail-closed from the Registry. CI and production acceptance remain separate evidence. |
-| Plan mutation/security allowlists | REVIEW NEXT — KEEP SECURITY by default | Plan still explicitly owns allowed operations, fields, option/meta boundaries, validation and risk gates. Registry data must not implicitly grant new mutations. Only duplicated descriptive facts may be centralized after proving the security boundary stays closed. |
+| Research Resource Registry implementation | DONE for Contract / Inventory / Executor; targeted CI PASS | `63b3b77a4285bb4a4d6d4f4827e4c99bd97f3c0a` adds the descriptive Registry; `601b8112dfead8ab5f02996dc4ef55c21dde4382` derives Research post types from it; `cb249a8badbdd1d60f59c46c7c77f07996ed57d6` derives structured inventory facts; `998b0b2ae91d94c4d3bb6b08641661f984a25c1d` loads the Registry before consumers; `93404340c0e3fc204473978920dbdd3c46b27e7d` removes the duplicated Executor specification table and resolves execution metadata fail-closed from the Registry. Source-contract and workflow guards were aligned in `92e2d744f5b8151e7f6801ce2ecf74edf474b949` and `1dbdff1585751a3401de5686b5842f9bcc720cc7`; `Manager v1 Development Completion Quality` run `39806057974` completed successfully. Production acceptance remains separate. |
+| Plan mutation/security allowlists | AUDITED — KEEP SECURITY by default | `docs/67-site-architect-plan-security-hardcode-audit.md` classifies each Plan hardcode. Only descriptive duplication should be centralized; action dispatch, writable option/meta/field boundaries, content limits and evidence/risk gates remain closed. |
 
 ## Current architecture after P0/P1 work
 
@@ -125,14 +125,15 @@ These are intentionally preserved while architecture boundaries are cleaned up.
 
 ## Next safe sequence
 
-1. Let the Executor/Registry consolidation complete CI; production behavior is not considered accepted from repository evidence alone.
-2. Audit `Eduardo_Research_Manager_Plan` field by field and classify each hardcode as descriptive duplication versus KEEP SECURITY.
-3. Centralize only descriptive Research facts that can be derived without widening allowed actions/options/meta/fields.
-4. Finish the isolated Admin default-language fallback and remaining true storage assumptions.
-5. Continue broader Theme Contract/capability derivation consolidation.
+1. In Plan, centralize only the duplicated structured Research post-type list through the Registry; do not change the explicit action dispatcher or risk policy.
+2. Replace behavior-preserving operational `'en'` defaults with the Theme Contract default language in isolated microphases.
+3. Centralize Theme home/page ownership checks through the Greenfield Theme Contract while retaining fail-closed mutation rules.
+4. Derive exact page option keys from the compatibility storage contract without widening the writable option set.
+5. Inventory every legitimate writable meta key and later replace broad prefix authorization with an exact trusted allowlist.
+6. Finish the isolated Admin default-language fallback and remaining true storage assumptions.
 
 ## CI / production rule
 
-Repository commits are engineering evidence only.
+Repository commits and CI are engineering evidence only.
 
-A change is not production-accepted until the relevant CI has completed successfully and, where the change affects live governance behavior, the production Site Architect/Gateway path has been read back and verified without residue.
+A change is not production-accepted until the relevant governed Site Architect/Gateway production path has been read back and verified without residue.
