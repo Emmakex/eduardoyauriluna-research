@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-inspect-insight-93-cleanup-20261022",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "insight",
+    "id": 93
+  }
+}
