@@ -19,6 +19,13 @@ ACTION_RE = re.compile(r"^[a-z][a-z0-9._-]{2,96}$")
 CAPABILITY_RE = re.compile(r"^[a-z][a-z0-9._-]{2,96}$")
 MODULE_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*\.py$")
 SUPPORTED_RESOLVERS = {"manager_resource_read"}
+RESOURCE_READ_CAPABILITIES = {
+    "insight": "insights.read",
+    "research_object": "research.read",
+    "research_line": "research.read",
+    "evidence": "evidence.read",
+    "page": "pages.read",
+}
 
 
 class ContractError(RuntimeError):
@@ -145,10 +152,9 @@ def required_capabilities(
         if not isinstance(payload, dict):
             raise ContractError("manager resource command payload is invalid")
         resource = payload.get("resource")
-        if resource == "insight":
-            return ["insights.read"]
-        if resource == "research_object":
-            return ["research.read"]
+        capability = RESOURCE_READ_CAPABILITIES.get(resource)
+        if capability is not None:
+            return [capability]
         raise ContractError("manager resource command has no bounded capability mapping")
 
     raise ContractError("Gateway v2 action has no resolvable capability contract")
