@@ -1,0 +1,37 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-research-object-inspect-20261022",
+  "command_sha256": "e232dce448ff3456f356fa5a242b7e88d73c53b2f2af9bb52be5907a3c5fed61",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect one managed Research Object by closed kind and positive ID.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "kind": {
+          "enum": [
+            "output",
+            "project",
+            "software",
+            "dataset"
+          ],
+          "type": "string"
+        },
+        "postId": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "postId"
+      ],
+      "type": "object"
+    },
+    "name": "site_research_object_inspect"
+  },
+  "version": "1"
+}

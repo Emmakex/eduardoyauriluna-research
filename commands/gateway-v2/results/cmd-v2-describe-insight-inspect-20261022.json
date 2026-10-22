@@ -1,0 +1,27 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-v2-describe-insight-inspect-20261022",
+  "command_sha256": "d65d0eb64e6ae2136bb6ef90a9896255d984dddae4218ecaee3c3c8885c7de65",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect one managed Insight by positive post ID.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "postId": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "postId"
+      ],
+      "type": "object"
+    },
+    "name": "site_insight_inspect"
+  },
+  "version": "1"
+}
