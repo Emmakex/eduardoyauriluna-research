@@ -32,6 +32,9 @@ RESOURCE_READ_CAPABILITIES = {
     # Research Manager deliberately governs Theme navigation reads with pages.read.
     # The outer MCP independently enforces its commercial navigation.read capability.
     "navigation": "pages.read",
+    # Status and versions are bounded system reads exposed by the Manager under site.read.
+    "status": "site.read",
+    "versions": "site.read",
 }
 
 
