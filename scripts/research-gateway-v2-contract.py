@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Declarative action contract and capability preflight for Research Gateway v2.
+"""Declarative action contract and Manager-scope preflight for Research Gateway v2.
 
 The registry is the single source of truth for Gateway v2 dispatch metadata and
-required production capabilities. Command payloads still expose bounded business
+required live Research Manager scopes. Command payloads still expose bounded business
 actions only; this module never accepts caller-selected MCP tools or URLs.
+
+Commercial MCP capabilities remain an independent inner authorization boundary and
+are enforced by the production MCP itself. This preflight intentionally validates the
+WordPress Research Manager credential scopes returned by /capabilities.
 """
 from __future__ import annotations
 
@@ -25,7 +29,9 @@ RESOURCE_READ_CAPABILITIES = {
     "research_line": "research.read",
     "evidence": "evidence.read",
     "page": "pages.read",
-    "navigation": "navigation.read",
+    # Research Manager deliberately governs Theme navigation reads with pages.read.
+    # The outer MCP independently enforces its commercial navigation.read capability.
+    "navigation": "pages.read",
 }
 
 
@@ -34,12 +40,12 @@ class ContractError(RuntimeError):
 
 
 class ScopeDenied(ContractError):
-    """The production principal is missing one or more declared capabilities."""
+    """The live Research Manager credential is missing one or more declared scopes."""
 
     def __init__(self, missing: list[str], required: list[str]) -> None:
         self.missing = missing
         self.required = required
-        super().__init__("scope denied: production principal is not granted: " + ", ".join(missing))
+        super().__init__("scope denied: live Manager credential is not granted: " + ", ".join(missing))
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -162,7 +168,7 @@ def required_capabilities(
 
 
 def granted_scopes(capabilities: Any) -> list[str]:
-    """Extract the authenticated connection's granted_scopes and fail closed if absent."""
+    """Extract the authenticated Manager credential's granted_scopes, fail closed if absent."""
     candidates: list[list[str]] = []
 
     def visit(value: Any, depth: int = 0) -> None:
@@ -219,7 +225,7 @@ def classify_failure(diagnostic: str) -> tuple[str, str, str]:
         return (
             "scope_denied",
             "authorization",
-            "The production principal is not granted the required capability or scope.",
+            "The production authorization contract does not grant the required capability or scope.",
         )
     if any(marker in lowered for marker in ("tool_is_error", "iserror:true", '"iserror":true')):
         return (
