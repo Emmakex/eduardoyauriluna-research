@@ -164,6 +164,34 @@ add_action('plugins_loaded', static function (): void {
     (new Eduardo_Research_Manager_V1_Capabilities())->register();
 }, 11);
 
+// Product branding is intentionally decoupled from legacy production identifiers.
+add_filter('gettext', static function (string $translated, string $text, string $domain): string {
+    if ('eduardo-research-manager' !== $domain) {
+        return $translated;
+    }
+
+    return match ($text) {
+        'Research Manager' => EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME,
+        'You do not have permission to access Research Manager.' => 'You do not have permission to access Site Architect.',
+        'You do not have permission to operate Research Manager.' => 'You do not have permission to operate Site Architect.',
+        default => $translated,
+    };
+}, 20, 3);
+
+add_action('admin_menu', static function (): void {
+    global $submenu;
+    if (! isset($submenu['tools.php']) || ! is_array($submenu['tools.php'])) {
+        return;
+    }
+
+    foreach ($submenu['tools.php'] as &$item) {
+        if (isset($item[2]) && 'eduardo-research-manager' === $item[2]) {
+            $item[0] = EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME;
+        }
+    }
+    unset($item);
+}, 999);
+
 if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
     add_action('plugins_loaded', static function (): void {
         WP_CLI::add_command('site-architect greenfield', 'Eduardo_Research_Manager_Greenfield_CLI');
