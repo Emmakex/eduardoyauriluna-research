@@ -1,0 +1,30 @@
+{
+  "action": "design.variant.update",
+  "command_id": "cmd-v2-design-variants-restore-20261022-01",
+  "command_sha256": "30be61ff39bb35f45c6ecd437e7759e39830ab543aa7179c48cc874bd0b090f9",
+  "correlation": {
+    "operation_id": "erm-design-variant-op-a575f94d50f243398e4e9466534760e2",
+    "plan_id": "erm-design-variant-plan-0b3a7d5d335c4bd84c-78b24684"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "design.write",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "changed_fields": [
+      "cards",
+      "collections",
+      "hero",
+      "sections"
+    ]
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
