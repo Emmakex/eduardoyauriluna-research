@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-design-variants-test-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "design.variant.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "changes": {
+      "hero": "editorial",
+      "sections": "plain",
+      "cards": "quiet",
+      "collections": "compact-grid"
+    }
+  }
+}
