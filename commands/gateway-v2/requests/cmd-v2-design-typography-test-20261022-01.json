@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-design-typography-test-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "design.preset.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "changes": {
+      "typography": "academic-mixed"
+    }
+  }
+}
