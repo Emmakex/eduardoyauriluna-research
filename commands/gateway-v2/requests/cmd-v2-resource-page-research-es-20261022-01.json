@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-resource-page-research-es-20261022-01",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "page",
+    "key": "research",
+    "language": "es"
+  }
+}
