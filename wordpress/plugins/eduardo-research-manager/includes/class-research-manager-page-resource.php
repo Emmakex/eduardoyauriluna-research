@@ -11,7 +11,8 @@ final class Eduardo_Research_Manager_Page_Resource {
         $this->contract = $contract ?: new Eduardo_Research_Manager_Contract();
     }
 
-    public function inspect(string $key, string $language = 'en'): array|WP_Error {
+    public function inspect(string $key, string $language = ''): array|WP_Error {
+        $language = $this->resolve_language($language);
         $valid = $this->validate_target($key, $language);
         if (is_wp_error($valid)) { return $valid; }
 
@@ -46,13 +47,14 @@ final class Eduardo_Research_Manager_Page_Resource {
     }
 
     public function build_creation_plan(string $key, string $intent = ''): array|WP_Error {
-        $valid = $this->validate_target($key, 'en'); if (is_wp_error($valid)) { return $valid; }
+        $language = $this->resolve_language('');
+        $valid = $this->validate_target($key, $language); if (is_wp_error($valid)) { return $valid; }
         $state = $this->contract->page_state($key);
         if (! empty($state['exists'])) { return new WP_Error('research_manager_page_exists', sprintf('The Theme-controlled page "%s" already exists. Use hydration or repair instead of creation.', $key)); }
         $definition = $this->contract->pages()[$key] ?? array();
         if (! is_array($definition)) { return new WP_Error('research_manager_page_contract_missing', 'The active Research preset does not expose this Page contract.'); }
         $labels = is_array($definition['labels'] ?? null) ? $definition['labels'] : array();
-        $title = sanitize_text_field((string) ($labels['en'] ?? $definition['label'] ?? ucfirst($key)));
+        $title = sanitize_text_field((string) ($labels[$language] ?? $definition['label'] ?? ucfirst($key)));
         $slug = sanitize_title((string) ($definition['wp_slug'] ?? $definition['slug'] ?? $key));
         $role = sanitize_key((string) ($definition['role'] ?? '')); $model = sanitize_key((string) ($definition['model'] ?? ''));
         if ('' === $slug || '' === $title || '' === $role || '' === $model) { return new WP_Error('research_manager_invalid_page_contract', 'The Theme Page contract is incomplete and cannot be created safely.'); }
@@ -63,7 +65,8 @@ final class Eduardo_Research_Manager_Page_Resource {
     }
 
     public function verify_creation(string $key, string $creation_token): array|WP_Error {
-        $valid = $this->validate_target($key, 'en'); if (is_wp_error($valid)) { return $valid; }
+        $language = $this->resolve_language('');
+        $valid = $this->validate_target($key, $language); if (is_wp_error($valid)) { return $valid; }
         $state = $this->contract->page_state($key);
         if (empty($state['exists'])) { return new WP_Error('research_manager_page_missing', 'The planned Theme-controlled Page does not exist after Apply.'); }
         $definition = is_array($state['contract'] ?? null) ? $state['contract'] : array();
@@ -73,7 +76,7 @@ final class Eduardo_Research_Manager_Page_Resource {
         $expected_role = (string) ($definition['role'] ?? ''); $expected_model = (string) ($definition['model'] ?? '');
         $expected_slug = (string) ($definition['wp_slug'] ?? $definition['slug'] ?? $key); $front_expected = 'front-page' === $expected_role;
         $front_actual = 'page' === (string) get_option('show_on_front', 'posts') && $page_id === (int) get_option('page_on_front', 0);
-        $url = $this->resource_url($key, 'en');
+        $url = $this->resource_url($key, $language);
         $checks = array('published'=>'publish' === (string) $page->post_status,'slug'=>$expected_slug === (string) $page->post_name,'role'=>$expected_role === (string) ($state['role'] ?? ''),'model'=>$expected_model === (string) ($state['model'] ?? ''),'provenance'=>'' !== $creation_token && hash_equals($creation_token, $stored_token),'route'=>'' !== $url,'front_page'=>$front_expected ? $front_actual : true);
         return array('verified'=>! in_array(false, $checks, true),'key'=>$key,'page_id'=>$page_id,'url'=>$url,'checks'=>$checks,'verified_at'=>gmdate(DATE_W3C));
     }
@@ -118,6 +121,11 @@ final class Eduardo_Research_Manager_Page_Resource {
         if (! in_array($language, $this->contract->languages(), true)) { return new WP_Error('research_manager_unknown_language', 'The requested language is outside the active Research preset.'); }
         if (! $this->slot_schema($key, $language)) { return new WP_Error('research_manager_page_model_unavailable', 'The Theme does not expose a structured slot schema for this page.'); }
         return true;
+    }
+
+    private function resolve_language(string $language): string {
+        $language = sanitize_key($language);
+        return '' !== $language ? $language : $this->contract->default_language();
     }
 
     private function normalize_slots(array $schema,array $slots): array|WP_Error {
