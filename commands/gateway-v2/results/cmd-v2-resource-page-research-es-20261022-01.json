@@ -1,0 +1,78 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-research-es-20261022-01",
+  "command_sha256": "a8c99a762c312f7a61363f8af4aa0d629adf7f32fc215a9ff5bbd81a490edb8e",
+  "data": {
+    "allowed_slots": [
+      "eyebrow",
+      "lead",
+      "sections"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "research",
+    "effective_slots": {
+      "eyebrow": "Agenda de investigación",
+      "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+      "sections": [
+        "Agentes autónomos de IA",
+        "Colaboración humano–IA",
+        "Transformación digital en pymes",
+        "Descubrimiento de información mediado por IA",
+        "Métodos y evaluación"
+      ]
+    },
+    "expected_model": "research-hub-v1",
+    "expected_role": "research-hub",
+    "key": "research",
+    "language": "es",
+    "model": "research-hub-v1",
+    "option_key": "eduardo_research_surface_research_es",
+    "page_id": 10,
+    "published": true,
+    "role": "research-hub",
+    "slug": "research",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "eyebrow": "Agenda de investigación",
+      "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+      "sections": [
+        "Agentes autónomos de IA",
+        "Colaboración humano–IA",
+        "Transformación digital en pymes",
+        "Descubrimiento de información mediado por IA",
+        "Métodos y evaluación"
+      ]
+    },
+    "title": "Research",
+    "url": "https://eduardoyauriluna.com/es/investigacion/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "research",
+    "language": "es",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
