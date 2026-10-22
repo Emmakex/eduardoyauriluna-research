@@ -1,0 +1,76 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-live-theme-navigation-final-readback-20261022-01",
+  "command_sha256": "898506552810577fc3ef45f42cfb765bf194216a6873a0def4d70d8ab1ff03b0",
+  "data": {
+    "arbitrary_urls": false,
+    "contract": {
+      "allowed_targets": [
+        "home",
+        "about",
+        "research",
+        "publications",
+        "projects",
+        "software",
+        "datasets",
+        "cv",
+        "insights",
+        "contact",
+        "privacy-policy",
+        "legal-notice"
+      ],
+      "arbitrary_urls": false,
+      "language_aware_urls": true,
+      "locations": {
+        "footer": {
+          "default": [
+            "privacy-policy",
+            "legal-notice"
+          ],
+          "min_items": 1
+        },
+        "primary": {
+          "default": [
+            "about",
+            "research",
+            "cv",
+            "insights",
+            "contact"
+          ],
+          "min_items": 1
+        }
+      },
+      "version": 1
+    },
+    "revision": "cf67d7fc241e3f082501690cba86b69702d2f4b20f1312aec4831e0861aa46c2",
+    "state": {
+      "footer": [
+        "privacy-policy",
+        "legal-notice"
+      ],
+      "primary": [
+        "about",
+        "research",
+        "cv",
+        "insights",
+        "contact"
+      ]
+    },
+    "verified_at": "2026-10-22T11:41:51+00:00"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "navigation"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
