@@ -1,0 +1,32 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-describe-research-objects-list-20261022",
+  "command_sha256": "2a36d5da9dabd112268261f509f34c29e650a2bbd63a6cbd961fa8e69a4612e5",
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "List managed Research Outputs, Projects, Software and Datasets.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "kind": {
+          "enum": [
+            "output",
+            "project",
+            "software",
+            "dataset"
+          ],
+          "type": "string"
+        },
+        "language": {
+          "pattern": "^[a-z][a-z0-9-]{1,15}$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "site_research_objects_list"
+  },
+  "version": "1"
+}
