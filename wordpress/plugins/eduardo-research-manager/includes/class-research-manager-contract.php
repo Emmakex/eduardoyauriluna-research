@@ -9,6 +9,18 @@ final class Eduardo_Research_Manager_Contract {
     public const EXPECTED_STYLESHEET = 'eduardo-research';
     public const MIN_PRESET_VERSION = 4;
 
+    /**
+     * Physical production storage aliases retained for backward compatibility.
+     *
+     * These are not the conceptual language model. They describe how the
+     * currently accepted EN/ES Greenfield installation stores language-bound
+     * state so callers do not independently reconstruct `_es` conventions.
+     */
+    private const LEGACY_LANGUAGE_STORAGE = array(
+        'en'=>array('suffix'=>'','identity_headline_field'=>'headline'),
+        'es'=>array('suffix'=>'_es','identity_headline_field'=>'headline_es'),
+    );
+
     public function theme_available(): bool {
         return function_exists('eduardo_research_preset');
     }
@@ -83,6 +95,52 @@ final class Eduardo_Research_Manager_Contract {
         return isset($languages[0]) ? (string) $languages[0] : '';
     }
 
+    public function language_storage(string $language): array|WP_Error {
+        $language = sanitize_key($language);
+        if (! in_array($language, $this->languages(), true)) {
+            return new WP_Error('research_manager_unknown_language', 'The requested language is outside the active Greenfield Theme contract.');
+        }
+        if (! isset(self::LEGACY_LANGUAGE_STORAGE[$language])) {
+            return new WP_Error(
+                'research_manager_language_storage_unmapped',
+                sprintf('Language "%s" has no compatible production storage mapping.', $language)
+            );
+        }
+        return self::LEGACY_LANGUAGE_STORAGE[$language];
+    }
+
+    public function language_storage_contract(): array {
+        $contract = array();
+        foreach ($this->languages() as $language) {
+            if (isset(self::LEGACY_LANGUAGE_STORAGE[$language])) {
+                $contract[$language] = self::LEGACY_LANGUAGE_STORAGE[$language];
+            }
+        }
+        return $contract;
+    }
+
+    public function page_option_key(string $key, string $language): string|WP_Error {
+        $storage = $this->language_storage($language);
+        if (is_wp_error($storage)) { return $storage; }
+        $suffix = (string) ($storage['suffix'] ?? '');
+        $key = sanitize_key($key);
+        if ('' === $key) {
+            return new WP_Error('research_manager_page_key_required', 'A Theme Page key is required for storage resolution.');
+        }
+        return 'home' === $key
+            ? 'eduardo_research_model' . $suffix
+            : 'eduardo_research_surface_' . $key . $suffix;
+    }
+
+    public function identity_headline_field(string $language): string|WP_Error {
+        $storage = $this->language_storage($language);
+        if (is_wp_error($storage)) { return $storage; }
+        $field = sanitize_key((string) ($storage['identity_headline_field'] ?? ''));
+        return '' !== $field
+            ? $field
+            : new WP_Error('research_manager_identity_language_field_unmapped', 'The requested language has no compatible Identity headline field.');
+    }
+
     public function evidence_store(): array {
         $value = get_option('eduardo_research_evidence', array());
         return is_array($value) ? $value : array();
@@ -109,6 +167,7 @@ final class Eduardo_Research_Manager_Contract {
             'post_types'=>$types,
             'languages'=>$this->languages(),
             'default_language'=>$this->default_language(),
+            'language_storage'=>$this->language_storage_contract(),
             'evidence_groups'=>array_keys($this->evidence_store()),
         );
     }
