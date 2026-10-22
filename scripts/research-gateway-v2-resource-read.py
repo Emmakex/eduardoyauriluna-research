@@ -33,7 +33,7 @@ EVIDENCE_GROUPS = {
 }
 PAGE_KEYS = {"home", "about", "research", "cv", "contact"}
 LIST_RESOURCES = {"insight", "research_object", "research_line", "evidence"}
-INSPECT_RESOURCES = {"insight", "research_object", "page", "navigation"}
+INSPECT_RESOURCES = {"insight", "research_object", "page", "navigation", "status", "versions"}
 SENSITIVE_KEY_PARTS = (
     "token",
     "secret",
@@ -130,9 +130,9 @@ def validate_inspect(payload: dict[str, Any]) -> None:
     if resource not in INSPECT_RESOURCES:
         raise CommandError("manager.resource.inspect resource is not supported")
 
-    if resource == "navigation":
+    if resource in {"navigation", "status", "versions"}:
         if set(payload) != {"resource"}:
-            raise CommandError("Navigation inspect accepts no caller-selected parameters")
+            raise CommandError(f"{resource} inspect accepts no caller-selected parameters")
         return
 
     if resource == "insight":
@@ -225,6 +225,12 @@ def execute(command_path: Path, result_dir: Path) -> int:
             resource = str(payload["resource"])
             if resource == "navigation":
                 data = client.call("site_navigation_inspect", {})
+                descriptor = {"type": resource}
+            elif resource == "status":
+                data = client.call("research_status", {})
+                descriptor = {"type": resource}
+            elif resource == "versions":
+                data = client.call("research_versions", {})
                 descriptor = {"type": resource}
             elif resource == "insight":
                 post_id = int(payload["id"])
@@ -321,6 +327,22 @@ def self_test() -> int:
             "requested_by": "chatgpt",
             "payload": {"resource": "navigation"},
         },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-status-0006",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "status"},
+        },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-versions-0007",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "versions"},
+        },
     ]
     for command in good_commands:
         validate_command(command)
@@ -334,7 +356,7 @@ def self_test() -> int:
     else:
         raise CommandError("resource read self-test accepted an arbitrary filter")
 
-    bad_navigation = dict(good_commands[-1])
+    bad_navigation = dict(good_commands[4])
     bad_navigation["payload"] = {"resource": "navigation", "location": "primary"}
     try:
         validate_command(bad_navigation)
@@ -342,6 +364,15 @@ def self_test() -> int:
         pass
     else:
         raise CommandError("resource read self-test accepted caller-selected navigation parameters")
+
+    bad_versions = dict(good_commands[6])
+    bad_versions["payload"] = {"resource": "versions", "component": "theme"}
+    try:
+        validate_command(bad_versions)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("resource read self-test accepted caller-selected system parameters")
 
     print("research-gateway-v2 resource read self-test: OK")
     return 0
