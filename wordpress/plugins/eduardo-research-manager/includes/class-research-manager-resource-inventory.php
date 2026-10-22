@@ -1,19 +1,23 @@
 <?php
-/** Bounded aggregate inventory over Manager-owned Research resources. */
+/** Bounded aggregate inventory over Site Architect-owned Research resources. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Resource_Inventory {
     public function types(): array {
-        return array(
-            'pages'=>array('scope'=>'pages.read','identifier'=>'key'),
-            'insights'=>array('scope'=>'insights.read','identifier'=>'post_id'),
-            'lines'=>array('scope'=>'research.read','identifier'=>'post_id'),
-            'outputs'=>array('scope'=>'research.read','identifier'=>'post_id'),
-            'projects'=>array('scope'=>'research.read','identifier'=>'post_id'),
-            'software'=>array('scope'=>'research.read','identifier'=>'post_id'),
-            'datasets'=>array('scope'=>'research.read','identifier'=>'post_id'),
+        return array_merge(
+            array(
+                'pages'=>array('scope'=>'pages.read','identifier'=>'key'),
+                'insights'=>array('scope'=>'insights.read','identifier'=>'post_id'),
+            ),
+            array_map(
+                static fn(array $spec): array => array(
+                    'scope'=>(string) ($spec['scope'] ?? ''),
+                    'identifier'=>(string) ($spec['identifier'] ?? 'post_id'),
+                ),
+                Eduardo_Research_Manager_Resource_Registry::inventory_specs()
+            )
         );
     }
 
@@ -41,7 +45,7 @@ final class Eduardo_Research_Manager_Resource_Inventory {
     public function get(string $type,string $identifier,array $args=array()): array|WP_Error {
         $type=sanitize_key($type); if(!isset($this->types()[$type])){return $this->error('resource_type_unknown','Unsupported Manager resource type.');}
         $language=$this->language((string) ($args['language']??'')); if(is_wp_error($language)){return $language;}
-        if('pages'===$type){return Eduardo_Research_Manager::pages()->inspect(sanitize_key($identifier),''!==$language?$language:'en');}
+        if('pages'===$type){return Eduardo_Research_Manager::pages()->inspect(sanitize_key($identifier),''!==$language?$language:Eduardo_Research_Manager::contract()->default_language());}
         $id=absint($identifier); if($id<=0){return $this->error('resource_identifier_invalid','Resource identifier must be a positive post ID.');}
         if('insights'===$type){$record=Eduardo_Research_Manager::insights()->inspect($id);}
         elseif('lines'===$type){$record=Eduardo_Research_Manager::lines()->inspect($id);}
@@ -50,17 +54,17 @@ final class Eduardo_Research_Manager_Resource_Inventory {
         elseif('software'===$type){$record=Eduardo_Research_Manager::software()->inspect($id);}
         else{$record=Eduardo_Research_Manager::datasets()->inspect($id);}
         if(is_wp_error($record)||''===$language){return $record;}
-        $recordLanguage=sanitize_key((string) ($record['language']??get_post_meta($id,'_research_language',true)?:'en'));
+        $recordLanguage=sanitize_key((string) ($record['language']??get_post_meta($id,'_research_language',true)?:Eduardo_Research_Manager::contract()->default_language()));
         if($recordLanguage!==$language){return new WP_Error('resource_language_mismatch','Requested resource does not match the requested language.',array('status'=>404));}
         return $record;
     }
 
     private function list_pages(string $language=''): array {
-        $items=array(); $languages=Eduardo_Research_Manager::contract()->languages();
-        foreach(Eduardo_Research_Manager::contract()->pages() as $key=>$definition){
-            $state=Eduardo_Research_Manager::contract()->page_state((string) $key);
+        $items=array(); $contract=Eduardo_Research_Manager::contract(); $languages=$contract->languages();
+        foreach($contract->pages() as $key=>$definition){
+            $state=$contract->page_state((string) $key);
             if(empty($state['exists'])){$items[]=array('type'=>'pages','key'=>(string) $key,'exists'=>false,'expected_role'=>(string) ($definition['role']??''),'expected_model'=>(string) ($definition['model']??''),'languages'=>$languages);continue;}
-            $selected=''!==$language?$language:'en'; $record=Eduardo_Research_Manager::pages()->inspect((string) $key,$selected);
+            $selected=''!==$language?$language:$contract->default_language(); $record=Eduardo_Research_Manager::pages()->inspect((string) $key,$selected);
             if(is_wp_error($record)){$items[]=array('type'=>'pages','key'=>(string) $key,'exists'=>true,'language'=>$selected,'error_code'=>$record->get_error_code());continue;}
             $items[]=array('type'=>'pages','key'=>(string) $record['key'],'page_id'=>(int) $record['page_id'],'title'=>(string) $record['title'],'slug'=>(string) $record['slug'],'status'=>(string) $record['status'],'language'=>$selected,'url'=>(string) $record['url'],'contract_aligned'=>!empty($record['contract_aligned']),'exists'=>true,'languages'=>$languages);
         }
@@ -74,11 +78,17 @@ final class Eduardo_Research_Manager_Resource_Inventory {
     }
 
     private function summary(string $type,WP_Post $post): array {
-        $id=(int) $post->ID; $language=sanitize_key((string) get_post_meta($id,'_research_language',true)); if(''===$language){$language='en';}
+        $id=(int) $post->ID; $language=sanitize_key((string) get_post_meta($id,'_research_language',true)); if(''===$language){$language=Eduardo_Research_Manager::contract()->default_language();}
         $item=array('type'=>$type,'post_id'=>$id,'title'=>(string) $post->post_title,'slug'=>(string) $post->post_name,'status'=>(string) $post->post_status,'language'=>$language,'modified_at'=>get_post_modified_time(DATE_W3C,true,$post),'url'=>(string) get_permalink($post));
         if('insights'===$type){$item['insight_type']=sanitize_key((string) get_post_meta($id,'_research_insight_type',true));}
         return $item;
     }
-    private function post_type(string $type): string { return array('insights'=>'post','lines'=>'research_line','outputs'=>'research_output','projects'=>'research_project','software'=>'research_software','datasets'=>'research_dataset')[$type]; }
+
+    private function post_type(string $type): string {
+        if('insights'===$type){return 'post';}
+        $spec=Eduardo_Research_Manager_Resource_Registry::by_inventory_key($type);
+        return (string) ($spec['post_type']??'');
+    }
+
     private function error(string $code,string $message): WP_Error { return new WP_Error($code,$message,array('status'=>400)); }
 }
