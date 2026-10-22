@@ -42,7 +42,7 @@ jobs:
               'version': '1',
               'tenant': 'eduardo-research',
               'principal': 'phase2d-github',
-              'add_capabilities': ['pages.write', 'translations.write'],
+              'add_capabilities': ['design.read', 'design.write'],
           }
           if value != expected:
               raise SystemExit('capability request does not match the reviewed Phase 2E contract')
