@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.1.0 — Governable Research Theme
+
+Turns the evolved Research Theme into an explicit, versioned control surface for Research Manager / Gateway governance while keeping the public frontend deterministic and Theme-owned.
+
+### Governance
+
+- Add `eduardo_research_governance_contract()` as the Theme-native declaration of governable surfaces and safety constraints.
+- Declare Theme-owned Page slots, registered navigation, design presets, component variants, Media slots and SEO/GEO as bounded control surfaces.
+- Expose `eduardo_research_governance_snapshot()` for a compact state/readback view without introducing an arbitrary WordPress or REST proxy.
+- Preserve researcher identity as verified/canonical state rather than free editorial copy.
+- Keep Gutenberg out of Page layout authority; the Theme remains the deterministic frontend renderer.
+- Explicitly reject arbitrary PHP, JavaScript, REST routes, SQL, filesystem access, arbitrary CSS/font URLs and arbitrary navigation URLs from the Theme governance contract.
+
+### Contract
+
+- Bump Research preset contract from version 5 to version 6.
+- Keep EN/ES Theme-native models and registered Page targets unchanged.
+- Retain bounded navigation state, palette/typography/density presets and component variants.
+- Preserve SEO/GEO, evidence gates, bilingual routing and Manager verification semantics.
+
+### Release
+
+- Version Theme metadata as `1.1.0`.
+- Package the installable artifact as `eduardo-research-1.1.0.zip`.
+- Add release-quality checks for the governance contract and preset version 6.
+
 ## 1.0.0 — Research Theme milestone
 
 First standalone release-candidate of the Eduardo Research Theme.
