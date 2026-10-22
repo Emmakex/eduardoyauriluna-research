@@ -198,10 +198,10 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_insight_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_insight_types')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required for Insight creation.'); }
-        $preset = eduardo_research_preset();
-        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_insight_types')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required for Insight creation.'); }
+        $languages = $theme_contract->languages();
+        $default_language = $theme_contract->default_language();
         $types = eduardo_research_insight_types($default_language);
         $types = is_array($types) ? $types : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
@@ -221,12 +221,12 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_line_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_line_statuses') || ! function_exists('eduardo_research_line_evidence_statuses')) {
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_line_statuses') || ! function_exists('eduardo_research_line_evidence_statuses')) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
         }
-        $preset = eduardo_research_preset();
-        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $languages = $theme_contract->languages();
+        $default_language = $theme_contract->default_language();
         $statuses = eduardo_research_line_statuses($default_language);
         $evidence_statuses = eduardo_research_line_evidence_statuses($default_language);
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
@@ -260,10 +260,10 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_output_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme publication contract is required.'); }
-        $preset = eduardo_research_preset();
-        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme publication contract is required.'); }
+        $languages = $theme_contract->languages();
+        $default_language = $theme_contract->default_language();
         $options = eduardo_research_collection_options('publications', $default_language);
         $output_types = is_array($options['output_type'] ?? null) ? $options['output_type'] : array();
         $review_statuses = is_array($options['review_status'] ?? null) ? $options['review_status'] : array();
@@ -300,10 +300,10 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_project_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme project contract is required.'); }
-        $preset = eduardo_research_preset();
-        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme project contract is required.'); }
+        $languages = $theme_contract->languages();
+        $default_language = $theme_contract->default_language();
         $options = eduardo_research_collection_options('projects', $default_language);
         $project_statuses = is_array($options['project_status'] ?? null) ? $options['project_status'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
@@ -341,10 +341,10 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_software_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.'); }
-        $preset = eduardo_research_preset();
-        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.'); }
+        $languages = $theme_contract->languages();
+        $default_language = $theme_contract->default_language();
         $options = eduardo_research_collection_options('software', $default_language);
         $software_statuses = is_array($options['software_status'] ?? null) ? $options['software_status'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
@@ -385,10 +385,10 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function normalize_dataset_creation(array $action): array|WP_Error {
-        if (! function_exists('eduardo_research_preset') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.'); }
-        $preset = eduardo_research_preset();
-        $languages = is_array($preset['languages'] ?? null) ? array_map('sanitize_key', $preset['languages']) : array();
-        $default_language = (new Eduardo_Research_Manager_Contract())->default_language();
+        $theme_contract = new Eduardo_Research_Manager_Contract();
+        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.'); }
+        $languages = $theme_contract->languages();
+        $default_language = $theme_contract->default_language();
         $options = eduardo_research_collection_options('datasets', $default_language);
         $access_levels = is_array($options['access_level'] ?? null) ? $options['access_level'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
