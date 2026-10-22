@@ -1,5 +1,5 @@
 <?php
-/** Safe mutation executor for the Research Manager. */
+/** Safe mutation executor for Site Architect. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
@@ -321,57 +321,35 @@ final class Eduardo_Research_Manager_Executor {
         return '' !== (string) ($stored['url'] ?? '');
     }
 
+    /**
+     * Resolve execution metadata from the descriptive Research Resource Registry.
+     *
+     * This method does not authorize an action. Eduardo_Research_Manager_Plan
+     * remains the fail-closed mutation boundary before Executor is reached.
+     */
     private function research_object_spec(string $action_type): array {
-        $specs = array(
-            'create_line'=>array(
-                'post_type'=>'research_line','creation_conflict'=>'research_manager_line_creation_conflict','rollback_conflict'=>'research_manager_line_rollback_conflict',
-                'meta'=>array(
-                    'evidence_status'=>'_research_evidence_status','research_status'=>'_research_status','central_question'=>'_research_central_question',
-                    'order'=>'_research_order','topics'=>'_research_topics','methods'=>'_research_methods',
-                ),
-                'array_fields'=>array('topics','methods'),'defaults'=>array('evidence_status'=>'unverified','research_status'=>'planned'),
-            ),
-            'create_output'=>array(
-                'post_type'=>'research_output','creation_conflict'=>'research_manager_output_creation_conflict','rollback_conflict'=>'research_manager_output_rollback_conflict',
-                'meta'=>array(
-                    'output_type'=>'_research_output_type','output_type_verified'=>'_research_output_type_verified',
-                    'review_status'=>'_research_review_status','review_status_verified'=>'_research_review_status_verified',
-                    'publication_date'=>'_research_publication_date','venue'=>'_research_venue','doi'=>'_research_doi','doi_verified'=>'_research_doi_verified',
-                    'authors'=>'_research_authors','line_ids'=>'_research_line_ids',
-                ),
-                'array_fields'=>array('authors','line_ids'),'defaults'=>array('output_type_verified'=>'0','review_status_verified'=>'0','doi_verified'=>'0'),
-            ),
-            'create_project'=>array(
-                'post_type'=>'research_project','creation_conflict'=>'research_manager_project_creation_conflict','rollback_conflict'=>'research_manager_project_rollback_conflict',
-                'meta'=>array(
-                    'project_status'=>'_research_project_status','question'=>'_research_question','role'=>'_research_role',
-                    'start_date'=>'_research_start_date','end_date'=>'_research_end_date','partner'=>'_research_partner','funding'=>'_research_funding',
-                    'project_url'=>'_research_project_url','methods'=>'_research_methods','line_ids'=>'_research_line_ids',
-                ),
-                'array_fields'=>array('methods','line_ids'),'defaults'=>array(),
-            ),
-            'create_software'=>array(
-                'post_type'=>'research_software','creation_conflict'=>'research_manager_software_creation_conflict','rollback_conflict'=>'research_manager_software_rollback_conflict',
-                'meta'=>array(
-                    'software_status'=>'_research_software_status','version'=>'_research_software_version','release_date'=>'_research_release_date',
-                    'repository_url'=>'_research_repository_url','archive_url'=>'_research_archive_url','license'=>'_research_license',
-                    'documentation_url'=>'_research_documentation_url','doi'=>'_research_doi','doi_verified'=>'_research_doi_verified',
-                    'programming_languages'=>'_research_programming_languages','line_ids'=>'_research_line_ids',
-                ),
-                'array_fields'=>array('programming_languages','line_ids'),'defaults'=>array('doi_verified'=>'0'),
-            ),
-            'create_dataset'=>array(
-                'post_type'=>'research_dataset','creation_conflict'=>'research_manager_dataset_creation_conflict','rollback_conflict'=>'research_manager_dataset_rollback_conflict',
-                'meta'=>array(
-                    'version'=>'_research_dataset_version','publication_date'=>'_research_publication_date','repository'=>'_research_repository',
-                    'doi'=>'_research_doi','doi_verified'=>'_research_doi_verified','license'=>'_research_license','access_level'=>'_research_access_level',
-                    'methodology'=>'_research_methodology','provenance'=>'_research_provenance','size'=>'_research_size',
-                    'documentation_url'=>'_research_documentation_url','ethics_notes'=>'_research_ethics_notes','formats'=>'_research_formats','line_ids'=>'_research_line_ids',
-                ),
-                'array_fields'=>array('formats','line_ids'),'defaults'=>array('doi_verified'=>'0'),
-            ),
+        $registered = Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type);
+        if (! $registered) { return array(); }
+
+        $post_type = sanitize_key((string) ($registered['post_type'] ?? ''));
+        $creation_conflict = sanitize_key((string) ($registered['creation_conflict'] ?? ''));
+        $rollback_conflict = sanitize_key((string) ($registered['rollback_conflict'] ?? ''));
+        $meta = is_array($registered['meta'] ?? null) ? $registered['meta'] : array();
+        $array_fields = is_array($registered['array_fields'] ?? null) ? array_values($registered['array_fields']) : array();
+        $defaults = is_array($registered['defaults'] ?? null) ? $registered['defaults'] : array();
+
+        if ('' === $post_type || '' === $creation_conflict || '' === $rollback_conflict || ! $meta) {
+            return array();
+        }
+
+        return array(
+            'post_type'=>$post_type,
+            'creation_conflict'=>$creation_conflict,
+            'rollback_conflict'=>$rollback_conflict,
+            'meta'=>$meta,
+            'array_fields'=>$array_fields,
+            'defaults'=>$defaults,
         );
-        return is_array($specs[$action_type] ?? null) ? $specs[$action_type] : array();
     }
 
     private function states_equal(array $left, array $right): bool {
