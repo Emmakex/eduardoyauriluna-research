@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Research Manager
+ * Plugin Name: Site Architect
  * Plugin URI: https://kairoseth.com/
- * Description: Portable WordPress control plane with read-only Site Baseline Audit and automatic Research Theme capability expansion.
+ * Description: Greenfield WordPress architecture and governance control plane for deterministic Theme-owned sites.
  * Version: 0.11.0
  * Requires at least: 6.6
  * Requires PHP: 8.1
@@ -15,6 +15,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.0');
+define('EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME', 'Site Architect');
 define('EDUARDO_RESEARCH_MANAGER_FILE', __FILE__);
 define('EDUARDO_RESEARCH_MANAGER_DIR', plugin_dir_path(__FILE__));
 
@@ -165,6 +166,7 @@ add_action('plugins_loaded', static function (): void {
 
 if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
     add_action('plugins_loaded', static function (): void {
-        WP_CLI::add_command('research-manager greenfield', 'Eduardo_Research_Manager_Greenfield_CLI');
+        WP_CLI::add_command('site-architect greenfield', 'Eduardo_Research_Manager_Greenfield_CLI');
+        WP_CLI::add_command('research-manager greenfield', 'Eduardo_Research_Manager_Greenfield_CLI'); // Legacy alias kept for production compatibility.
     }, 20);
 }
