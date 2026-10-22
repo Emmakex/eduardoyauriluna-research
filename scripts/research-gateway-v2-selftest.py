@@ -86,6 +86,14 @@ def assert_contract_invariants() -> None:
         "action": "manager.resource.inspect",
         "payload": {"resource": "navigation"},
     }
+    status_read = {
+        "action": "manager.resource.inspect",
+        "payload": {"resource": "status"},
+    }
+    versions_read = {
+        "action": "manager.resource.inspect",
+        "payload": {"resource": "versions"},
+    }
     nav_write = {"action": "navigation.update", "payload": {}}
     rollback = {
         "action": "operation.rollback",
@@ -97,6 +105,8 @@ def assert_contract_invariants() -> None:
     assert worker.contract.required_capabilities(evidence_read, registry) == ["evidence.read"]
     assert worker.contract.required_capabilities(page_read, registry) == ["pages.read"]
     assert worker.contract.required_capabilities(navigation_read, registry) == ["pages.read"]
+    assert worker.contract.required_capabilities(status_read, registry) == ["site.read"]
+    assert worker.contract.required_capabilities(versions_read, registry) == ["site.read"]
     assert worker.contract.required_capabilities(nav_write, registry) == [
         "pages.read",
         "pages.write",
@@ -129,6 +139,14 @@ def assert_contract_invariants() -> None:
     )
     assert navigation_ok["required_capabilities"] == ["pages.read"]
     assert navigation_ok["granted"] is True
+
+    versions_ok = worker.contract.preflight(
+        versions_read,
+        {"granted_scopes": ["site.read"]},
+        registry,
+    )
+    assert versions_ok["required_capabilities"] == ["site.read"]
+    assert versions_ok["granted"] is True
 
     try:
         worker.contract.preflight(
