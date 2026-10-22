@@ -38,7 +38,8 @@ Legacy production identifiers such as `Eduardo_Research_Manager_*`, `eduardo_res
 | Identity fields reconstruct `headline` / `headline_es` locally | DONE for Identity Profile | `8c746dccfa61c24a6ad6deddeeb916eea7bed779` resolves physical headline fields through the contract and derives allowed/verifiable identity fields from that mapping. |
 | Remaining direct `_es` / language-storage assumptions | IN PROGRESS | Search and migrate only when they represent storage ownership; do not change genuine bilingual content/data. |
 | Research resource mapping design | DONE | `0ff750696c3aaa237f7593526f1b2432c624829b` documents the exact Registry boundary and security rule. |
-| Research Resource Registry implementation | PARTIAL / IN PROGRESS | `63b3b77a4285bb4a4d6d4f4827e4c99bd97f3c0a` adds the exact descriptive Registry; `601b8112dfead8ab5f02996dc4ef55c21dde4382` makes the Theme Contract derive Research post types from it; `cb249a8badbdd1d60f59c46c7c77f07996ed57d6` makes Resource Inventory derive structured inventory type/post-type/scope facts from it. Executor and Plan are intentionally still unchanged pending CI evidence. |
+| Research Resource Registry implementation | DONE for Contract / Inventory / Executor | `63b3b77a4285bb4a4d6d4f4827e4c99bd97f3c0a` adds the descriptive Registry; `601b8112dfead8ab5f02996dc4ef55c21dde4382` derives Research post types from it; `cb249a8badbdd1d60f59c46c7c77f07996ed57d6` derives structured inventory facts; `998b0b2ae91d94c4d3bb6b08641661f984a25c1d` loads the Registry before consumers; `93404340c0e3fc204473978920dbdd3c46b27e7d` removes the duplicated Executor specification table and resolves execution metadata fail-closed from the Registry. CI and production acceptance remain separate evidence. |
+| Plan mutation/security allowlists | REVIEW NEXT — KEEP SECURITY by default | Plan still explicitly owns allowed operations, fields, option/meta boundaries, validation and risk gates. Registry data must not implicitly grant new mutations. Only duplicated descriptive facts may be centralized after proving the security boundary stays closed. |
 
 ## Current architecture after P0/P1 work
 
@@ -89,6 +90,19 @@ Executor = execution of validated actions
 
 Adding a Registry entry must never authorize a new mutation automatically.
 
+Executor therefore consumes only a normalized execution subset from the Registry:
+
+```text
+post_type
+creation_conflict
+rollback_conflict
+meta
+array_fields
+defaults
+```
+
+Missing required execution metadata fails closed and is treated as unsupported. Executor does not grant mutation permission; every normal execution path first validates the Plan.
+
 No reusable identity service should invent Eduardo's name or biography as a final fallback.
 
 ## Compatibility boundary
@@ -104,15 +118,16 @@ The following remain unchanged by the current P0/P1 work:
 - existing Preview → Apply → Verify → Rollback behavior;
 - current Eduardo blueprint path and contents;
 - current EN/ES physical storage layout;
-- current Research post types, public resource keys and read scopes.
+- current Research post types, public resource keys and read scopes;
+- current Plan action allowlist and risk/evidence gates.
 
 These are intentionally preserved while architecture boundaries are cleaned up.
 
 ## Next safe sequence
 
-1. Let the current Registry/Inventory cut complete CI before touching Executor.
-2. Migrate `Executor::research_object_spec()` to consume the Registry only if exact metadata/default/conflict parity is proven.
-3. Let Plan consume only safe descriptive subsets later; keep explicit action/schema validation fail-closed.
+1. Let the Executor/Registry consolidation complete CI; production behavior is not considered accepted from repository evidence alone.
+2. Audit `Eduardo_Research_Manager_Plan` field by field and classify each hardcode as descriptive duplication versus KEEP SECURITY.
+3. Centralize only descriptive Research facts that can be derived without widening allowed actions/options/meta/fields.
 4. Finish the isolated Admin default-language fallback and remaining true storage assumptions.
 5. Continue broader Theme Contract/capability derivation consolidation.
 
