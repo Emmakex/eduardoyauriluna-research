@@ -92,6 +92,57 @@ def diagnostic_sanitizer():
     raise RuntimeError("selected command runner does not expose sanitized diagnostic handling")
 
 
+def classify_failure(diagnostic: str) -> tuple[str, str, str]:
+    """Convert low-level sanitized diagnostics into stable Gateway failure semantics."""
+    lowered = diagnostic.lower()
+    if any(
+        marker in lowered
+        for marker in (
+            "principal_not_granted",
+            "commercial entitlement denied",
+            "insufficient_scope",
+            "scope denied",
+            "scope_missing",
+            "not granted",
+        )
+    ):
+        return (
+            "scope_denied",
+            "authorization",
+            "The production principal is not granted the required capability or scope.",
+        )
+    if any(marker in lowered for marker in ("tool_is_error", "iserror:true", '"iserror":true')):
+        return (
+            "mcp_refused",
+            "execution",
+            "The production MCP or Research Manager refused the bounded operation.",
+        )
+    if any(
+        marker in lowered
+        for marker in (
+            "connection refused",
+            "connection reset",
+            "timed out",
+            "timeout",
+            "could not resolve",
+            "temporary failure in name resolution",
+            "network is unreachable",
+            "tls",
+            "ssl",
+        )
+    ):
+        return (
+            "transport_failed",
+            "transport",
+            "The production MCP transport did not complete successfully.",
+        )
+    return (
+        "execution_failed",
+        "execution",
+        "The bounded production operation did not complete successfully.",
+    )
+
+
 def observable_run(*args, **kwargs):
     global _last_diagnostic
     completed = _real_run(*args, **kwargs)
@@ -110,7 +161,17 @@ def observable_write_result(result_dir, command_id, result):
         result = dict(result)
         error = result.get("error")
         if isinstance(error, dict):
-            result["error"] = {**error, "diagnostic": _last_diagnostic}
+            code, stage, message = classify_failure(_last_diagnostic)
+            existing_code = error.get("code")
+            if existing_code in {None, "execution_failed"}:
+                existing_code = code
+            result["error"] = {
+                **error,
+                "code": existing_code,
+                "stage": stage,
+                "message": message if error.get("code") in {None, "execution_failed"} else error.get("message", message),
+                "diagnostic": _last_diagnostic,
+            }
     return _real_write_result(result_dir, command_id, result)
 
 
