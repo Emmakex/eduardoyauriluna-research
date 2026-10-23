@@ -149,7 +149,13 @@ final class Eduardo_Research_Manager_Software_Resource {
     }
 
     private function validate_contract(): bool|WP_Error {
-        if (! $this->contract->compatible() || ! post_type_exists('research_software') || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.'); }
+        if (! $this->contract->compatible() || ! post_type_exists('research_software')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.');
+        }
+        $catalogs = $this->contract->collection_catalogs('software');
+        if (is_wp_error($catalogs)) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.');
+        }
         return true;
     }
     private function private_meta_value(int $post_id, string $key, mixed $default = null): mixed {
