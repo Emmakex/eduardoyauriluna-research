@@ -57,7 +57,7 @@ final class Eduardo_Research_Manager_Dataset_Resource {
             'slug'=>is_scalar($data['slug'] ?? null) ? (string) $data['slug'] : sanitize_title($title),
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'version'=>is_scalar($data['version'] ?? null) ? (string) $data['version'] : '',
             'publication_date'=>is_scalar($data['publication_date'] ?? null) ? (string) $data['publication_date'] : '',
