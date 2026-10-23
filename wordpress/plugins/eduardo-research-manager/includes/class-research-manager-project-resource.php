@@ -58,7 +58,7 @@ final class Eduardo_Research_Manager_Project_Resource {
             'slug'=>is_scalar($data['slug'] ?? null) ? (string) $data['slug'] : sanitize_title($title),
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'project_status'=>is_scalar($data['project_status'] ?? null) ? (string) $data['project_status'] : '',
             'question'=>is_scalar($data['question'] ?? null) ? (string) $data['question'] : '',
