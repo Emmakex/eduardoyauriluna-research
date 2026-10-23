@@ -126,6 +126,11 @@ final class Eduardo_Research_Manager_Contract {
         );
     }
 
+    public function line_is_verified_public(int $line_id, string $language): bool {
+        return function_exists('eduardo_research_line_is_verified_public')
+            && eduardo_research_line_is_verified_public($line_id, $language);
+    }
+
     public function collection_catalogs(string $surface, string $language = ''): array|WP_Error {
         if (! $this->theme_available() || ! function_exists('eduardo_research_collection_options')) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme collection contract is required.');
