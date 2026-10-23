@@ -92,7 +92,7 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
             'content'=>'' !== $content,
             'language'=>in_array((string) ($record['language'] ?? ''), Eduardo_Research_Manager::contract()->languages(), true),
             'insight_type'=>array_key_exists((string) ($record['insight_type'] ?? ''), Eduardo_Research_Manager::insights()->types()),
-            'relations'=>count($line_ids) === count(array_filter($line_ids, static fn(int $line_id): bool => Eduardo_Research_Manager::contract()->line_is_verified_public($line_id, (string) ($record['language'] ?? 'en')))),
+            'relations'=>count($line_ids) === count(array_filter($line_ids, static fn(int $line_id): bool => Eduardo_Research_Manager::contract()->line_is_verified_public($line_id, (string) ($record['language'] ?? Eduardo_Research_Manager::contract()->default_language())))),
             'schedule'=>'future' !== $status || '' !== $scheduled_at,
             'url'=>'' !== (string) ($record['url'] ?? ''),
         );
