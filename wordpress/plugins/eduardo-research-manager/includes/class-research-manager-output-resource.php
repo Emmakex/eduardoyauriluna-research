@@ -55,7 +55,7 @@ final class Eduardo_Research_Manager_Output_Resource {
             'slug'=>is_scalar($data['slug'] ?? null) ? (string) $data['slug'] : sanitize_title($title),
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'output_type'=>is_scalar($data['output_type'] ?? null) ? (string) $data['output_type'] : '',
             'review_status'=>is_scalar($data['review_status'] ?? null) ? (string) $data['review_status'] : '',
