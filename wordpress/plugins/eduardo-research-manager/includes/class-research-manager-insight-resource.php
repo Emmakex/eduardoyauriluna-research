@@ -249,7 +249,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
         if (! $this->contract->compatible() || ! function_exists('eduardo_research_insight_types')) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme editorial contract is required.');
         }
-        if (! in_array('en', $this->languages(), true) || ! $this->types()) {
+        if (! in_array($this->contract->default_language(), $this->languages(), true) || ! $this->types()) {
             return new WP_Error('research_manager_insight_contract_invalid', 'The active Research Theme does not expose a usable Insight contract.');
         }
         return true;
