@@ -221,13 +221,17 @@ final class Eduardo_Research_Manager_Plan {
 
     private static function normalize_line_creation(array $action): array|WP_Error {
         $theme_contract = new Eduardo_Research_Manager_Contract();
-        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_line_statuses') || ! function_exists('eduardo_research_line_evidence_statuses')) {
+        if (! $theme_contract->theme_available()) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
         }
         $languages = $theme_contract->languages();
         $default_language = $theme_contract->default_language();
-        $statuses = eduardo_research_line_statuses($default_language);
-        $evidence_statuses = eduardo_research_line_evidence_statuses($default_language);
+        $catalogs = $theme_contract->line_catalogs($default_language);
+        if (is_wp_error($catalogs)) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
+        }
+        $statuses = is_array($catalogs['statuses'] ?? null) ? $catalogs['statuses'] : array();
+        $evidence_statuses = is_array($catalogs['evidence_statuses'] ?? null) ? $catalogs['evidence_statuses'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($action['excerpt'] ?? ''));
