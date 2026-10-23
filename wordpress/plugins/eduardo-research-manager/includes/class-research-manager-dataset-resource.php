@@ -173,7 +173,11 @@ final class Eduardo_Research_Manager_Dataset_Resource {
     }
 
     private function validate_contract(): bool|WP_Error {
-        if (! $this->contract->compatible() || ! post_type_exists('research_dataset') || ! function_exists('eduardo_research_collection_options')) {
+        if (! $this->contract->compatible() || ! post_type_exists('research_dataset')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.');
+        }
+        $catalogs = $this->contract->collection_catalogs('datasets');
+        if (is_wp_error($catalogs)) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.');
         }
         return true;
