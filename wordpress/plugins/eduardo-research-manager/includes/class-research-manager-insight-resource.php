@@ -238,7 +238,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
         }
         $ids = array_values(array_unique(array_filter(array_map('absint', $value))));
         foreach ($ids as $line_id) {
-            if (! function_exists('eduardo_research_line_is_verified_public') || ! eduardo_research_line_is_verified_public($line_id, $language)) {
+            if (! $this->contract->line_is_verified_public($line_id, $language)) {
                 return new WP_Error('research_manager_unverified_insight_line_relation', 'Insights may only relate to verified Research Lines in the same language.');
             }
         }
