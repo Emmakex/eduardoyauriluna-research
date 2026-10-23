@@ -219,7 +219,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
 
     public function types(): array {
         if (! function_exists('eduardo_research_insight_types')) { return array(); }
-        $types = eduardo_research_insight_types('en');
+        $types = $this->contract->insight_types();
         return is_array($types) ? $types : array();
     }
 
