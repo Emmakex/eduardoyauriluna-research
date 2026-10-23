@@ -62,7 +62,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
             'slug'=>$slug,
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'insight_type'=>is_scalar($data['insight_type'] ?? null) ? (string) $data['insight_type'] : 'research_note',
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'creation_token'=>wp_generate_uuid4(),
