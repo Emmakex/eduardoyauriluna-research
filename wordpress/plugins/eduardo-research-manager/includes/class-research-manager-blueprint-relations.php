@@ -192,7 +192,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
         $posts = get_posts(array('post_type'=>$post_type,'post_status'=>'any','name'=>$slug,'posts_per_page'=>5,'orderby'=>'ID','order'=>'ASC','suppress_filters'=>true));
         foreach ($posts as $post) {
             if (! $post instanceof WP_Post) { continue; }
-            $stored = function_exists('eduardo_research_post_language') ? eduardo_research_post_language((int) $post->ID) : sanitize_key((string) get_post_meta((int) $post->ID, '_research_language', true));
+            $stored = Eduardo_Research_Manager::contract()->post_language((int) $post->ID);
             if ($language === $stored) { return (int) $post->ID; }
         }
         return 0;
