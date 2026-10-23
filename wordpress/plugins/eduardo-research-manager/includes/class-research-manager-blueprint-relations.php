@@ -127,7 +127,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
                 if (! is_array($record)) { return $this->record_error($resource, $index, 'Blueprint resource records must be object-like arrays.'); }
                 if (! array_key_exists('line_refs', $record)) { continue; }
                 if (! is_array($record['line_refs'])) { return $this->record_error($resource, $index, 'line_refs must be an array of stable Research Line references.'); }
-                $language = sanitize_key((string) ($record['language'] ?? 'en'));
+                $language = sanitize_key((string) ($record['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
                 if (! in_array($language, $normalized['languages'], true)) { return $this->record_error($resource, $index, 'Resource language is outside the blueprint language set.'); }
                 $slug = sanitize_title((string) ($record['slug'] ?? $record['title'] ?? ''));
                 if ('' === $slug) { return $this->record_error($resource, $index, 'Related resources require a resolvable slug.'); }
