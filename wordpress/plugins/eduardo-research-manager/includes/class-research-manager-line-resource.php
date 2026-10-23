@@ -171,7 +171,11 @@ final class Eduardo_Research_Manager_Line_Resource {
     }
 
     private function validate_contract(): bool|WP_Error {
-        if (! $this->contract->compatible() || ! post_type_exists('research_line') || ! function_exists('eduardo_research_line_statuses') || ! function_exists('eduardo_research_line_evidence_statuses')) {
+        if (! $this->contract->compatible() || ! post_type_exists('research_line')) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
+        }
+        $catalogs = $this->contract->line_catalogs();
+        if (is_wp_error($catalogs)) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme line contract is required.');
         }
         return true;
