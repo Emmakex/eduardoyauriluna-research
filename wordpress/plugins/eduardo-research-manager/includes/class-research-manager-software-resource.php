@@ -54,7 +54,7 @@ final class Eduardo_Research_Manager_Software_Resource {
             'slug'=>is_scalar($data['slug'] ?? null) ? (string) $data['slug'] : sanitize_title($title),
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'software_status'=>is_scalar($data['software_status'] ?? null) ? (string) $data['software_status'] : '',
             'version'=>is_scalar($data['version'] ?? null) ? (string) $data['version'] : '',
