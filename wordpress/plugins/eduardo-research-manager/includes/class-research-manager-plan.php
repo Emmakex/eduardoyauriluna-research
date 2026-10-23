@@ -483,8 +483,9 @@ final class Eduardo_Research_Manager_Plan {
         if (null === $value || array() === $value) { return array(); }
         if (! is_array($value)) { return new WP_Error('research_manager_invalid_line_relations', 'Research line relations must be an array of IDs.'); }
         $ids = array_values(array_unique(array_filter(array_map('absint', $value))));
+        $theme_contract = new Eduardo_Research_Manager_Contract();
         foreach ($ids as $id) {
-            if (! function_exists('eduardo_research_line_is_verified_public') || ! eduardo_research_line_is_verified_public($id, $language)) {
+            if (! $theme_contract->line_is_verified_public($id, $language)) {
                 return new WP_Error('research_manager_unverified_line_relation', $resource_label . ' may only relate to verified Research Lines in the same language.');
             }
         }
