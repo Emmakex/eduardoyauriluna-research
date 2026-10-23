@@ -355,10 +355,15 @@ final class Eduardo_Research_Manager_Plan {
 
     private static function normalize_software_creation(array $action): array|WP_Error {
         $theme_contract = new Eduardo_Research_Manager_Contract();
-        if (! $theme_contract->theme_available() || ! function_exists('eduardo_research_collection_options')) { return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.'); }
+        if (! $theme_contract->theme_available()) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.');
+        }
         $languages = $theme_contract->languages();
         $default_language = $theme_contract->default_language();
-        $options = eduardo_research_collection_options('software', $default_language);
+        $options = $theme_contract->collection_catalogs('software', $default_language);
+        if (is_wp_error($options)) {
+            return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme software contract is required.');
+        }
         $software_statuses = is_array($options['software_status'] ?? null) ? $options['software_status'] : array();
         $title = sanitize_text_field((string) ($action['title'] ?? ''));
         $slug = sanitize_title((string) ($action['slug'] ?? ''));
