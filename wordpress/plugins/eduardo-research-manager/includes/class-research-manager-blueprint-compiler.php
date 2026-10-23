@@ -49,7 +49,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
 
                 if ('lines' === $resource_key) {
                     $slug = sanitize_title((string) ($payload['slug'] ?? $payload['title'] ?? ''));
-                    $language = sanitize_key((string) ($payload['language'] ?? 'en'));
+                    $language = sanitize_key((string) ($payload['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
                     if ('' !== $slug) {
                         $existing = $resources['lines']->find_by_slug($slug, $language);
                         if ($existing > 0) {
