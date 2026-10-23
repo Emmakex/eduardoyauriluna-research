@@ -185,7 +185,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
     }
 
     private function verified_line(int $post_id, string $language): bool {
-        return $post_id > 0 && function_exists('eduardo_research_line_is_verified_public') && eduardo_research_line_is_verified_public($post_id, $language);
+        return $post_id > 0 && Eduardo_Research_Manager::contract()->line_is_verified_public($post_id, $language);
     }
 
     private function find_resource(string $post_type, string $slug, string $language): int {
