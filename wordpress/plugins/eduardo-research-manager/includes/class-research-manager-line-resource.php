@@ -54,7 +54,7 @@ final class Eduardo_Research_Manager_Line_Resource {
             'slug'=>is_scalar($data['slug'] ?? null) ? (string) $data['slug'] : sanitize_title($title),
             'excerpt'=>is_scalar($data['excerpt'] ?? null) ? (string) $data['excerpt'] : '',
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
-            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : 'en',
+            'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
             'evidence_status'=>is_scalar($data['evidence_status'] ?? null) ? (string) $data['evidence_status'] : 'unverified',
             'research_status'=>is_scalar($data['research_status'] ?? null) ? (string) $data['research_status'] : 'planned',
