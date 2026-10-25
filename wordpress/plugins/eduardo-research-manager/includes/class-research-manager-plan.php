@@ -544,7 +544,24 @@ final class Eduardo_Research_Manager_Plan {
     }
 
     private static function allowed_meta_key(string $key): bool {
-        return str_starts_with($key, '_eduardo_research_') || str_starts_with($key, '_research_');
+        $shared = array(
+            '_eduardo_research_role',
+            '_eduardo_research_model',
+            '_eduardo_research_manager_creation_token',
+            '_eduardo_research_translation_evidence',
+            '_research_language',
+            '_research_insight_type',
+            '_research_insight_line_relations',
+            '_research_translation_en',
+            '_research_translation_es',
+        );
+        if (in_array($key, $shared, true)) { return true; }
+
+        foreach (Eduardo_Research_Manager_Resource_Registry::all() as $resource) {
+            $meta = is_array($resource['meta'] ?? null) ? $resource['meta'] : array();
+            if (in_array($key, array_values($meta), true)) { return true; }
+        }
+        return false;
     }
 
     private static function sanitize_post_field_value(string $field, mixed $value): mixed {
