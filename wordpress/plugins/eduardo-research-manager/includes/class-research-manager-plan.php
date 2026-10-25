@@ -469,8 +469,8 @@ final class Eduardo_Research_Manager_Plan {
             }
             $orcid = trim((string) ($author['orcid'] ?? ''));
             if ('' !== $orcid) {
-                $orcid = preg_replace('#^https?://orcid\\.org/#i', '', $orcid) ?? '';
-                if (1 !== preg_match('/^\\d{4}-\\d{4}-\\d{4}-[\\dX]{4}$/i', $orcid)) { return new WP_Error('research_manager_invalid_orcid', 'Author ORCID must use the 0000-0000-0000-0000 format.'); }
+                $orcid = preg_replace('#^https?://orcid\.org/#i', '', $orcid) ?? '';
+                if (1 !== preg_match('/^\d{4}-\d{4}-\d{4}-[\dX]{4}$/i', $orcid)) { return new WP_Error('research_manager_invalid_orcid', 'Author ORCID must use the 0000-0000-0000-0000 format.'); }
                 $record['orcid'] = strtoupper($orcid);
             }
             $record['is_site_researcher'] = ! empty($author['is_site_researcher']);
@@ -507,18 +507,18 @@ final class Eduardo_Research_Manager_Plan {
     private static function normalize_date(string $value): string {
         $value = trim($value);
         if ('' === $value) { return ''; }
-        if (1 === preg_match('/^\\d{4}$/', $value)) { return $value; }
-        if (1 === preg_match('/^(\\d{4})-(0[1-9]|1[0-2])$/', $value)) { return $value; }
-        if (1 !== preg_match('/^(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$/', $value, $parts)) { return ''; }
+        if (1 === preg_match('/^\d{4}$/', $value)) { return $value; }
+        if (1 === preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $value)) { return $value; }
+        if (1 !== preg_match('/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', $value, $parts)) { return ''; }
         return checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]) ? $value : '';
     }
 
     private static function normalize_doi(string $value): string {
         $value = trim($value);
         if ('' === $value) { return ''; }
-        $value = preg_replace('#^(?:https?://(?:dx\\.)?doi\\.org/|doi:\\s*)#i', '', $value) ?? '';
+        $value = preg_replace('#^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)#i', '', $value) ?? '';
         $value = trim($value);
-        return 1 === preg_match('/^10\\.\\d{4,9}\\/\\S+$/i', $value) ? $value : '';
+        return 1 === preg_match('/^10\.\d{4,9}\/\S+$/i', $value) ? $value : '';
     }
 
     private static function normalize_http_url(string $value): string {
