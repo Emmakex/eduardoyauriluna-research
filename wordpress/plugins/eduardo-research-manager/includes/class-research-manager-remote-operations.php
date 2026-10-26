@@ -483,7 +483,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
             return array(
                 'prepared'=>$prepared,
                 'preview'=>is_array($prepared['preview'] ?? null) ? $prepared['preview'] : array(),
-                'target'=>array('resource'=>'insight','post_id'=>0,'language'=>(string) ($expected['language'] ?? 'en')),
+                'target'=>array('resource'=>'insight','post_id'=>0,'language'=>(string) ($expected['language'] ?? Eduardo_Research_Manager::contract()->default_language())),
                 'requested'=>array('data'=>$expected),
                 'apply_allowed'=>! empty($prepared['apply_allowed']),
             );
@@ -501,7 +501,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
             return array(
                 'prepared'=>$prepared,
                 'preview'=>is_array($prepared['preview'] ?? null) ? $prepared['preview'] : array(),
-                'target'=>array('resource'=>'insight','post_id'=>$post_id,'language'=>(string) ($before['language'] ?? 'en')),
+                'target'=>array('resource'=>'insight','post_id'=>$post_id,'language'=>(string) ($before['language'] ?? Eduardo_Research_Manager::contract()->default_language())),
                 'requested'=>array('changes'=>$expected),
                 'apply_allowed'=>! empty($prepared['apply_allowed']),
             );
@@ -591,7 +591,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
             );
         }
 
-        $language = sanitize_key((string) ($payload['language'] ?? 'en'));
+        $language = sanitize_key((string) ($payload['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $slots = is_array($payload['slots'] ?? null) ? $payload['slots'] : array();
         if (! $slots) { return $this->error('validation_failed', 'page-slots-update requires at least one Theme-owned slot.', 400); }
         $prepared = $this->page_editor->preview($key, $language, $slots);
@@ -672,7 +672,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if ('' === $key) { return $this->error('validation_failed', 'Page operation is missing its rendered verification target.', 409); }
         $languages = in_array($type, array('page-create','page-remediate'), true)
             ? Eduardo_Research_Manager::contract()->languages()
-            : array(sanitize_key((string) ($target['language'] ?? 'en')));
+            : array(sanitize_key((string) ($target['language'] ?? Eduardo_Research_Manager::contract()->default_language())));
         $resources = array();
         $verified = true;
         foreach ($languages as $language) {
@@ -726,7 +726,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
 
     private function default_reason(string $operation, array $target): string {
         if ('page-slots-update' === $operation) {
-            return sprintf('Remote structured Page update: %s (%s)', (string) ($target['key'] ?? ''), strtoupper((string) ($target['language'] ?? 'en')));
+            return sprintf('Remote structured Page update: %s (%s)', (string) ($target['key'] ?? ''), strtoupper((string) ($target['language'] ?? Eduardo_Research_Manager::contract()->default_language())));
         }
         if ('page-create' === $operation) {
             return sprintf('Remote recovery of missing Theme Page: %s', (string) ($target['key'] ?? ''));
