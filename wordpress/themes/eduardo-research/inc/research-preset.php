@@ -34,8 +34,13 @@ function eduardo_research_preset(): array {
     );
 }
 
+function eduardo_research_page_contracts(): array {
+    $pages = eduardo_research_preset()['pages'] ?? array();
+    return is_array($pages) ? $pages : array();
+}
+
 function eduardo_research_page_contract(string $key): ?array {
-    $pages = eduardo_research_preset()['pages'];
+    $pages = eduardo_research_page_contracts();
     return isset($pages[$key]) && is_array($pages[$key]) ? $pages[$key] : null;
 }
 
@@ -47,7 +52,7 @@ function eduardo_research_navigation_contract(): array {
             'primary'=>array('default'=>array_values((array) ($preset['primary_navigation'] ?? array())), 'min_items'=>1),
             'footer'=>array('default'=>array_values((array) ($preset['footer_navigation'] ?? array())), 'min_items'=>1),
         ),
-        'allowed_targets'=>array_values(array_keys((array) ($preset['pages'] ?? array()))),
+        'allowed_targets'=>array_values(array_keys(eduardo_research_page_contracts())),
         'arbitrary_urls'=>false,
         'language_aware_urls'=>true,
     );
