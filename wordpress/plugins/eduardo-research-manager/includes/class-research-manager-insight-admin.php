@@ -246,9 +246,10 @@ final class Eduardo_Research_Manager_Insight_Admin {
     }
 
     private function selected_language(array $languages): string {
-        $candidate = isset($_GET['erm_insight_language']) ? sanitize_key((string) wp_unslash($_GET['erm_insight_language'])) : 'en';
+        $default_language = Eduardo_Research_Manager::contract()->default_language();
+        $candidate = isset($_GET['erm_insight_language']) ? sanitize_key((string) wp_unslash($_GET['erm_insight_language'])) : $default_language;
         if (in_array($candidate, $languages, true)) { return $candidate; }
-        return isset($languages[0]) ? sanitize_key((string) $languages[0]) : 'en';
+        return isset($languages[0]) ? sanitize_key((string) $languages[0]) : $default_language;
     }
 
     private function require_admin(string $nonce_action): void {
