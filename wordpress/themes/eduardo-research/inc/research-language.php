@@ -10,7 +10,13 @@ function eduardo_research_languages(): array {
     );
 }
 
-function eduardo_research_default_language(): string { return 'en'; }
+function eduardo_research_default_language(): string {
+    $declared = sanitize_key((string) (eduardo_research_preset()['default_language'] ?? ''));
+    $languages = eduardo_research_languages();
+    if ('' !== $declared && isset($languages[$declared])) { return $declared; }
+    $fallback = array_key_first($languages);
+    return is_string($fallback) ? $fallback : '';
+}
 
 function eduardo_research_request_language(): string {
     $path = trim((string) wp_parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/');
