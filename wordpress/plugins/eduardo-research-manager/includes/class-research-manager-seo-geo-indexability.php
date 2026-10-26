@@ -466,7 +466,7 @@ final class Eduardo_Research_Manager_SEO_GEO_Indexability {
     private function resource_url(string $type, string|int $identifier, string $language, array $inspection): string {
         if ('page' === sanitize_key($type)) {
             $key = sanitize_key((string) $identifier);
-            $language = sanitize_key($language ?: (string) ($inspection['language'] ?? 'en'));
+            $language = sanitize_key($language ?: (string) ($inspection['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
             return function_exists('eduardo_research_page_url') ? (string) eduardo_research_page_url($key, $language) : '';
         }
         $post_id = absint($inspection['post_id'] ?? $identifier);
@@ -475,7 +475,7 @@ final class Eduardo_Research_Manager_SEO_GEO_Indexability {
 
     private function target(string $type, string|int $identifier, string $language): array {
         if ('page' === sanitize_key($type)) {
-            return array('key'=>sanitize_key((string) $identifier),'language'=>sanitize_key($language ?: 'en'));
+            return array('key'=>sanitize_key((string) $identifier),'language'=>sanitize_key($language ?: Eduardo_Research_Manager::contract()->default_language()));
         }
         return array('post_id'=>absint($identifier));
     }
