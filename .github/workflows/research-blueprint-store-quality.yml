@@ -112,6 +112,49 @@ jobs:
           if (! is_array($decoded) || "Eduardo Jose Yauri Luna" !== ($decoded["site"]["name"] ?? "") || "eduardo-research-blueprint-v1.json" !== $store->export_filename()) { exit(1); }
           $preview = Eduardo_Research_Manager::pipeline()->preview($blueprint);
           if (is_wp_error($preview) || empty($preview["apply_allowed"])) { fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : wp_json_encode($preview)); exit(1); }
+
+          // Canonical site.identity must win over conflicting legacy Home aliases.
+          $canonical_conflict = $blueprint;
+          foreach ($canonical_conflict["pages"] as &$record) {
+              if ("home" !== (string) ($record["key"] ?? "")) { continue; }
+              $record["slots"]["en"]["researcher-headline"] = "Legacy Wrong English Headline";
+              $record["slots"]["es"]["researcher-headline"] = "Legacy Wrong Spanish Headline";
+              break;
+          }
+          unset($record);
+          $canonical_path = tempnam(sys_get_temp_dir(), "erm-store-canonical-");
+          if (false === $canonical_path || false === file_put_contents($canonical_path, wp_json_encode($canonical_conflict))) { exit(1); }
+          $canonical_store = new Eduardo_Research_Manager_Blueprint_Store(null, $canonical_path);
+          $canonical_defaults = $canonical_store->instance_defaults();
+          @unlink($canonical_path);
+          if (is_wp_error($canonical_defaults)
+              || "Eduardo Jose Yauri Luna" !== (string) ($canonical_defaults["identity"]["name"] ?? "")
+              || "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes" !== (string) ($canonical_defaults["identity"]["headlines"]["en"] ?? "")
+              || "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales" !== (string) ($canonical_defaults["identity"]["headlines"]["es"] ?? "")) {
+              fwrite(STDERR, is_wp_error($canonical_defaults) ? $canonical_defaults->get_error_message() : wp_json_encode($canonical_defaults)); exit(1);
+          }
+
+          // A v1 blueprint without site.identity still resolves headlines from the old Home aliases.
+          $legacy_blueprint = $blueprint;
+          unset($legacy_blueprint["site"]["identity"]);
+          foreach ($legacy_blueprint["pages"] as &$record) {
+              if ("home" !== (string) ($record["key"] ?? "")) { continue; }
+              $record["slots"]["en"]["researcher-headline"] = "Legacy English Headline";
+              $record["slots"]["es"]["researcher-headline"] = "Legacy Spanish Headline";
+              break;
+          }
+          unset($record);
+          $legacy_path = tempnam(sys_get_temp_dir(), "erm-store-legacy-");
+          if (false === $legacy_path || false === file_put_contents($legacy_path, wp_json_encode($legacy_blueprint))) { exit(1); }
+          $legacy_store = new Eduardo_Research_Manager_Blueprint_Store(null, $legacy_path);
+          $legacy_defaults = $legacy_store->instance_defaults();
+          @unlink($legacy_path);
+          if (is_wp_error($legacy_defaults)
+              || "Eduardo Jose Yauri Luna" !== (string) ($legacy_defaults["identity"]["name"] ?? "")
+              || "Legacy English Headline" !== (string) ($legacy_defaults["identity"]["headlines"]["en"] ?? "")
+              || "Legacy Spanish Headline" !== (string) ($legacy_defaults["identity"]["headlines"]["es"] ?? "")) {
+              fwrite(STDERR, is_wp_error($legacy_defaults) ? $legacy_defaults->get_error_message() : wp_json_encode($legacy_defaults)); exit(1);
+          }
           ' --allow-root
 
       - name: Verify installable plugin package contains canonical blueprint
