@@ -37,7 +37,7 @@ final class Eduardo_Research_Manager_Remote_Line_Operations {
             if (is_wp_error($before)) { return $this->normalise($before, 400); }
             $prepared = $this->editor->preview_update($post_id, $changes, $confirmed, $reference);
             if (is_wp_error($prepared)) { return $this->normalise($prepared, 400); }
-            $target = array('resource'=>'research-line','post_id'=>$post_id,'language'=>(string) ($before['language'] ?? 'en'));
+            $target = array('resource'=>'research-line','post_id'=>$post_id,'language'=>(string) ($before['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
             $requested = array('changes'=>(array) ($prepared['expected'] ?? $changes));
         }
         $revision = Eduardo_Research_Manager::remote_operations()->revision_fingerprint();
