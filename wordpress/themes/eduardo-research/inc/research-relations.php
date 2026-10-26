@@ -106,12 +106,8 @@ function eduardo_research_related_objects_query_for_post(int $post_id, int $limi
 }
 
 function eduardo_research_surface_key_for_type(string $post_type): string {
-    return array(
-        'research_output'=>'publications',
-        'research_project'=>'projects',
-        'research_software'=>'software',
-        'research_dataset'=>'datasets',
-    )[$post_type] ?? 'research';
+    $surface = eduardo_research_content_type_surface($post_type);
+    return '' !== $surface ? $surface : 'research';
 }
 
 function eduardo_research_render_research_context(int $post_id): void {
