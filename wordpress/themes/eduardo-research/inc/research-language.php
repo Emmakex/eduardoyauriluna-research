@@ -230,7 +230,8 @@ function eduardo_research_t(string $key, ?string $language = null): string {
         $override = trim((string) $overrides[$key][$language]);
         if ('' !== $override) { return $override; }
     }
-    return (string) ($dictionary[$key][$language] ?? $dictionary[$key]['en'] ?? $key);
+    $default = eduardo_research_default_language();
+    return (string) ($dictionary[$key][$language] ?? $dictionary[$key][$default] ?? $key);
 }
 
 function eduardo_research_localize_record(array $record, ?string $language = null): array {
