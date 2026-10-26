@@ -25,8 +25,3 @@ function eduardo_research_template_include(string $template): string {
     return is_readable($owned) ? $owned : $template;
 }
 add_filter('template_include', 'eduardo_research_template_include', 99);
-
-function eduardo_research_page_contract(string $key): ?array {
-    $pages = eduardo_research_preset()['pages'];
-    return isset($pages[$key]) && is_array($pages[$key]) ? $pages[$key] : null;
-}

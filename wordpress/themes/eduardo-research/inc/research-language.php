@@ -44,14 +44,14 @@ add_filter('query_vars', 'eduardo_research_language_query_vars');
 
 function eduardo_research_page_slug(string $key, ?string $language = null): string {
     $language = $language ?: eduardo_research_current_language();
-    $contract = eduardo_research_preset()['pages'][$key] ?? array();
+    $contract = eduardo_research_page_contract($key) ?? array();
     $slugs = is_array($contract['slugs'] ?? null) ? $contract['slugs'] : array();
     return (string) ($slugs[$language] ?? $contract['slug'] ?? $key);
 }
 
 function eduardo_research_page_label(string $key, ?string $language = null): string {
     $language = $language ?: eduardo_research_current_language();
-    $contract = eduardo_research_preset()['pages'][$key] ?? array();
+    $contract = eduardo_research_page_contract($key) ?? array();
     $labels = is_array($contract['labels'] ?? null) ? $contract['labels'] : array();
     return (string) ($labels[$language] ?? $contract['label'] ?? ucfirst($key));
 }
