@@ -40,7 +40,7 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
 
     public function inspect(WP_REST_Request $request): WP_REST_Response|WP_Error {
         $key = sanitize_key((string) $request['key']);
-        $language = sanitize_key((string) ($request->get_param('language') ?: 'en'));
+        $language = sanitize_key((string) ($request->get_param('language') ?: Eduardo_Research_Manager::contract()->default_language()));
         $result = Eduardo_Research_Manager::page_editor()->inspect($key, $language);
         return is_wp_error($result) ? $result : $this->response($request, $result);
     }
