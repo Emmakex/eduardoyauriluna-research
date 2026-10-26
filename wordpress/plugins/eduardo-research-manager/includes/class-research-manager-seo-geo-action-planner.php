@@ -26,7 +26,7 @@ final class Eduardo_Research_Manager_SEO_GEO_Action_Planner {
         $stored = is_array($inspection['stored'] ?? null) ? $inspection['stored'] : array();
         $slots = is_array($stored['effective_slots'] ?? null) ? $stored['effective_slots'] : array();
         $key = sanitize_key((string) ($inspection['key'] ?? $stored['key'] ?? ''));
-        $language = sanitize_key((string) ($inspection['language'] ?? $stored['language'] ?? 'en'));
+        $language = sanitize_key((string) ($inspection['language'] ?? $stored['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $description_slot = 'home' === $key ? 'hero-lead' : 'lead';
         $description = trim(wp_strip_all_tags((string) ($slots[$description_slot] ?? '')));
         $checks = array();
@@ -57,7 +57,7 @@ final class Eduardo_Research_Manager_SEO_GEO_Action_Planner {
     private function record_plan(string $type, array $inspection): array {
         $stored = is_array($inspection['stored'] ?? null) ? $inspection['stored'] : array();
         $post_id = absint($inspection['post_id'] ?? $stored['post_id'] ?? 0);
-        $language = sanitize_key((string) ($inspection['language'] ?? $stored['language'] ?? 'en'));
+        $language = sanitize_key((string) ($inspection['language'] ?? $stored['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $checks = array();
 
         $checks[] = $this->check(
