@@ -4,14 +4,15 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_current_page_key(): ?string {
+    $pages = eduardo_research_page_contracts();
     $localized = sanitize_key((string) get_query_var('research_page_key'));
-    if ('' !== $localized && isset(eduardo_research_preset()['pages'][$localized])) { return $localized; }
+    if ('' !== $localized && isset($pages[$localized])) { return $localized; }
     if (is_front_page()) { return 'home'; }
     if (! is_page()) { return null; }
     $post = get_queried_object();
     if (! $post instanceof WP_Post) { return null; }
     $slug = (string) $post->post_name;
-    foreach (eduardo_research_preset()['pages'] as $key => $contract) {
+    foreach ($pages as $key => $contract) {
         $expected = (string) ($contract['wp_slug'] ?? $contract['slug'] ?? '');
         if ('' !== $expected && $expected === $slug) { return (string) $key; }
     }
