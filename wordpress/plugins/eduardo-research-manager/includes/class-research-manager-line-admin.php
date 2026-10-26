@@ -179,7 +179,7 @@ final class Eduardo_Research_Manager_Line_Admin {
         }
 
         $result = Eduardo_Research_Manager::line_editor()->apply_preview($prepared);
-        $language = sanitize_key((string) ($prepared['expected']['language'] ?? 'en'));
+        $language = sanitize_key((string) ($prepared['expected']['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $post_id = absint($prepared['post_id'] ?? 0);
         $args = array('erm_line_language'=>$language);
         if ($post_id > 0) { $args['erm_line_id'] = $post_id; }
