@@ -19,8 +19,6 @@
       "slots": {
         "en": {
           "hero-eyebrow": "Research profile",
-          "researcher-name": "Eduardo Jose Yauri Luna",
-          "researcher-headline": "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
           "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
           "research-lines-heading": "Research agenda",
           "research-lines-intro": "The planned research agenda is organised around four directions: autonomous AI agents for business processes, human–AI collaboration and responsible autonomy, digital transformation and AI adoption in SMEs, and AI-mediated information discovery and generative search.",
@@ -34,8 +32,6 @@
         },
         "es": {
           "hero-eyebrow": "Perfil de investigación",
-          "researcher-name": "Eduardo Jose Yauri Luna",
-          "researcher-headline": "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales",
           "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
           "research-lines-heading": "Agenda de investigación",
           "research-lines-intro": "La agenda de investigación planificada se organiza en cuatro líneas: agentes autónomos de IA para procesos empresariales, colaboración humano–IA y autonomía responsable, transformación digital y adopción de IA en pymes, y descubrimiento de información mediado por IA y búsqueda generativa.",
