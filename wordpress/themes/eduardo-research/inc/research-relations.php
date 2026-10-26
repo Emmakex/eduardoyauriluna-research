@@ -4,7 +4,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_relation_object_types(): array {
-    return array('research_output','research_project','research_software','research_dataset');
+    return eduardo_research_surface_content_types();
 }
 
 function eduardo_research_relation_source_types(): array {
