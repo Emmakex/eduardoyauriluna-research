@@ -35,13 +35,9 @@ function eduardo_research_localized_content_types(): array {
 }
 
 function eduardo_research_content_language_rewrites(): void {
-    $routes = array(
-        'publications'=>'research_output',
-        'projects'=>'research_project',
-        'software'=>'research_software',
-        'datasets'=>'research_dataset',
-    );
-    foreach ($routes as $key => $type) {
+    foreach (eduardo_research_surface_content_types() as $type) {
+        $key = eduardo_research_content_type_surface((string) $type);
+        if ('' === $key) { continue; }
         $slug = preg_quote(eduardo_research_page_slug($key, 'es'), '#');
         add_rewrite_rule('^es/' . $slug . '/([^/]+)/?$', 'index.php?post_type=' . $type . '&name=$matches[1]&research_lang=es', 'top');
     }
