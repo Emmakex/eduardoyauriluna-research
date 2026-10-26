@@ -163,11 +163,12 @@ function eduardo_research_dictionary(): array {
 }
 
 function eduardo_research_ui_copy_contract(): array {
+    $languages = array_values(array_keys(eduardo_research_languages()));
     $keys = array();
     foreach (eduardo_research_dictionary() as $key => $translations) {
         if (! is_array($translations)) { continue; }
         $keys[(string) $key] = array(
-            'languages'=>array('en','es'),
+            'languages'=>$languages,
             'max_length'=>str_ends_with((string) $key, '_body') ? 500 : 160,
         );
     }
@@ -177,7 +178,7 @@ function eduardo_research_ui_copy_contract(): array {
         'keys'=>$keys,
         'constraints'=>array(
             'registered_keys_only'=>true,
-            'languages'=>array('en','es'),
+            'languages'=>$languages,
             'html'=>false,
             'shortcodes'=>false,
             'arbitrary_option'=>false,
