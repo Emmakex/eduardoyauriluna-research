@@ -53,6 +53,15 @@ final class Eduardo_Research_Manager_Contract {
         return is_array($pages) ? $pages : array();
     }
 
+    public function front_page_key(): string {
+        foreach ($this->pages() as $key => $definition) {
+            if (is_array($definition) && 'front-page' === sanitize_key((string) ($definition['role'] ?? ''))) {
+                return sanitize_key((string) $key);
+            }
+        }
+        return '';
+    }
+
     public function page_id(string $key): int {
         $contract = $this->pages()[$key] ?? null;
         if (! is_array($contract)) { return 0; }
