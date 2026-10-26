@@ -22,7 +22,7 @@ final class Eduardo_Research_Manager_Dataset_Resource {
             'post_id'=>$post_id,'post_type'=>'research_dataset','status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', 'en'),
+            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
             'version'=>$this->private_meta_string($post_id, '_research_dataset_version'),
             'publication_date'=>$this->private_meta_string($post_id, '_research_publication_date'),
             'repository'=>$this->private_meta_string($post_id, '_research_repository'),
