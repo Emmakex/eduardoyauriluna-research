@@ -101,13 +101,3 @@ function eduardo_research_exploration_robots(array $robots): array {
     return $robots;
 }
 add_filter('wp_robots', 'eduardo_research_exploration_robots', 20);
-
-/** Release metadata exposed by the WordPress Appearance UI. */
-function eduardo_research_release_theme_branding(array $themes): array {
-    $stylesheet = get_stylesheet();
-    if (! isset($themes[$stylesheet]) || ! is_array($themes[$stylesheet])) { return $themes; }
-    $themes[$stylesheet]['author'] = 'Emmake by Kairoseth';
-    $themes[$stylesheet]['authorAndUri'] = '<a href="https://kairoseth.com/">Emmake by Kairoseth</a>';
-    return $themes;
-}
-add_filter('wp_prepare_themes_for_js', 'eduardo_research_release_theme_branding', 30);
