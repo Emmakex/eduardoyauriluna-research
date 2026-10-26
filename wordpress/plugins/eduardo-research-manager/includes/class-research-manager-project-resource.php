@@ -26,7 +26,7 @@ final class Eduardo_Research_Manager_Project_Resource {
             'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,
             'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', 'en'),
+            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
             'project_status'=>$this->private_meta_string($post_id, '_research_project_status'),
             'question'=>$this->private_meta_string($post_id, '_research_question'),
             'role'=>$this->private_meta_string($post_id, '_research_role'),
