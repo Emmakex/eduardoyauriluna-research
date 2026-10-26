@@ -109,7 +109,7 @@ jobs:
           wp eval 'foreach (["research_line","research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
           wp eval '$page = get_page_by_path("publications"); if (! $page || "output-index" !== get_post_meta($page->ID, "_eduardo_research_role", true)) { exit(1); }' --allow-root
           wp eval 'if ("CreativeWork" !== eduardo_research_output_schema_type(0)) { exit(1); } foreach (["about","research","publications","projects","software","datasets","cv","insights","contact"] as $key) { if ("" === eduardo_research_page_url($key)) { exit(1); } }' --allow-root
-      - name: Verify canonical Theme version in Appearance
+      - name: Verify canonical Theme metadata in Appearance
         shell: bash
         run: |
           set -euo pipefail
@@ -117,11 +117,19 @@ jobs:
           wp eval '
           if (! function_exists("wp_prepare_themes_for_js")) { require_once ABSPATH . "wp-admin/includes/theme.php"; }
           $stylesheet = get_stylesheet();
-          $canonical = (string) wp_get_theme($stylesheet)->get("Version");
+          $canonical = wp_get_theme($stylesheet);
           $themes = wp_prepare_themes_for_js();
           $matches = array_values(array_filter($themes, static fn(array $theme): bool => $stylesheet === (string) ($theme["id"] ?? "")));
           if (1 !== count($matches)) { exit(1); }
-          if ($canonical !== (string) ($matches[0]["version"] ?? "")) { fwrite(STDERR, "Theme version mismatch\n"); exit(1); }
+          $prepared = $matches[0];
+          $expected = [
+              "version" => (string) $canonical->get("Version"),
+              "author" => (string) $canonical->get("Author"),
+              "description" => (string) $canonical->get("Description"),
+          ];
+          foreach ($expected as $field => $value) {
+              if ($value !== (string) ($prepared[$field] ?? "")) { fwrite(STDERR, "Theme metadata mismatch: " . $field . "\n"); exit(1); }
+          }
           ' --allow-root
       - name: Verify native EN ES contract
         shell: bash
