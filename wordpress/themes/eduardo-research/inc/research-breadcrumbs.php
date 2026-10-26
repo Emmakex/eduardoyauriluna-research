@@ -11,10 +11,11 @@ function eduardo_research_breadcrumb_items(): array {
         return $items;
     }
     if (is_singular()) {
-        $type = get_post_type();
-        $index_map = array('research_line'=>'research','research_output'=>'publications','research_project'=>'projects','research_software'=>'software','research_dataset'=>'datasets','post'=>'insights');
-        if (isset($index_map[$type])) {
-            $key = $index_map[$type];
+        $type = (string) get_post_type();
+        $key = 'research_line' === $type
+            ? 'research'
+            : ('post' === $type ? 'insights' : eduardo_research_content_type_surface($type));
+        if ('' !== $key) {
             $items[] = array('name'=>eduardo_research_page_label($key),'url'=>eduardo_research_page_url($key));
         }
         if (! is_front_page()) { $items[] = array('name'=>get_the_title(),'url'=>(string) get_permalink()); }
