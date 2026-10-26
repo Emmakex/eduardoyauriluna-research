@@ -106,7 +106,6 @@ add_filter('wp_robots', 'eduardo_research_exploration_robots', 20);
 function eduardo_research_release_theme_branding(array $themes): array {
     $stylesheet = get_stylesheet();
     if (! isset($themes[$stylesheet]) || ! is_array($themes[$stylesheet])) { return $themes; }
-    $themes[$stylesheet]['version'] = '1.0.0';
     $themes[$stylesheet]['author'] = 'Emmake by Kairoseth';
     $themes[$stylesheet]['authorAndUri'] = '<a href="https://kairoseth.com/">Emmake by Kairoseth</a>';
     return $themes;
