@@ -466,7 +466,7 @@ final class Eduardo_Research_Manager_Admin {
     }
 
     private function selected_language(array $languages): string {
-        $candidate = isset($_GET['erm_page_language']) ? sanitize_key((string) wp_unslash($_GET['erm_page_language'])) : 'en';
+        $candidate = isset($_GET['erm_page_language']) ? sanitize_key((string) wp_unslash($_GET['erm_page_language'])) : Eduardo_Research_Manager::contract()->default_language();
         if (in_array($candidate, $languages, true)) { return $candidate; }
         return isset($languages[0]) ? sanitize_key((string) $languages[0]) : '';
     }
