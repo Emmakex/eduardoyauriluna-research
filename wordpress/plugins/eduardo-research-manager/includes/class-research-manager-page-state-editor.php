@@ -16,7 +16,7 @@ final class Eduardo_Research_Manager_Page_State_Editor {
     }
 
     public function inspect(string $key): array|WP_Error {
-        $page = $this->pages->inspect(sanitize_key($key), 'en');
+        $page = $this->pages->inspect(sanitize_key($key), '');
         if (is_wp_error($page)) { return $page; }
         $policy = (array) $page['state_policy'];
         $policy['allowed_statuses'] = array_values(array_intersect(self::ALLOWED_STATUSES, (array) ($policy['allowed_statuses'] ?? self::ALLOWED_STATUSES)));
