@@ -459,7 +459,7 @@ final class Eduardo_Research_Manager_Admin {
     }
 
     private function selected_page_key(array $page_contracts): string {
-        $candidate = isset($_GET['erm_page_key']) ? sanitize_key((string) wp_unslash($_GET['erm_page_key'])) : 'home';
+        $candidate = isset($_GET['erm_page_key']) ? sanitize_key((string) wp_unslash($_GET['erm_page_key'])) : Eduardo_Research_Manager::contract()->front_page_key();
         if (isset($page_contracts[$candidate])) { return $candidate; }
         $keys = array_keys($page_contracts);
         return isset($keys[0]) ? sanitize_key((string) $keys[0]) : '';
