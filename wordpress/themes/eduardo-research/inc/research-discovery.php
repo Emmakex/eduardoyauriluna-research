@@ -58,7 +58,7 @@ function eduardo_research_discovery_template(): void {
     }
 
     if ((int) get_query_var('eduardo_research_json') === 1) {
-        $types = array('research_line','research_output','research_project','research_software','research_dataset');
+        $types = array_merge(array('research_line'), eduardo_research_surface_content_types());
         $items = array();
         $latest = 0;
         foreach ($types as $type) {
