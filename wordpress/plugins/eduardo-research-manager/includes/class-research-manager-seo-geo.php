@@ -49,7 +49,7 @@ final class Eduardo_Research_Manager_SEO_GEO {
         $type = sanitize_key($type);
         if ('page' === $type) {
             $key = sanitize_key((string) $identifier);
-            $language = sanitize_key($language ?: 'en');
+            $language = sanitize_key($language ?: Eduardo_Research_Manager::contract()->default_language());
             if (! isset(Eduardo_Research_Manager::contract()->pages()[$key])) {
                 return new WP_Error('validation_failed', 'The requested Page is outside the active Research preset.', array('status'=>400));
             }
