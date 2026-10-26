@@ -77,7 +77,9 @@ function eduardo_research_navigation_target_is_visible(string $key): bool {
     $post_type = eduardo_research_collection_post_type($key);
     if ('' === $post_type) { return true; }
 
-    $language = function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en';
+    $language = function_exists('eduardo_research_current_language')
+        ? eduardo_research_current_language()
+        : sanitize_key((string) (eduardo_research_preset()['default_language'] ?? ''));
     static $cache = array();
     $cache_key = $language . ':' . $key;
     if (array_key_exists($cache_key, $cache)) { return (bool) $cache[$cache_key]; }
@@ -107,7 +109,9 @@ function eduardo_research_navigation_keys(string $location): array {
 }
 
 function eduardo_research_page_url(string $key, ?string $language = null): string {
-    $language = $language ?: (function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en');
+    $language = $language ?: (function_exists('eduardo_research_current_language')
+        ? eduardo_research_current_language()
+        : sanitize_key((string) (eduardo_research_preset()['default_language'] ?? '')));
     $preset = eduardo_research_preset();
     $contract = $preset['pages'][$key] ?? null;
     if (! is_array($contract)) { return 'es' === $language ? home_url('/es/') : home_url('/'); }
