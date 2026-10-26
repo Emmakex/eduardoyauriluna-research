@@ -29,6 +29,13 @@ function eduardo_research_register_all_rewrites(): void {
     eduardo_research_discovery_rewrites();
 }
 
+function eduardo_research_native_language_state(): array {
+    return array(
+        'default'=>eduardo_research_default_language(),
+        'enabled'=>array_values(array_keys(eduardo_research_languages())),
+    );
+}
+
 function eduardo_research_install(): void {
     $preset = eduardo_research_preset();
     $page_ids = array();
@@ -53,7 +60,7 @@ function eduardo_research_install(): void {
     eduardo_research_register_all_rewrites();
     flush_rewrite_rules(false);
     update_option('eduardo_research_theme_bootstrap_version', '4');
-    update_option('eduardo_research_native_languages', array('default'=>'en','enabled'=>array('en','es')));
+    update_option('eduardo_research_native_languages', eduardo_research_native_language_state());
 }
 add_action('after_switch_theme', 'eduardo_research_install');
 
@@ -62,6 +69,6 @@ function eduardo_research_maybe_upgrade(): void {
     eduardo_research_register_all_rewrites();
     flush_rewrite_rules(false);
     update_option('eduardo_research_theme_bootstrap_version', '4');
-    update_option('eduardo_research_native_languages', array('default'=>'en','enabled'=>array('en','es')));
+    update_option('eduardo_research_native_languages', eduardo_research_native_language_state());
 }
 add_action('init', 'eduardo_research_maybe_upgrade', 30);
