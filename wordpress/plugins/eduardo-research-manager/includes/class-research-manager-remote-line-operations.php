@@ -27,7 +27,7 @@ final class Eduardo_Research_Manager_Remote_Line_Operations {
             if (! $data) { return $this->error('validation_failed', 'line-create requires a bounded data object.', 400); }
             $prepared = $this->editor->preview_create($data, $confirmed, $reference);
             if (is_wp_error($prepared)) { return $this->normalise($prepared, 400); }
-            $target = array('resource'=>'research-line','post_id'=>0,'language'=>(string) (($prepared['expected']['language'] ?? 'en')));
+            $target = array('resource'=>'research-line','post_id'=>0,'language'=>(string) (($prepared['expected']['language'] ?? Eduardo_Research_Manager::contract()->default_language())));
             $requested = array('data'=>(array) ($prepared['expected'] ?? array()));
         } else {
             $post_id = absint($payload['post_id'] ?? 0);
