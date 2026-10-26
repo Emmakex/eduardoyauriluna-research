@@ -107,15 +107,16 @@ final class Eduardo_Research_Manager_Diagnostics {
             'languages'
         );
 
-        $home_id = $this->contract->page_id('home');
-        $front_ok = $home_id > 0 && 'page' === get_option('show_on_front') && $home_id === (int) get_option('page_on_front');
+        $front_page_key = $this->contract->front_page_key();
+        $front_page_id = '' !== $front_page_key ? $this->contract->page_id($front_page_key) : 0;
+        $front_ok = $front_page_id > 0 && 'page' === get_option('show_on_front') && $front_page_id === (int) get_option('page_on_front');
         $checks[] = $this->check(
             'front-page',
             'Research Home routing',
             $front_ok ? 'pass' : 'warning',
             $front_ok ? 'Research Home is assigned as the static front page.' : 'The Research Home resource is not the active static front page.',
             $front_ok ? '' : 'auto-fix-candidate',
-            'page:home'
+            'page:' . $front_page_key
         );
 
         $indexable = '1' === (string) get_option('blog_public', '1');
