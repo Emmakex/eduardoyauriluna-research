@@ -284,7 +284,7 @@ final class Eduardo_Research_Manager_Line_Admin {
             'title'=>$title,
             'excerpt'=>(string) wp_unslash($input['excerpt'] ?? ''),
             'content'=>(string) wp_unslash($input['content'] ?? ''),
-            'language'=>sanitize_key((string) wp_unslash($input['language'] ?? 'en')),
+            'language'=>sanitize_key((string) wp_unslash($input['language'] ?? Eduardo_Research_Manager::contract()->default_language())),
             'evidence_status'=>sanitize_key((string) wp_unslash($input['evidence_status'] ?? 'unverified')),
             'research_status'=>sanitize_key((string) wp_unslash($input['research_status'] ?? 'planned')),
             'central_question'=>sanitize_textarea_field((string) wp_unslash($input['central_question'] ?? '')),
