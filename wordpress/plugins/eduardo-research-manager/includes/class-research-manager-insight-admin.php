@@ -152,7 +152,7 @@ final class Eduardo_Research_Manager_Insight_Admin {
                 'title'=>(string) wp_unslash($_POST['title'] ?? ''),
                 'excerpt'=>(string) wp_unslash($_POST['excerpt'] ?? ''),
                 'content'=>(string) wp_unslash($_POST['content'] ?? ''),
-                'language'=>sanitize_key((string) wp_unslash($_POST['language'] ?? 'en')),
+                'language'=>sanitize_key((string) wp_unslash($_POST['language'] ?? Eduardo_Research_Manager::contract()->default_language())),
                 'insight_type'=>sanitize_key((string) wp_unslash($_POST['insight_type'] ?? 'research_note')),
                 'status'=>sanitize_key((string) wp_unslash($_POST['status'] ?? 'draft')),
             );
@@ -166,7 +166,7 @@ final class Eduardo_Research_Manager_Insight_Admin {
                 'title'=>(string) wp_unslash($_POST['title'] ?? ''),
                 'excerpt'=>(string) wp_unslash($_POST['excerpt'] ?? ''),
                 'content'=>(string) wp_unslash($_POST['content'] ?? ''),
-                'language'=>sanitize_key((string) wp_unslash($_POST['language'] ?? 'en')),
+                'language'=>sanitize_key((string) wp_unslash($_POST['language'] ?? Eduardo_Research_Manager::contract()->default_language())),
                 'insight_type'=>sanitize_key((string) wp_unslash($_POST['insight_type'] ?? 'research_note')),
             );
             $prepared = Eduardo_Research_Manager::insight_editor()->preview_update($post_id, $changes);
