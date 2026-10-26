@@ -63,7 +63,7 @@ function eduardo_research_alternate_urls(): array {
         return array('en'=>eduardo_research_page_url($key, 'en'), 'es'=>eduardo_research_page_url($key, 'es'));
     }
 
-    if (is_singular(array('research_line','research_output','research_project','research_software','research_dataset','post'))) {
+    if (is_singular(eduardo_research_localized_content_types())) {
         $post_id = get_queried_object_id();
         if ($post_id <= 0 || ! function_exists('eduardo_research_post_language')) { return array(); }
         $record_language = eduardo_research_post_language($post_id);
