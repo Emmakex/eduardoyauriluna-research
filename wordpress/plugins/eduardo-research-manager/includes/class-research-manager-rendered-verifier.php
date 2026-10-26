@@ -44,7 +44,7 @@ final class Eduardo_Research_Manager_Rendered_Verifier {
         if ('publish' !== $post->post_status) {
             return new WP_Error('research_manager_render_resource_not_public', 'Rendered verification only checks publicly accessible published resources.');
         }
-        $language = function_exists('eduardo_research_post_language') ? eduardo_research_post_language($post_id) : 'en';
+        $language = function_exists('eduardo_research_post_language') ? eduardo_research_post_language($post_id) : $this->contract->default_language();
         $url = (string) get_permalink($post_id);
         $expected = array_merge(array((string) $post->post_title), $expected_text);
         $forbidden = array_merge($forbidden_text, $this->sensitive_forbidden_values($post_id, $post->post_type));
