@@ -234,7 +234,7 @@ final class Eduardo_Research_Manager_Insight_Admin {
         $result = Eduardo_Research_Manager::insight_editor()->rollback((string) $edit['snapshot_id']);
         $mode = sanitize_key((string) ($edit['mode'] ?? ''));
         $post_id = absint($edit['post_id'] ?? 0);
-        $language = sanitize_key((string) ($edit['language'] ?? 'en'));
+        $language = sanitize_key((string) ($edit['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $args = array('erm_insight_language'=>$language);
         if ('create' !== $mode && $post_id > 0) { $args['erm_insight_id'] = $post_id; }
         if (is_wp_error($result)) {
