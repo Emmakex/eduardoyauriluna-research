@@ -109,6 +109,19 @@ jobs:
           wp eval 'foreach (["research_line","research_output","research_project","research_software","research_dataset"] as $type) { if (! post_type_exists($type)) { exit(1); } $object = get_post_type_object($type); if (! $object || $object->has_archive) { exit(1); } }' --allow-root
           wp eval '$page = get_page_by_path("publications"); if (! $page || "output-index" !== get_post_meta($page->ID, "_eduardo_research_role", true)) { exit(1); }' --allow-root
           wp eval 'if ("CreativeWork" !== eduardo_research_output_schema_type(0)) { exit(1); } foreach (["about","research","publications","projects","software","datasets","cv","insights","contact"] as $key) { if ("" === eduardo_research_page_url($key)) { exit(1); } }' --allow-root
+      - name: Verify canonical Theme version in Appearance
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/research-wp
+          wp eval '
+          if (! function_exists("wp_prepare_themes_for_js")) { require_once ABSPATH . "wp-admin/includes/theme.php"; }
+          $stylesheet = get_stylesheet();
+          $canonical = (string) wp_get_theme($stylesheet)->get("Version");
+          $themes = wp_prepare_themes_for_js();
+          if (! isset($themes[$stylesheet]["version"])) { exit(1); }
+          if ($canonical !== (string) $themes[$stylesheet]["version"]) { fwrite(STDERR, "Theme version mismatch\n"); exit(1); }
+          ' --allow-root
       - name: Verify native EN ES contract
         shell: bash
         run: |
