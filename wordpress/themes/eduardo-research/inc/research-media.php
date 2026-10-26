@@ -14,7 +14,7 @@ function eduardo_research_primary_media_id(int $post_id = 0, string $page_key = 
     } else {
         $page_key = sanitize_key($page_key);
         $language = sanitize_key($language ?: eduardo_research_current_language());
-        if ('' === $page_key || ! isset(eduardo_research_preset()['pages'][$page_key]) || ! in_array($language, array('en','es'), true)) {
+        if ('' === $page_key || ! isset(eduardo_research_preset()['pages'][$page_key]) || ! isset(eduardo_research_languages()[$language])) {
             return 0;
         }
         $attachment_id = absint(get_option(eduardo_research_primary_media_option_key($page_key, $language), 0));
