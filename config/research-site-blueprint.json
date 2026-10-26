@@ -3,7 +3,14 @@
   "site": {
     "name": "Eduardo Jose Yauri Luna",
     "canonical_domain": "https://eduardoyauriluna.com",
-    "purpose": "Research identity hub"
+    "purpose": "Research identity hub",
+    "identity": {
+      "name": "Eduardo Jose Yauri Luna",
+      "headlines": {
+        "en": "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes",
+        "es": "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales"
+      }
+    }
   },
   "languages": ["en", "es"],
   "pages": [
