@@ -3,6 +3,10 @@
 declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
+function eduardo_research_insight_type_keys(): array {
+    return array('research_note', 'explainer', 'method_note', 'working_note', 'commentary');
+}
+
 function eduardo_research_insight_types(?string $language = null): array {
     $language = $language ?: eduardo_research_current_language();
     $es = 'es' === $language;
@@ -20,7 +24,7 @@ function eduardo_research_register_insight_meta(): void {
         'type'=>'string','single'=>true,'show_in_rest'=>true,
         'sanitize_callback'=>static function($value): string {
             $value = sanitize_key((string) $value);
-            return array_key_exists($value, eduardo_research_insight_types('en')) ? $value : 'research_note';
+            return in_array($value, eduardo_research_insight_type_keys(), true) ? $value : 'research_note';
         },
         'auth_callback'=>static fn() => current_user_can('edit_posts'),
     ));
@@ -29,7 +33,7 @@ add_action('init', 'eduardo_research_register_insight_meta', 18);
 
 function eduardo_research_insight_type(int $post_id): string {
     $type = sanitize_key((string) get_post_meta($post_id, '_research_insight_type', true));
-    return array_key_exists($type, eduardo_research_insight_types('en')) ? $type : 'research_note';
+    return in_array($type, eduardo_research_insight_type_keys(), true) ? $type : 'research_note';
 }
 
 function eduardo_research_insight_type_label(int $post_id, ?string $language = null): string {
