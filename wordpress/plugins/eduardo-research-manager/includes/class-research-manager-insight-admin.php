@@ -193,7 +193,7 @@ final class Eduardo_Research_Manager_Insight_Admin {
         }
 
         $result = Eduardo_Research_Manager::insight_editor()->apply_preview($prepared);
-        $language = sanitize_key((string) ($prepared['expected']['language'] ?? 'en'));
+        $language = sanitize_key((string) ($prepared['expected']['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $post_id = absint($prepared['post_id'] ?? 0);
         $args = array('erm_insight_language'=>$language);
         if ($post_id > 0) { $args['erm_insight_id'] = $post_id; }
