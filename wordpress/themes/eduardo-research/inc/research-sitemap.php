@@ -13,7 +13,7 @@ if (class_exists('WP_Sitemaps_Provider')) {
         public function get_url_list($page_num, $object_subtype = ''): array {
             if (1 !== (int) $page_num) { return array(); }
             $urls = array();
-            foreach ((array) (eduardo_research_preset()['pages'] ?? array()) as $key => $contract) {
+            foreach (eduardo_research_page_contracts() as $key => $contract) {
                 $wp_slug = (string) ($contract['wp_slug'] ?? $contract['slug'] ?? $key);
                 $page = get_page_by_path($wp_slug, OBJECT, 'page');
                 if (! $page instanceof WP_Post || 'publish' !== $page->post_status) { continue; }
