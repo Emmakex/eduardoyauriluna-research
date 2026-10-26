@@ -5,7 +5,8 @@ if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_post_language(int $post_id): string {
     $language = sanitize_key((string) get_post_meta($post_id, '_research_language', true));
-    return in_array($language, array('en','es'), true) ? $language : 'en';
+    $languages = eduardo_research_languages();
+    return isset($languages[$language]) ? $language : eduardo_research_default_language();
 }
 
 function eduardo_research_content_language_meta_query(?string $language = null): array {
