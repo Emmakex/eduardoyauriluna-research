@@ -34,6 +34,11 @@ function eduardo_research_preset(): array {
     );
 }
 
+function eduardo_research_page_contract(string $key): ?array {
+    $pages = eduardo_research_preset()['pages'];
+    return isset($pages[$key]) && is_array($pages[$key]) ? $pages[$key] : null;
+}
+
 function eduardo_research_navigation_contract(): array {
     $preset = eduardo_research_preset();
     return array(
@@ -112,8 +117,7 @@ function eduardo_research_page_url(string $key, ?string $language = null): strin
     $language = $language ?: (function_exists('eduardo_research_current_language')
         ? eduardo_research_current_language()
         : sanitize_key((string) (eduardo_research_preset()['default_language'] ?? '')));
-    $preset = eduardo_research_preset();
-    $contract = $preset['pages'][$key] ?? null;
+    $contract = eduardo_research_page_contract($key);
     if (! is_array($contract)) { return 'es' === $language ? home_url('/es/') : home_url('/'); }
     if ('home' === $key) { return 'es' === $language ? home_url('/es/') : home_url('/'); }
 
