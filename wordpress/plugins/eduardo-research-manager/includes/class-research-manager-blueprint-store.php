@@ -65,19 +65,22 @@ final class Eduardo_Research_Manager_Blueprint_Store {
         if (is_wp_error($blueprint)) { return $blueprint; }
 
         $site = is_array($blueprint['site'] ?? null) ? $blueprint['site'] : array();
-        $identity = is_array($site['identity'] ?? null) ? $site['identity'] : array();
+        $has_canonical_identity = array_key_exists('identity', $site) && is_array($site['identity']);
+        $identity = $has_canonical_identity ? $site['identity'] : array();
         $identity_headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
         $languages = array_values(array_filter(array_map(
             static fn(mixed $value): string => is_scalar($value) ? sanitize_key((string) $value) : '',
             is_array($blueprint['languages'] ?? null) ? $blueprint['languages'] : array()
         )));
 
-        // Backward-compatible fallback for older v1 blueprints that stored identity aliases on Home.
+        // Legacy v1 fallback is consulted only when the canonical identity block does not exist.
         $home_slots = array();
-        foreach ((array) ($blueprint['pages'] ?? array()) as $page) {
-            if (! is_array($page) || 'home' !== sanitize_key((string) ($page['key'] ?? ''))) { continue; }
-            $home_slots = is_array($page['slots'] ?? null) ? $page['slots'] : array();
-            break;
+        if (! $has_canonical_identity) {
+            foreach ((array) ($blueprint['pages'] ?? array()) as $page) {
+                if (! is_array($page) || 'home' !== sanitize_key((string) ($page['key'] ?? ''))) { continue; }
+                $home_slots = is_array($page['slots'] ?? null) ? $page['slots'] : array();
+                break;
+            }
         }
 
         $headlines = array();
