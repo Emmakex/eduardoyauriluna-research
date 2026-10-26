@@ -4,6 +4,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once get_template_directory() . '/inc/research-preset.php';
+require_once get_template_directory() . '/inc/research-content-types.php';
 require_once get_template_directory() . '/inc/research-language.php';
 require_once get_template_directory() . '/inc/research-content-language.php';
 require_once get_template_directory() . '/inc/research-model.php';
@@ -76,28 +77,5 @@ function eduardo_research_assets(): void {
 }
 add_action('wp_enqueue_scripts', 'eduardo_research_assets');
 
-function eduardo_research_register_content_types(): void {
-    $types = array(
-        'research_line' => array('Research Lines', 'Research Line', 'dashicons-networking', false),
-        'research_output' => array('Outputs', 'Output', 'dashicons-media-document', 'publications'),
-        'research_project' => array('Projects', 'Project', 'dashicons-portfolio', 'projects'),
-        'research_software' => array('Software', 'Software', 'dashicons-editor-code', 'software'),
-        'research_dataset' => array('Datasets', 'Dataset', 'dashicons-database', 'datasets'),
-    );
-    foreach ($types as $type => $labels) {
-        $supports = array('title', 'editor', 'excerpt', 'thumbnail', 'custom-fields');
-        if ('research_line' === $type) { $supports[] = 'page-attributes'; }
-        register_post_type($type, array(
-            'labels' => array('name' => $labels[0], 'singular_name' => $labels[1]),
-            'public' => true,
-            'show_in_rest' => true,
-            'has_archive' => false,
-            'rewrite' => false === $labels[3] ? false : array('slug' => $labels[3], 'with_front' => false),
-            'menu_icon' => $labels[2],
-            'supports' => $supports,
-        ));
-    }
-}
-add_action('init', 'eduardo_research_register_content_types');
 function eduardo_research_page_editor_support(): void { remove_post_type_support('page', 'editor'); }
 add_action('init', 'eduardo_research_page_editor_support', 20);
