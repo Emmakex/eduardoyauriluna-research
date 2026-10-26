@@ -16,7 +16,7 @@ final class Eduardo_Research_Manager_Page_Editor {
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
     }
 
-    public function inspect(string $key, string $language = 'en'): array|WP_Error {
+    public function inspect(string $key, string $language = ''): array|WP_Error {
         return $this->pages->inspect($key, $language);
     }
 
