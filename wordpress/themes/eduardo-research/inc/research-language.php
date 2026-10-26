@@ -81,7 +81,8 @@ function eduardo_research_translation_url(string $language, ?string $key = null)
     $key = $key ?: eduardo_research_current_page_key();
     if ($key) { return eduardo_research_page_url($key, $language); }
 
-    if (is_singular(array('research_output','research_project','research_software','research_dataset','post'))) {
+    $singular_types = array_merge(eduardo_research_surface_content_types(), array('post'));
+    if (is_singular($singular_types)) {
         $post_id = get_queried_object_id();
         if ($post_id > 0 && function_exists('eduardo_research_post_language')) {
             $record_language = eduardo_research_post_language($post_id);
@@ -90,11 +91,9 @@ function eduardo_research_translation_url(string $language, ?string $key = null)
                 $alternate = eduardo_research_record_translation_url($post_id, $language);
                 if ('' !== $alternate) { return $alternate; }
             }
-            $type_map = array(
-                'research_output'=>'publications','research_project'=>'projects','research_software'=>'software',
-                'research_dataset'=>'datasets','post'=>'insights',
-            );
-            $index = $type_map[get_post_type($post_id)] ?? 'home';
+            $post_type = (string) get_post_type($post_id);
+            $index = 'post' === $post_type ? 'insights' : eduardo_research_content_type_surface($post_type);
+            if ('' === $index) { $index = 'home'; }
             return eduardo_research_page_url($index, $language);
         }
     }
