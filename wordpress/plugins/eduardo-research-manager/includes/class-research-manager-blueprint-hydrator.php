@@ -250,8 +250,8 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
     }
 
     /**
-     * Backward-compatible bootstrap bridge for the v1 bundled blueprint.
-     * Legacy home identity aliases may initialize canonical Identity once,
+     * Seed canonical Identity once from instance data in the active blueprint.
+     * Legacy Home identity aliases remain a v1 fallback for missing fields,
      * but can never overwrite an already initialized Manager identity.
      */
     private function identity_seed(array $normalized): array|WP_Error {
@@ -259,6 +259,25 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
         if (is_array($stored) && $stored) { return array(); }
 
         $seed = array();
+        $site = is_array($normalized['site'] ?? null) ? $normalized['site'] : array();
+        $identity = is_array($site['identity'] ?? null) ? $site['identity'] : array();
+        $name = is_scalar($identity['name'] ?? null)
+            ? trim(sanitize_text_field((string) $identity['name']))
+            : '';
+        if ('' !== $name) { $seed['name'] = $name; }
+
+        $headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
+        foreach ((array) ($normalized['languages'] ?? array()) as $language) {
+            $language = sanitize_key((string) $language);
+            $headline = is_scalar($headlines[$language] ?? null)
+                ? trim(sanitize_text_field((string) $headlines[$language]))
+                : '';
+            if ('' === $headline) { continue; }
+            $field = Eduardo_Research_Manager::contract()->identity_headline_field($language);
+            if (is_wp_error($field)) { return $field; }
+            $seed[$field] = $headline;
+        }
+
         foreach ((array) ($normalized['pages'] ?? array()) as $record) {
             if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
             $slots = is_array($record['slots'] ?? null) ? $record['slots'] : array();
@@ -269,12 +288,12 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
             if ('' !== $name_en && '' !== $name_es && $name_en !== $name_es) {
                 return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
             }
-            $name = '' !== $name_en ? $name_en : $name_es;
+            $legacy_name = '' !== $name_en ? $name_en : $name_es;
             $headline = trim(sanitize_text_field((string) ($en['researcher-headline'] ?? '')));
             $headline_es = trim(sanitize_text_field((string) ($es['researcher-headline'] ?? '')));
-            if ('' !== $name) { $seed['name'] = $name; }
-            if ('' !== $headline) { $seed['headline'] = $headline; }
-            if ('' !== $headline_es) { $seed['headline_es'] = $headline_es; }
+            if (! isset($seed['name']) && '' !== $legacy_name) { $seed['name'] = $legacy_name; }
+            if (! isset($seed['headline']) && '' !== $headline) { $seed['headline'] = $headline; }
+            if (! isset($seed['headline_es']) && '' !== $headline_es) { $seed['headline_es'] = $headline_es; }
             break;
         }
         return $seed;
