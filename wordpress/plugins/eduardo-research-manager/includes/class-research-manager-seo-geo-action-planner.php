@@ -27,7 +27,7 @@ final class Eduardo_Research_Manager_SEO_GEO_Action_Planner {
         $slots = is_array($stored['effective_slots'] ?? null) ? $stored['effective_slots'] : array();
         $key = sanitize_key((string) ($inspection['key'] ?? $stored['key'] ?? ''));
         $language = sanitize_key((string) ($inspection['language'] ?? $stored['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
-        $description_slot = 'home' === $key ? 'hero-lead' : 'lead';
+        $description_slot = $key === Eduardo_Research_Manager::contract()->front_page_key() ? 'hero-lead' : 'lead';
         $description = trim(wp_strip_all_tags((string) ($slots[$description_slot] ?? '')));
         $checks = array();
 
