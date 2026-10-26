@@ -4,7 +4,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_line_statuses(?string $language = null): array {
-    $language = $language ?: (function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en');
+    $language = $language ?: (function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : eduardo_research_default_language());
     $es = 'es' === $language;
     return array(
         'planned'=>$es ? 'Planificada' : 'Planned',
@@ -16,7 +16,7 @@ function eduardo_research_line_statuses(?string $language = null): array {
 }
 
 function eduardo_research_line_evidence_statuses(?string $language = null): array {
-    $language = $language ?: (function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en');
+    $language = $language ?: (function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : eduardo_research_default_language());
     $es = 'es' === $language;
     return array(
         'unverified'=>$es ? 'No verificada' : 'Unverified',
