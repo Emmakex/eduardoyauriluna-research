@@ -251,8 +251,8 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
 
     /**
      * Seed canonical Identity once from instance data in the active blueprint.
-     * Legacy Home identity aliases remain a v1 fallback for missing fields,
-     * but can never overwrite an already initialized Manager identity.
+     * Canonical site.identity is authoritative when present. Legacy Home
+     * identity aliases remain only a v1 fallback when that block is absent.
      */
     private function identity_seed(array $normalized): array|WP_Error {
         $stored = get_option('eduardo_research_identity', array());
@@ -260,7 +260,8 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
 
         $seed = array();
         $site = is_array($normalized['site'] ?? null) ? $normalized['site'] : array();
-        $identity = is_array($site['identity'] ?? null) ? $site['identity'] : array();
+        $has_canonical_identity = array_key_exists('identity', $site) && is_array($site['identity']);
+        $identity = $has_canonical_identity ? $site['identity'] : array();
         $name = is_scalar($identity['name'] ?? null)
             ? trim(sanitize_text_field((string) $identity['name']))
             : '';
@@ -278,30 +279,33 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
             $seed[$field] = $headline;
         }
 
-        foreach ((array) ($normalized['pages'] ?? array()) as $record) {
-            if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
-            $slots = is_array($record['slots'] ?? null) ? $record['slots'] : array();
-            $en = is_array($slots['en'] ?? null) ? $slots['en'] : array();
-            $es = is_array($slots['es'] ?? null) ? $slots['es'] : array();
-            $name_en = trim(sanitize_text_field((string) ($en['researcher-name'] ?? '')));
-            $name_es = trim(sanitize_text_field((string) ($es['researcher-name'] ?? '')));
-            if ('' !== $name_en && '' !== $name_es && $name_en !== $name_es) {
-                return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
+        if (! $has_canonical_identity) {
+            foreach ((array) ($normalized['pages'] ?? array()) as $record) {
+                if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
+                $slots = is_array($record['slots'] ?? null) ? $record['slots'] : array();
+                $en = is_array($slots['en'] ?? null) ? $slots['en'] : array();
+                $es = is_array($slots['es'] ?? null) ? $slots['es'] : array();
+                $name_en = trim(sanitize_text_field((string) ($en['researcher-name'] ?? '')));
+                $name_es = trim(sanitize_text_field((string) ($es['researcher-name'] ?? '')));
+                if ('' !== $name_en && '' !== $name_es && $name_en !== $name_es) {
+                    return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
+                }
+                $legacy_name = '' !== $name_en ? $name_en : $name_es;
+                $headline = trim(sanitize_text_field((string) ($en['researcher-headline'] ?? '')));
+                $headline_es = trim(sanitize_text_field((string) ($es['researcher-headline'] ?? '')));
+                if ('' !== $legacy_name) { $seed['name'] = $legacy_name; }
+                if ('' !== $headline) { $seed['headline'] = $headline; }
+                if ('' !== $headline_es) { $seed['headline_es'] = $headline_es; }
+                break;
             }
-            $legacy_name = '' !== $name_en ? $name_en : $name_es;
-            $headline = trim(sanitize_text_field((string) ($en['researcher-headline'] ?? '')));
-            $headline_es = trim(sanitize_text_field((string) ($es['researcher-headline'] ?? '')));
-            if (! isset($seed['name']) && '' !== $legacy_name) { $seed['name'] = $legacy_name; }
-            if (! isset($seed['headline']) && '' !== $headline) { $seed['headline'] = $headline; }
-            if (! isset($seed['headline_es']) && '' !== $headline_es) { $seed['headline_es'] = $headline_es; }
-            break;
         }
         return $seed;
     }
 
     private function has_identity_seed_data(array $normalized): bool {
         $site = is_array($normalized['site'] ?? null) ? $normalized['site'] : array();
-        $identity = is_array($site['identity'] ?? null) ? $site['identity'] : array();
+        $has_canonical_identity = array_key_exists('identity', $site) && is_array($site['identity']);
+        $identity = $has_canonical_identity ? $site['identity'] : array();
         $name = is_scalar($identity['name'] ?? null) ? trim((string) $identity['name']) : '';
         if ('' !== $name) { return true; }
         $headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
@@ -309,6 +313,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
             $language = sanitize_key((string) $language);
             if (is_scalar($headlines[$language] ?? null) && '' !== trim((string) $headlines[$language])) { return true; }
         }
+        if ($has_canonical_identity) { return false; }
 
         foreach ((array) ($normalized['pages'] ?? array()) as $record) {
             if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
