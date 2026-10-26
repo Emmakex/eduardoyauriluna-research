@@ -51,15 +51,10 @@ function eduardo_research_record_url(WP_Post $post, ?string $language = null): s
         $prefix = 'es' === $language ? 'es/investigacion/lineas/' : 'research/lines/';
         return home_url('/' . $prefix . $post->post_name . '/');
     }
-    $map = array(
-        'research_output'=>'publications',
-        'research_project'=>'projects',
-        'research_software'=>'software',
-        'research_dataset'=>'datasets',
-        'post'=>'insights',
-    );
-    $key = $map[$post->post_type] ?? null;
-    if (! $key) { return ''; }
+    $key = 'post' === $post->post_type
+        ? 'insights'
+        : eduardo_research_content_type_surface($post->post_type);
+    if ('' === $key) { return ''; }
     $slug = trim(eduardo_research_page_slug($key, $language), '/');
     $prefix = 'es' === $language ? 'es/' : '';
     return home_url('/' . $prefix . $slug . '/' . $post->post_name . '/');
