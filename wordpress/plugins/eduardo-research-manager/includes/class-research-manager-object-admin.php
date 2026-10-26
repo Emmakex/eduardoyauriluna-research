@@ -193,7 +193,7 @@ final class Eduardo_Research_Manager_Object_Admin {
 
         $result = Eduardo_Research_Manager::object_editor()->apply_preview($prepared);
         $kind = sanitize_key((string) ($prepared['kind'] ?? 'output'));
-        $language = sanitize_key((string) ($prepared['expected']['language'] ?? 'en'));
+        $language = sanitize_key((string) ($prepared['expected']['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         $post_id = absint($prepared['post_id'] ?? 0);
         $args = array('erm_object_kind'=>$kind,'erm_object_language'=>$language);
         if ($post_id > 0) { $args['erm_object_id'] = $post_id; }
@@ -234,7 +234,7 @@ final class Eduardo_Research_Manager_Object_Admin {
         $result = Eduardo_Research_Manager::object_editor()->rollback((string) $edit['snapshot_id']);
         $args = array(
             'erm_object_kind'=>sanitize_key((string) ($edit['kind'] ?? 'output')),
-            'erm_object_language'=>sanitize_key((string) ($edit['language'] ?? 'en')),
+            'erm_object_language'=>sanitize_key((string) ($edit['language'] ?? Eduardo_Research_Manager::contract()->default_language())),
         );
         $post_id = absint($edit['post_id'] ?? 0);
         if ('create' !== (string) ($edit['mode'] ?? '') && $post_id > 0) { $args['erm_object_id'] = $post_id; }
@@ -246,7 +246,7 @@ final class Eduardo_Research_Manager_Object_Admin {
     }
 
     private function render_fields(string $kind, array $record, array $languages, string $mode): void {
-        $language = sanitize_key((string) ($record['language'] ?? 'en'));
+        $language = sanitize_key((string) ($record['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
         echo '<table class="form-table" role="presentation"><tbody>';
         $this->text_row('Title', 'title', (string) ($record['title'] ?? ''), true);
         if ('create' === $mode) {
@@ -354,7 +354,7 @@ final class Eduardo_Research_Manager_Object_Admin {
             'title'=>$this->scalar($source, 'title'),
             'excerpt'=>$this->scalar($source, 'excerpt'),
             'content'=>$this->scalar($source, 'content'),
-            'language'=>sanitize_key($this->scalar($source, 'language', 'en')),
+            'language'=>sanitize_key($this->scalar($source, 'language', Eduardo_Research_Manager::contract()->default_language())),
         );
         if ('create' === $mode) {
             $data['slug'] = sanitize_title($this->scalar($source, 'slug'));
@@ -452,8 +452,9 @@ final class Eduardo_Research_Manager_Object_Admin {
     }
 
     private function selected_language(array $languages): string {
-        $language = isset($_GET['erm_object_language']) ? sanitize_key((string) wp_unslash($_GET['erm_object_language'])) : (string) ($languages[0] ?? 'en');
-        return in_array($language, $languages, true) ? $language : (string) ($languages[0] ?? 'en');
+        $default = Eduardo_Research_Manager::contract()->default_language();
+        $language = isset($_GET['erm_object_language']) ? sanitize_key((string) wp_unslash($_GET['erm_object_language'])) : $default;
+        return in_array($language, $languages, true) ? $language : (string) ($languages[0] ?? $default);
     }
 
     private function text_row(string $label, string $name, string $value, bool $required = false, string $description = ''): void {
