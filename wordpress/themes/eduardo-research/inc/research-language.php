@@ -57,7 +57,7 @@ function eduardo_research_page_label(string $key, ?string $language = null): str
 }
 
 function eduardo_research_multilingual_rewrites(): void {
-    foreach ((array) (eduardo_research_preset()['pages'] ?? array()) as $key => $contract) {
+    foreach (eduardo_research_page_contracts() as $key => $contract) {
         $wp_slug = (string) ($contract['wp_slug'] ?? $contract['slug'] ?? $key);
         $page = get_page_by_path($wp_slug, OBJECT, 'page');
         if (! $page instanceof WP_Post) { continue; }
