@@ -7,7 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 function eduardo_research_governance_contract(): array {
     $preset = function_exists('eduardo_research_preset') ? eduardo_research_preset() : array();
     $theme = wp_get_theme('eduardo-research');
-    $pages = is_array($preset['pages'] ?? null) ? $preset['pages'] : array();
+    $pages = eduardo_research_page_contracts();
     $languages = is_array($preset['languages'] ?? null) ? array_values($preset['languages']) : array_values(array_keys(eduardo_research_languages()));
 
     $page_models = array();
