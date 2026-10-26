@@ -155,7 +155,7 @@ final class Eduardo_Research_Manager_Navigation {
     }
 
     private function verify_rendered(string $location, array $items): array {
-        $languages = function_exists('eduardo_research_languages') ? array_keys((array) eduardo_research_languages()) : array('en','es');
+        $languages = Eduardo_Research_Manager::contract()->languages();
         $results = array(); $all = true;
         foreach ($languages as $language) {
             $url = eduardo_research_page_url('home', (string) $language);
