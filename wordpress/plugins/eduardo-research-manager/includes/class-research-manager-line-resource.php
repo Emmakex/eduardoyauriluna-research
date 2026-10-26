@@ -26,7 +26,7 @@ final class Eduardo_Research_Manager_Line_Resource {
             'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,
             'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', 'en'),
+            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
             'evidence_status'=>$this->private_meta_string($post_id, '_research_evidence_status', 'unverified'),
             'research_status'=>$this->private_meta_string($post_id, '_research_status', 'planned'),
             'central_question'=>$this->private_meta_string($post_id, '_research_central_question'),
@@ -165,7 +165,7 @@ final class Eduardo_Research_Manager_Line_Resource {
         $posts = get_posts($args);
         foreach ($posts as $post) {
             if (! $post instanceof WP_Post) { continue; }
-            if (null === $language || sanitize_key($language) === $this->private_meta_string((int) $post->ID, '_research_language', 'en')) { return (int) $post->ID; }
+            if (null === $language || sanitize_key($language) === $this->private_meta_string((int) $post->ID, '_research_language', $this->contract->default_language())) { return (int) $post->ID; }
         }
         return 0;
     }
