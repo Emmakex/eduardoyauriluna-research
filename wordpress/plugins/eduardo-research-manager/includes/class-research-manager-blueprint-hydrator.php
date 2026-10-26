@@ -41,7 +41,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
                 'status'=>(string) ($prepared['status'] ?? 'change'),'apply_allowed'=>! empty($prepared['apply_allowed']),
                 'plan_id'=>(string) ($prepared['plan_id'] ?? ''),'preview'=>$prepared['preview'] ?? array(),
             );
-        } elseif ($this->has_legacy_identity_slots($normalized)) {
+        } elseif ($this->has_identity_seed_data($normalized)) {
             $skipped[] = array('resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','reason'=>'canonical_identity_already_initialized');
         }
 
@@ -99,7 +99,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
                 'status'=>(string) ($result['status'] ?? 'applied'),'plan_id'=>(string) ($prepared['plan_id'] ?? ''),
                 'snapshot_id'=>(string) ($result['snapshot_id'] ?? ''),'verification'=>$result['verification'] ?? array(),
             );
-        } elseif ($this->has_legacy_identity_slots($normalized)) {
+        } elseif ($this->has_identity_seed_data($normalized)) {
             $skipped[] = array('resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','reason'=>'canonical_identity_already_initialized');
         }
 
@@ -299,7 +299,17 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
         return $seed;
     }
 
-    private function has_legacy_identity_slots(array $normalized): bool {
+    private function has_identity_seed_data(array $normalized): bool {
+        $site = is_array($normalized['site'] ?? null) ? $normalized['site'] : array();
+        $identity = is_array($site['identity'] ?? null) ? $site['identity'] : array();
+        $name = is_scalar($identity['name'] ?? null) ? trim((string) $identity['name']) : '';
+        if ('' !== $name) { return true; }
+        $headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
+        foreach ((array) ($normalized['languages'] ?? array()) as $language) {
+            $language = sanitize_key((string) $language);
+            if (is_scalar($headlines[$language] ?? null) && '' !== trim((string) $headlines[$language])) { return true; }
+        }
+
         foreach ((array) ($normalized['pages'] ?? array()) as $record) {
             if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
             foreach ((array) ($record['slots'] ?? array()) as $values) {
