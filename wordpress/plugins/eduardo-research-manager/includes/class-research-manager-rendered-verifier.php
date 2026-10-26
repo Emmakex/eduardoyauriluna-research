@@ -11,10 +11,11 @@ final class Eduardo_Research_Manager_Rendered_Verifier {
         $this->contract = $contract ?: new Eduardo_Research_Manager_Contract();
     }
 
-    public function verify_page(string $key, string $language = 'en', array $expected_text = array()): array|WP_Error {
+    public function verify_page(string $key, string $language = '', array $expected_text = array()): array|WP_Error {
         if (! $this->contract->compatible()) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required for rendered verification.');
         }
+        if ('' === $language) { $language = $this->contract->default_language(); }
         if (! isset($this->contract->pages()[$key])) {
             return new WP_Error('research_manager_unknown_page', 'The requested Page key is outside the active Research preset.');
         }
