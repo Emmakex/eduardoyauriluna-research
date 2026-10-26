@@ -147,11 +147,13 @@ final class Eduardo_Research_Manager_Contract {
     }
 
     public function collection_catalogs(string $surface, string $language = ''): array|WP_Error {
-        if (! $this->theme_available() || ! function_exists('eduardo_research_collection_options')) {
+        if (! $this->theme_available()
+            || ! function_exists('eduardo_research_collection_post_type')
+            || ! function_exists('eduardo_research_collection_options')) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme collection contract is required.');
         }
         $surface = sanitize_key($surface);
-        if (! in_array($surface, array('publications','projects','software','datasets'), true)) {
+        if ('' === eduardo_research_collection_post_type($surface)) {
             return new WP_Error('research_manager_collection_surface_not_allowed', 'The requested Research Collection is outside the active Theme contract.');
         }
         $language = sanitize_key($language);
