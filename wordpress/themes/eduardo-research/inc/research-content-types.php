@@ -68,6 +68,10 @@ function eduardo_research_surface_content_types(): array {
     ));
 }
 
+function eduardo_research_surface_keys(): array {
+    return array_values(array_map('eduardo_research_content_type_surface', eduardo_research_surface_content_types()));
+}
+
 function eduardo_research_register_content_types(): void {
     foreach (eduardo_research_content_type_contracts() as $type => $contract) {
         register_post_type($type, array(
