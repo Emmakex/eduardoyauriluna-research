@@ -21,7 +21,7 @@ final class Eduardo_Research_Manager_Output_Resource {
         return array(
             'post_id'=>$post_id,'post_type'=>'research_output','status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', 'en'),
+            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
             'output_type'=>$this->private_meta_string($post_id, '_research_output_type'),
             'output_type_verified'=>$this->private_meta_string($post_id, '_research_output_type_verified', '0'),
             'review_status'=>$this->private_meta_string($post_id, '_research_review_status'),
