@@ -235,7 +235,7 @@ function eduardo_research_t(string $key, ?string $language = null): string {
 
 function eduardo_research_localize_record(array $record, ?string $language = null): array {
     $language = $language ?: eduardo_research_current_language();
-    if ('en' === $language) { return $record; }
+    if (eduardo_research_default_language() === $language) { return $record; }
     if (isset($record['translations'][$language]) && is_array($record['translations'][$language])) {
         $record = array_replace($record, $record['translations'][$language]);
     }
