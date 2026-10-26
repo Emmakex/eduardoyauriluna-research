@@ -77,7 +77,7 @@ add_action('pre_get_posts', 'eduardo_research_harden_publication_filter_query', 
 
 function eduardo_research_is_exploration_query(): bool {
     $page_key = function_exists('eduardo_research_current_page_key') ? eduardo_research_current_page_key() : null;
-    $collection_keys = array('publications','projects','software','datasets');
+    $collection_keys = eduardo_research_surface_keys();
     if (in_array($page_key, $collection_keys, true)) {
         foreach (array('research_line','output_type','review_status','project_status','software_status','access_level','year','sort','research_page') as $key) {
             if (isset($_GET[$key]) && '' !== trim((string) wp_unslash($_GET[$key]))) { return true; }
