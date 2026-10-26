@@ -571,7 +571,7 @@ final class Eduardo_Research_Manager_Remote_Operations {
         if ('page-remediate' === $operation) {
             $check_id = sanitize_key((string) ($payload['check_id'] ?? ('page-' . $key)));
             $allowed_checks = array('page-' . $key);
-            if ('home' === $key) { $allowed_checks[] = 'front-page'; }
+            if ($key === Eduardo_Research_Manager::contract()->front_page_key()) { $allowed_checks[] = 'front-page'; }
             if (! in_array($check_id, $allowed_checks, true)) {
                 return $this->error('validation_failed', 'Page remediation may target only the Page structural check, plus front-page routing for Research Home.', 400);
             }
