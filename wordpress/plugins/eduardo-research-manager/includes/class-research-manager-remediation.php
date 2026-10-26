@@ -129,16 +129,17 @@ final class Eduardo_Research_Manager_Remediation {
     }
 
     private function build_front_page_plan(string $intent): array|WP_Error {
-        $home_id = $this->contract->page_id('home');
-        if ($home_id <= 0) {
+        $front_page_key = $this->contract->front_page_key();
+        $front_page_id = '' !== $front_page_key ? $this->contract->page_id($front_page_key) : 0;
+        if ($front_page_id <= 0) {
             return new WP_Error('research_manager_remediation_home_missing', 'Research Home must exist before static-front-page routing can be repaired.');
         }
         $actions = array();
         if ('page' !== (string) get_option('show_on_front', 'posts')) {
             $actions[] = array('type'=>'option','key'=>'show_on_front','value'=>'page');
         }
-        if ($home_id !== (int) get_option('page_on_front', 0)) {
-            $actions[] = array('type'=>'option','key'=>'page_on_front','value'=>$home_id);
+        if ($front_page_id !== (int) get_option('page_on_front', 0)) {
+            $actions[] = array('type'=>'option','key'=>'page_on_front','value'=>$front_page_id);
         }
         if (! $actions) { return new WP_Error('research_manager_remediation_not_needed', 'Research Home is already the static front page.'); }
         return Eduardo_Research_Manager_Plan::create(
