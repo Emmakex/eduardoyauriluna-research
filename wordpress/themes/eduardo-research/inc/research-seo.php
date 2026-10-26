@@ -90,8 +90,9 @@ function eduardo_research_head_metadata(): void {
     foreach ($alternates as $code => $alternate_url) {
         echo '<link rel="alternate" hreflang="' . esc_attr((string) $code) . '" href="' . esc_url((string) $alternate_url) . '">' . "\n";
     }
-    if (isset($alternates['en'])) {
-        echo '<link rel="alternate" hreflang="x-default" href="' . esc_url((string) $alternates['en']) . '">' . "\n";
+    $default_language = eduardo_research_default_language();
+    if (isset($alternates[$default_language])) {
+        echo '<link rel="alternate" hreflang="x-default" href="' . esc_url((string) $alternates[$default_language]) . '">' . "\n";
     }
     if ('' !== $description) { echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n"; }
     $article = is_singular(array('research_output','post'));
