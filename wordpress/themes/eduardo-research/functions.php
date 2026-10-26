@@ -41,7 +41,7 @@ add_action('after_setup_theme', 'eduardo_research_setup');
 
 function eduardo_research_assets(): void {
     $path = get_stylesheet_directory() . '/style.css';
-    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : '1.1.0';
+    $version = is_readable($path) ? substr((string) hash_file('sha256', $path), 0, 16) : (string) wp_get_theme()->get('Version');
     wp_enqueue_style('eduardo-research', get_stylesheet_uri(), array(), $version);
 
     $styles = array(
