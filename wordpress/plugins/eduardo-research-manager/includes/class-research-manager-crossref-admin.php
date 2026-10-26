@@ -71,7 +71,7 @@ final class Eduardo_Research_Manager_Crossref_Admin {
                     if (! is_array($row)) { continue; }
                     $id = absint($row['post_id'] ?? 0);
                     $doi = (string) ($row['doi'] ?? '');
-                    $label = sprintf('%s [%s]%s', (string) ($row['title'] ?? ('#' . $id)), strtoupper((string) ($row['language'] ?? 'en')), '' !== $doi ? ' — ' . $doi : ' — no DOI');
+                    $label = sprintf('%s [%s]%s', (string) ($row['title'] ?? ('#' . $id)), strtoupper((string) ($row['language'] ?? Eduardo_Research_Manager::contract()->default_language())), '' !== $doi ? ' — ' . $doi : ' — no DOI');
                     ?>
                     <option value="<?php echo esc_attr((string) $id); ?>" <?php selected($selected_id, $id); ?>><?php echo esc_html($label); ?></option>
                   <?php endforeach; ?>
@@ -175,7 +175,7 @@ final class Eduardo_Research_Manager_Crossref_Admin {
         return add_query_arg(array(
             'page'=>'eduardo-research-objects',
             'erm_object_kind'=>'output',
-            'erm_object_language'=>(string) ($selected['language'] ?? 'en'),
+            'erm_object_language'=>(string) ($selected['language'] ?? Eduardo_Research_Manager::contract()->default_language()),
             'erm_object_id'=>absint($selected['post_id'] ?? 0),
         ), admin_url('admin.php'));
     }
