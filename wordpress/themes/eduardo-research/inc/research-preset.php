@@ -73,13 +73,9 @@ function eduardo_research_navigation_state(): array {
 }
 
 function eduardo_research_navigation_target_is_visible(string $key): bool {
-    $post_types = array(
-        'publications'=>'research_output',
-        'projects'=>'research_project',
-        'software'=>'research_software',
-        'datasets'=>'research_dataset',
-    );
-    if (! isset($post_types[$key])) { return true; }
+    if (! function_exists('eduardo_research_collection_post_type')) { return true; }
+    $post_type = eduardo_research_collection_post_type($key);
+    if ('' === $post_type) { return true; }
 
     $language = function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : 'en';
     static $cache = array();
@@ -87,7 +83,7 @@ function eduardo_research_navigation_target_is_visible(string $key): bool {
     if (array_key_exists($cache_key, $cache)) { return (bool) $cache[$cache_key]; }
 
     $args = array(
-        'post_type'=>$post_types[$key],
+        'post_type'=>$post_type,
         'post_status'=>'publish',
         'posts_per_page'=>1,
         'fields'=>'ids',
