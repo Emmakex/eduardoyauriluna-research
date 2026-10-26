@@ -148,7 +148,7 @@ final class Eduardo_Research_Manager_Admin {
               <label for="erm-page-key"><strong><?php echo esc_html__('Theme Page', 'eduardo-research-manager'); ?></strong></label><br>
               <select id="erm-page-key" name="erm_page_key">
                 <?php foreach ($page_contracts as $candidate_key => $definition) : ?>
-                  <?php $label = is_array($definition) ? (string) (($definition['label'] ?? $definition['labels']['en'] ?? ucfirst((string) $candidate_key))) : ucfirst((string) $candidate_key); ?>
+                  <?php $label = is_array($definition) ? (string) (($definition['label'] ?? $definition['labels'][Eduardo_Research_Manager::contract()->default_language()] ?? ucfirst((string) $candidate_key))) : ucfirst((string) $candidate_key); ?>
                   <option value="<?php echo esc_attr((string) $candidate_key); ?>" <?php selected($page_key, (string) $candidate_key); ?>><?php echo esc_html($label); ?></option>
                 <?php endforeach; ?>
               </select>
