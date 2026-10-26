@@ -154,4 +154,63 @@ jobs:
           if (is_wp_error($home_state) || ! empty($home_state["stored_slots"])) { fwrite(STDERR, wp_json_encode($home_state)); exit(1); }
           $identity_after = get_option("eduardo_research_identity", null);
           if (null !== $identity_after && false !== $identity_after) { fwrite(STDERR, "Canonical Identity seed survived hydration rollback\n"); exit(1); }
+
+          // Canonical site.identity is authoritative even when legacy Home aliases conflict.
+          $canonical_conflict = $blueprint;
+          foreach ($canonical_conflict["pages"] as &$record) {
+              if ("home" !== (string) ($record["key"] ?? "")) { continue; }
+              $record["slots"]["en"]["researcher-name"] = "Legacy Wrong EN";
+              $record["slots"]["es"]["researcher-name"] = "Legacy Wrong ES";
+              $record["slots"]["en"]["researcher-headline"] = "Legacy Wrong English Headline";
+              $record["slots"]["es"]["researcher-headline"] = "Legacy Wrong Spanish Headline";
+              break;
+          }
+          unset($record);
+          $conflict_preview = Eduardo_Research_Manager::hydrator()->preview($canonical_conflict);
+          if (is_wp_error($conflict_preview) || 25 !== (int) $conflict_preview["operation_count"]) {
+              fwrite(STDERR, is_wp_error($conflict_preview) ? $conflict_preview->get_error_message() : wp_json_encode($conflict_preview)); exit(1);
+          }
+          $conflict_hydrated = Eduardo_Research_Manager::hydrator()->apply($canonical_conflict);
+          if (is_wp_error($conflict_hydrated) || empty($conflict_hydrated["verified"]) || 25 !== (int) $conflict_hydrated["operation_count"]) {
+              fwrite(STDERR, is_wp_error($conflict_hydrated) ? $conflict_hydrated->get_error_message() : wp_json_encode($conflict_hydrated)); exit(1);
+          }
+          $conflict_identity = (new Eduardo_Research_Manager_Identity_Profile())->inspect();
+          if (is_wp_error($conflict_identity)
+              || "Eduardo Jose Yauri Luna" !== (string) ($conflict_identity["name"] ?? "")
+              || "Artificial Intelligence, Digital Transformation and Autonomous Systems for Business Processes" !== (string) ($conflict_identity["headline"] ?? "")
+              || "Inteligencia Artificial, Transformación Digital y Sistemas Autónomos para Procesos Empresariales" !== (string) ($conflict_identity["headline_es"] ?? "")) {
+              fwrite(STDERR, is_wp_error($conflict_identity) ? $conflict_identity->get_error_message() : wp_json_encode($conflict_identity)); exit(1);
+          }
+          $conflict_rollback = Eduardo_Research_Manager::hydrator()->rollback($conflict_hydrated["snapshot_ids"]);
+          if (is_wp_error($conflict_rollback) || 25 !== (int) $conflict_rollback["snapshot_count"]) { exit(1); }
+
+          // Legacy v1 blueprints without site.identity still seed Identity from the old Home aliases.
+          $legacy_blueprint = $blueprint;
+          unset($legacy_blueprint["site"]["identity"]);
+          foreach ($legacy_blueprint["pages"] as &$record) {
+              if ("home" !== (string) ($record["key"] ?? "")) { continue; }
+              $record["slots"]["en"]["researcher-name"] = "Eduardo Jose Yauri Luna";
+              $record["slots"]["es"]["researcher-name"] = "Eduardo Jose Yauri Luna";
+              $record["slots"]["en"]["researcher-headline"] = "Legacy English Headline";
+              $record["slots"]["es"]["researcher-headline"] = "Legacy Spanish Headline";
+              break;
+          }
+          unset($record);
+          $legacy_preview = Eduardo_Research_Manager::hydrator()->preview($legacy_blueprint);
+          if (is_wp_error($legacy_preview) || 25 !== (int) $legacy_preview["operation_count"]) {
+              fwrite(STDERR, is_wp_error($legacy_preview) ? $legacy_preview->get_error_message() : wp_json_encode($legacy_preview)); exit(1);
+          }
+          $legacy_hydrated = Eduardo_Research_Manager::hydrator()->apply($legacy_blueprint);
+          if (is_wp_error($legacy_hydrated) || empty($legacy_hydrated["verified"]) || 25 !== (int) $legacy_hydrated["operation_count"]) {
+              fwrite(STDERR, is_wp_error($legacy_hydrated) ? $legacy_hydrated->get_error_message() : wp_json_encode($legacy_hydrated)); exit(1);
+          }
+          $legacy_identity = (new Eduardo_Research_Manager_Identity_Profile())->inspect();
+          if (is_wp_error($legacy_identity)
+              || "Eduardo Jose Yauri Luna" !== (string) ($legacy_identity["name"] ?? "")
+              || "Legacy English Headline" !== (string) ($legacy_identity["headline"] ?? "")
+              || "Legacy Spanish Headline" !== (string) ($legacy_identity["headline_es"] ?? "")) {
+              fwrite(STDERR, is_wp_error($legacy_identity) ? $legacy_identity->get_error_message() : wp_json_encode($legacy_identity)); exit(1);
+          }
+          $legacy_rollback = Eduardo_Research_Manager::hydrator()->rollback($legacy_hydrated["snapshot_ids"]);
+          if (is_wp_error($legacy_rollback) || 25 !== (int) $legacy_rollback["snapshot_count"]) { exit(1); }
           ' --allow-root
