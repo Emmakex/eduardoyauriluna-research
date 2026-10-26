@@ -48,7 +48,7 @@ function eduardo_research_line_is_verified_public(int $line_id, ?string $languag
 function eduardo_research_is_managed_insight(int $post_id): bool {
     if ('post' !== get_post_type($post_id) || ! metadata_exists('post', $post_id, '_research_insight_type')) { return false; }
     $type = sanitize_key((string) get_post_meta($post_id, '_research_insight_type', true));
-    return function_exists('eduardo_research_insight_types') && array_key_exists($type, eduardo_research_insight_types('en'));
+    return function_exists('eduardo_research_insight_type_keys') && in_array($type, eduardo_research_insight_type_keys(), true);
 }
 
 function eduardo_research_post_line_ids(int $post_id, ?string $language = null): array {
