@@ -148,7 +148,7 @@ final class Eduardo_Research_Manager_Remediation {
     }
 
     private function build_language_plan(string $intent): array|WP_Error {
-        $expected = array('default'=>'en','enabled'=>$this->contract->languages());
+        $expected = array('default'=>$this->contract->default_language(),'enabled'=>$this->contract->languages());
         $stored = get_option('eduardo_research_native_languages', array());
         if (maybe_serialize($stored) === maybe_serialize($expected)) {
             return new WP_Error('research_manager_remediation_not_needed', 'Native language configuration already matches the Research preset.');
