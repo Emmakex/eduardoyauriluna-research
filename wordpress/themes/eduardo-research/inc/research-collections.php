@@ -4,12 +4,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 function eduardo_research_collection_post_type(string $surface): string {
-    return array(
-        'publications'=>'research_output',
-        'projects'=>'research_project',
-        'software'=>'research_software',
-        'datasets'=>'research_dataset',
-    )[$surface] ?? '';
+    return eduardo_research_surface_content_type($surface);
 }
 
 function eduardo_research_collection_options(string $surface, ?string $language = null): array {
