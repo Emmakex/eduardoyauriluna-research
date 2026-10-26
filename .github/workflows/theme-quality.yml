@@ -119,8 +119,9 @@ jobs:
           $stylesheet = get_stylesheet();
           $canonical = (string) wp_get_theme($stylesheet)->get("Version");
           $themes = wp_prepare_themes_for_js();
-          if (! isset($themes[$stylesheet]["version"])) { exit(1); }
-          if ($canonical !== (string) $themes[$stylesheet]["version"]) { fwrite(STDERR, "Theme version mismatch\n"); exit(1); }
+          $matches = array_values(array_filter($themes, static fn(array $theme): bool => $stylesheet === (string) ($theme["id"] ?? "")));
+          if (1 !== count($matches)) { exit(1); }
+          if ($canonical !== (string) ($matches[0]["version"] ?? "")) { fwrite(STDERR, "Theme version mismatch\n"); exit(1); }
           ' --allow-root
       - name: Verify native EN ES contract
         shell: bash
