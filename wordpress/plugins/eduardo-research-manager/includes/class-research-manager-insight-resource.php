@@ -23,7 +23,7 @@ final class Eduardo_Research_Manager_Insight_Resource {
         }
 
         $language = sanitize_key((string) get_post_meta($post_id, '_research_language', true));
-        if ('' === $language) { $language = 'en'; }
+        if ('' === $language) { $language = $this->contract->default_language(); }
         $insight_type = sanitize_key((string) get_post_meta($post_id, '_research_insight_type', true));
         if ('' === $insight_type || ! array_key_exists($insight_type, $this->types())) {
             return new WP_Error('research_manager_insight_unmanaged', 'The requested WordPress post does not have a valid Research Insight editorial type.');
