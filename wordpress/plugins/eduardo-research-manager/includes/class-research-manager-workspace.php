@@ -182,13 +182,14 @@ final class Eduardo_Research_Manager_Workspace {
             'insights'=>0,
             'translations'=>0,
         );
+        $object_kinds = array_keys(Eduardo_Research_Manager::object_editor()->supported_kinds());
 
         foreach ($languages as $language) {
             $insights = Eduardo_Research_Manager::insight_editor()->list((string) $language);
             if (is_array($insights)) { $counts['insights'] += count($insights); }
             $lines = Eduardo_Research_Manager::line_editor()->list((string) $language);
             if (is_array($lines)) { $counts['lines'] += count($lines); }
-            foreach (array('output','project','software','dataset') as $kind) {
+            foreach ($object_kinds as $kind) {
                 $objects = Eduardo_Research_Manager::object_editor()->list($kind, (string) $language);
                 if (is_array($objects)) { $counts['objects'] += count($objects); }
             }
