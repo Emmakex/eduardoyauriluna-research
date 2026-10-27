@@ -172,12 +172,10 @@ final class Eduardo_Research_Manager_SEO_GEO_Readiness {
 
         $specs = array(
             'insight'=>array('post_type'=>'post','meta_key'=>'_research_insight_type'),
-            'line'=>array('post_type'=>'research_line'),
-            'output'=>array('post_type'=>'research_output'),
-            'project'=>array('post_type'=>'research_project'),
-            'software'=>array('post_type'=>'research_software'),
-            'dataset'=>array('post_type'=>'research_dataset'),
         );
+        foreach (Eduardo_Research_Manager_Resource_Registry::all() as $type => $spec) {
+            $specs[$type] = array('post_type'=>(string) ($spec['post_type'] ?? ''));
+        }
         foreach ($specs as $type => $spec) {
             $args = array(
                 'post_type'=>$spec['post_type'],
