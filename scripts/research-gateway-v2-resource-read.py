@@ -33,7 +33,7 @@ EVIDENCE_GROUPS = {
 }
 PAGE_KEYS = {"home", "about", "research", "cv", "contact"}
 LIST_RESOURCES = {"insight", "research_object", "research_line", "evidence"}
-INSPECT_RESOURCES = {"insight", "research_object", "page", "navigation", "status", "versions"}
+INSPECT_RESOURCES = {"insight", "research_object", "research_line", "page", "navigation", "status", "versions"}
 SENSITIVE_KEY_PARTS = (
     "token",
     "secret",
@@ -140,6 +140,11 @@ def validate_inspect(payload: dict[str, Any]) -> None:
             raise CommandError("Insight inspect requires resource and positive safe integer id")
         return
 
+    if resource == "research_line":
+        if set(payload) != {"resource", "id"} or not valid_id(payload.get("id")):
+            raise CommandError("Research Line inspect requires resource and positive safe integer id")
+        return
+
     if resource == "research_object":
         if set(payload) != {"resource", "kind", "id"}:
             raise CommandError("Research Object inspect requires resource, kind and id")
@@ -235,6 +240,10 @@ def execute(command_path: Path, result_dir: Path) -> int:
             elif resource == "insight":
                 post_id = int(payload["id"])
                 data = client.call("site_insight_inspect", {"postId": post_id})
+                descriptor = {"type": resource, "id": post_id}
+            elif resource == "research_line":
+                post_id = int(payload["id"])
+                data = client.call("site_research_line_inspect", {"postId": post_id})
                 descriptor = {"type": resource, "id": post_id}
             elif resource == "research_object":
                 post_id = int(payload["id"])
@@ -343,6 +352,14 @@ def self_test() -> int:
             "requested_by": "chatgpt",
             "payload": {"resource": "versions"},
         },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-line-inspect-0008",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "research_line", "id": 29},
+        },
     ]
     for command in good_commands:
         validate_command(command)
@@ -373,6 +390,15 @@ def self_test() -> int:
         pass
     else:
         raise CommandError("resource read self-test accepted caller-selected system parameters")
+
+    bad_line = dict(good_commands[7])
+    bad_line["payload"] = {"resource": "research_line", "id": 0}
+    try:
+        validate_command(bad_line)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("resource read self-test accepted an invalid Research Line id")
 
     print("research-gateway-v2 resource read self-test: OK")
     return 0
