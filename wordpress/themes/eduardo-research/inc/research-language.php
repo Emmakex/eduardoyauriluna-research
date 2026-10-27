@@ -81,7 +81,7 @@ function eduardo_research_translation_url(string $language, ?string $key = null)
     $key = $key ?: eduardo_research_current_page_key();
     if ($key) { return eduardo_research_page_url($key, $language); }
 
-    $singular_types = array_merge(eduardo_research_surface_content_types(), array('post'));
+    $singular_types = eduardo_research_localized_content_types();
     if (is_singular($singular_types)) {
         $post_id = get_queried_object_id();
         if ($post_id > 0 && function_exists('eduardo_research_post_language')) {
