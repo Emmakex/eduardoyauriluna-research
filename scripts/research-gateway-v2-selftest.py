@@ -55,6 +55,7 @@ def assert_contract_invariants() -> None:
     assert "navigation.update" in actions
     assert "operation.rollback" in actions
     assert "manager.research.lines.list.pair" not in actions
+    assert "manager.evidence.contact.audit" not in actions
     assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.runner_path("manager.capability.check", registry).name == "research-gateway-v2-capability-check.py"
