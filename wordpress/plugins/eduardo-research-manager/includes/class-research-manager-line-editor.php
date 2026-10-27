@@ -23,8 +23,9 @@ final class Eduardo_Research_Manager_Line_Editor {
             return new WP_Error('research_manager_unknown_language', 'Research Line language is outside the active Research preset.');
         }
 
+        $registry = Eduardo_Research_Manager_Resource_Registry::get('line');
         $args = array(
-            'post_type'=>'research_line',
+            'post_type'=>(string) ($registry['post_type'] ?? ''),
             'post_status'=>'any',
             'posts_per_page'=>100,
             'orderby'=>array('menu_order'=>'ASC','modified'=>'DESC'),
