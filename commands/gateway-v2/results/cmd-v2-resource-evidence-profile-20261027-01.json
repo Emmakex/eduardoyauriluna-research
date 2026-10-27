@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-resource-evidence-profile-20261027-01",
+  "command_sha256": "61b45efbe7e952a4afd61bc824d0c50317258cd2ffac8a7b97ea0459525edb20",
+  "data": {
+    "count": 0,
+    "group": "profile",
+    "items": [],
+    "label": "Research profile",
+    "surfaces": [
+      "about"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "profile"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
