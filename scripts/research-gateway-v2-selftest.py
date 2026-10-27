@@ -54,6 +54,7 @@ def assert_contract_invariants() -> None:
     assert "manager.capability.check" in actions
     assert "navigation.update" in actions
     assert "operation.rollback" in actions
+    assert "manager.research.lines.list.pair" not in actions
     assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.runner_path("manager.capability.check", registry).name == "research-gateway-v2-capability-check.py"
@@ -245,14 +246,14 @@ def main() -> int:
         assert [item[1]["command_id"] for item in queue] == ["cmd-v2-selftest-two-0002"]
 
         # A sealed historical request may no longer satisfy the current action-specific
-        # schema. Identity + fingerprint + terminal result keep it valid as audit history.
+        # schema or registry. Identity + fingerprint + terminal result keep it valid as audit history.
         legacy = {
             "version": "1",
             "command_id": "cmd-v2-selftest-legacy-0003",
             "tenant": "eduardo-research",
-            "action": "manager.capability.check",
+            "action": "manager.research.lines.list.pair",
             "requested_by": "chatgpt",
-            "payload": {"capabilities": ["navigation.write"]},
+            "payload": {},
         }
         legacy_path = requests / f"{legacy['command_id']}.json"
         legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
