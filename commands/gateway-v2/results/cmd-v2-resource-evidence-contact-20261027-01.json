@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-resource-evidence-contact-20261027-01",
+  "command_sha256": "256c091926449ae4046b15d7d01ba609f42f1a77da365d8f6374a75e584f46e3",
+  "data": {
+    "count": 0,
+    "group": "contact",
+    "items": [],
+    "label": "Research contact",
+    "surfaces": [
+      "contact"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "contact"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
