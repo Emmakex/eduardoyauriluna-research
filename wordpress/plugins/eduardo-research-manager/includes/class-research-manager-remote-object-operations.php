@@ -325,13 +325,16 @@ final class Eduardo_Research_Manager_Remote_Object_Operations {
     }
 
     private function verify_object(string $kind, int $post_id, array $expected): array|WP_Error {
-        return match ($kind) {
-            'output' => Eduardo_Research_Manager::outputs()->verify($post_id, $expected),
-            'project' => Eduardo_Research_Manager::projects()->verify($post_id, $expected),
-            'software' => Eduardo_Research_Manager::software()->verify($post_id, $expected),
-            'dataset' => Eduardo_Research_Manager::datasets()->verify($post_id, $expected),
-            default => $this->error('validation_failed', 'Unsupported Research Object kind.', 400),
-        };
+        if (is_wp_error($this->kind_spec($kind))) {
+            return $this->error('validation_failed', 'Unsupported Research Object kind.', 400);
+        }
+        $registry = Eduardo_Research_Manager_Resource_Registry::get($kind);
+        $service_key = sanitize_key((string) ($registry['inventory_key'] ?? ''));
+        $services = Eduardo_Research_Manager::research_services();
+        if ('' === $service_key || ! isset($services[$service_key])) {
+            return $this->error('validation_failed', 'Unsupported Research Object kind.', 400);
+        }
+        return $services[$service_key]->verify($post_id, $expected);
     }
 
     private function audit(string $event, string $outcome, array $state, array $actor): void {
