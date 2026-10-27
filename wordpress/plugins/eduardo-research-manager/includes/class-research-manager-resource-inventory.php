@@ -7,16 +7,13 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Resource_Inventory {
     public function types(): array {
         return array_merge(
-            array(
-                'pages'=>array('scope'=>'pages.read','identifier'=>'key'),
-                'insights'=>array('scope'=>'insights.read','identifier'=>'post_id'),
-            ),
+            array('pages'=>array('scope'=>'pages.read','identifier'=>'key')),
             array_map(
                 static fn(array $spec): array => array(
                     'scope'=>(string) ($spec['scope'] ?? ''),
                     'identifier'=>(string) ($spec['identifier'] ?? 'post_id'),
                 ),
-                Eduardo_Research_Manager_Resource_Registry::inventory_specs()
+                Eduardo_Research_Manager_Resource_Registry::vertical_inventory_specs()
             )
         );
     }
