@@ -245,8 +245,9 @@ final class Eduardo_Research_Manager_GitHub_Adapter {
         $identity = $this->normalize_repository($full_name);
         if (! $identity) { return array(); }
         $target = strtolower($identity['full_name']);
+        $software = Eduardo_Research_Manager_Resource_Registry::get('software');
         $posts = get_posts(array(
-            'post_type'=>'research_software','post_status'=>'any','posts_per_page'=>250,
+            'post_type'=>(string) ($software['post_type'] ?? ''),'post_status'=>'any','posts_per_page'=>250,
             'orderby'=>'ID','order'=>'ASC','suppress_filters'=>true,
         ));
         foreach ($posts as $post) {
