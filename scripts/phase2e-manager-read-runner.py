@@ -19,17 +19,14 @@ BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
 LIST_ACTION = "manager.tools.list"
 DESCRIBE_ACTION = "manager.tool.describe"
 PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
-CV_EVIDENCE_AUDIT_ACTION = "manager.evidence.cv.audit"
 ACTION = LIST_ACTION
 ACTIONS = {
     LIST_ACTION,
     DESCRIBE_ACTION,
     PAGE_INSPECT_PAIR_ACTION,
-    CV_EVIDENCE_AUDIT_ACTION,
 }
 TOOL_NAME_RE = re.compile(r"^(?:site|research)_[a-z0-9_]{2,96}$")
 PAGE_INSPECT_KEYS = ("about", "research", "cv", "contact", "home")
-CV_EVIDENCE_GROUPS = ("experience", "education", "affiliations", "awards")
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "authorization", "cookie", "nonce")
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_manager_read_base", BASE_RUNNER)
@@ -97,9 +94,6 @@ def validate_command(command: dict[str, Any]) -> None:
             raise CommandError("manager.page.inspect.pair payload keys are invalid")
         if payload.get("key") not in PAGE_INSPECT_KEYS or payload.get("languages") != ["en", "es"]:
             raise CommandError("manager.page.inspect.pair is currently bounded to reviewed Home/About/Research/CV/Contact EN/ES pairs")
-    elif action == CV_EVIDENCE_AUDIT_ACTION:
-        if payload != {}:
-            raise CommandError("manager.evidence.cv.audit payload must be empty")
 
 
 def load_validated_command(path: Path) -> dict[str, Any]:
@@ -156,15 +150,6 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 pages[language] = sanitize_read_value(inspected)
             result["resource"] = {"key": page_key, "languages": ["en", "es"]}
             result["pages"] = pages
-        elif action == CV_EVIDENCE_AUDIT_ACTION:
-            groups: dict[str, Any] = {}
-            for group in CV_EVIDENCE_GROUPS:
-                listed = client.call("site_evidence_list", {"group": group})
-                if not isinstance(listed, (dict, list)):
-                    raise CommandError("site_evidence_list returned an unsupported result")
-                groups[group] = sanitize_read_value(listed)
-            result["resource"] = {"surface": "cv", "groups": list(CV_EVIDENCE_GROUPS)}
-            result["groups"] = groups
         else:
             tools = tool_inventory(client)
             if action == LIST_ACTION:
