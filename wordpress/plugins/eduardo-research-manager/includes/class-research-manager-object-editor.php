@@ -12,28 +12,32 @@ final class Eduardo_Research_Manager_Object_Editor {
     }
 
     public function supported_kinds(): array {
-        return array(
+        $supported = array(
             'output'=>array(
-                'post_type'=>'research_output',
                 'label'=>'Research Output',
                 'fields'=>array('status','slug','title','excerpt','content','language','output_type','review_status','publication_date','venue','doi','authors','line_ids'),
             ),
             'project'=>array(
-                'post_type'=>'research_project',
                 'label'=>'Research Project',
                 'fields'=>array('status','slug','title','excerpt','content','language','project_status','question','role','start_date','end_date','partner','funding','project_url','methods','line_ids'),
             ),
             'software'=>array(
-                'post_type'=>'research_software',
                 'label'=>'Research Software',
                 'fields'=>array('status','slug','title','excerpt','content','language','software_status','version','release_date','repository_url','archive_url','license','documentation_url','doi','programming_languages','line_ids'),
             ),
             'dataset'=>array(
-                'post_type'=>'research_dataset',
                 'label'=>'Research Dataset',
                 'fields'=>array('status','slug','title','excerpt','content','language','version','publication_date','repository','doi','license','access_level','methodology','provenance','size','documentation_url','ethics_notes','formats','line_ids'),
             ),
         );
+        foreach ($supported as $kind => $spec) {
+            $registry = Eduardo_Research_Manager_Resource_Registry::get($kind);
+            $supported[$kind] = array_merge(
+                array('post_type'=>(string) ($registry['post_type'] ?? '')),
+                $spec
+            );
+        }
+        return $supported;
     }
 
     public function list(string $kind, string $language = ''): array|WP_Error {
