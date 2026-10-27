@@ -39,7 +39,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
             $plans[] = array('resource'=>'pages','index'=>$index,'key'=>$key,'plan'=>$plan);
         }
 
-        foreach (array('insights','lines','outputs','projects','software','datasets') as $resource_key) {
+        foreach (Eduardo_Research_Manager_Resource_Registry::vertical_blueprint_resource_keys() as $resource_key) {
             foreach ($normalized[$resource_key] as $index => $record) {
                 if (! is_array($record)) { return $this->record_error($resource_key, $index, 'Blueprint resource records must be object-like arrays.'); }
                 $payload = $record;
