@@ -22,7 +22,6 @@ PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
 EVIDENCE_ABOUT_AUDIT_ACTION = "manager.evidence.about.audit"
 CV_EVIDENCE_AUDIT_ACTION = "manager.evidence.cv.audit"
 CONTACT_EVIDENCE_AUDIT_ACTION = "manager.evidence.contact.audit"
-RESEARCH_LINES_LIST_PAIR_ACTION = "manager.research.lines.list.pair"
 ACTION = LIST_ACTION
 ACTIONS = {
     LIST_ACTION,
@@ -31,7 +30,6 @@ ACTIONS = {
     EVIDENCE_ABOUT_AUDIT_ACTION,
     CV_EVIDENCE_AUDIT_ACTION,
     CONTACT_EVIDENCE_AUDIT_ACTION,
-    RESEARCH_LINES_LIST_PAIR_ACTION,
 }
 TOOL_NAME_RE = re.compile(r"^(?:site|research)_[a-z0-9_]{2,96}$")
 PAGE_INSPECT_KEYS = ("about", "research", "cv", "contact", "home")
@@ -114,9 +112,6 @@ def validate_command(command: dict[str, Any]) -> None:
     elif action == CONTACT_EVIDENCE_AUDIT_ACTION:
         if payload != {}:
             raise CommandError("manager.evidence.contact.audit payload must be empty")
-    elif action == RESEARCH_LINES_LIST_PAIR_ACTION:
-        if payload != {}:
-            raise CommandError("manager.research.lines.list.pair payload must be empty")
 
 
 def load_validated_command(path: Path) -> dict[str, Any]:
@@ -200,15 +195,6 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 groups[group] = sanitize_read_value(listed)
             result["resource"] = {"surface": "contact", "groups": list(CONTACT_EVIDENCE_GROUPS)}
             result["groups"] = groups
-        elif action == RESEARCH_LINES_LIST_PAIR_ACTION:
-            lines: dict[str, Any] = {}
-            for language in ("en", "es"):
-                listed = client.call("site_research_lines_list", {"language": language})
-                if not isinstance(listed, (dict, list)):
-                    raise CommandError("site_research_lines_list returned an unsupported result")
-                lines[language] = sanitize_read_value(listed)
-            result["resource"] = {"type": "research-lines", "languages": ["en", "es"]}
-            result["lines"] = lines
         else:
             tools = tool_inventory(client)
             if action == LIST_ACTION:
