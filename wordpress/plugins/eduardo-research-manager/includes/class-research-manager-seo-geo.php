@@ -74,12 +74,11 @@ final class Eduardo_Research_Manager_SEO_GEO {
 
         $kind_map = array(
             'insight'=>array('post_type'=>'post','kind'=>'insight'),
-            'line'=>array('post_type'=>'research_line','kind'=>'line'),
-            'output'=>array('post_type'=>'research_output','kind'=>'output'),
-            'project'=>array('post_type'=>'research_project','kind'=>'project'),
-            'software'=>array('post_type'=>'research_software','kind'=>'software'),
-            'dataset'=>array('post_type'=>'research_dataset','kind'=>'dataset'),
         );
+        foreach (array('line','output','project','software','dataset') as $kind) {
+            $spec = Eduardo_Research_Manager_Resource_Registry::get($kind);
+            $kind_map[$kind] = array('post_type'=>(string) ($spec['post_type'] ?? ''),'kind'=>$kind);
+        }
         if (! isset($kind_map[$type]) || $kind_map[$type]['post_type'] !== (string) $post->post_type) {
             return new WP_Error('validation_failed', 'The requested resource type does not match the managed Research resource.', array('status'=>400));
         }
