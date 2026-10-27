@@ -165,6 +165,15 @@ final class Eduardo_Research_Manager_Resource_Registry {
         ));
     }
 
+    public static function vertical_blueprint_resource_keys(): array {
+        $keys = array('insights');
+        foreach (self::all() as $spec) {
+            $inventory_key = sanitize_key((string) ($spec['inventory_key'] ?? ''));
+            if ('' !== $inventory_key) { $keys[] = $inventory_key; }
+        }
+        return array_values(array_unique($keys));
+    }
+
     public static function inventory_specs(): array {
         $specs = array();
         foreach (self::all() as $spec) {
