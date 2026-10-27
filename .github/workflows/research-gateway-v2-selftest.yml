@@ -36,6 +36,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Compile Gateway v2 Python surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/research-gateway-v2-*.py \
+            scripts/phase2d-command-runner.py \
+            scripts/phase2d-run-attempt-guard.py \
+            scripts/phase2e-*.py
       - name: Validate Gateway v2 offline invariants
         shell: bash
         run: |
