@@ -124,12 +124,10 @@ final class Eduardo_Research_Manager_SEO_GEO {
         $counts = array('pages'=>count(Eduardo_Research_Manager::contract()->pages()));
         $specs = array(
             'insights'=>array('post_type'=>'post','meta_key'=>'_research_insight_type'),
-            'lines'=>array('post_type'=>'research_line'),
-            'outputs'=>array('post_type'=>'research_output'),
-            'projects'=>array('post_type'=>'research_project'),
-            'software'=>array('post_type'=>'research_software'),
-            'datasets'=>array('post_type'=>'research_dataset'),
         );
+        foreach (Eduardo_Research_Manager_Resource_Registry::inventory_specs() as $key => $spec) {
+            $specs[$key] = array('post_type'=>(string) ($spec['post_type'] ?? ''));
+        }
         foreach ($specs as $key => $spec) {
             $args = array(
                 'post_type'=>$spec['post_type'],'post_status'=>array('publish','draft','future','private','pending'),
