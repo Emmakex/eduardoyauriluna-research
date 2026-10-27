@@ -166,12 +166,20 @@ final class Eduardo_Research_Manager_Resource_Registry {
     }
 
     public static function vertical_blueprint_resource_keys(): array {
-        $keys = array('insights');
-        foreach (self::all() as $spec) {
-            $inventory_key = sanitize_key((string) ($spec['inventory_key'] ?? ''));
-            if ('' !== $inventory_key) { $keys[] = $inventory_key; }
-        }
-        return array_values(array_unique($keys));
+        return array_keys(self::vertical_inventory_specs());
+    }
+
+    public static function vertical_inventory_specs(): array {
+        return array_merge(
+            array(
+                'insights'=>array(
+                    'scope'=>'insights.read',
+                    'identifier'=>'post_id',
+                    'post_type'=>'post',
+                ),
+            ),
+            self::inventory_specs()
+        );
     }
 
     public static function inventory_specs(): array {
