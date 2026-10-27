@@ -29,7 +29,6 @@
     "manager.page.inspect.pair": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["pages.read"]},
     "manager.evidence.about.audit": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["evidence.read"]},
     "manager.evidence.cv.audit": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["evidence.read"]},
-    "manager.evidence.contact.audit": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["evidence.read"]},
-    "manager.research.lines.list.pair": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["research.read"]}
+    "manager.evidence.contact.audit": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["evidence.read"]}
   }
 }
