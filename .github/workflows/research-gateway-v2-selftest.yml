@@ -1,0 +1,42 @@
+name: Research Gateway v2 Selftest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/research-gateway-v2.yml'
+      - '.github/workflows/research-gateway-v2-selftest.yml'
+      - 'config/research-gateway-v2-*.json'
+      - 'scripts/research-gateway-v2-*.py'
+      - 'scripts/phase2d-command-runner.py'
+      - 'scripts/phase2d-run-attempt-guard.py'
+      - 'scripts/phase2e-*.py'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/research-gateway-v2.yml'
+      - '.github/workflows/research-gateway-v2-selftest.yml'
+      - 'config/research-gateway-v2-*.json'
+      - 'scripts/research-gateway-v2-*.py'
+      - 'scripts/phase2d-command-runner.py'
+      - 'scripts/phase2d-run-attempt-guard.py'
+      - 'scripts/phase2e-*.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-gateway-v2-selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Gateway v2 offline invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/research-gateway-v2-selftest.py
