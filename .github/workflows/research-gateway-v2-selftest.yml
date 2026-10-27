@@ -23,6 +23,7 @@ on:
       - 'scripts/phase2e-*.py'
   workflow_dispatch:
 
+# Offline-only guard: never attach production MCP secrets or drain the durable queue here.
 permissions:
   contents: read
 
