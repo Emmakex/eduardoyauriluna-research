@@ -148,7 +148,7 @@ function eduardo_research_schema_graph(): void {
     }
     if ($topics) { $person['knowsAbout'] = array_values(array_unique($topics)); }
 
-    $website = array('@type'=>'WebSite','@id'=>home_url('/#website'),'url'=>home_url('/'),'name'=>get_bloginfo('name'),'inLanguage'=>array('en','es'),'publisher'=>array('@id'=>home_url('/#researcher')));
+    $website = array('@type'=>'WebSite','@id'=>home_url('/#website'),'url'=>home_url('/'),'name'=>get_bloginfo('name'),'inLanguage'=>array_values(array_keys(eduardo_research_languages())),'publisher'=>array('@id'=>home_url('/#researcher')));
     $page = array('@type'=>eduardo_research_page_schema_type($key),'@id'=>$url . '#webpage','url'=>$url,'name'=>wp_get_document_title(),'inLanguage'=>$language,'isPartOf'=>array('@id'=>home_url('/#website')),'about'=>array('@id'=>home_url('/#researcher')));
     if ('about' === $key) { $page['mainEntity'] = array('@id'=>home_url('/#researcher')); }
     $graph = array($person,$website,$page);
