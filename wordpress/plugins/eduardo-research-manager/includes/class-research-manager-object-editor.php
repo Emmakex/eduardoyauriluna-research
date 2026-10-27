@@ -295,13 +295,16 @@ final class Eduardo_Research_Manager_Object_Editor {
     }
 
     private function resource(string $kind): object {
-        return match (sanitize_key($kind)) {
-            'output' => Eduardo_Research_Manager::outputs(),
-            'project' => Eduardo_Research_Manager::projects(),
-            'software' => Eduardo_Research_Manager::software(),
-            'dataset' => Eduardo_Research_Manager::datasets(),
-            default => new WP_Error('research_manager_unknown_object_kind', 'Unsupported Research object kind.'),
-        };
+        $kind = sanitize_key($kind);
+        if (! isset($this->supported_kinds()[$kind])) {
+            return new WP_Error('research_manager_unknown_object_kind', 'Unsupported Research object kind.');
+        }
+        $registry = Eduardo_Research_Manager_Resource_Registry::get($kind);
+        $service_key = sanitize_key((string) ($registry['inventory_key'] ?? ''));
+        $services = Eduardo_Research_Manager::research_services();
+        return '' !== $service_key && isset($services[$service_key])
+            ? $services[$service_key]
+            : new WP_Error('research_manager_unknown_object_kind', 'Unsupported Research object kind.');
     }
 
     private function evidence_context(bool $confirmed, string $reference): array {
