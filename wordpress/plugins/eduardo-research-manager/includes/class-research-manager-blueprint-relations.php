@@ -9,13 +9,6 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
     private Eduardo_Research_Manager_Line_Resource $lines;
     private Eduardo_Research_Manager_Executor $executor;
 
-    private const RESOURCES = array(
-        'outputs'=>array('post_type'=>'research_output','service'=>'outputs'),
-        'projects'=>array('post_type'=>'research_project','service'=>'projects'),
-        'software'=>array('post_type'=>'research_software','service'=>'software'),
-        'datasets'=>array('post_type'=>'research_dataset','service'=>'datasets'),
-    );
-
     public function __construct(
         ?Eduardo_Research_Manager_Blueprint $blueprints = null,
         ?Eduardo_Research_Manager_Line_Resource $lines = null,
@@ -122,7 +115,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
         $line_index = $this->line_index($normalized['lines']);
         if (is_wp_error($line_index)) { return $line_index; }
         $operations = array();
-        foreach (self::RESOURCES as $resource => $spec) {
+        foreach (Eduardo_Research_Manager_Resource_Registry::relation_blueprint_specs() as $resource => $spec) {
             foreach ($normalized[$resource] as $index => $record) {
                 if (! is_array($record)) { return $this->record_error($resource, $index, 'Blueprint resource records must be object-like arrays.'); }
                 if (! array_key_exists('line_refs', $record)) { continue; }
