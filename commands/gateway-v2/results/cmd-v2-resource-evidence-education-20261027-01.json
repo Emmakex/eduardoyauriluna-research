@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-resource-evidence-education-20261027-01",
+  "command_sha256": "bc621664b34098f0cd57bb14186fa0ab16c77ab078dbb80fb8e004aeedccdc8e",
+  "data": {
+    "count": 0,
+    "group": "education",
+    "items": [],
+    "label": "Education",
+    "surfaces": [
+      "cv"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "education"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
