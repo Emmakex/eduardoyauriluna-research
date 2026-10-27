@@ -192,13 +192,19 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
     }
 
     private function service(string $name): object {
-        return match ($name) {
-            'outputs'=>Eduardo_Research_Manager::outputs(),
-            'projects'=>Eduardo_Research_Manager::projects(),
-            'software'=>Eduardo_Research_Manager::software(),
-            'datasets'=>Eduardo_Research_Manager::datasets(),
-            default=>throw new LogicException('Unsupported Research Manager relation service.'),
-        };
+        $name = sanitize_key($name);
+        $allowed = false;
+        foreach (Eduardo_Research_Manager_Resource_Registry::relation_blueprint_specs() as $spec) {
+            if ($name === sanitize_key((string) ($spec['service'] ?? ''))) {
+                $allowed = true;
+                break;
+            }
+        }
+        $services = Eduardo_Research_Manager::research_services();
+        if (! $allowed || ! isset($services[$name])) {
+            throw new LogicException('Unsupported Research Manager relation service.');
+        }
+        return $services[$name];
     }
 
     private function evidence_context(array $record): array|WP_Error {
