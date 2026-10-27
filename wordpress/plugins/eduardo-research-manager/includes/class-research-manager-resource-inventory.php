@@ -44,12 +44,9 @@ final class Eduardo_Research_Manager_Resource_Inventory {
         $language=$this->language((string) ($args['language']??'')); if(is_wp_error($language)){return $language;}
         if('pages'===$type){return Eduardo_Research_Manager::pages()->inspect(sanitize_key($identifier),''!==$language?$language:Eduardo_Research_Manager::contract()->default_language());}
         $id=absint($identifier); if($id<=0){return $this->error('resource_identifier_invalid','Resource identifier must be a positive post ID.');}
-        if('insights'===$type){$record=Eduardo_Research_Manager::insights()->inspect($id);}
-        elseif('lines'===$type){$record=Eduardo_Research_Manager::lines()->inspect($id);}
-        elseif('outputs'===$type){$record=Eduardo_Research_Manager::outputs()->inspect($id);}
-        elseif('projects'===$type){$record=Eduardo_Research_Manager::projects()->inspect($id);}
-        elseif('software'===$type){$record=Eduardo_Research_Manager::software()->inspect($id);}
-        else{$record=Eduardo_Research_Manager::datasets()->inspect($id);}
+        $services=Eduardo_Research_Manager::research_services();
+        if(!isset($services[$type])){return $this->error('resource_service_unavailable','Research resource service is unavailable.');}
+        $record=$services[$type]->inspect($id);
         if(is_wp_error($record)||''===$language){return $record;}
         $recordLanguage=sanitize_key((string) ($record['language']??get_post_meta($id,'_research_language',true)?:Eduardo_Research_Manager::contract()->default_language()));
         if($recordLanguage!==$language){return new WP_Error('resource_language_mismatch','Requested resource does not match the requested language.',array('status'=>404));}
