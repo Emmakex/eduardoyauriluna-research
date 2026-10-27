@@ -83,7 +83,7 @@ $registry=source('wordpress/plugins/eduardo-research-manager/includes/class-rese
 foreach(array('lines','outputs','projects','software','datasets') as $key){check(str_contains($registry,"'inventory_key'=>'{$key}'"),'Research Resource Registry inventory key missing: '.$key);}
 foreach(array('research_line','research_output','research_project','research_software','research_dataset') as $postType){check(str_contains($registry,"'post_type'=>'{$postType}'"),'Research Resource Registry post type missing: '.$postType);}
 check(str_contains($registry,"'read_scope'=>'research.read'"),'Research Resource Registry must retain the bounded Research read scope');
-check(str_contains($resource,'Eduardo_Research_Manager_Resource_Registry::inventory_specs()'),'Resource inventory must derive structured Research type/scope facts from the Registry');
+check(str_contains($resource,'Eduardo_Research_Manager_Resource_Registry::vertical_inventory_specs()'),'Resource inventory must derive Research vertical type/scope facts from the Registry');
 check(str_contains($resource,'Eduardo_Research_Manager_Resource_Registry::by_inventory_key($type)'),'Resource inventory must resolve Research post types through the Registry');
 check(str_contains($resource,'default_language()'),'Resource inventory must use the Theme Contract default language rather than its own EN fallback');
 check(str_contains($resource,"'language'=>\$language"),'Resource inventory must preserve language filters');
