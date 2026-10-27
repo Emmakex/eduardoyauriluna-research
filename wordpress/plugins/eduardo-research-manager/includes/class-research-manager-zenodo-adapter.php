@@ -301,15 +301,16 @@ final class Eduardo_Research_Manager_Zenodo_Adapter {
 
     private function local_doi_index(): array|WP_Error {
         $index = array();
-        foreach (array('output','software','dataset') as $kind) {
+        foreach (Eduardo_Research_Manager::object_editor()->supported_kinds() as $kind => $spec) {
+            if (! in_array('doi', (array) ($spec['fields'] ?? array()), true)) { continue; }
             foreach (Eduardo_Research_Manager::contract()->languages() as $language) {
-                $rows = Eduardo_Research_Manager::object_editor()->list($kind, (string) $language);
+                $rows = Eduardo_Research_Manager::object_editor()->list((string) $kind, (string) $language);
                 if (is_wp_error($rows)) { return $rows; }
                 foreach ($rows as $row) {
                     if (! is_array($row)) { continue; }
                     $doi = Eduardo_Research_Manager::crossref()->normalize_doi((string) ($row['doi'] ?? ''));
                     if ('' === $doi) { continue; }
-                    $row['kind'] = $kind;
+                    $row['kind'] = (string) $kind;
                     if (! isset($index[$doi])) { $index[$doi] = array(); }
                     $index[$doi][] = $row;
                 }
