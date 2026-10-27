@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-resource-evidence-experience-20261027-01",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "evidence",
+    "filters": {
+      "group": "experience"
+    }
+  }
+}
