@@ -24,15 +24,7 @@ final class Eduardo_Research_Manager_Greenfield {
     public function resources(): array|WP_Error {
         $ready = $this->ready();
         if (is_wp_error($ready)) { return $ready; }
-        return array(
-            'pages' => Eduardo_Research_Manager::pages(),
-            'insights' => Eduardo_Research_Manager::insights(),
-            'lines' => Eduardo_Research_Manager::lines(),
-            'outputs' => Eduardo_Research_Manager::outputs(),
-            'projects' => Eduardo_Research_Manager::projects(),
-            'software' => Eduardo_Research_Manager::software(),
-            'datasets' => Eduardo_Research_Manager::datasets(),
-        );
+        return Eduardo_Research_Manager::research_services();
     }
 
     public function status(): array {
