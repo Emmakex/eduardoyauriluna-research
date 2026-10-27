@@ -75,7 +75,7 @@ final class Eduardo_Research_Manager_SEO_GEO {
         $kind_map = array(
             'insight'=>array('post_type'=>'post','kind'=>'insight'),
         );
-        // Keep the inspection surface explicit; the Registry supplies descriptive resource identity only.
+        // The explicit kind list bounds inspection; the Registry supplies descriptive post-type identity only.
         foreach (array('line','output','project','software','dataset') as $kind) {
             $spec = Eduardo_Research_Manager_Resource_Registry::get($kind);
             $kind_map[$kind] = array('post_type'=>(string) ($spec['post_type'] ?? ''),'kind'=>$kind);
