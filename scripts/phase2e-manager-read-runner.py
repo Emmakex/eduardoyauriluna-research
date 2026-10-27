@@ -18,8 +18,6 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
 LIST_ACTION = "manager.tools.list"
 DESCRIBE_ACTION = "manager.tool.describe"
-RESOURCE_LIST_ACTION = "manager.resource.list"
-RESOURCE_INSPECT_ACTION = "manager.resource.inspect"
 PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
 EVIDENCE_ABOUT_AUDIT_ACTION = "manager.evidence.about.audit"
 CV_EVIDENCE_AUDIT_ACTION = "manager.evidence.cv.audit"
@@ -29,8 +27,6 @@ ACTION = LIST_ACTION
 ACTIONS = {
     LIST_ACTION,
     DESCRIBE_ACTION,
-    RESOURCE_LIST_ACTION,
-    RESOURCE_INSPECT_ACTION,
     PAGE_INSPECT_PAIR_ACTION,
     EVIDENCE_ABOUT_AUDIT_ACTION,
     CV_EVIDENCE_AUDIT_ACTION,
@@ -38,9 +34,6 @@ ACTIONS = {
     RESEARCH_LINES_LIST_PAIR_ACTION,
 }
 TOOL_NAME_RE = re.compile(r"^(?:site|research)_[a-z0-9_]{2,96}$")
-LANGUAGE_RE = re.compile(r"^[a-z][a-z0-9-]{1,15}$")
-RESOURCE_TYPES = {"insight", "research_object"}
-RESEARCH_OBJECT_KINDS = {"output", "project", "software", "dataset"}
 PAGE_INSPECT_KEYS = ("about", "research", "cv", "contact", "home")
 ABOUT_EVIDENCE_GROUPS = ("profile", "affiliations", "identifiers")
 CV_EVIDENCE_GROUPS = ("experience", "education", "affiliations", "awards")
@@ -80,64 +73,6 @@ def sanitize_read_value(value: Any, depth: int = 0) -> Any:
     return str(value)[:40000]
 
 
-def valid_post_id(value: Any) -> bool:
-    return (
-        isinstance(value, int)
-        and not isinstance(value, bool)
-        and 0 < value <= base.MAX_SAFE_INTEGER
-    )
-
-
-def validate_language(value: Any, field: str) -> None:
-    if value is not None and (
-        not isinstance(value, str) or LANGUAGE_RE.fullmatch(value) is None
-    ):
-        raise CommandError(f"{field} is invalid")
-
-
-def validate_resource_list_payload(payload: dict[str, Any]) -> None:
-    if set(payload) != {"resource", "filters"}:
-        raise CommandError("manager.resource.list payload must contain only resource and filters")
-    resource = payload.get("resource")
-    filters = payload.get("filters")
-    if resource not in RESOURCE_TYPES:
-        raise CommandError("manager.resource.list resource is not supported")
-    if not isinstance(filters, dict):
-        raise CommandError("manager.resource.list filters must be an object")
-
-    if resource == "insight":
-        if not set(filters).issubset({"language"}):
-            raise CommandError("Insight list filters may contain only language")
-        validate_language(filters.get("language"), "payload.filters.language")
-        return
-
-    if not set(filters).issubset({"kind", "language"}):
-        raise CommandError("Research Object list filters may contain only kind and language")
-    kind = filters.get("kind")
-    if kind is not None and kind not in RESEARCH_OBJECT_KINDS:
-        raise CommandError("payload.filters.kind is invalid")
-    validate_language(filters.get("language"), "payload.filters.language")
-
-
-def validate_resource_inspect_payload(payload: dict[str, Any]) -> None:
-    resource = payload.get("resource")
-    if resource not in RESOURCE_TYPES:
-        raise CommandError("manager.resource.inspect resource is not supported")
-    if resource == "insight":
-        if set(payload) != {"resource", "id"}:
-            raise CommandError("Insight inspect payload must contain only resource and id")
-        if not valid_post_id(payload.get("id")):
-            raise CommandError("payload.id must be a positive safe integer")
-        return
-
-    if set(payload) != {"resource", "kind", "id"}:
-        raise CommandError("Research Object inspect payload must contain resource, kind and id")
-    if payload.get("kind") not in RESEARCH_OBJECT_KINDS:
-        raise CommandError("payload.kind is invalid")
-    if not valid_post_id(payload.get("id")):
-        raise CommandError("payload.id must be a positive safe integer")
-
-
 def validate_command(command: dict[str, Any]) -> None:
     if set(command) != {"version", "command_id", "tenant", "action", "requested_by", "payload"}:
         raise CommandError("command keys do not match command-v1 contract")
@@ -165,10 +100,6 @@ def validate_command(command: dict[str, Any]) -> None:
         tool = payload.get("tool")
         if not isinstance(tool, str) or TOOL_NAME_RE.fullmatch(tool) is None:
             raise CommandError("manager.tool.describe tool name is invalid")
-    elif action == RESOURCE_LIST_ACTION:
-        validate_resource_list_payload(payload)
-    elif action == RESOURCE_INSPECT_ACTION:
-        validate_resource_inspect_payload(payload)
     elif action == PAGE_INSPECT_PAIR_ACTION:
         if set(payload) != {"key", "languages"}:
             raise CommandError("manager.page.inspect.pair payload keys are invalid")
@@ -232,35 +163,7 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "command_id": command_id,
             "read_only": True,
         }
-        if action == RESOURCE_LIST_ACTION:
-            resource = str(command["payload"]["resource"])
-            filters = dict(command["payload"]["filters"])
-            if resource == "insight":
-                listed = client.call("site_insights_list", filters)
-            else:
-                listed = client.call("site_research_objects_list", filters)
-            if not isinstance(listed, (dict, list)):
-                raise CommandError("resource list returned an unsupported result")
-            result["resource"] = {"type": resource, "filters": sanitize_read_value(filters)}
-            result["data"] = sanitize_read_value(listed)
-        elif action == RESOURCE_INSPECT_ACTION:
-            resource = str(command["payload"]["resource"])
-            post_id = int(command["payload"]["id"])
-            if resource == "insight":
-                inspected = client.call("site_insight_inspect", {"postId": post_id})
-                descriptor: dict[str, Any] = {"type": resource, "id": post_id}
-            else:
-                kind = str(command["payload"]["kind"])
-                inspected = client.call(
-                    "site_research_object_inspect",
-                    {"kind": kind, "postId": post_id},
-                )
-                descriptor = {"type": resource, "kind": kind, "id": post_id}
-            if not isinstance(inspected, dict):
-                raise CommandError("resource inspect returned a non-object result")
-            result["resource"] = descriptor
-            result["data"] = sanitize_read_value(inspected)
-        elif action == PAGE_INSPECT_PAIR_ACTION:
+        if action == PAGE_INSPECT_PAIR_ACTION:
             page_key = str(command["payload"]["key"])
             pages: dict[str, Any] = {}
             for language in command["payload"]["languages"]:
