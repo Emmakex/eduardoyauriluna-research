@@ -115,6 +115,17 @@ final class Eduardo_Research_Manager {
     public static function contract(): Eduardo_Research_Manager_Contract { if (! self::$contract) { self::$contract = new Eduardo_Research_Manager_Contract(); } return self::$contract; }
     public static function diagnostics(): Eduardo_Research_Manager_Diagnostics { if (! self::$diagnostics) { self::$diagnostics = new Eduardo_Research_Manager_Diagnostics(self::contract()); } return self::$diagnostics; }
     public static function executor(): Eduardo_Research_Manager_Executor { if (! self::$executor) { self::$executor = new Eduardo_Research_Manager_Executor(); } return self::$executor; }
+    public static function research_services(): array {
+        return array(
+            'pages'=>self::pages(),
+            'insights'=>self::insights(),
+            'lines'=>self::lines(),
+            'outputs'=>self::outputs(),
+            'projects'=>self::projects(),
+            'software'=>self::software(),
+            'datasets'=>self::datasets(),
+        );
+    }
     public static function pages(): Eduardo_Research_Manager_Page_Resource { if (! self::$pages) { self::$pages = new Eduardo_Research_Manager_Page_Resource(self::contract()); } return self::$pages; }
     public static function page_editor(): Eduardo_Research_Manager_Page_Editor { if (! self::$page_editor) { self::$page_editor = new Eduardo_Research_Manager_Page_Editor(self::pages(), self::executor()); } return self::$page_editor; }
     public static function insights(): Eduardo_Research_Manager_Insight_Resource { if (! self::$insights) { self::$insights = new Eduardo_Research_Manager_Insight_Resource(self::contract()); } return self::$insights; }
