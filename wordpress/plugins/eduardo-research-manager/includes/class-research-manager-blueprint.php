@@ -6,7 +6,13 @@ if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Blueprint {
     private const VERSION = 1;
-    private const RESOURCE_KEYS = array('pages','insights','lines','outputs','projects','software','datasets');
+
+    private static function resource_keys(): array {
+        return array_merge(
+            array('pages'),
+            Eduardo_Research_Manager_Resource_Registry::vertical_blueprint_resource_keys()
+        );
+    }
 
     public function validate(array $blueprint): array|WP_Error {
         if (! Eduardo_Research_Manager_Mode::is_greenfield()) {
@@ -16,7 +22,8 @@ final class Eduardo_Research_Manager_Blueprint {
         if (self::VERSION !== $version) {
             return new WP_Error('research_manager_blueprint_version_unsupported', 'Unsupported Research blueprint version.');
         }
-        $allowed = array_merge(array('version','site','languages'), self::RESOURCE_KEYS);
+        $resource_keys = self::resource_keys();
+        $allowed = array_merge(array('version','site','languages'), $resource_keys);
         $unknown = array_diff(array_keys($blueprint), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_blueprint_key_unknown', 'Blueprint contains unsupported top-level keys: ' . implode(', ', $unknown));
@@ -31,7 +38,7 @@ final class Eduardo_Research_Manager_Blueprint {
             return new WP_Error('research_manager_blueprint_language_unsupported', 'Blueprint requests languages outside the active Research Theme contract.');
         }
         $normalized = array('version'=>self::VERSION,'site'=>is_array($blueprint['site'] ?? null) ? $blueprint['site'] : array(),'languages'=>$languages);
-        foreach (self::RESOURCE_KEYS as $key) {
+        foreach ($resource_keys as $key) {
             $records = $blueprint[$key] ?? array();
             if (! is_array($records)) {
                 return new WP_Error('research_manager_blueprint_resource_invalid', sprintf('Blueprint resource "%s" must be an array.', $key));
@@ -45,7 +52,7 @@ final class Eduardo_Research_Manager_Blueprint {
         $normalized = $this->validate($blueprint);
         if (is_wp_error($normalized)) { return $normalized; }
         $counts = array();
-        foreach (self::RESOURCE_KEYS as $key) { $counts[$key] = count($normalized[$key]); }
+        foreach (self::resource_keys() as $key) { $counts[$key] = count($normalized[$key]); }
         return array('version'=>$normalized['version'],'languages'=>$normalized['languages'],'resources'=>$counts,'total_resources'=>array_sum($counts),'requires_legacy_discovery'=>false,'requires_gutenberg_layout'=>false);
     }
 }
