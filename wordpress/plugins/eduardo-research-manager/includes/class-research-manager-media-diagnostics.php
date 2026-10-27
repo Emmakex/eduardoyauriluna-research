@@ -260,7 +260,7 @@ final class Eduardo_Research_Manager_Media_Diagnostics {
     /** @return array<int,array<int,array<string,mixed>>> */
     private function theme_assignment_usage(): array {
         $usage = array();
-        $post_types = array('post','research_line','research_output','research_project','research_software','research_dataset');
+        $post_types = array_merge(array('post'), Eduardo_Research_Manager_Resource_Registry::post_types());
         $ids = get_posts(array(
             'post_type'=>$post_types,
             'post_status'=>'any',
