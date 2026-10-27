@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-resource-evidence-awards-20261027-01",
+  "command_sha256": "9c3c476f3161cdd0fd468279687cd266eb27dc2841ee96cd9aab227c0d50ea0d",
+  "data": {
+    "count": 0,
+    "group": "awards",
+    "items": [],
+    "label": "Awards",
+    "surfaces": [
+      "cv"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "awards"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
