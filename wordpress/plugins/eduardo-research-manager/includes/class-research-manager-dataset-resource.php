@@ -15,11 +15,12 @@ final class Eduardo_Research_Manager_Dataset_Resource {
         $valid = $this->validate_contract();
         if (is_wp_error($valid)) { return $valid; }
         $post = get_post($post_id);
-        if (! $post instanceof WP_Post || 'research_dataset' !== $post->post_type) {
+        $post_type = $this->post_type();
+        if (! $post instanceof WP_Post || $post_type !== $post->post_type) {
             return new WP_Error('research_manager_dataset_missing', 'The requested Research Dataset does not exist.');
         }
         return array(
-            'post_id'=>$post_id,'post_type'=>'research_dataset','status'=>(string) $post->post_status,
+            'post_id'=>$post_id,'post_type'=>$post_type,'status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,'content'=>(string) $post->post_content,
             'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
@@ -166,14 +167,14 @@ final class Eduardo_Research_Manager_Dataset_Resource {
     public function find_created_by_token(string $token): int {
         if ('' === trim($token)) { return 0; }
         $posts = get_posts(array(
-            'post_type'=>'research_dataset','post_status'=>'any','posts_per_page'=>2,'orderby'=>'ID','order'=>'ASC',
+            'post_type'=>$this->post_type(),'post_status'=>'any','posts_per_page'=>2,'orderby'=>'ID','order'=>'ASC',
             'meta_key'=>'_eduardo_research_manager_creation_token','meta_value'=>$token,'suppress_filters'=>true,
         ));
         return isset($posts[0]) && $posts[0] instanceof WP_Post ? (int) $posts[0]->ID : 0;
     }
 
     private function validate_contract(): bool|WP_Error {
-        if (! $this->contract->compatible() || ! post_type_exists('research_dataset')) {
+        if (! $this->contract->compatible() || ! post_type_exists($this->post_type())) {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.');
         }
         $catalogs = $this->contract->collection_catalogs('datasets');
@@ -181,6 +182,11 @@ final class Eduardo_Research_Manager_Dataset_Resource {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme dataset contract is required.');
         }
         return true;
+    }
+
+    private function post_type(): string {
+        $registry = Eduardo_Research_Manager_Resource_Registry::get('dataset');
+        return (string) ($registry['post_type'] ?? '');
     }
 
     private function private_meta_value(int $post_id, string $key, mixed $default = null): mixed {
