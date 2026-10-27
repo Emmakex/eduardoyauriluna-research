@@ -1,0 +1,33 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-v2-resource-evidence-affiliations-20261027-01",
+  "command_sha256": "b09d328545e192473a5ad8b00900183bfb24983a0c3f8b4fcaf1ae6c42dabc59",
+  "data": {
+    "count": 0,
+    "group": "affiliations",
+    "items": [],
+    "label": "Affiliations",
+    "surfaces": [
+      "about",
+      "cv"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "affiliations"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
