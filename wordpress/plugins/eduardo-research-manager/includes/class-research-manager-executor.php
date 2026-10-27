@@ -141,7 +141,7 @@ final class Eduardo_Research_Manager_Executor {
         return array('exists'=>true,'value'=>array(
             'post_id'=>(int) $post->ID,'post_type'=>(string) $post->post_type,'status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,
-            'content'=>(string) $post->post_content,'language'=>$this->private_meta_string((int) $post->ID, '_research_language', 'en'),
+            'content'=>(string) $post->post_content,'language'=>$this->private_meta_string((int) $post->ID, '_research_language', Eduardo_Research_Manager::contract()->default_language()),
             'insight_type'=>$this->private_meta_string((int) $post->ID, '_research_insight_type', 'research_note'),
             'creation_token'=>$this->private_meta_string((int) $post->ID, '_eduardo_research_manager_creation_token'),
             'url'=>(string) get_permalink($post),
@@ -158,7 +158,7 @@ final class Eduardo_Research_Manager_Executor {
         $value = array(
             'post_id'=>(int) $post->ID,'post_type'=>$post_type,'status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,
-            'content'=>(string) $post->post_content,'language'=>$this->private_meta_string((int) $post->ID, '_research_language', 'en'),
+            'content'=>(string) $post->post_content,'language'=>$this->private_meta_string((int) $post->ID, '_research_language', Eduardo_Research_Manager::contract()->default_language()),
         );
         foreach ((array) $spec['meta'] as $field => $meta_key) {
             $default = in_array($field, (array) ($spec['array_fields'] ?? array()), true) ? array() : ('0' === (string) ($spec['defaults'][$field] ?? '') ? '0' : '');
