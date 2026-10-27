@@ -1,5 +1,5 @@
 <?php
-/** Bounded aggregate inventory over Site Architect-owned Research resources. */
+/** Bounded aggregate inventory; Research vertical type/scope facts come from the Resource Registry. */
 declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
