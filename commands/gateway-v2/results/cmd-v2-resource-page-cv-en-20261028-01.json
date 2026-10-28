@@ -1,0 +1,80 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-cv-en-20261028-01",
+  "command_sha256": "eff99f569baefdd8e1387743c4619346d46ffa54df5b60d5066733b283a60844",
+  "data": {
+    "allowed_slots": [
+      "eyebrow",
+      "lead",
+      "sections"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "cv",
+    "effective_slots": {
+      "eyebrow": "Academic CV",
+      "lead": "Academic and professional background of Eduardo Jose Yauri Luna, focused on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems.",
+      "sections": [
+        "Identity and research profile",
+        "Education",
+        "Research-relevant professional experience",
+        "Research outputs",
+        "Projects and software",
+        "Skills and methods"
+      ]
+    },
+    "expected_model": "research-cv-v1",
+    "expected_role": "academic-cv",
+    "key": "cv",
+    "language": "en",
+    "model": "research-cv-v1",
+    "option_key": "eduardo_research_surface_cv",
+    "page_id": 15,
+    "published": true,
+    "role": "academic-cv",
+    "slug": "cv",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "eyebrow": "Academic CV",
+      "lead": "Academic and professional background of Eduardo Jose Yauri Luna, focused on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems.",
+      "sections": [
+        "Identity and research profile",
+        "Education",
+        "Research-relevant professional experience",
+        "Research outputs",
+        "Projects and software",
+        "Skills and methods"
+      ]
+    },
+    "title": "CV",
+    "url": "https://eduardoyauriluna.com/cv/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "cv",
+    "language": "en",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
