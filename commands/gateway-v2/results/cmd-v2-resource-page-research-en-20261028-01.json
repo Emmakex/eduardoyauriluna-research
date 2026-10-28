@@ -1,0 +1,78 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-research-en-20261028-01",
+  "command_sha256": "23b2e7bd3aed1ac1ac82528d831452200d08cfafcdb26a4fa958cccd428488bf",
+  "data": {
+    "allowed_slots": [
+      "eyebrow",
+      "lead",
+      "sections"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "research",
+    "effective_slots": {
+      "eyebrow": "Research agenda",
+      "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+      "sections": [
+        "Autonomous AI agents",
+        "Human–AI collaboration",
+        "Digital transformation in SMEs",
+        "AI-mediated information discovery",
+        "Methods and evaluation"
+      ]
+    },
+    "expected_model": "research-hub-v1",
+    "expected_role": "research-hub",
+    "key": "research",
+    "language": "en",
+    "model": "research-hub-v1",
+    "option_key": "eduardo_research_surface_research",
+    "page_id": 10,
+    "published": true,
+    "role": "research-hub",
+    "slug": "research",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "eyebrow": "Research agenda",
+      "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+      "sections": [
+        "Autonomous AI agents",
+        "Human–AI collaboration",
+        "Digital transformation in SMEs",
+        "AI-mediated information discovery",
+        "Methods and evaluation"
+      ]
+    },
+    "title": "Research",
+    "url": "https://eduardoyauriluna.com/research/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "research",
+    "language": "en",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
