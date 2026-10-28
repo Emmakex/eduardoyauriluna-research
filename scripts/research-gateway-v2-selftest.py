@@ -58,6 +58,7 @@ def assert_contract_invariants() -> None:
     assert "manager.evidence.contact.audit" not in actions
     assert "manager.evidence.about.audit" not in actions
     assert "manager.evidence.cv.audit" not in actions
+    assert "manager.page.inspect.pair" not in actions
     assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.runner_path("manager.capability.check", registry).name == "research-gateway-v2-capability-check.py"
