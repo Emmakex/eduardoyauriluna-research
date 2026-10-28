@@ -18,15 +18,12 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_RUNNER = Path(__file__).with_name("phase2d-command-runner.py")
 LIST_ACTION = "manager.tools.list"
 DESCRIBE_ACTION = "manager.tool.describe"
-PAGE_INSPECT_PAIR_ACTION = "manager.page.inspect.pair"
 ACTION = LIST_ACTION
 ACTIONS = {
     LIST_ACTION,
     DESCRIBE_ACTION,
-    PAGE_INSPECT_PAIR_ACTION,
 }
 TOOL_NAME_RE = re.compile(r"^(?:site|research)_[a-z0-9_]{2,96}$")
-PAGE_INSPECT_KEYS = ("about", "research", "cv", "contact", "home")
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "authorization", "cookie", "nonce")
 
 spec = importlib.util.spec_from_file_location("phase2d_command_runner_manager_read_base", BASE_RUNNER)
@@ -89,11 +86,6 @@ def validate_command(command: dict[str, Any]) -> None:
         tool = payload.get("tool")
         if not isinstance(tool, str) or TOOL_NAME_RE.fullmatch(tool) is None:
             raise CommandError("manager.tool.describe tool name is invalid")
-    elif action == PAGE_INSPECT_PAIR_ACTION:
-        if set(payload) != {"key", "languages"}:
-            raise CommandError("manager.page.inspect.pair payload keys are invalid")
-        if payload.get("key") not in PAGE_INSPECT_KEYS or payload.get("languages") != ["en", "es"]:
-            raise CommandError("manager.page.inspect.pair is currently bounded to reviewed Home/About/Research/CV/Contact EN/ES pairs")
 
 
 def load_validated_command(path: Path) -> dict[str, Any]:
@@ -140,41 +132,30 @@ def execute(command_path: Path, result_dir: Path) -> int:
             "command_id": command_id,
             "read_only": True,
         }
-        if action == PAGE_INSPECT_PAIR_ACTION:
-            page_key = str(command["payload"]["key"])
-            pages: dict[str, Any] = {}
-            for language in command["payload"]["languages"]:
-                inspected = client.call("site_page_inspect", {"key": page_key, "language": language})
-                if not isinstance(inspected, dict):
-                    raise CommandError("site_page_inspect returned a non-object result")
-                pages[language] = sanitize_read_value(inspected)
-            result["resource"] = {"key": page_key, "languages": ["en", "es"]}
-            result["pages"] = pages
+        tools = tool_inventory(client)
+        if action == LIST_ACTION:
+            names = sorted({item.get("name") for item in tools if isinstance(item.get("name"), str)})
+            if not names:
+                raise CommandError("MCP tools/list returned an empty tool inventory")
+            result["tools"] = names
         else:
-            tools = tool_inventory(client)
-            if action == LIST_ACTION:
-                names = sorted({item.get("name") for item in tools if isinstance(item.get("name"), str)})
-                if not names:
-                    raise CommandError("MCP tools/list returned an empty tool inventory")
-                result["tools"] = names
-            else:
-                requested = str(command["payload"]["tool"])
-                matches = [item for item in tools if item.get("name") == requested]
-                if len(matches) != 1:
-                    raise CommandError("requested MCP tool was not uniquely present")
-                item = matches[0]
-                safe: dict[str, Any] = {"name": requested}
-                description = item.get("description")
-                if isinstance(description, str):
-                    safe["description"] = description
-                input_schema = item.get("inputSchema")
-                if not isinstance(input_schema, dict):
-                    raise CommandError("requested MCP tool exposes no input schema")
-                safe["inputSchema"] = sanitize_read_value(input_schema)
-                output_schema = item.get("outputSchema")
-                if isinstance(output_schema, dict):
-                    safe["outputSchema"] = sanitize_read_value(output_schema)
-                result["tool"] = safe
+            requested = str(command["payload"]["tool"])
+            matches = [item for item in tools if item.get("name") == requested]
+            if len(matches) != 1:
+                raise CommandError("requested MCP tool was not uniquely present")
+            item = matches[0]
+            safe: dict[str, Any] = {"name": requested}
+            description = item.get("description")
+            if isinstance(description, str):
+                safe["description"] = description
+            input_schema = item.get("inputSchema")
+            if not isinstance(input_schema, dict):
+                raise CommandError("requested MCP tool exposes no input schema")
+            safe["inputSchema"] = sanitize_read_value(input_schema)
+            output_schema = item.get("outputSchema")
+            if isinstance(output_schema, dict):
+                safe["outputSchema"] = sanitize_read_value(output_schema)
+            result["tool"] = safe
         path = write_result(result_dir, command_id, result)
         print(f"SUCCESS {path}")
         return 0
