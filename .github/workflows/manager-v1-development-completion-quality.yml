@@ -84,7 +84,8 @@ jobs:
           set -euo pipefail
           grep -F "array('slug','title','excerpt','content','language','insight_type','line_ids')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
           grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-insight-resource.php
-          grep -F "array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          grep -F "Eduardo_Research_Manager_Resource_Registry::resource_fields('line')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
+          grep -F "array('status','slug','title','excerpt','content','language')" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php
           grep -F "'status'=>'post_status'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
           grep -F "'slug'=>'post_name'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php
       - name: Enforce bounded Page CTA targets
