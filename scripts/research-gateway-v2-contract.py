@@ -38,6 +38,9 @@ RESOURCE_READ_CAPABILITIES = {
     # Status and versions are bounded system reads exposed by the Manager under site.read.
     "status": "site.read",
     "versions": "site.read",
+    # Design state and bounded Theme variants share the existing Manager design.read scope.
+    "design": "design.read",
+    "design_variants": "design.read",
 }
 
 
