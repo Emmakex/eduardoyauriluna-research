@@ -1,0 +1,96 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-home-es-20261028-01",
+  "command_sha256": "b57b4316662ea204a930435bf81fef52b4cb5c992dbf7c9276e8b71522d4acab",
+  "data": {
+    "allowed_slots": [
+      "hero-eyebrow",
+      "hero-lead",
+      "hero-primary-target",
+      "hero-secondary-target",
+      "research-lines-heading",
+      "research-lines-intro",
+      "selected-outputs-heading",
+      "selected-outputs-intro",
+      "academic-identifiers-heading",
+      "latest-insights-heading",
+      "final-cta-heading",
+      "final-cta-body",
+      "final-cta-button",
+      "final-cta-target"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "home",
+    "effective_slots": {
+      "academic-identifiers-heading": "Perfiles académicos",
+      "final-cta-body": "Explora las líneas de investigación, las preguntas que las orientan y los métodos planteados para su desarrollo.",
+      "final-cta-button": "Explorar investigación",
+      "final-cta-heading": "Investigación y colaboración",
+      "final-cta-target": "contact",
+      "hero-eyebrow": "Perfil investigador",
+      "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
+      "hero-primary-target": "research",
+      "hero-secondary-target": "cv",
+      "latest-insights-heading": "Notas de investigación",
+      "research-lines-heading": "Agenda de investigación",
+      "research-lines-intro": "La agenda de investigación se articula en torno a agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.",
+      "selected-outputs-heading": "Resultados de investigación",
+      "selected-outputs-intro": "Los resultados de investigación se mostrarán aquí a medida que haya publicaciones, proyectos, software o conjuntos de datos disponibles y verificados."
+    },
+    "expected_model": "research-home-v1",
+    "expected_role": "front-page",
+    "key": "home",
+    "language": "es",
+    "model": "research-home-v1",
+    "option_key": "eduardo_research_model_es",
+    "page_id": 8,
+    "published": true,
+    "role": "front-page",
+    "slug": "home",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "academic-identifiers-heading": "Perfiles académicos",
+      "final-cta-body": "Explora las líneas de investigación, las preguntas que las orientan y los métodos planteados para su desarrollo.",
+      "final-cta-button": "Explorar investigación",
+      "final-cta-heading": "Investigación y colaboración",
+      "hero-eyebrow": "Perfil investigador",
+      "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
+      "latest-insights-heading": "Notas de investigación",
+      "research-lines-heading": "Agenda de investigación",
+      "research-lines-intro": "La agenda de investigación se articula en torno a agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.",
+      "selected-outputs-heading": "Resultados de investigación",
+      "selected-outputs-intro": "Los resultados de investigación se mostrarán aquí a medida que haya publicaciones, proyectos, software o conjuntos de datos disponibles y verificados."
+    },
+    "title": "Home",
+    "url": "https://eduardoyauriluna.com/es/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "home",
+    "language": "es",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
