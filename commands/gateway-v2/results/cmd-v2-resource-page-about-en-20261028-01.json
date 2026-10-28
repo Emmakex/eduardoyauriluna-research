@@ -1,0 +1,72 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-about-en-20261028-01",
+  "command_sha256": "259a846602e26ca0ac0c712287d12cb199234627225e8410e5c0e25d9d4cfa80",
+  "data": {
+    "allowed_slots": [
+      "eyebrow",
+      "lead",
+      "sections"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "about",
+    "effective_slots": {
+      "eyebrow": "Researcher profile",
+      "lead": "Eduardo Jose Yauri Luna is a researcher focused on autonomous AI agents, human–AI collaboration, SME digital transformation and AI-mediated information discovery.",
+      "sections": [
+        "Research focus",
+        "Professional background"
+      ]
+    },
+    "expected_model": "research-about-v1",
+    "expected_role": "profile",
+    "key": "about",
+    "language": "en",
+    "model": "research-about-v1",
+    "option_key": "eduardo_research_surface_about",
+    "page_id": 9,
+    "published": true,
+    "role": "profile",
+    "slug": "about",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "eyebrow": "Researcher profile",
+      "lead": "Eduardo Jose Yauri Luna is a researcher focused on autonomous AI agents, human–AI collaboration, SME digital transformation and AI-mediated information discovery.",
+      "sections": [
+        "Research focus",
+        "Professional background"
+      ]
+    },
+    "title": "About",
+    "url": "https://eduardoyauriluna.com/about/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "about",
+    "language": "en",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
