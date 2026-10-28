@@ -59,6 +59,7 @@ def assert_contract_invariants() -> None:
     assert "manager.evidence.about.audit" not in actions
     assert "manager.evidence.cv.audit" not in actions
     assert "manager.page.inspect.pair" not in actions
+    assert "manager.design.inspect" not in actions
     assert worker.contract.runner_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.validator_path("manager.resource.list", registry).name == "research-gateway-v2-resource-read.py"
     assert worker.contract.runner_path("manager.capability.check", registry).name == "research-gateway-v2-capability-check.py"
@@ -271,8 +272,7 @@ def main() -> int:
             "command_sha256": worker.guard.guard.command_sha256(legacy),
         }
         (results / f"{legacy['command_id']}.json").write_text(
-            json.dumps(legacy_result), encoding="utf-8"
-        )
+            json.dumps(legacy_result), encoding="utf-8")
         queue = worker.unresolved_requests(requests, results)
         assert [item[1]["command_id"] for item in queue] == ["cmd-v2-selftest-two-0002"]
 
