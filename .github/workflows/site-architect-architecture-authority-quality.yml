@@ -5,6 +5,9 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
@@ -13,6 +16,9 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
@@ -35,6 +41,9 @@ jobs:
           root = Path('wordpress/plugins/eduardo-research-manager/includes')
           plan = (root / 'class-research-manager-plan.php').read_text(encoding='utf-8')
           registry = (root / 'class-research-manager-resource-registry.php').read_text(encoding='utf-8')
+          line_resource = (root / 'class-research-manager-line-resource.php').read_text(encoding='utf-8')
+          line_editor = (root / 'class-research-manager-line-editor.php').read_text(encoding='utf-8')
+          capabilities = (root / 'class-research-manager-v1-capabilities.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
 
           actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
@@ -55,8 +64,22 @@ jobs:
           if missing:
               raise SystemExit(f'Plan mutation dispatcher lost explicit fail-closed actions: {missing}')
 
-          if 'public static function by_creation_action' not in registry:
-              raise SystemExit('Resource Registry must remain the descriptive creation-action authority')
+          for method in ('by_creation_action', 'resource_fields', 'resource_meta_fields', 'array_fields', 'defaults'):
+              if f'public static function {method}' not in registry:
+                  raise SystemExit(f'Resource Registry lost descriptive authority method: {method}')
+
+          consumers = {
+              'Line Resource': line_resource,
+              'Line Editor': line_editor,
+              'V1 Capabilities': capabilities,
+          }
+          for consumer_name, source in consumers.items():
+              if "Resource_Registry::resource_fields('line')" not in source:
+                  raise SystemExit(f'{consumer_name} must derive Research Line fields from Resource Registry')
+
+          for consumer_name, source in (('Line Resource', line_resource), ('Line Editor', line_editor)):
+              if "Resource_Registry::resource_meta_fields('line')" not in source:
+                  raise SystemExit(f'{consumer_name} must derive Research Line meta storage from Resource Registry')
 
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
@@ -65,3 +88,55 @@ jobs:
           if '$contract->identity_headline_field($language)' not in hydrator:
               raise SystemExit('Blueprint Hydrator must resolve Identity headline storage through Contract')
           PY
+
+      - name: Verify Research descriptor semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php; do
+            php -l "$file"
+          done
+
+          php <<'PHP'
+          <?php
+          define('ABSPATH', __DIR__);
+          function sanitize_key($key) {
+              return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $key));
+          }
+          require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php';
+
+          $expected_fields = array(
+              'status','slug','title','excerpt','content','language',
+              'evidence_status','research_status','central_question','order','topics','methods',
+          );
+          $expected_meta = array(
+              'language'=>'_research_language',
+              'evidence_status'=>'_research_evidence_status',
+              'research_status'=>'_research_status',
+              'central_question'=>'_research_central_question',
+              'order'=>'_research_order',
+              'topics'=>'_research_topics',
+              'methods'=>'_research_methods',
+          );
+
+          if (Eduardo_Research_Manager_Resource_Registry::resource_fields('line') !== $expected_fields) {
+              fwrite(STDERR, "Research Line field vocabulary drifted from the certified contract.\n");
+              exit(1);
+          }
+          if (Eduardo_Research_Manager_Resource_Registry::resource_meta_fields('line') !== $expected_meta) {
+              fwrite(STDERR, "Research Line field-to-storage descriptor drifted from the certified contract.\n");
+              exit(1);
+          }
+          if (Eduardo_Research_Manager_Resource_Registry::array_fields('line') !== array('topics','methods')) {
+              fwrite(STDERR, "Research Line array-field descriptor drifted from the certified contract.\n");
+              exit(1);
+          }
+          if (Eduardo_Research_Manager_Resource_Registry::defaults('line') !== array('evidence_status'=>'unverified','research_status'=>'planned')) {
+              fwrite(STDERR, "Research Line defaults descriptor drifted from the certified contract.\n");
+              exit(1);
+          }
+          PHP
