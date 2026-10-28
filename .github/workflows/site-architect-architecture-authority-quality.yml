@@ -16,6 +16,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
   push:
@@ -34,6 +35,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
 
@@ -68,6 +70,7 @@ jobs:
           compiler = (root / 'class-research-manager-blueprint-compiler.php').read_text(encoding='utf-8')
           relations = (root / 'class-research-manager-blueprint-relations.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
+          pairing = (root / 'class-research-manager-translation-pairing.php').read_text(encoding='utf-8')
 
           actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
 
@@ -137,6 +140,16 @@ jobs:
           if "$spec['service']" in relations:
               raise SystemExit('Blueprint Relations must not consume operational service binding from Resource Registry')
 
+          if 'Resource_Registry::post_types()' not in pairing:
+              raise SystemExit('Translation Pairing must derive structured Research post types from Resource Registry')
+          if 'private static function structured_types' not in pairing or 'private static function supported_types' not in pairing:
+              raise SystemExit('Translation Pairing lost its bounded Registry-derived type helpers')
+          if "array_merge(self::structured_types(), array('post'))" not in pairing:
+              raise SystemExit('Translation Pairing must keep Insight post as the sole explicit non-Registry supported type')
+          for forbidden in ('private const SUPPORTED_TYPES', 'private const STRUCTURED_TYPES'):
+              if forbidden in pairing:
+                  raise SystemExit('Translation Pairing must not restore duplicated Research post-type constants')
+
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
           if leaked_hydrator:
@@ -160,7 +173,8 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php \
-            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php; do
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php; do
             php -l "$file"
           done
 
@@ -171,6 +185,14 @@ jobs:
               return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $key));
           }
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php';
+
+          $expected_post_types = array(
+              'research_line','research_output','research_project','research_software','research_dataset',
+          );
+          if (Eduardo_Research_Manager_Resource_Registry::post_types() !== $expected_post_types) {
+              fwrite(STDERR, "Research post-type taxonomy drifted from the certified Registry contract.\n");
+              exit(1);
+          }
 
           $expected_fields = array(
               'status','slug','title','excerpt','content','language',
