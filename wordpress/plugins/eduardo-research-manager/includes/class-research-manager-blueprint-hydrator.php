@@ -267,6 +267,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
             : '';
         if ('' !== $name) { $seed['name'] = $name; }
 
+        $contract = Eduardo_Research_Manager::contract();
         $headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
         foreach ((array) ($normalized['languages'] ?? array()) as $language) {
             $language = sanitize_key((string) $language);
@@ -274,30 +275,36 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
                 ? trim(sanitize_text_field((string) $headlines[$language]))
                 : '';
             if ('' === $headline) { continue; }
-            $field = Eduardo_Research_Manager::contract()->identity_headline_field($language);
+            $field = $contract->identity_headline_field($language);
             if (is_wp_error($field)) { return $field; }
             $seed[$field] = $headline;
         }
 
         if (! $has_canonical_identity) {
+            $legacy_names = array();
             foreach ((array) ($normalized['pages'] ?? array()) as $record) {
                 if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
                 $slots = is_array($record['slots'] ?? null) ? $record['slots'] : array();
-                $en = is_array($slots['en'] ?? null) ? $slots['en'] : array();
-                $es = is_array($slots['es'] ?? null) ? $slots['es'] : array();
-                $name_en = trim(sanitize_text_field((string) ($en['researcher-name'] ?? '')));
-                $name_es = trim(sanitize_text_field((string) ($es['researcher-name'] ?? '')));
-                if ('' !== $name_en && '' !== $name_es && $name_en !== $name_es) {
-                    return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
+                foreach ($contract->languages() as $language) {
+                    $language = sanitize_key((string) $language);
+                    $values = is_array($slots[$language] ?? null) ? $slots[$language] : array();
+                    $legacy_name = trim(sanitize_text_field((string) ($values['researcher-name'] ?? '')));
+                    if ('' !== $legacy_name) { $legacy_names[$language] = $legacy_name; }
+
+                    $legacy_headline = trim(sanitize_text_field((string) ($values['researcher-headline'] ?? '')));
+                    if ('' === $legacy_headline) { continue; }
+                    $field = $contract->identity_headline_field($language);
+                    if (is_wp_error($field)) { return $field; }
+                    $seed[$field] = $legacy_headline;
                 }
-                $legacy_name = '' !== $name_en ? $name_en : $name_es;
-                $headline = trim(sanitize_text_field((string) ($en['researcher-headline'] ?? '')));
-                $headline_es = trim(sanitize_text_field((string) ($es['researcher-headline'] ?? '')));
-                if ('' !== $legacy_name) { $seed['name'] = $legacy_name; }
-                if ('' !== $headline) { $seed['headline'] = $headline; }
-                if ('' !== $headline_es) { $seed['headline_es'] = $headline_es; }
                 break;
             }
+
+            $unique_names = array_values(array_unique(array_values($legacy_names)));
+            if (count($unique_names) > 1) {
+                return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
+            }
+            if ($unique_names) { $seed['name'] = (string) $unique_names[0]; }
         }
         return $seed;
     }
