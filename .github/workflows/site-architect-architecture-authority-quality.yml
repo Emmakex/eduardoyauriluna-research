@@ -8,6 +8,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-admin.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
@@ -29,6 +30,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-admin.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
@@ -65,6 +67,7 @@ jobs:
           line_resource = (root / 'class-research-manager-line-resource.php').read_text(encoding='utf-8')
           line_editor = (root / 'class-research-manager-line-editor.php').read_text(encoding='utf-8')
           object_editor = (root / 'class-research-manager-object-editor.php').read_text(encoding='utf-8')
+          object_admin = (root / 'class-research-manager-object-admin.php').read_text(encoding='utf-8')
           object_resources = {
               'output': (root / 'class-research-manager-output-resource.php').read_text(encoding='utf-8'),
               'project': (root / 'class-research-manager-project-resource.php').read_text(encoding='utf-8'),
@@ -101,7 +104,7 @@ jobs:
           if "'eduardo_research_identity'" not in allowed_options:
               raise SystemExit('Plan must keep the Identity option explicit in its fail-closed security allowlist')
 
-          for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults', 'blueprint_resource_label'):
+          for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults', 'object_resource_keys', 'blueprint_resource_label'):
               if f'public static function {method}' not in registry:
                   raise SystemExit(f'Resource Registry lost descriptive authority method: {method}')
 
@@ -140,6 +143,19 @@ jobs:
                   raise SystemExit(f'{message} must derive from Resource Registry')
           if "'fields'=>array('status','slug'" in object_editor:
               raise SystemExit('Object Editor must not restore literal Research Object field vocabularies')
+
+          object_editor_kinds = object_editor.split('public function supported_kinds', 1)[1].split('public function list', 1)[0]
+          if 'Resource_Registry::object_resource_keys()' not in object_editor_kinds:
+              raise SystemExit('Object Editor must derive Research Object membership from Resource Registry')
+          duplicated_object_kinds = sorted(set(re.findall(r"'(output|project|software|dataset)'\s*=>", object_editor_kinds)))
+          if duplicated_object_kinds:
+              raise SystemExit(f'Object Editor duplicates Registry-owned Research Object membership: {duplicated_object_kinds}')
+
+          object_admin_kinds = object_admin.split('private function kinds', 1)[1].split('private function structured_status', 1)[0]
+          if 'Eduardo_Research_Manager::object_editor()->supported_kinds()' not in object_admin_kinds:
+              raise SystemExit('Object Admin must derive supported Research Object membership from Object Editor')
+          if re.search(r"return\s+array\(\s*'output'\s*=>", object_admin_kinds):
+              raise SystemExit('Object Admin must not restore a literal Research Object membership map')
 
           if 'Resource_Registry::blueprint_resource_label($resource_key)' not in compiler:
               raise SystemExit('Blueprint Compiler must derive Research resource intent labels from Resource Registry')
@@ -207,6 +223,7 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-admin.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php \
@@ -230,6 +247,7 @@ jobs:
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php';
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php';
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php';
+          require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php';
 
           if (Eduardo_Research_Manager_Identity_Profile::option_key() !== 'eduardo_research_identity') {
               fwrite(STDERR, "Canonical Identity option key drifted from the certified storage contract.\n");
@@ -242,6 +260,30 @@ jobs:
           if (Eduardo_Research_Manager_Resource_Registry::post_types() !== $expected_post_types) {
               fwrite(STDERR, "Research post-type taxonomy drifted from the certified Registry contract.\n");
               exit(1);
+          }
+
+          $expected_object_kinds = array('output','project','software','dataset');
+          if (Eduardo_Research_Manager_Resource_Registry::object_resource_keys() !== $expected_object_kinds) {
+              fwrite(STDERR, "Research Object kind grouping drifted from the certified Registry contract.\n");
+              exit(1);
+          }
+          $object_editor = (new ReflectionClass(Eduardo_Research_Manager_Object_Editor::class))->newInstanceWithoutConstructor();
+          $supported_objects = $object_editor->supported_kinds();
+          if (array_keys($supported_objects) !== $expected_object_kinds) {
+              fwrite(STDERR, "Object Editor kind ordering drifted from the Registry contract.\n");
+              exit(1);
+          }
+          $expected_object_labels = array(
+              'output'=>'Research Output',
+              'project'=>'Research Project',
+              'software'=>'Research Software',
+              'dataset'=>'Research Dataset',
+          );
+          foreach ($expected_object_labels as $kind => $label) {
+              if (($supported_objects[$kind]['label'] ?? '') !== $label) {
+                  fwrite(STDERR, "Object Editor visible label drifted for {$kind}.\n");
+                  exit(1);
+              }
           }
 
           $translation_editor = (new ReflectionClass(Eduardo_Research_Manager_Translation_Editor::class))->newInstanceWithoutConstructor();
