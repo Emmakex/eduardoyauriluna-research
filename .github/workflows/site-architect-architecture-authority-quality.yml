@@ -7,6 +7,11 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
@@ -18,6 +23,11 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
@@ -43,6 +53,13 @@ jobs:
           registry = (root / 'class-research-manager-resource-registry.php').read_text(encoding='utf-8')
           line_resource = (root / 'class-research-manager-line-resource.php').read_text(encoding='utf-8')
           line_editor = (root / 'class-research-manager-line-editor.php').read_text(encoding='utf-8')
+          object_editor = (root / 'class-research-manager-object-editor.php').read_text(encoding='utf-8')
+          object_resources = {
+              'output': (root / 'class-research-manager-output-resource.php').read_text(encoding='utf-8'),
+              'project': (root / 'class-research-manager-project-resource.php').read_text(encoding='utf-8'),
+              'software': (root / 'class-research-manager-software-resource.php').read_text(encoding='utf-8'),
+              'dataset': (root / 'class-research-manager-dataset-resource.php').read_text(encoding='utf-8'),
+          }
           capabilities = (root / 'class-research-manager-v1-capabilities.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
 
@@ -64,7 +81,7 @@ jobs:
           if missing:
               raise SystemExit(f'Plan mutation dispatcher lost explicit fail-closed actions: {missing}')
 
-          for method in ('by_creation_action', 'resource_fields', 'resource_meta_fields', 'array_fields', 'defaults'):
+          for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults'):
               if f'public static function {method}' not in registry:
                   raise SystemExit(f'Resource Registry lost descriptive authority method: {method}')
 
@@ -80,6 +97,20 @@ jobs:
           for consumer_name, source in (('Line Resource', line_resource), ('Line Editor', line_editor)):
               if "Resource_Registry::resource_meta_fields('line')" not in source:
                   raise SystemExit(f'{consumer_name} must derive Research Line meta storage from Resource Registry')
+
+          for kind, source in object_resources.items():
+              if f"Resource_Registry::editable_fields('{kind}')" not in source:
+                  raise SystemExit(f'{kind} Resource must derive bounded Research Object fields from Resource Registry')
+
+          for token, message in (
+              ('Resource_Registry::editable_fields($kind)', 'Object Editor fields'),
+              ('Resource_Registry::auxiliary_fields($kind)', 'Object Editor auxiliary fields'),
+              ('Resource_Registry::array_fields($kind)', 'Object Editor array fields'),
+          ):
+              if token not in object_editor:
+                  raise SystemExit(f'{message} must derive from Resource Registry')
+          if "'fields'=>array(" in object_editor:
+              raise SystemExit('Object Editor must not restore literal Research Object field vocabularies')
 
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
@@ -97,6 +128,11 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-editor.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-object-editor.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-output-resource.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php; do
             php -l "$file"
           done
@@ -138,5 +174,28 @@ jobs:
           if (Eduardo_Research_Manager_Resource_Registry::defaults('line') !== array('evidence_status'=>'unverified','research_status'=>'planned')) {
               fwrite(STDERR, "Research Line defaults descriptor drifted from the certified contract.\n");
               exit(1);
+          }
+
+          $expected_editable = array(
+              'output'=>array('status','slug','title','excerpt','content','language','output_type','review_status','publication_date','venue','doi','authors','line_ids'),
+              'project'=>array('status','slug','title','excerpt','content','language','project_status','question','role','start_date','end_date','partner','funding','project_url','methods','line_ids'),
+              'software'=>array('status','slug','title','excerpt','content','language','software_status','version','release_date','repository_url','archive_url','license','documentation_url','doi','programming_languages','line_ids'),
+              'dataset'=>array('status','slug','title','excerpt','content','language','version','publication_date','repository','doi','license','access_level','methodology','provenance','size','documentation_url','ethics_notes','formats','line_ids'),
+          );
+          $expected_auxiliary = array(
+              'output'=>array('output_type_verified','review_status_verified','doi_verified'),
+              'project'=>array(),
+              'software'=>array('doi_verified'),
+              'dataset'=>array('doi_verified'),
+          );
+          foreach ($expected_editable as $kind => $fields) {
+              if (Eduardo_Research_Manager_Resource_Registry::editable_fields($kind) !== $fields) {
+                  fwrite(STDERR, "Research Object editable field vocabulary drifted for {$kind}.\n");
+                  exit(1);
+              }
+              if (Eduardo_Research_Manager_Resource_Registry::auxiliary_fields($kind) !== $expected_auxiliary[$kind]) {
+                  fwrite(STDERR, "Research Object auxiliary field vocabulary drifted for {$kind}.\n");
+                  exit(1);
+              }
           }
           PHP
