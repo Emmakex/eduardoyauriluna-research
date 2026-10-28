@@ -19,28 +19,20 @@ final class Eduardo_Research_Manager_Dataset_Resource {
         if (! $post instanceof WP_Post || $post_type !== $post->post_type) {
             return new WP_Error('research_manager_dataset_missing', 'The requested Research Dataset does not exist.');
         }
-        return array(
+        $record = array(
             'post_id'=>$post_id,'post_type'=>$post_type,'status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
-            'version'=>$this->private_meta_string($post_id, '_research_dataset_version'),
-            'publication_date'=>$this->private_meta_string($post_id, '_research_publication_date'),
-            'repository'=>$this->private_meta_string($post_id, '_research_repository'),
-            'doi'=>$this->private_meta_string($post_id, '_research_doi'),
-            'doi_verified'=>$this->private_meta_string($post_id, '_research_doi_verified', '0'),
-            'license'=>$this->private_meta_string($post_id, '_research_license'),
-            'access_level'=>$this->private_meta_string($post_id, '_research_access_level'),
-            'methodology'=>$this->private_meta_string($post_id, '_research_methodology'),
-            'provenance'=>$this->private_meta_string($post_id, '_research_provenance'),
-            'size'=>$this->private_meta_string($post_id, '_research_size'),
-            'documentation_url'=>$this->private_meta_string($post_id, '_research_documentation_url'),
-            'ethics_notes'=>$this->private_meta_string($post_id, '_research_ethics_notes'),
-            'formats'=>$this->private_meta_value($post_id, '_research_formats', array()),
-            'line_ids'=>$this->private_meta_value($post_id, '_research_line_ids', array()),
-            'creation_token'=>$this->private_meta_string($post_id, '_eduardo_research_manager_creation_token'),
-            'url'=>(string) get_permalink($post),
         );
+        foreach ($this->meta_fields() as $field => $meta_key) {
+            $default = $this->default_for_field($field);
+            $record[$field] = in_array($field, $this->array_fields(), true)
+                ? $this->private_meta_value($post_id, $meta_key, $default)
+                : $this->private_meta_string($post_id, $meta_key, (string) $default);
+        }
+        $record['creation_token'] = $this->private_meta_string($post_id, '_eduardo_research_manager_creation_token');
+        $record['url'] = (string) get_permalink($post);
+        return $record;
     }
 
     public function build_creation_plan(array $data, string $intent = '', array $context = array()): array|WP_Error {
@@ -116,21 +108,19 @@ final class Eduardo_Research_Manager_Dataset_Resource {
                 $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>$wp_field,'value'=>$next[$field]);
             }
         }
-        $meta = array(
-            'language'=>'_research_language','version'=>'_research_dataset_version','publication_date'=>'_research_publication_date',
-            'repository'=>'_research_repository','doi'=>'_research_doi','license'=>'_research_license','access_level'=>'_research_access_level',
-            'methodology'=>'_research_methodology','provenance'=>'_research_provenance','size'=>'_research_size',
-            'documentation_url'=>'_research_documentation_url','ethics_notes'=>'_research_ethics_notes','formats'=>'_research_formats',
-            'line_ids'=>'_research_line_ids',
-        );
-        foreach ($meta as $field => $meta_key) {
+        $meta_fields = $this->meta_fields();
+        foreach ($meta_fields as $field => $meta_key) {
             if (! array_key_exists($field, $changes)) { continue; }
             if (maybe_serialize($current[$field]) !== maybe_serialize($next[$field])) {
                 $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$meta_key,'value'=>$next[$field]);
             }
         }
         if (array_key_exists('doi', $changes) && (string) $current['doi_verified'] !== (string) $next['doi_verified']) {
-            $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_doi_verified','value'=>$next['doi_verified']);
+            $meta_key = (string) ($meta_fields['doi_verified'] ?? '');
+            if ('' === $meta_key) {
+                return new WP_Error('research_manager_dataset_storage_contract_invalid', 'Research Dataset storage descriptor is incomplete.');
+            }
+            $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$meta_key,'value'=>$next['doi_verified']);
         }
         if (! $actions) { return new WP_Error('research_manager_no_change', 'The requested Research Dataset update already matches stored state.'); }
         $intent = '' !== trim($intent) ? $intent : sprintf('Update Research Dataset #%d', $post_id);
@@ -187,6 +177,25 @@ final class Eduardo_Research_Manager_Dataset_Resource {
     private function post_type(): string {
         $registry = Eduardo_Research_Manager_Resource_Registry::get('dataset');
         return (string) ($registry['post_type'] ?? '');
+    }
+
+    private function meta_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::resource_meta_fields('dataset');
+    }
+
+    private function array_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::array_fields('dataset');
+    }
+
+    private function defaults(): array {
+        return Eduardo_Research_Manager_Resource_Registry::defaults('dataset');
+    }
+
+    private function default_for_field(string $field): mixed {
+        if ('language' === $field) { return $this->contract->default_language(); }
+        if (in_array($field, $this->array_fields(), true)) { return array(); }
+        $defaults = $this->defaults();
+        return $defaults[$field] ?? '';
     }
 
     private function private_meta_value(int $post_id, string $key, mixed $default = null): mixed {
