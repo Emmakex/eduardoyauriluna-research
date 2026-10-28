@@ -83,10 +83,10 @@ final class Eduardo_Research_Manager_Dataset_Resource {
         $current = $this->inspect($post_id);
         if (is_wp_error($current)) { return $current; }
         if (! $changes) { return new WP_Error('research_manager_empty_update', 'At least one Research Dataset field must be supplied.'); }
-        $allowed = array(
-            'title','excerpt','content','language','version','publication_date','repository','doi','license','access_level',
-            'methodology','provenance','size','documentation_url','ethics_notes','formats','line_ids',
-        );
+        $allowed = array_values(array_diff(
+            Eduardo_Research_Manager_Resource_Registry::editable_fields('dataset'),
+            array('status','slug')
+        ));
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_dataset_field_not_allowed', 'Research Dataset update contains fields outside the bounded contract: ' . implode(', ', array_map('sanitize_key', $unknown)));
@@ -140,7 +140,7 @@ final class Eduardo_Research_Manager_Dataset_Resource {
     public function verify(int $post_id, array $expected, ?string $creation_token = null): array|WP_Error {
         $record = $this->inspect($post_id);
         if (is_wp_error($record)) { return $record; }
-        $allowed = array('status','slug','title','excerpt','content','language','version','publication_date','repository','doi','license','access_level','methodology','provenance','size','documentation_url','ethics_notes','formats','line_ids');
+        $allowed = Eduardo_Research_Manager_Resource_Registry::editable_fields('dataset');
         $unknown = array_diff(array_keys($expected), $allowed);
         if ($unknown) { return new WP_Error('research_manager_dataset_field_not_allowed', 'Research Dataset verification requested unsupported fields.'); }
         $synthetic = array(
