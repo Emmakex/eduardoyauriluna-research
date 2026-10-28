@@ -12,20 +12,14 @@ final class Eduardo_Research_Manager_Object_Editor {
     }
 
     public function supported_kinds(): array {
-        $supported = array(
-            'output'=>array('label'=>'Research Output'),
-            'project'=>array('label'=>'Research Project'),
-            'software'=>array('label'=>'Research Software'),
-            'dataset'=>array('label'=>'Research Dataset'),
-        );
-        foreach ($supported as $kind => $spec) {
+        $supported = array();
+        foreach (Eduardo_Research_Manager_Resource_Registry::object_resource_keys() as $kind) {
             $registry = Eduardo_Research_Manager_Resource_Registry::get($kind);
-            $supported[$kind] = array_merge(
-                array(
-                    'post_type'=>(string) ($registry['post_type'] ?? ''),
-                    'fields'=>Eduardo_Research_Manager_Resource_Registry::editable_fields($kind),
-                ),
-                $spec
+            if (! $registry) { continue; }
+            $supported[$kind] = array(
+                'post_type'=>(string) ($registry['post_type'] ?? ''),
+                'fields'=>Eduardo_Research_Manager_Resource_Registry::editable_fields($kind),
+                'label'=>'Research ' . ucwords(str_replace(array('-','_'), ' ', $kind)),
             );
         }
         return $supported;
