@@ -158,6 +158,35 @@ final class Eduardo_Research_Manager_Resource_Registry {
         return array();
     }
 
+    /** Descriptive editable/readback field vocabulary; this does not authorize mutation. */
+    public static function resource_fields(string $resource_key): array {
+        $spec = self::get($resource_key);
+        if (! $spec) { return array(); }
+        $meta = is_array($spec['meta'] ?? null) ? $spec['meta'] : array();
+        return array_merge(
+            array('status','slug','title','excerpt','content','language'),
+            array_keys($meta)
+        );
+    }
+
+    /** Descriptive field-to-storage map; Plan remains the fail-closed mutation authority. */
+    public static function resource_meta_fields(string $resource_key): array {
+        $spec = self::get($resource_key);
+        if (! $spec) { return array(); }
+        $meta = is_array($spec['meta'] ?? null) ? $spec['meta'] : array();
+        return array_merge(array('language'=>'_research_language'), $meta);
+    }
+
+    public static function array_fields(string $resource_key): array {
+        $spec = self::get($resource_key);
+        return is_array($spec['array_fields'] ?? null) ? array_values($spec['array_fields']) : array();
+    }
+
+    public static function defaults(string $resource_key): array {
+        $spec = self::get($resource_key);
+        return is_array($spec['defaults'] ?? null) ? $spec['defaults'] : array();
+    }
+
     public static function post_types(): array {
         return array_values(array_map(
             static fn(array $spec): string => (string) ($spec['post_type'] ?? ''),
