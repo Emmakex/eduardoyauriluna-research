@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-v2-resource-research-objects-20261028-01",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "research_object",
+    "filters": {}
+  }
+}
