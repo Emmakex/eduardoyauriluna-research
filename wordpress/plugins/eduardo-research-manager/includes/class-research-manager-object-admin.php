@@ -125,7 +125,7 @@ final class Eduardo_Research_Manager_Object_Admin {
               <tr><th><?php echo esc_html__('Object type', 'eduardo-research-manager'); ?></th><td><?php echo esc_html(strtoupper((string) ($prepared['kind'] ?? ''))); ?></td></tr>
               <tr><th><?php echo esc_html__('Mode', 'eduardo-research-manager'); ?></th><td><?php echo esc_html(strtoupper((string) ($prepared['mode'] ?? ''))); ?></td></tr>
               <tr><th><?php echo esc_html__('Status', 'eduardo-research-manager'); ?></th><td><?php echo esc_html(strtoupper((string) ($prepared['status'] ?? ''))); ?></td></tr>
-              <tr><th><?php echo esc_html__('Risk', 'eduardo-research-manager'); ?></th><td><?php echo esc_html(strtoupper((string) ($prepared['risk'] ?? $prepared['plan']['risk'] ?? ''))); ?></td></tr>
+              <tr><th><?php echo esc_html__('Risk', 'eduardo-research-manager'); ?></th><td><?php echo esc_html(strtoupper((string) ($prepared['risk'] ?? ''))); ?></td></tr>
               <tr><th><?php echo esc_html__('Mutation actions', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) $actions); ?></td></tr>
               <tr><th><?php echo esc_html__('Apply gate', 'eduardo-research-manager'); ?></th><td><?php echo ! empty($prepared['apply_allowed']) ? esc_html__('Allowed', 'eduardo-research-manager') : esc_html__('Blocked', 'eduardo-research-manager'); ?></td></tr>
               <?php if (empty($prepared['apply_allowed']) && '' !== (string) ($prepared['apply_blocker'] ?? '')) : ?><tr><th><?php echo esc_html__('Blocker', 'eduardo-research-manager'); ?></th><td><?php echo esc_html((string) $prepared['apply_blocker']); ?></td></tr><?php endif; ?>
