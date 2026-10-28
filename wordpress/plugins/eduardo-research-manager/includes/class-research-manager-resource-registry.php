@@ -169,6 +169,22 @@ final class Eduardo_Research_Manager_Resource_Registry {
         );
     }
 
+    /** Public editor/verification vocabulary; derived from Registry storage descriptors. */
+    public static function editable_fields(string $resource_key): array {
+        return array_values(array_filter(
+            self::resource_fields($resource_key),
+            static fn(string $field): bool => ! str_ends_with($field, '_verified')
+        ));
+    }
+
+    /** Readback-only descriptor fields that accompany editable Research values. */
+    public static function auxiliary_fields(string $resource_key): array {
+        return array_values(array_diff(
+            self::resource_fields($resource_key),
+            self::editable_fields($resource_key)
+        ));
+    }
+
     /** Descriptive field-to-storage map; Plan remains the fail-closed mutation authority. */
     public static function resource_meta_fields(string $resource_key): array {
         $spec = self::get($resource_key);
