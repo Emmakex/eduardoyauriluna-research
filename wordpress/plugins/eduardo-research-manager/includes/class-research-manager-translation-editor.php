@@ -17,14 +17,27 @@ final class Eduardo_Research_Manager_Translation_Editor {
     }
 
     public function supported_types(): array {
-        return array(
-            'research_line'=>'Research Lines',
-            'post'=>'Research Insights',
-            'research_output'=>'Research Outputs',
-            'research_project'=>'Research Projects',
-            'research_software'=>'Research Software',
-            'research_dataset'=>'Research Datasets',
+        $labels = array(
+            'lines'=>'Research Lines',
+            'outputs'=>'Research Outputs',
+            'projects'=>'Research Projects',
+            'software'=>'Research Software',
+            'datasets'=>'Research Datasets',
         );
+        $types = array();
+        foreach ($labels as $inventory_key => $label) {
+            $spec = Eduardo_Research_Manager_Resource_Registry::by_inventory_key($inventory_key);
+            $post_type = sanitize_key((string) ($spec['post_type'] ?? ''));
+            if ('' === $post_type) { continue; }
+            $types[$post_type] = $label;
+            if ('lines' === $inventory_key) {
+                $types['post'] = 'Research Insights';
+            }
+        }
+        if (! isset($types['post'])) {
+            $types['post'] = 'Research Insights';
+        }
+        return $types;
     }
 
     public function list_candidates(string $post_type, string $language): array|WP_Error {
