@@ -24,6 +24,7 @@ final class Eduardo_Research_Manager_Line_Editor {
         }
 
         $registry = Eduardo_Research_Manager_Resource_Registry::get('line');
+        $meta_fields = Eduardo_Research_Manager_Resource_Registry::resource_meta_fields('line');
         $args = array(
             'post_type'=>(string) ($registry['post_type'] ?? ''),
             'post_status'=>'any',
@@ -33,7 +34,7 @@ final class Eduardo_Research_Manager_Line_Editor {
             'suppress_filters'=>true,
         );
         if ('' !== $language) {
-            $args['meta_query'] = array(array('key'=>'_research_language','value'=>$language,'compare'=>'='));
+            $args['meta_query'] = array(array('key'=>(string) ($meta_fields['language'] ?? ''),'value'=>$language,'compare'=>'='));
         }
 
         $rows = array();
@@ -244,21 +245,16 @@ final class Eduardo_Research_Manager_Line_Editor {
 
     private function expected_from_creation_action(array $action): array {
         $expected = array();
-        foreach (array(
-            'status','slug','title','excerpt','content','language','evidence_status','research_status',
-            'central_question','order','topics','methods'
-        ) as $field) {
-            $expected[$field] = $action[$field] ?? (in_array($field, array('topics','methods'), true) ? array() : '');
+        $array_fields = Eduardo_Research_Manager_Resource_Registry::array_fields('line');
+        foreach (Eduardo_Research_Manager_Resource_Registry::resource_fields('line') as $field) {
+            $expected[$field] = $action[$field] ?? (in_array($field, $array_fields, true) ? array() : '');
         }
         return $expected;
     }
 
     private function state_checksum(array $record): string {
         $state = array();
-        foreach (array(
-            'post_id','status','slug','title','excerpt','content','language','evidence_status','research_status',
-            'central_question','order','topics','methods'
-        ) as $field) {
+        foreach (array_merge(array('post_id'), Eduardo_Research_Manager_Resource_Registry::resource_fields('line')) as $field) {
             $state[$field] = $record[$field] ?? null;
         }
         return hash('sha256', (string) wp_json_encode($state));
