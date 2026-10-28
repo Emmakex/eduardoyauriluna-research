@@ -19,7 +19,7 @@ final class Eduardo_Research_Manager_Project_Resource {
         if (! $post instanceof WP_Post || $post_type !== $post->post_type) {
             return new WP_Error('research_manager_project_missing', 'The requested Research Project does not exist.');
         }
-        return array(
+        $record = array(
             'post_id'=>$post_id,
             'post_type'=>$post_type,
             'status'=>(string) $post->post_status,
@@ -27,20 +27,16 @@ final class Eduardo_Research_Manager_Project_Resource {
             'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,
             'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
-            'project_status'=>$this->private_meta_string($post_id, '_research_project_status'),
-            'question'=>$this->private_meta_string($post_id, '_research_question'),
-            'role'=>$this->private_meta_string($post_id, '_research_role'),
-            'start_date'=>$this->private_meta_string($post_id, '_research_start_date'),
-            'end_date'=>$this->private_meta_string($post_id, '_research_end_date'),
-            'partner'=>$this->private_meta_string($post_id, '_research_partner'),
-            'funding'=>$this->private_meta_string($post_id, '_research_funding'),
-            'project_url'=>$this->private_meta_string($post_id, '_research_project_url'),
-            'methods'=>$this->private_meta_value($post_id, '_research_methods', array()),
-            'line_ids'=>$this->private_meta_value($post_id, '_research_line_ids', array()),
-            'creation_token'=>$this->private_meta_string($post_id, '_eduardo_research_manager_creation_token'),
-            'url'=>(string) get_permalink($post),
         );
+        foreach ($this->meta_fields() as $field => $meta_key) {
+            $default = $this->default_for_field($field);
+            $record[$field] = in_array($field, $this->array_fields(), true)
+                ? $this->private_meta_value($post_id, $meta_key, $default)
+                : $this->private_meta_string($post_id, $meta_key, (string) $default);
+        }
+        $record['creation_token'] = $this->private_meta_string($post_id, '_eduardo_research_manager_creation_token');
+        $record['url'] = (string) get_permalink($post);
+        return $record;
     }
 
     public function build_creation_plan(array $data, string $intent = '', array $context = array()): array|WP_Error {
@@ -115,12 +111,7 @@ final class Eduardo_Research_Manager_Project_Resource {
                 $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>$wp_field,'value'=>$next[$field]);
             }
         }
-        $meta = array(
-            'language'=>'_research_language','project_status'=>'_research_project_status','question'=>'_research_question','role'=>'_research_role',
-            'start_date'=>'_research_start_date','end_date'=>'_research_end_date','partner'=>'_research_partner','funding'=>'_research_funding',
-            'project_url'=>'_research_project_url','methods'=>'_research_methods','line_ids'=>'_research_line_ids',
-        );
-        foreach ($meta as $field => $meta_key) {
+        foreach ($this->meta_fields() as $field => $meta_key) {
             if (! array_key_exists($field, $changes)) { continue; }
             if (maybe_serialize($current[$field]) !== maybe_serialize($next[$field])) {
                 $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$meta_key,'value'=>$next[$field]);
@@ -192,6 +183,25 @@ final class Eduardo_Research_Manager_Project_Resource {
     private function post_type(): string {
         $registry = Eduardo_Research_Manager_Resource_Registry::get('project');
         return (string) ($registry['post_type'] ?? '');
+    }
+
+    private function meta_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::resource_meta_fields('project');
+    }
+
+    private function array_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::array_fields('project');
+    }
+
+    private function defaults(): array {
+        return Eduardo_Research_Manager_Resource_Registry::defaults('project');
+    }
+
+    private function default_for_field(string $field): mixed {
+        if ('language' === $field) { return $this->contract->default_language(); }
+        if (in_array($field, $this->array_fields(), true)) { return array(); }
+        $defaults = $this->defaults();
+        return $defaults[$field] ?? '';
     }
 
     private function private_meta_value(int $post_id, string $key, mixed $default = null): mixed {
