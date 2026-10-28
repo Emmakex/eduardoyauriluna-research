@@ -116,6 +116,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
         if (is_wp_error($line_index)) { return $line_index; }
         $operations = array();
         foreach (Eduardo_Research_Manager_Resource_Registry::relation_blueprint_specs() as $resource => $spec) {
+            $service_key = sanitize_key((string) $resource);
             foreach ($normalized[$resource] as $index => $record) {
                 if (! is_array($record)) { return $this->record_error($resource, $index, 'Blueprint resource records must be object-like arrays.'); }
                 if (! array_key_exists('line_refs', $record)) { continue; }
@@ -137,7 +138,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
                 $context = $this->evidence_context($record);
                 if (is_wp_error($context)) { return $this->record_error($resource, $index, $context->get_error_message()); }
                 $operations[] = array(
-                    'resource'=>$resource,'service'=>$spec['service'],'index'=>$index,'post_id'=>$post_id,'slug'=>$slug,'language'=>$language,
+                    'resource'=>$resource,'service'=>$service_key,'index'=>$index,'post_id'=>$post_id,'slug'=>$slug,'language'=>$language,
                     'line_refs'=>array_values(array_map('strval', $record['line_refs'])),'line_ids'=>$line_ids,'context'=>$context,
                 );
             }
@@ -193,13 +194,7 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
 
     private function service(string $name): object {
         $name = sanitize_key($name);
-        $allowed = false;
-        foreach (Eduardo_Research_Manager_Resource_Registry::relation_blueprint_specs() as $spec) {
-            if ($name === sanitize_key((string) ($spec['service'] ?? ''))) {
-                $allowed = true;
-                break;
-            }
-        }
+        $allowed = isset(Eduardo_Research_Manager_Resource_Registry::relation_blueprint_specs()[$name]);
         $services = Eduardo_Research_Manager::research_services();
         if (! $allowed || ! isset($services[$name])) {
             throw new LogicException('Unsupported Research Manager relation service.');
