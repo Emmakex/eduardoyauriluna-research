@@ -73,7 +73,9 @@ check(str_contains($insight,"'slug'=>'post_name'"),'Insight slug update must wri
 check(str_contains($insight,'research_manager_insight_slug_required'),'Insight slug must reject empty values');
 
 $line=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-line-resource.php');
-check(str_contains($line,"array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods')"),'Research Line update contract must include status and slug');
+$lineRegistry=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php');
+check(str_contains($line,"Eduardo_Research_Manager_Resource_Registry::resource_fields('line')"),'Research Line update contract must derive its field vocabulary from Resource Registry');
+check(str_contains($lineRegistry,"array('status','slug','title','excerpt','content','language')"),'Research Line Registry vocabulary must include status and slug');
 check(str_contains($line,"'status'=>'post_status'"),'Research Line publication-state update must use bounded post_status action');
 check(str_contains($line,"'slug'=>'post_name'"),'Research Line slug update must use bounded post_name action');
 check(str_contains($line,'research_manager_line_slug_required'),'Research Line slug must reject empty values');
