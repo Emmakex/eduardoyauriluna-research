@@ -1,0 +1,72 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-about-es-20261028-01",
+  "command_sha256": "06c33eb1fa496b87f2f7438851e3c75f9a97cbb0026fcf48dcea548b86d6f5cf",
+  "data": {
+    "allowed_slots": [
+      "eyebrow",
+      "lead",
+      "sections"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "about",
+    "effective_slots": {
+      "eyebrow": "Perfil investigador",
+      "lead": "Eduardo Jose Yauri Luna es un investigador centrado en agentes autónomos de IA, colaboración humano–IA, transformación digital de pymes y descubrimiento de información mediado por IA.",
+      "sections": [
+        "Enfoque de investigación",
+        "Trayectoria profesional"
+      ]
+    },
+    "expected_model": "research-about-v1",
+    "expected_role": "profile",
+    "key": "about",
+    "language": "es",
+    "model": "research-about-v1",
+    "option_key": "eduardo_research_surface_about_es",
+    "page_id": 9,
+    "published": true,
+    "role": "profile",
+    "slug": "about",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "eyebrow": "Perfil investigador",
+      "lead": "Eduardo Jose Yauri Luna es un investigador centrado en agentes autónomos de IA, colaboración humano–IA, transformación digital de pymes y descubrimiento de información mediado por IA.",
+      "sections": [
+        "Enfoque de investigación",
+        "Trayectoria profesional"
+      ]
+    },
+    "title": "About",
+    "url": "https://eduardoyauriluna.com/es/perfil/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "about",
+    "language": "es",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
