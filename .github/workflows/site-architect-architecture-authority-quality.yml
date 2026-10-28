@@ -1,0 +1,67 @@
+name: Site Architect Architecture Authority Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - '.github/workflows/site-architect-architecture-authority-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
+      - '.github/workflows/site-architect-architecture-authority-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  authority-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Site Architect authority boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('wordpress/plugins/eduardo-research-manager/includes')
+          plan = (root / 'class-research-manager-plan.php').read_text(encoding='utf-8')
+          registry = (root / 'class-research-manager-resource-registry.php').read_text(encoding='utf-8')
+          hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
+
+          actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
+
+          risk = plan.split('public static function action_risk', 1)[1].split('private static function normalize_action', 1)[0]
+          signature = plan.split('private static function target_signature', 1)[1].split('private static function checksum', 1)[0]
+          normalizer = plan.split('private static function normalize_action', 1)[1].split('private static function normalize_page_creation', 1)[0]
+
+          for section_name, section in (('action_risk', risk), ('target_signature', signature)):
+              leaked = [action for action in actions if action in section]
+              if leaked:
+                  raise SystemExit(f'{section_name} duplicates Research creation taxonomy: {leaked}')
+              if 'Resource_Registry::by_creation_action' not in section:
+                  raise SystemExit(f'{section_name} must derive Research creation descriptors from Resource Registry')
+
+          # The mutation dispatcher deliberately remains explicit and fail-closed.
+          missing = [action for action in actions if action not in normalizer]
+          if missing:
+              raise SystemExit(f'Plan mutation dispatcher lost explicit fail-closed actions: {missing}')
+
+          if 'public static function by_creation_action' not in registry:
+              raise SystemExit('Resource Registry must remain the descriptive creation-action authority')
+
+          forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
+          leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
+          if leaked_hydrator:
+              raise SystemExit('Blueprint Hydrator reconstructs language storage directly: ' + ', '.join(leaked_hydrator))
+          if '$contract->identity_headline_field($language)' not in hydrator:
+              raise SystemExit('Blueprint Hydrator must resolve Identity headline storage through Contract')
+          PY
