@@ -241,6 +241,7 @@ final class Eduardo_Research_Manager_Resource_Registry {
         );
     }
 
+    /** Descriptive relation-capable blueprint resources; service binding remains operational. */
     public static function relation_blueprint_specs(): array {
         $specs = array();
         foreach (self::all() as $spec) {
@@ -249,7 +250,6 @@ final class Eduardo_Research_Manager_Resource_Registry {
             if ('' === $inventory_key) { continue; }
             $specs[$inventory_key] = array(
                 'post_type'=>(string) ($spec['post_type'] ?? ''),
-                'service'=>$inventory_key,
             );
         }
         return $specs;
