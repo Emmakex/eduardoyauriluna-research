@@ -55,6 +55,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           root = Path('wordpress/plugins/eduardo-research-manager/includes')
           plan = (root / 'class-research-manager-plan.php').read_text(encoding='utf-8')
@@ -117,6 +118,15 @@ jobs:
           for kind, source in object_resources.items():
               if f"Resource_Registry::editable_fields('{kind}')" not in source:
                   raise SystemExit(f'{kind} Resource must derive bounded Research Object fields from Resource Registry')
+              if f"Resource_Registry::resource_meta_fields('{kind}')" not in source:
+                  raise SystemExit(f'{kind} Resource must derive Research Object meta storage from Resource Registry')
+              if f"Resource_Registry::array_fields('{kind}')" not in source:
+                  raise SystemExit(f'{kind} Resource must derive Research Object array storage from Resource Registry')
+              if f"Resource_Registry::defaults('{kind}')" not in source:
+                  raise SystemExit(f'{kind} Resource must derive Research Object storage defaults from Resource Registry')
+              storage_literals = sorted(set(re.findall(r"'(_research_[^']+)'", source)))
+              if storage_literals:
+                  raise SystemExit(f'{kind} Resource hardcodes Registry-owned meta storage: {storage_literals}')
 
           for token, message in (
               ('Resource_Registry::editable_fields($kind)', 'Object Editor fields'),
