@@ -203,6 +203,14 @@ final class Eduardo_Research_Manager_Resource_Registry {
         return is_array($spec['defaults'] ?? null) ? $spec['defaults'] : array();
     }
 
+    /** Descriptive Research Object grouping; Research Lines remain their own vertical resource. */
+    public static function object_resource_keys(): array {
+        return array_values(array_filter(
+            array_keys(self::all()),
+            static fn(string $resource_key): bool => 'line' !== $resource_key
+        ));
+    }
+
     public static function post_types(): array {
         return array_values(array_map(
             static fn(array $spec): string => (string) ($spec['post_type'] ?? ''),
