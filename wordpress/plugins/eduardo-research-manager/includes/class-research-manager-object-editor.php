@@ -13,27 +13,18 @@ final class Eduardo_Research_Manager_Object_Editor {
 
     public function supported_kinds(): array {
         $supported = array(
-            'output'=>array(
-                'label'=>'Research Output',
-                'fields'=>array('status','slug','title','excerpt','content','language','output_type','review_status','publication_date','venue','doi','authors','line_ids'),
-            ),
-            'project'=>array(
-                'label'=>'Research Project',
-                'fields'=>array('status','slug','title','excerpt','content','language','project_status','question','role','start_date','end_date','partner','funding','project_url','methods','line_ids'),
-            ),
-            'software'=>array(
-                'label'=>'Research Software',
-                'fields'=>array('status','slug','title','excerpt','content','language','software_status','version','release_date','repository_url','archive_url','license','documentation_url','doi','programming_languages','line_ids'),
-            ),
-            'dataset'=>array(
-                'label'=>'Research Dataset',
-                'fields'=>array('status','slug','title','excerpt','content','language','version','publication_date','repository','doi','license','access_level','methodology','provenance','size','documentation_url','ethics_notes','formats','line_ids'),
-            ),
+            'output'=>array('label'=>'Research Output'),
+            'project'=>array('label'=>'Research Project'),
+            'software'=>array('label'=>'Research Software'),
+            'dataset'=>array('label'=>'Research Dataset'),
         );
         foreach ($supported as $kind => $spec) {
             $registry = Eduardo_Research_Manager_Resource_Registry::get($kind);
             $supported[$kind] = array_merge(
-                array('post_type'=>(string) ($registry['post_type'] ?? '')),
+                array(
+                    'post_type'=>(string) ($registry['post_type'] ?? ''),
+                    'fields'=>Eduardo_Research_Manager_Resource_Registry::editable_fields($kind),
+                ),
                 $spec
             );
         }
@@ -322,7 +313,7 @@ final class Eduardo_Research_Manager_Object_Editor {
         $spec = $this->supported_kinds()[sanitize_key($kind)] ?? array('fields'=>array());
         $expected = array();
         foreach ((array) $spec['fields'] as $field) {
-            $expected[$field] = $action[$field] ?? $this->default_value_for_field($field);
+            $expected[$field] = $action[$field] ?? $this->default_value_for_field($kind, $field);
         }
         return $expected;
     }
@@ -340,14 +331,10 @@ final class Eduardo_Research_Manager_Object_Editor {
     }
 
     private function auxiliary_state_fields(string $kind): array {
-        return match (sanitize_key($kind)) {
-            'output' => array('output_type_verified','review_status_verified','doi_verified'),
-            'software', 'dataset' => array('doi_verified'),
-            default => array(),
-        };
+        return Eduardo_Research_Manager_Resource_Registry::auxiliary_fields($kind);
     }
 
-    private function default_value_for_field(string $field): mixed {
-        return in_array($field, array('authors','line_ids','methods','programming_languages','formats'), true) ? array() : '';
+    private function default_value_for_field(string $kind, string $field): mixed {
+        return in_array($field, Eduardo_Research_Manager_Resource_Registry::array_fields($kind), true) ? array() : '';
     }
 }
