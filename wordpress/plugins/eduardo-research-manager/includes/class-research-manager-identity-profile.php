@@ -5,6 +5,8 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Identity_Profile {
+    private const OPTION_KEY = 'eduardo_research_identity';
+
     private Eduardo_Research_Manager_Executor $executor;
     private Eduardo_Research_Manager_Evidence_Editor $evidence;
 
@@ -16,8 +18,12 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $this->evidence = $evidence ?: Eduardo_Research_Manager::evidence_editor();
     }
 
+    public static function option_key(): string {
+        return self::OPTION_KEY;
+    }
+
     public function inspect(): array|WP_Error {
-        $stored = get_option('eduardo_research_identity', array());
+        $stored = get_option(self::OPTION_KEY, array());
         if (! is_array($stored)) {
             return new WP_Error('research_manager_identity_invalid', 'The canonical Researcher Identity has an invalid stored shape.');
         }
@@ -126,7 +132,7 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $plan = Eduardo_Research_Manager_Plan::create(
             'Update canonical verified Researcher Identity profile',
             array(
-                array('type'=>'option','key'=>'eduardo_research_identity','value'=>$next),
+                array('type'=>'option','key'=>self::OPTION_KEY,'value'=>$next),
                 array('type'=>'option','key'=>'eduardo_research_evidence','value'=>$store),
             ),
             array('evidence_confirmed'=>$evidence_confirmed,'evidence_reference'=>$reference)
