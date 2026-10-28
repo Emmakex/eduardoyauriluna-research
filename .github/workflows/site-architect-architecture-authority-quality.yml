@@ -18,6 +18,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
   push:
@@ -38,6 +39,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
 
@@ -75,6 +77,7 @@ jobs:
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
           identity_profile = (root / 'class-research-manager-identity-profile.php').read_text(encoding='utf-8')
           pairing = (root / 'class-research-manager-translation-pairing.php').read_text(encoding='utf-8')
+          translation_editor = (root / 'class-research-manager-translation-editor.php').read_text(encoding='utf-8')
 
           actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
 
@@ -167,6 +170,15 @@ jobs:
               if forbidden in pairing:
                   raise SystemExit('Translation Pairing must not restore duplicated Research post-type constants')
 
+          translation_editor_types = translation_editor.split('public function supported_types', 1)[1].split('public function list_candidates', 1)[0]
+          if 'Resource_Registry::by_inventory_key($inventory_key)' not in translation_editor_types:
+              raise SystemExit('Translation Editor must derive Research post types from Resource Registry')
+          duplicated_editor_types = sorted(set(re.findall(r"'research_(?:line|output|project|software|dataset)'", translation_editor_types)))
+          if duplicated_editor_types:
+              raise SystemExit(f'Translation Editor duplicates Registry-owned Research post types: {duplicated_editor_types}')
+          if "$types['post'] = 'Research Insights';" not in translation_editor_types:
+              raise SystemExit('Translation Editor must keep Insight post as the explicit non-Registry UI exception')
+
           if "private const OPTION_KEY = 'eduardo_research_identity';" not in identity_profile:
               raise SystemExit('Identity Profile must own the canonical Identity option key')
           if 'public static function option_key(): string' not in identity_profile or 'return self::OPTION_KEY;' not in identity_profile:
@@ -204,7 +216,8 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php \
-            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php; do
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php; do
             php -l "$file"
           done
 
@@ -216,6 +229,7 @@ jobs:
           }
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php';
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php';
+          require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php';
 
           if (Eduardo_Research_Manager_Identity_Profile::option_key() !== 'eduardo_research_identity') {
               fwrite(STDERR, "Canonical Identity option key drifted from the certified storage contract.\n");
@@ -227,6 +241,20 @@ jobs:
           );
           if (Eduardo_Research_Manager_Resource_Registry::post_types() !== $expected_post_types) {
               fwrite(STDERR, "Research post-type taxonomy drifted from the certified Registry contract.\n");
+              exit(1);
+          }
+
+          $translation_editor = (new ReflectionClass(Eduardo_Research_Manager_Translation_Editor::class))->newInstanceWithoutConstructor();
+          $expected_translation_types = array(
+              'research_line'=>'Research Lines',
+              'post'=>'Research Insights',
+              'research_output'=>'Research Outputs',
+              'research_project'=>'Research Projects',
+              'research_software'=>'Research Software',
+              'research_dataset'=>'Research Datasets',
+          );
+          if ($translation_editor->supported_types() !== $expected_translation_types) {
+              fwrite(STDERR, "Translation Editor visible type labels or ordering drifted from the certified UI contract.\n");
               exit(1);
           }
 
