@@ -33,7 +33,17 @@ EVIDENCE_GROUPS = {
 }
 PAGE_KEYS = {"home", "about", "research", "cv", "contact"}
 LIST_RESOURCES = {"insight", "research_object", "research_line", "evidence"}
-INSPECT_RESOURCES = {"insight", "research_object", "research_line", "page", "navigation", "status", "versions"}
+INSPECT_RESOURCES = {
+    "insight",
+    "research_object",
+    "research_line",
+    "page",
+    "navigation",
+    "status",
+    "versions",
+    "design",
+    "design_variants",
+}
 SENSITIVE_KEY_PARTS = (
     "token",
     "secret",
@@ -130,7 +140,7 @@ def validate_inspect(payload: dict[str, Any]) -> None:
     if resource not in INSPECT_RESOURCES:
         raise CommandError("manager.resource.inspect resource is not supported")
 
-    if resource in {"navigation", "status", "versions"}:
+    if resource in {"navigation", "status", "versions", "design", "design_variants"}:
         if set(payload) != {"resource"}:
             raise CommandError(f"{resource} inspect accepts no caller-selected parameters")
         return
@@ -236,6 +246,12 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 descriptor = {"type": resource}
             elif resource == "versions":
                 data = client.call("research_versions", {})
+                descriptor = {"type": resource}
+            elif resource == "design":
+                data = client.call("site_design_inspect", {})
+                descriptor = {"type": resource}
+            elif resource == "design_variants":
+                data = client.call("site_design_variants", {})
                 descriptor = {"type": resource}
             elif resource == "insight":
                 post_id = int(payload["id"])
@@ -360,6 +376,22 @@ def self_test() -> int:
             "requested_by": "chatgpt",
             "payload": {"resource": "research_line", "id": 29},
         },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-design-0009",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "design"},
+        },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-design-variants-0010",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "design_variants"},
+        },
     ]
     for command in good_commands:
         validate_command(command)
@@ -399,6 +431,24 @@ def self_test() -> int:
         pass
     else:
         raise CommandError("resource read self-test accepted an invalid Research Line id")
+
+    bad_design = dict(good_commands[8])
+    bad_design["payload"] = {"resource": "design", "preset": "researcher"}
+    try:
+        validate_command(bad_design)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("resource read self-test accepted caller-selected Design parameters")
+
+    bad_design_variants = dict(good_commands[9])
+    bad_design_variants["payload"] = {"resource": "design_variants", "variant": "hero"}
+    try:
+        validate_command(bad_design_variants)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("resource read self-test accepted caller-selected Design Variant parameters")
 
     print("research-gateway-v2 resource read self-test: OK")
     return 0
