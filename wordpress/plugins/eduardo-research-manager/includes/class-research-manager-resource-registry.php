@@ -214,6 +214,20 @@ final class Eduardo_Research_Manager_Resource_Registry {
         return array_keys(self::vertical_inventory_specs());
     }
 
+    /** Human-readable singular descriptor for Greenfield blueprint intent text. */
+    public static function blueprint_resource_label(string $inventory_key): string {
+        $inventory_key = sanitize_key($inventory_key);
+        return match ($inventory_key) {
+            'insights'=>'insight',
+            'lines'=>'research line',
+            'outputs'=>'research output',
+            'projects'=>'research project',
+            'software'=>'research software',
+            'datasets'=>'research dataset',
+            default=>rtrim($inventory_key, 's'),
+        };
+    }
+
     public static function vertical_inventory_specs(): array {
         return array_merge(
             array(
