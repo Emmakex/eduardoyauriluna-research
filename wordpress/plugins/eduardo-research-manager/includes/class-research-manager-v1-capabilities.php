@@ -32,7 +32,7 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             $data['insight_control']['slug_updates']=array('available'=>true,'operation'=>'insight-update','sanitization'=>'sanitize_title','reversible'=>true,'stale_preview_protection'=>true);
         }
         if(is_array($data['research_line_control']??null)){
-            $fields=array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods');
+            $fields=Eduardo_Research_Manager_Resource_Registry::resource_fields('line');
             $data['research_line_control']['fields']=$fields;
             $data['research_line_control']['update_fields']=$fields;
             $data['research_line_control']['slug_updates']=array('available'=>true,'operation'=>'line-update','sanitization'=>'sanitize_title','reversible'=>true);
