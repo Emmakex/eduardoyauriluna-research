@@ -1,0 +1,30 @@
+{
+  "action": "navigation.update",
+  "command_id": "cmd-v2-navigation-rendered-temporary-20261028-01",
+  "command_sha256": "61ea9b6a775f3925201335e2ddbe6896e9d1eda05ec0bd32443f36962d329a4e",
+  "correlation": {
+    "operation_id": "erm-nav-op-f9d9d2b29dad448980a9c4abe9affe74",
+    "plan_id": "erm-nav-plan-59651b2c44b1520f4f-0f272626"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "site.diagnostics",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "item_count": 2,
+    "location": "footer",
+    "registered_targets_only": true
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
