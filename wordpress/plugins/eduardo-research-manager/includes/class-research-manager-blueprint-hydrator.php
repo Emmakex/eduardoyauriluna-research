@@ -255,7 +255,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
      * identity aliases remain only a v1 fallback when that block is absent.
      */
     private function identity_seed(array $normalized): array|WP_Error {
-        $stored = get_option('eduardo_research_identity', array());
+        $stored = get_option(Eduardo_Research_Manager_Identity_Profile::option_key(), array());
         if (is_array($stored) && $stored) { return array(); }
 
         $seed = array();
