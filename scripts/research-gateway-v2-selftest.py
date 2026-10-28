@@ -139,7 +139,8 @@ def assert_contract_invariants() -> None:
             request_dir=request_dir,
         ) == ["design.read", "operations.rollback", "design.write"]
 
-        source["action"] = "manager.design.inspect"
+        source["action"] = "manager.resource.inspect"
+        source["payload"] = {"resource": "design"}
         (request_dir / f"{source['command_id']}.json").write_text(json.dumps(source), encoding="utf-8")
         try:
             worker.contract.required_capabilities(rollback, registry, request_dir=request_dir)
