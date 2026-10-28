@@ -13,6 +13,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
@@ -29,6 +30,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
@@ -61,6 +63,7 @@ jobs:
               'dataset': (root / 'class-research-manager-dataset-resource.php').read_text(encoding='utf-8'),
           }
           capabilities = (root / 'class-research-manager-v1-capabilities.php').read_text(encoding='utf-8')
+          compiler = (root / 'class-research-manager-blueprint-compiler.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
 
           actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
@@ -81,7 +84,7 @@ jobs:
           if missing:
               raise SystemExit(f'Plan mutation dispatcher lost explicit fail-closed actions: {missing}')
 
-          for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults'):
+          for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults', 'blueprint_resource_label'):
               if f'public static function {method}' not in registry:
                   raise SystemExit(f'Resource Registry lost descriptive authority method: {method}')
 
@@ -112,6 +115,11 @@ jobs:
           if "'fields'=>array('status','slug'" in object_editor:
               raise SystemExit('Object Editor must not restore literal Research Object field vocabularies')
 
+          if 'Resource_Registry::blueprint_resource_label($resource_key)' not in compiler:
+              raise SystemExit('Blueprint Compiler must derive Research resource intent labels from Resource Registry')
+          if "array('insights'=>'insight','lines'=>'research line'" in compiler:
+              raise SystemExit('Blueprint Compiler must not restore a literal Research resource label taxonomy')
+
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
           if leaked_hydrator:
@@ -133,7 +141,8 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-project-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-software-resource.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php \
-            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php; do
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php; do
             php -l "$file"
           done
 
@@ -195,6 +204,21 @@ jobs:
               }
               if (Eduardo_Research_Manager_Resource_Registry::auxiliary_fields($kind) !== $expected_auxiliary[$kind]) {
                   fwrite(STDERR, "Research Object auxiliary field vocabulary drifted for {$kind}.\n");
+                  exit(1);
+              }
+          }
+
+          $expected_labels = array(
+              'insights'=>'insight',
+              'lines'=>'research line',
+              'outputs'=>'research output',
+              'projects'=>'research project',
+              'software'=>'research software',
+              'datasets'=>'research dataset',
+          );
+          foreach ($expected_labels as $resource_key => $label) {
+              if (Eduardo_Research_Manager_Resource_Registry::blueprint_resource_label($resource_key) !== $label) {
+                  fwrite(STDERR, "Research blueprint descriptor label drifted for {$resource_key}.\n");
                   exit(1);
               }
           }
