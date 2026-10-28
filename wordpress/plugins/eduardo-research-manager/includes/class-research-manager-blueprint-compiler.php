@@ -59,7 +59,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
                     }
                 }
 
-                $singular = array('insights'=>'insight','lines'=>'research line','outputs'=>'research output','projects'=>'research project','software'=>'research software','datasets'=>'research dataset')[$resource_key] ?? rtrim($resource_key, 's');
+                $singular = Eduardo_Research_Manager_Resource_Registry::blueprint_resource_label($resource_key);
                 $intent = sprintf('Greenfield blueprint: create %s record %d', $singular, $index + 1);
                 $plan = $resources[$resource_key]->build_creation_plan($payload, $intent, $context);
                 if (is_wp_error($plan)) { return $plan; }
