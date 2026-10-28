@@ -272,7 +272,8 @@ def main() -> int:
             "command_sha256": worker.guard.guard.command_sha256(legacy),
         }
         (results / f"{legacy['command_id']}.json").write_text(
-            json.dumps(legacy_result), encoding="utf-8")
+            json.dumps(legacy_result), encoding="utf-8"
+        )
         queue = worker.unresolved_requests(requests, results)
         assert [item[1]["command_id"] for item in queue] == ["cmd-v2-selftest-two-0002"]
 
