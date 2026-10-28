@@ -19,23 +19,19 @@ final class Eduardo_Research_Manager_Output_Resource {
         if (! $post instanceof WP_Post || $post_type !== $post->post_type) {
             return new WP_Error('research_manager_output_missing', 'The requested Research Output does not exist.');
         }
-        return array(
+        $record = array(
             'post_id'=>$post_id,'post_type'=>$post_type,'status'=>(string) $post->post_status,
             'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
-            'output_type'=>$this->private_meta_string($post_id, '_research_output_type'),
-            'output_type_verified'=>$this->private_meta_string($post_id, '_research_output_type_verified', '0'),
-            'review_status'=>$this->private_meta_string($post_id, '_research_review_status'),
-            'review_status_verified'=>$this->private_meta_string($post_id, '_research_review_status_verified', '0'),
-            'publication_date'=>$this->private_meta_string($post_id, '_research_publication_date'),
-            'venue'=>$this->private_meta_string($post_id, '_research_venue'),
-            'doi'=>$this->private_meta_string($post_id, '_research_doi'),
-            'doi_verified'=>$this->private_meta_string($post_id, '_research_doi_verified', '0'),
-            'authors'=>$this->private_meta_value($post_id, '_research_authors', array()),
-            'line_ids'=>$this->private_meta_value($post_id, '_research_line_ids', array()),
-            'creation_token'=>$this->private_meta_string($post_id, '_eduardo_research_manager_creation_token'),
-            'url'=>(string) get_permalink($post),
         );
+        foreach ($this->meta_fields() as $field => $meta_key) {
+            $default = $this->default_for_field($field);
+            $record[$field] = in_array($field, $this->array_fields(), true)
+                ? $this->private_meta_value($post_id, $meta_key, $default)
+                : $this->private_meta_string($post_id, $meta_key, (string) $default);
+        }
+        $record['creation_token'] = $this->private_meta_string($post_id, '_eduardo_research_manager_creation_token');
+        $record['url'] = (string) get_permalink($post);
+        return $record;
     }
 
     public function build_creation_plan(array $data, string $intent = '', array $context = array()): array|WP_Error {
@@ -110,13 +106,8 @@ final class Eduardo_Research_Manager_Output_Resource {
                 $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>$wp_field,'value'=>$next[$field]);
             }
         }
-        if (array_key_exists('language', $changes) && (string) $current['language'] !== (string) $next['language']) {
-            $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>'_research_language','value'=>$next['language']);
-        }
-        foreach (array(
-            'output_type'=>'_research_output_type','review_status'=>'_research_review_status','publication_date'=>'_research_publication_date',
-            'venue'=>'_research_venue','doi'=>'_research_doi','authors'=>'_research_authors','line_ids'=>'_research_line_ids',
-        ) as $field => $meta_key) {
+        $meta_fields = $this->meta_fields();
+        foreach ($meta_fields as $field => $meta_key) {
             if (! array_key_exists($field, $changes)) { continue; }
             if (maybe_serialize($current[$field]) !== maybe_serialize($next[$field])) {
                 $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$meta_key,'value'=>$next[$field]);
@@ -124,14 +115,18 @@ final class Eduardo_Research_Manager_Output_Resource {
         }
 
         foreach (array(
-            'output_type'=>array('flag'=>'_research_output_type_verified','expected'=>'output_type_verified'),
-            'review_status'=>array('flag'=>'_research_review_status_verified','expected'=>'review_status_verified'),
-            'doi'=>array('flag'=>'_research_doi_verified','expected'=>'doi_verified'),
-        ) as $field => $verification) {
+            'output_type'=>'output_type_verified',
+            'review_status'=>'review_status_verified',
+            'doi'=>'doi_verified',
+        ) as $field => $verified_field) {
             if (! array_key_exists($field, $changes)) { continue; }
-            $expected_flag = (string) $next[$verification['expected']];
-            if ((string) $current[$verification['expected']] !== $expected_flag) {
-                $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$verification['flag'],'value'=>$expected_flag);
+            $expected_flag = (string) $next[$verified_field];
+            if ((string) $current[$verified_field] !== $expected_flag) {
+                $meta_key = (string) ($meta_fields[$verified_field] ?? '');
+                if ('' === $meta_key) {
+                    return new WP_Error('research_manager_output_storage_contract_invalid', 'Research Output storage descriptor is incomplete.');
+                }
+                $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$meta_key,'value'=>$expected_flag);
             }
         }
 
@@ -194,6 +189,25 @@ final class Eduardo_Research_Manager_Output_Resource {
     private function post_type(): string {
         $registry = Eduardo_Research_Manager_Resource_Registry::get('output');
         return (string) ($registry['post_type'] ?? '');
+    }
+
+    private function meta_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::resource_meta_fields('output');
+    }
+
+    private function array_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::array_fields('output');
+    }
+
+    private function defaults(): array {
+        return Eduardo_Research_Manager_Resource_Registry::defaults('output');
+    }
+
+    private function default_for_field(string $field): mixed {
+        if ('language' === $field) { return $this->contract->default_language(); }
+        if (in_array($field, $this->array_fields(), true)) { return array(); }
+        $defaults = $this->defaults();
+        return $defaults[$field] ?? '';
     }
 
     private function valid_publication_date(string $value): bool {
