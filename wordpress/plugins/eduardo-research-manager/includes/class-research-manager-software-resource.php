@@ -77,10 +77,10 @@ final class Eduardo_Research_Manager_Software_Resource {
         $current = $this->inspect($post_id);
         if (is_wp_error($current)) { return $current; }
         if (! $changes) { return new WP_Error('research_manager_empty_update', 'At least one Research Software field must be supplied.'); }
-        $allowed = array(
-            'title','excerpt','content','language','software_status','version','release_date','repository_url','archive_url',
-            'license','documentation_url','doi','programming_languages','line_ids',
-        );
+        $allowed = array_values(array_diff(
+            Eduardo_Research_Manager_Resource_Registry::editable_fields('software'),
+            array('status','slug')
+        ));
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) { return new WP_Error('research_manager_software_field_not_allowed', 'Research Software update contains fields outside the bounded contract: ' . implode(', ', array_map('sanitize_key', $unknown))); }
         if (array_key_exists('programming_languages', $changes) && ! is_array($changes['programming_languages'])) { return new WP_Error('research_manager_invalid_programming_languages', 'Programming languages must be supplied as an array.'); }
@@ -122,7 +122,7 @@ final class Eduardo_Research_Manager_Software_Resource {
     public function verify(int $post_id, array $expected, ?string $creation_token = null): array|WP_Error {
         $record = $this->inspect($post_id);
         if (is_wp_error($record)) { return $record; }
-        $allowed = array('status','slug','title','excerpt','content','language','software_status','version','release_date','repository_url','archive_url','license','documentation_url','doi','programming_languages','line_ids');
+        $allowed = Eduardo_Research_Manager_Resource_Registry::editable_fields('software');
         $unknown = array_diff(array_keys($expected), $allowed);
         if ($unknown) { return new WP_Error('research_manager_software_field_not_allowed', 'Research Software verification requested unsupported fields.'); }
         $synthetic = array(
