@@ -19,7 +19,8 @@ final class Eduardo_Research_Manager_Line_Resource {
         if (! $post instanceof WP_Post || $post_type !== $post->post_type) {
             return new WP_Error('research_manager_line_missing', 'The requested Research Line does not exist.');
         }
-        return array(
+
+        $record = array(
             'post_id'=>$post_id,
             'post_type'=>$post_type,
             'status'=>(string) $post->post_status,
@@ -27,27 +28,30 @@ final class Eduardo_Research_Manager_Line_Resource {
             'title'=>(string) $post->post_title,
             'excerpt'=>(string) $post->post_excerpt,
             'content'=>(string) $post->post_content,
-            'language'=>$this->private_meta_string($post_id, '_research_language', $this->contract->default_language()),
-            'evidence_status'=>$this->private_meta_string($post_id, '_research_evidence_status', 'unverified'),
-            'research_status'=>$this->private_meta_string($post_id, '_research_status', 'planned'),
-            'central_question'=>$this->private_meta_string($post_id, '_research_central_question'),
-            'order'=>$this->private_meta_string($post_id, '_research_order'),
-            'topics'=>$this->private_meta_value($post_id, '_research_topics', array()),
-            'methods'=>$this->private_meta_value($post_id, '_research_methods', array()),
-            'creation_token'=>$this->private_meta_string($post_id, '_eduardo_research_manager_creation_token'),
-            'url'=>(string) get_permalink($post),
         );
+        foreach ($this->meta_fields() as $field => $meta_key) {
+            $default = $this->default_for_field($field);
+            $record[$field] = in_array($field, $this->array_fields(), true)
+                ? $this->private_meta_value($post_id, $meta_key, $default)
+                : $this->private_meta_string($post_id, $meta_key, (string) $default);
+        }
+        $record['creation_token'] = $this->private_meta_string($post_id, '_eduardo_research_manager_creation_token');
+        $record['url'] = (string) get_permalink($post);
+        return $record;
     }
 
     public function build_creation_plan(array $data, string $intent = '', array $context = array()): array|WP_Error {
         $valid = $this->validate_contract();
         if (is_wp_error($valid)) { return $valid; }
-        if (array_key_exists('topics', $data) && ! is_array($data['topics'])) {
-            return new WP_Error('research_manager_invalid_line_topics', 'Research Line topics must be supplied as an array.');
+        foreach ($this->array_fields() as $array_field) {
+            if (array_key_exists($array_field, $data) && ! is_array($data[$array_field])) {
+                return new WP_Error(
+                    'research_manager_invalid_line_' . sanitize_key($array_field),
+                    sprintf('Research Line %s must be supplied as an array.', str_replace('_', ' ', $array_field))
+                );
+            }
         }
-        if (array_key_exists('methods', $data) && ! is_array($data['methods'])) {
-            return new WP_Error('research_manager_invalid_line_methods', 'Research Line methods must be supplied as an array.');
-        }
+
         $title = is_scalar($data['title'] ?? null) ? (string) $data['title'] : '';
         $action = array(
             'type'=>'create_line',
@@ -57,14 +61,18 @@ final class Eduardo_Research_Manager_Line_Resource {
             'content'=>is_scalar($data['content'] ?? null) ? (string) $data['content'] : '',
             'language'=>is_scalar($data['language'] ?? null) ? (string) $data['language'] : $this->contract->default_language(),
             'status'=>is_scalar($data['status'] ?? null) ? (string) $data['status'] : 'draft',
-            'evidence_status'=>is_scalar($data['evidence_status'] ?? null) ? (string) $data['evidence_status'] : 'unverified',
-            'research_status'=>is_scalar($data['research_status'] ?? null) ? (string) $data['research_status'] : 'planned',
-            'central_question'=>is_scalar($data['central_question'] ?? null) ? (string) $data['central_question'] : '',
-            'order'=>is_scalar($data['order'] ?? null) ? (string) $data['order'] : '',
-            'topics'=>$data['topics'] ?? array(),
-            'methods'=>$data['methods'] ?? array(),
             'creation_token'=>wp_generate_uuid4(),
         );
+        foreach ($this->meta_fields() as $field => $_meta_key) {
+            if ('language' === $field) { continue; }
+            if (in_array($field, $this->array_fields(), true)) {
+                $action[$field] = $data[$field] ?? array();
+                continue;
+            }
+            $default = $this->default_for_field($field);
+            $action[$field] = is_scalar($data[$field] ?? null) ? (string) $data[$field] : $default;
+        }
+
         $intent = '' !== trim($intent) ? $intent : sprintf('Create verified Research Line: %s', sanitize_text_field($title));
         return Eduardo_Research_Manager_Plan::create($intent, array($action), $context);
     }
@@ -73,23 +81,18 @@ final class Eduardo_Research_Manager_Line_Resource {
         $current = $this->inspect($post_id);
         if (is_wp_error($current)) { return $current; }
         if (! $changes) { return new WP_Error('research_manager_empty_update', 'At least one Research Line field must be supplied.'); }
-        $allowed = array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods');
+        $allowed = $this->resource_fields();
         $unknown = array_diff(array_keys($changes), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_line_field_not_allowed', 'Research Line update contains fields outside the bounded contract: ' . implode(', ', array_map('sanitize_key', $unknown)));
         }
-        foreach (array('topics','methods') as $array_field) {
+        foreach ($this->array_fields() as $array_field) {
             if (array_key_exists($array_field, $changes) && ! is_array($changes[$array_field])) {
-                return new WP_Error('research_manager_invalid_line_list', 'Research Line topics and methods must be supplied as arrays.');
+                return new WP_Error('research_manager_invalid_line_list', 'Research Line list fields must be supplied as arrays.');
             }
         }
 
-        $synthetic = array(
-            'type'=>'create_line','title'=>$current['title'],'slug'=>$current['slug'],'excerpt'=>$current['excerpt'],'content'=>$current['content'],
-            'language'=>$current['language'],'status'=>$current['status'],'evidence_status'=>$current['evidence_status'],'research_status'=>$current['research_status'],
-            'central_question'=>$current['central_question'],'order'=>$current['order'],'topics'=>$current['topics'],'methods'=>$current['methods'],
-            'creation_token'=>wp_generate_uuid4(),
-        );
+        $synthetic = $this->creation_action_from_record($current);
         foreach ($changes as $field => $value) { $synthetic[$field] = $value; }
         $normalization = Eduardo_Research_Manager_Plan::create('Normalize Research Line update', array($synthetic), $context);
         if (is_wp_error($normalization)) { return $normalization; }
@@ -105,11 +108,7 @@ final class Eduardo_Research_Manager_Line_Resource {
                 $actions[] = array('type'=>'post_field','post_id'=>$post_id,'field'=>$wp_field,'value'=>$next[$field]);
             }
         }
-        $meta = array(
-            'language'=>'_research_language','evidence_status'=>'_research_evidence_status','research_status'=>'_research_status',
-            'central_question'=>'_research_central_question','order'=>'_research_order','topics'=>'_research_topics','methods'=>'_research_methods',
-        );
-        foreach ($meta as $field => $meta_key) {
+        foreach ($this->meta_fields() as $field => $meta_key) {
             if (! array_key_exists($field, $changes)) { continue; }
             if (maybe_serialize($current[$field]) !== maybe_serialize($next[$field])) {
                 $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>$meta_key,'value'=>$next[$field]);
@@ -123,16 +122,11 @@ final class Eduardo_Research_Manager_Line_Resource {
     public function verify(int $post_id, array $expected, ?string $creation_token = null): array|WP_Error {
         $record = $this->inspect($post_id);
         if (is_wp_error($record)) { return $record; }
-        $allowed = array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods');
+        $allowed = $this->resource_fields();
         $unknown = array_diff(array_keys($expected), $allowed);
         if ($unknown) { return new WP_Error('research_manager_line_field_not_allowed', 'Research Line verification requested unsupported fields.'); }
 
-        $synthetic = array(
-            'type'=>'create_line','title'=>$record['title'],'slug'=>$record['slug'],'excerpt'=>$record['excerpt'],'content'=>$record['content'],
-            'language'=>$record['language'],'status'=>$record['status'],'evidence_status'=>$record['evidence_status'],'research_status'=>$record['research_status'],
-            'central_question'=>$record['central_question'],'order'=>$record['order'],'topics'=>$record['topics'],'methods'=>$record['methods'],
-            'creation_token'=>wp_generate_uuid4(),
-        );
+        $synthetic = $this->creation_action_from_record($record);
         foreach ($expected as $field => $value) { $synthetic[$field] = $value; }
         $normalized = Eduardo_Research_Manager_Plan::create(
             'Normalize Research Line verification', array($synthetic),
@@ -164,9 +158,10 @@ final class Eduardo_Research_Manager_Line_Resource {
         if ('' === $slug) { return 0; }
         $args = array('post_type'=>$this->post_type(),'post_status'=>'any','name'=>$slug,'posts_per_page'=>10,'suppress_filters'=>true);
         $posts = get_posts($args);
+        $language_meta = (string) ($this->meta_fields()['language'] ?? '');
         foreach ($posts as $post) {
             if (! $post instanceof WP_Post) { continue; }
-            if (null === $language || sanitize_key($language) === $this->private_meta_string((int) $post->ID, '_research_language', $this->contract->default_language())) { return (int) $post->ID; }
+            if (null === $language || sanitize_key($language) === $this->private_meta_string((int) $post->ID, $language_meta, $this->contract->default_language())) { return (int) $post->ID; }
         }
         return 0;
     }
@@ -185,6 +180,37 @@ final class Eduardo_Research_Manager_Line_Resource {
     private function post_type(): string {
         $registry = Eduardo_Research_Manager_Resource_Registry::get('line');
         return (string) ($registry['post_type'] ?? '');
+    }
+
+    private function resource_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::resource_fields('line');
+    }
+
+    private function meta_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::resource_meta_fields('line');
+    }
+
+    private function array_fields(): array {
+        return Eduardo_Research_Manager_Resource_Registry::array_fields('line');
+    }
+
+    private function defaults(): array {
+        return Eduardo_Research_Manager_Resource_Registry::defaults('line');
+    }
+
+    private function default_for_field(string $field): mixed {
+        if ('language' === $field) { return $this->contract->default_language(); }
+        if (in_array($field, $this->array_fields(), true)) { return array(); }
+        $defaults = $this->defaults();
+        return $defaults[$field] ?? '';
+    }
+
+    private function creation_action_from_record(array $record): array {
+        $action = array('type'=>'create_line','creation_token'=>wp_generate_uuid4());
+        foreach ($this->resource_fields() as $field) {
+            $action[$field] = $record[$field] ?? $this->default_for_field($field);
+        }
+        return $action;
     }
 
     private function private_meta_value(int $post_id, string $key, mixed $default = null): mixed {
