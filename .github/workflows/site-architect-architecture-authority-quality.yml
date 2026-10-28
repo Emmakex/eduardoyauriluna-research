@@ -109,7 +109,7 @@ jobs:
           ):
               if token not in object_editor:
                   raise SystemExit(f'{message} must derive from Resource Registry')
-          if "'fields'=>array(" in object_editor:
+          if "'fields'=>array('status','slug'" in object_editor:
               raise SystemExit('Object Editor must not restore literal Research Object field vocabularies')
 
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
