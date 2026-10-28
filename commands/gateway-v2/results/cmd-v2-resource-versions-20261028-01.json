@@ -1,0 +1,33 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-versions-20261028-01",
+  "command_sha256": "9a83ed915cae09a3017f72473f5ce867d62cc70e04d3ce98281ff8ada9c19ee4",
+  "data": {
+    "api": "v1",
+    "manager": "0.11.0",
+    "php": "8.5.12",
+    "preset": {
+      "compatible": true,
+      "id": "research",
+      "minimum_supported_version": 4,
+      "version": 6
+    },
+    "theme": "1.1.0",
+    "wordpress": "7.1.3"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "versions"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
