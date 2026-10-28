@@ -67,6 +67,28 @@ jobs:
         shell: bash
         run: bash .github/scripts/ensure-wp-cli.sh
 
+      - name: Guard legacy Identity language-storage authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php')
+          source = path.read_text(encoding='utf-8')
+          forbidden = (
+              "$slots['en']",
+              "$slots['es']",
+              "$seed['headline']",
+              "$seed['headline_es']",
+          )
+          leaked = [token for token in forbidden if token in source]
+          if leaked:
+              raise SystemExit('Blueprint Hydrator reconstructs legacy language storage directly: ' + ', '.join(leaked))
+          if '$contract->identity_headline_field($language)' not in source:
+              raise SystemExit('Blueprint Hydrator must resolve Identity headline storage through the Greenfield Theme Contract')
+          PY
+
       - name: Install WordPress, Theme and Manager
         shell: bash
         run: |
