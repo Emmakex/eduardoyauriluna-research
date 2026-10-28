@@ -25,7 +25,6 @@
     "manager.design.inspect": {"runner": "research-gateway-v2-design-inspect.py", "validator": "research-gateway-v2-design-inspect.py", "read_only": true, "required_capabilities": ["design.read"]},
     "manager.design.variants.inspect": {"runner": "research-gateway-v2-design-variants-inspect.py", "validator": "research-gateway-v2-design-variants-inspect.py", "read_only": true, "required_capabilities": ["design.read"]},
     "manager.resource.list": {"runner": "research-gateway-v2-resource-read.py", "validator": "research-gateway-v2-resource-read.py", "read_only": true, "capability_resolver": "manager_resource_read"},
-    "manager.resource.inspect": {"runner": "research-gateway-v2-resource-read.py", "validator": "research-gateway-v2-resource-read.py", "read_only": true, "capability_resolver": "manager_resource_read"},
-    "manager.page.inspect.pair": {"runner": "phase2e-manager-read-runner.py", "validator": "phase2e-manager-read-runner.py", "read_only": true, "required_capabilities": ["pages.read"]}
+    "manager.resource.inspect": {"runner": "research-gateway-v2-resource-read.py", "validator": "research-gateway-v2-resource-read.py", "read_only": true, "capability_resolver": "manager_resource_read"}
   }
 }
