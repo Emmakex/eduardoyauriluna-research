@@ -16,6 +16,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
@@ -35,6 +36,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
       - '.github/workflows/site-architect-architecture-authority-quality.yml'
@@ -70,6 +72,7 @@ jobs:
           compiler = (root / 'class-research-manager-blueprint-compiler.php').read_text(encoding='utf-8')
           relations = (root / 'class-research-manager-blueprint-relations.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
+          identity_profile = (root / 'class-research-manager-identity-profile.php').read_text(encoding='utf-8')
           pairing = (root / 'class-research-manager-translation-pairing.php').read_text(encoding='utf-8')
 
           actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
@@ -89,6 +92,10 @@ jobs:
           missing = [action for action in actions if action not in normalizer]
           if missing:
               raise SystemExit(f'Plan mutation dispatcher lost explicit fail-closed actions: {missing}')
+
+          allowed_options = plan.split('private const ALLOWED_OPTIONS', 1)[1].split(');', 1)[0]
+          if "'eduardo_research_identity'" not in allowed_options:
+              raise SystemExit('Plan must keep the Identity option explicit in its fail-closed security allowlist')
 
           for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults', 'blueprint_resource_label'):
               if f'public static function {method}' not in registry:
@@ -150,12 +157,23 @@ jobs:
               if forbidden in pairing:
                   raise SystemExit('Translation Pairing must not restore duplicated Research post-type constants')
 
+          if "private const OPTION_KEY = 'eduardo_research_identity';" not in identity_profile:
+              raise SystemExit('Identity Profile must own the canonical Identity option key')
+          if 'public static function option_key(): string' not in identity_profile or 'return self::OPTION_KEY;' not in identity_profile:
+              raise SystemExit('Identity Profile must expose its canonical option key descriptively')
+          if identity_profile.count("'eduardo_research_identity'") != 1:
+              raise SystemExit('Identity Profile must not duplicate its canonical option key literal')
+
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
           if leaked_hydrator:
               raise SystemExit('Blueprint Hydrator reconstructs language storage directly: ' + ', '.join(leaked_hydrator))
           if '$contract->identity_headline_field($language)' not in hydrator:
               raise SystemExit('Blueprint Hydrator must resolve Identity headline storage through Contract')
+          if "'eduardo_research_identity'" in hydrator:
+              raise SystemExit('Blueprint Hydrator must not hardcode the canonical Identity option key')
+          if 'Eduardo_Research_Manager_Identity_Profile::option_key()' not in hydrator:
+              raise SystemExit('Blueprint Hydrator must derive Identity option storage from Identity Profile')
           PY
 
       - name: Verify Research descriptor semantics
@@ -174,6 +192,8 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php; do
             php -l "$file"
           done
@@ -185,6 +205,12 @@ jobs:
               return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $key));
           }
           require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php';
+          require 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php';
+
+          if (Eduardo_Research_Manager_Identity_Profile::option_key() !== 'eduardo_research_identity') {
+              fwrite(STDERR, "Canonical Identity option key drifted from the certified storage contract.\n");
+              exit(1);
+          }
 
           $expected_post_types = array(
               'research_line','research_output','research_project','research_software','research_dataset',
