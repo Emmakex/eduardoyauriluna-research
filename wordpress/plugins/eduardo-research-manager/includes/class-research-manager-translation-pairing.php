@@ -5,8 +5,6 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Translation_Pairing {
-    private const SUPPORTED_TYPES = array('research_line','research_output','research_project','research_software','research_dataset','post');
-    private const STRUCTURED_TYPES = array('research_line','research_output','research_project','research_software','research_dataset');
     private const EVIDENCE_META = '_eduardo_research_translation_evidence';
 
     public function inspect(int $post_id): array|WP_Error {
@@ -27,7 +25,7 @@ final class Eduardo_Research_Manager_Translation_Pairing {
             'counterpart_type'=>$target instanceof WP_Post ? (string) $target->post_type : '',
             'counterpart_status'=>$target instanceof WP_Post ? (string) $target->post_status : '',
             'counterpart_url'=>$target instanceof WP_Post ? (string) get_permalink($target_id) : '',
-            'evidence_reference'=>in_array($record['post_type'], self::STRUCTURED_TYPES, true)
+            'evidence_reference'=>in_array($record['post_type'], self::structured_types(), true)
                 ? (string) get_post_meta($post_id, self::EVIDENCE_META, true) : '',
         );
     }
@@ -61,7 +59,7 @@ final class Eduardo_Research_Manager_Translation_Pairing {
         }
 
         $post_type = (string) $first['post_type'];
-        if (in_array($post_type, self::STRUCTURED_TYPES, true)) {
+        if (in_array($post_type, self::structured_types(), true)) {
             $reference = sanitize_text_field((string) ($context['evidence_reference'] ?? ''));
             $actions[] = array('type'=>'post_meta','post_id'=>$en_id,'key'=>self::EVIDENCE_META,'value'=>$reference);
             $actions[] = array('type'=>'post_meta','post_id'=>$es_id,'key'=>self::EVIDENCE_META,'value'=>$reference);
@@ -98,7 +96,7 @@ final class Eduardo_Research_Manager_Translation_Pairing {
             }
         }
 
-        if (in_array($record['post_type'], self::STRUCTURED_TYPES, true)) {
+        if (in_array($record['post_type'], self::structured_types(), true)) {
             $reference = sanitize_text_field((string) ($context['evidence_reference'] ?? ''));
             $actions[] = array('type'=>'post_meta','post_id'=>$post_id,'key'=>self::EVIDENCE_META,'value'=>$reference);
             if ($counterpart instanceof WP_Post && $counterpart->post_type === $record['post_type']) {
@@ -160,7 +158,7 @@ final class Eduardo_Research_Manager_Translation_Pairing {
 
     private function record(int $post_id, bool $require_publish): array|WP_Error {
         $post = get_post($post_id);
-        if (! $post instanceof WP_Post || ! in_array((string) $post->post_type, self::SUPPORTED_TYPES, true)) {
+        if (! $post instanceof WP_Post || ! in_array((string) $post->post_type, self::supported_types(), true)) {
             return new WP_Error('research_manager_translation_resource_unsupported', 'Translation pairing supports Research Lines, Insights, Publications, Projects, Software and Datasets only.');
         }
         if ($require_publish && 'publish' !== (string) $post->post_status) {
@@ -176,6 +174,14 @@ final class Eduardo_Research_Manager_Translation_Pairing {
             return new WP_Error('research_manager_translation_language_invalid', 'Translation records must use the Research EN/ES language contract.');
         }
         return array('post_id'=>$post_id,'post_type'=>(string) $post->post_type,'status'=>(string) $post->post_status,'language'=>$language);
+    }
+
+    private static function structured_types(): array {
+        return Eduardo_Research_Manager_Resource_Registry::post_types();
+    }
+
+    private static function supported_types(): array {
+        return array_merge(self::structured_types(), array('post'));
     }
 
     private function assert_pair_slot_available(int $post_id, string $target_language, int $expected_id): bool|WP_Error {
