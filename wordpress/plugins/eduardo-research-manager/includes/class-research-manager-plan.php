@@ -83,7 +83,7 @@ final class Eduardo_Research_Manager_Plan {
         $type = (string) ($action['type'] ?? '');
         if ('create_page' === $type) { return 'standard'; }
         if ('create_insight' === $type) { return 'editorial-review'; }
-        if (in_array($type, array('create_line','create_output','create_project','create_software','create_dataset'), true)) { return 'evidence-required'; }
+        if (Eduardo_Research_Manager_Resource_Registry::by_creation_action($type)) { return 'evidence-required'; }
 
         $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
         $post_id = absint($action['post_id'] ?? 0);
@@ -603,11 +603,8 @@ final class Eduardo_Research_Manager_Plan {
         if ('post_field' === $action['type']) { return 'post_field:' . $action['post_id'] . ':' . $action['field']; }
         if ('create_page' === $action['type']) { return 'create_page:' . $action['wp_slug']; }
         if ('create_insight' === $action['type']) { return 'create_insight:' . $action['slug']; }
-        if ('create_line' === $action['type']) { return 'create_line:' . $action['slug']; }
-        if ('create_output' === $action['type']) { return 'create_output:' . $action['slug']; }
-        if ('create_project' === $action['type']) { return 'create_project:' . $action['slug']; }
-        if ('create_software' === $action['type']) { return 'create_software:' . $action['slug']; }
-        if ('create_dataset' === $action['type']) { return 'create_dataset:' . $action['slug']; }
+        $resource = Eduardo_Research_Manager_Resource_Registry::by_creation_action((string) ($action['type'] ?? ''));
+        if ($resource) { return (string) $resource['creation_action'] . ':' . $action['slug']; }
         return 'unknown:' . md5((string) wp_json_encode($action));
     }
 
