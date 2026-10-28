@@ -1,0 +1,96 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-v2-resource-page-home-en-20261028-01",
+  "command_sha256": "872fb52064ac41349354b6ce752e53e26a8a0866b74a7719ccfd196e93735e30",
+  "data": {
+    "allowed_slots": [
+      "hero-eyebrow",
+      "hero-lead",
+      "hero-primary-target",
+      "hero-secondary-target",
+      "research-lines-heading",
+      "research-lines-intro",
+      "selected-outputs-heading",
+      "selected-outputs-intro",
+      "academic-identifiers-heading",
+      "latest-insights-heading",
+      "final-cta-heading",
+      "final-cta-body",
+      "final-cta-button",
+      "final-cta-target"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "home",
+    "effective_slots": {
+      "academic-identifiers-heading": "Academic profiles",
+      "final-cta-body": "Explore the research lines, the questions that guide them and the methods proposed for their development.",
+      "final-cta-button": "Explore research",
+      "final-cta-heading": "Research and collaboration",
+      "final-cta-target": "contact",
+      "hero-eyebrow": "Researcher profile",
+      "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
+      "hero-primary-target": "research",
+      "hero-secondary-target": "cv",
+      "latest-insights-heading": "Research notes",
+      "research-lines-heading": "Research agenda",
+      "research-lines-intro": "The research agenda focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.",
+      "selected-outputs-heading": "Research outputs",
+      "selected-outputs-intro": "Research outputs will be listed here as publications, projects, software or datasets become available and are verified."
+    },
+    "expected_model": "research-home-v1",
+    "expected_role": "front-page",
+    "key": "home",
+    "language": "en",
+    "model": "research-home-v1",
+    "option_key": "eduardo_research_model",
+    "page_id": 8,
+    "published": true,
+    "role": "front-page",
+    "slug": "home",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "academic-identifiers-heading": "Academic profiles",
+      "final-cta-body": "Explore the research lines, the questions that guide them and the methods proposed for their development.",
+      "final-cta-button": "Explore research",
+      "final-cta-heading": "Research and collaboration",
+      "hero-eyebrow": "Researcher profile",
+      "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
+      "latest-insights-heading": "Research notes",
+      "research-lines-heading": "Research agenda",
+      "research-lines-intro": "The research agenda focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.",
+      "selected-outputs-heading": "Research outputs",
+      "selected-outputs-intro": "Research outputs will be listed here as publications, projects, software or datasets become available and are verified."
+    },
+    "title": "Home",
+    "url": "https://eduardoyauriluna.com/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "home",
+    "language": "en",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
