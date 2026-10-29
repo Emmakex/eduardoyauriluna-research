@@ -1,0 +1,25 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-phase3-describe-site-pages-list-20261029-04",
+  "command_sha256": "2f867853b9eb3cd6c68d923df69f7394a8e6d2160ca4affa22e453c2875cd38c",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "List Theme-owned page inventory.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "site_pages_list"
+  },
+  "version": "1"
+}
