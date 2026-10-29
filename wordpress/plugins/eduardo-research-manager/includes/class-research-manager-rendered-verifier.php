@@ -37,7 +37,7 @@ final class Eduardo_Research_Manager_Rendered_Verifier {
             return new WP_Error('research_manager_theme_contract_unavailable', 'A compatible Research Theme contract is required for rendered verification.');
         }
         $post = get_post($post_id);
-        $supported = array('research_line','research_output','research_project','research_software','research_dataset','post');
+        $supported = array_merge($this->contract->research_post_types(), array('post'));
         if (! $post instanceof WP_Post || ! in_array($post->post_type, $supported, true)) {
             return new WP_Error('research_manager_render_resource_missing', 'Rendered verification requires a supported Research resource.');
         }
