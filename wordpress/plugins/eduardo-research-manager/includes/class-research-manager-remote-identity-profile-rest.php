@@ -51,7 +51,7 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_REST {
             'available'=>$available,'transport_base'=>'/research-manager/v1/identity-profile','fields'=>$fields,'languages'=>$languages,
             'read_scope'=>'evidence.read','write_scopes'=>array('identity.write','evidence.write','operations.apply'),'rollback_scopes'=>array('identity.write','evidence.write','operations.rollback'),
             'lifecycle'=>array('inspect','plan','apply','status','verify','rollback'),'evidence_required'=>true,'stale_preview_protection'=>true,'idempotency'=>true,
-            'theme_canonical_source'=>'eduardo_research_identity','arbitrary_wordpress_profile_proxy'=>false,
+            'theme_canonical_source'=>Eduardo_Research_Manager_Identity_Profile::option_key(),'arbitrary_wordpress_profile_proxy'=>false,
         );
         $response->set_data($payload);return $response;
     }
