@@ -10,6 +10,8 @@ on:
       - 'scripts/manager-v1-development-completion-contract-test.php'
       - 'scripts/manager-v1-operation-observability-test.php'
       - 'scripts/manager-v1-page-state-lifecycle-test.php'
+      - 'docs/63-greenfield-hardcode-coupling-audit.md'
+      - 'README.md'
       - '.github/workflows/manager-v1-development-completion-quality.yml'
   push:
     branches: [main]
@@ -21,6 +23,8 @@ on:
       - 'scripts/manager-v1-development-completion-contract-test.php'
       - 'scripts/manager-v1-operation-observability-test.php'
       - 'scripts/manager-v1-page-state-lifecycle-test.php'
+      - 'docs/63-greenfield-hardcode-coupling-audit.md'
+      - 'README.md'
       - '.github/workflows/manager-v1-development-completion-quality.yml'
 
 permissions:
@@ -134,3 +138,21 @@ jobs:
           grep -F "'secrets_exposed'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
           grep -F "'oauth_completion_remote'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
           grep -F "'external_publish_remote'=>false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php
+      - name: Enforce architecture closeout reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F '**CLOSEOUT RECONCILED — final architectural ledger for Site Architect cleanup tracker #394.**' docs/63-greenfield-hardcode-coupling-audit.md
+          grep -F '**RESOLVED**' docs/63-greenfield-hardcode-coupling-audit.md
+          grep -F '**KEEP DOMAIN**' docs/63-greenfield-hardcode-coupling-audit.md
+          grep -F '**KEEP SECURITY**' docs/63-greenfield-hardcode-coupling-audit.md
+          grep -F '**COMPATIBILITY ONLY**' docs/63-greenfield-hardcode-coupling-audit.md
+          grep -F 'Greenfield hardcode/coupling architectural cleanup: **closed**' README.md
+          ! grep -F 'Greenfield hardcode/coupling cleanup: active' README.md
+          grep -F "'theme'=>Eduardo_Research_Manager::contract()->theme_version()" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php
+          ! grep -F "'surfaces'=>array(" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php
+          grep -F 'if (! $profile->research_available()) {' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php
+          grep -F '(new Eduardo_Research_Manager_Portability())->register();' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php
+          grep -F "'writes_enabled' => false" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-portability.php
+          grep -F 'Eduardo_Research_Manager::blueprint_store()->instance_defaults()' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
+          ! grep -F 'Eduardo Jose Yauri Luna' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
