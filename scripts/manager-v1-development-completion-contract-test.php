@@ -42,6 +42,7 @@ $identity=source('wordpress/plugins/eduardo-research-manager/includes/class-rese
 check(str_contains($identity,"'name'=>\$name"),'Identity profile must expose canonical name');
 check(str_contains($identity,'$contract->identity_headline_field($language)'),'Identity profile must resolve language-bound headline fields through the Greenfield Theme Contract');
 check(str_contains($identity,"'identity_language_map'=>\$identity_language_map"),'Identity profile must expose its runtime language/field compatibility map');
+check(str_contains($identity,'public function contract_descriptor(): array|WP_Error'),'Identity profile must own the descriptive field/language contract');
 check(str_contains($contract,"'identity_headline_field'=>'headline'"),'Greenfield Theme Contract must preserve the primary headline storage field');
 check(str_contains($contract,"'identity_headline_field'=>'headline_es'"),'Greenfield Theme Contract must preserve the Spanish headline storage field');
 check(str_contains($contract,'private const LEGACY_LANGUAGE_STORAGE'),'Legacy EN/ES physical storage compatibility must have one contract owner');
@@ -54,9 +55,13 @@ check(str_contains($identity,"'arbitrary_wordpress_profile_proxy'=>false"),'Iden
 $identityRest=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php');
 check(str_contains($identityRest,"'/identity-profile'"),'Remote canonical identity read surface missing');
 foreach(array("'identity.write'","'evidence.write'","'operations.apply'","'operations.rollback'") as $scope){check(str_contains($identityRest,$scope),'Remote identity scope missing: '.$scope);}
-check(str_contains($identityRest,"'fields'=>array('name','headline','headline_es')"),'Remote identity capabilities must advertise EN/ES canonical fields');
+check(str_contains($identityRest,'contract_descriptor()'),'Remote identity capabilities must derive fields/languages from the canonical Identity descriptor');
+check(false===str_contains($identityRest,"'fields'=>array('name','headline','headline_es')"),'Remote identity capabilities must not re-declare canonical fields');
+check(false===str_contains($identityRest,"'languages'=>array('en','es')"),'Remote identity capabilities must not re-declare canonical languages');
 check(str_contains($identityRest,"'arbitrary_wordpress_profile_proxy'=>false"),'Remote identity must keep WordPress profile proxy disabled');
 $identityOps=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php');
+check(str_contains($identityOps,'$this->identity->contract_descriptor()'),'Identity operations must derive top-level payload fields from the canonical Identity descriptor');
+check(false===str_contains($identityOps,"array('name','headline','headline_es')"),'Identity operations must not re-declare canonical fields');
 check(str_contains($identityOps,"'source_revision'"),'Identity operations must preserve source revision');
 check(str_contains($identityOps,"'post_apply_revision'"),'Identity operations must preserve resulting revision');
 
