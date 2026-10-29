@@ -6,6 +6,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-media-metadata.php'
+      - '.github/scripts/test-remote-media-metadata-authority-regression.php'
       - '.github/scripts/test-remote-media-rollback-stale.php'
       - '.github/workflows/research-manager-remote-media-metadata-quality.yml'
   push:
@@ -14,6 +15,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-media-metadata.php'
+      - '.github/scripts/test-remote-media-metadata-authority-regression.php'
       - '.github/scripts/test-remote-media-rollback-stale.php'
       - '.github/workflows/research-manager-remote-media-metadata-quality.yml'
 
@@ -61,7 +63,11 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-metadata-rest.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-media-metadata.php
+          php -l .github/scripts/test-remote-media-metadata-authority-regression.php
           php -l .github/scripts/test-remote-media-rollback-stale.php
+
+      - name: Verify Media metadata mutable operation authority
+        run: php .github/scripts/test-remote-media-metadata-authority-regression.php
 
       - name: Install clean Research WordPress
         shell: bash
