@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-insights-en-20261029",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "insight",
+    "filters": {
+      "language": "en"
+    }
+  }
+}
