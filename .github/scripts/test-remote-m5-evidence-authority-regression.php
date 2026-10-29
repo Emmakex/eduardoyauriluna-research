@@ -27,7 +27,7 @@ if (1 !== preg_match($create_plan_authority, $operations)) {
     fail_m5_evidence_authority('create_plan does not validate against MUTABLE_OPERATIONS');
 }
 
-if (!str_contains($rest, "'operations'=>$this->operations->mutable_operations()")) {
+if (!str_contains($rest, "'operations'=>\$this->operations->mutable_operations()")) {
     fail_m5_evidence_authority('REST capabilities do not consume Operations mutable authority');
 }
 
