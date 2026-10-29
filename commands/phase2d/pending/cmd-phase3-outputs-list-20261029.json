@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-outputs-list-20261029",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "research_object",
+    "filters": {
+      "kind": "output"
+    }
+  }
+}
