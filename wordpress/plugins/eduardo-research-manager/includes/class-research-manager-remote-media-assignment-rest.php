@@ -164,7 +164,7 @@ final class Eduardo_Research_Manager_Remote_Media_Assignment_REST {
                 'insight'=>array('write_scope'=>'insights.write','read_scope'=>'insights.read'),
                 'research'=>array(
                     'write_scope'=>'research.write','read_scope'=>'research.read',
-                    'kinds'=>array('line','output','project','software','dataset'),
+                    'kinds'=>$this->editor->supported_research_kinds(),
                 ),
             ),
             'transport'=>array(
