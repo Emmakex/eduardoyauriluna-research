@@ -6,7 +6,9 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remediation.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-pages-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-diagnostics.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
@@ -14,6 +16,7 @@ on:
       - 'wordpress/themes/eduardo-research/inc/research-model.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m3-page-remediation.php'
+      - '.github/scripts/test-remote-page-state-authority-regression.php'
       - '.github/workflows/research-manager-remote-m3-remediation-quality.yml'
   push:
     branches: [main]
@@ -22,6 +25,7 @@ on:
       - 'wordpress/themes/eduardo-research/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m3-page-remediation.php'
+      - '.github/scripts/test-remote-page-state-authority-regression.php'
       - '.github/workflows/research-manager-remote-m3-remediation-quality.yml'
 
 permissions:
@@ -67,8 +71,14 @@ jobs:
           set -euo pipefail
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-operations.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-pages-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-rest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remediation.php
           php -l .github/scripts/test-remote-m3-page-remediation.php
+          php -l .github/scripts/test-remote-page-state-authority-regression.php
+
+      - name: Verify Page State mutation contract authority
+        run: php .github/scripts/test-remote-page-state-authority-regression.php
 
       - name: Install clean Research WordPress
         shell: bash
