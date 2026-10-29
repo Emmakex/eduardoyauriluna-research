@@ -33,6 +33,7 @@ grep -Fq "unset(\$endpoints[\$route])" "$PORTABILITY"
 grep -Fq "remove_menu_page('eduardo-research-workspace')" "$V1"
 grep -Fq "strip_diagnostic_payload_from_capabilities" "$V1"
 grep -Fq "unset(\$payload['data']['site_baseline'])" "$V1"
+grep -Fq '$profile = new Eduardo_Research_Manager_Site_Profile();' "$V1"
 grep -Fq "'lighthouse_core_web_vitals'" "$BASELINE"
 grep -Fq "'accessibility_axe_wcag'" "$BASELINE"
 grep -Fq "'search_console'" "$BASELINE"
@@ -60,6 +61,17 @@ grep -Fq "new PortableResearchManagerAdapter(selected)" "$HTTP"
 grep -Fq "export type TenantProductProfile = 'research-theme' | 'generic-wordpress'" "$CONFIG"
 grep -Fq 'productProfile: productProfile(definition.profile' "$CONFIG"
 grep -Fq "site_baseline_audit: { commercialCapability:'diagnostics.read', backendScopes:['site.diagnostics']" "$AUTH"
+
+# Portability remains available for the generic-wordpress compatibility package, but it
+# must not be eagerly loaded or registered in the Research Greenfield runtime.
+if sed -n '1,/^final class Eduardo_Research_Manager_V1_Capabilities/p' "$V1" | grep -Eq 'class-research-manager-(site-baseline|portability)\.php'; then
+  echo 'V1 capabilities eagerly loads generic portability classes before the site profile is known.' >&2
+  exit 1
+fi
+PORTABILITY_ACTIVATION="$(sed -n '/if (! \$profile->research_available()) {/,/^[[:space:]]*}$/p' "$V1")"
+grep -Fq "class-research-manager-site-baseline.php" <<<"$PORTABILITY_ACTIVATION"
+grep -Fq "class-research-manager-portability.php" <<<"$PORTABILITY_ACTIVATION"
+grep -Fq "(new Eduardo_Research_Manager_Portability())->register();" <<<"$PORTABILITY_ACTIVATION"
 
 # Portable admin UX is a product contract, not a cosmetic extra. Keep the generic
 # surface understandable, progressive, accessible and safe for non-technical users.
