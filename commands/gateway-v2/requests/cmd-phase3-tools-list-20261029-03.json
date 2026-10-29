@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-tools-list-20261029-03",
+  "tenant": "eduardo-research",
+  "action": "manager.tools.list",
+  "requested_by": "chatgpt",
+  "payload": {}
+}
