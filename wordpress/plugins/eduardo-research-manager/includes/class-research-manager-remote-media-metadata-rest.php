@@ -114,7 +114,7 @@ final class Eduardo_Research_Manager_Remote_Media_Metadata_REST {
         $media = is_array($data['media_control'] ?? null) ? $data['media_control'] : array();
         $media['write_available'] = true;
         $media['write_scope'] = 'media.write';
-        $media['operations'] = array('media-metadata-update');
+        $media['operations'] = Eduardo_Research_Manager_Remote_Media_Metadata_Operations::mutable_operations();
         $media['metadata_fields'] = Eduardo_Research_Manager_Media_Editor::FIELDS;
         $media['metadata_transport'] = array(
             'base'=>'/research-manager/v1/media/metadata',
