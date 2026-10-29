@@ -1,0 +1,29 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-phase3-insight-42-inspect-20261029",
+  "command_sha256": "240e9dec910a6ec1e958a47c630164f76be4d8cb87f46f1d02ed04209c93f087",
+  "data": {
+    "content": "<p>La inteligencia artificial está evolucionando más allá de herramientas aisladas que generan texto, clasifican información o realizan predicciones. Cada vez más, los sistemas de IA se diseñan para planificar, utilizar herramientas, coordinar tareas y actuar a lo largo de procesos empresariales completos.</p><p>Este cambio modifica el problema central de investigación. La cuestión ya no es únicamente si un sistema de IA puede ejecutar una tarea, sino si un sistema autónomo o semiautónomo puede operar dentro de un proceso organizativo real manteniendo fiabilidad, observabilidad, trazabilidad y gobernanza.</p><h2>La autonomía no es una propiedad binaria</h2><p>Los procesos empresariales contienen distintos niveles de riesgo operativo. Algunas acciones pueden ejecutarse automáticamente, mientras que otras requieren aprobación, juicio contextual o responsabilidad explícita. Por ello, la autonomía debe tratarse como una variable de diseño calibrada y no como un objetivo de todo o nada.</p><p>Una agenda de investigación útil debe examinar cómo se distribuye la autoridad de decisión entre personas y agentes de IA, cuándo debe producirse una escalada y cómo se recuperan los sistemas cuando fallan herramientas, datos o decisiones intermedias.</p><h2>La evaluación debe ir más allá de completar tareas</h2><p>Un agente que completa una tarea no es necesariamente un sistema operativo fiable. La evaluación también debería considerar tasas de error, comportamiento de recuperación, latencia, coste, trazabilidad, intervención humana y consecuencias de acciones incorrectas.</p><p>Esta perspectiva es especialmente relevante en pequeñas y medianas empresas, donde los sistemas fragmentados, los recursos técnicos limitados y las restricciones prácticas de integración hacen especialmente importantes la fiabilidad y el valor operativo medible.</p><h2>Una dirección de investigación</h2><p>La dirección de trabajo consiste en estudiar arquitecturas y métodos de evaluación para agentes de IA autónomos y semiautónomos aplicados a procesos empresariales. El objetivo no es asumir que una mayor autonomía siempre es mejor, sino identificar las condiciones bajo las cuales los procesos habilitados por IA pueden convertirse en componentes fiables, gobernables y útiles para las organizaciones.</p><p>Esta nota define un problema y una dirección de investigación. No presenta resultados empíricos completados.</p>",
+    "excerpt": "Una nota de investigación sobre por qué los agentes de IA empresariales deben evaluarse no solo por completar tareas, sino por operar con fiabilidad, trazabilidad y gobernanza.",
+    "insight_type": "research_note",
+    "language": "es",
+    "line_ids": [
+      30
+    ],
+    "post_id": 42,
+    "post_type": "post",
+    "scheduled_at": "",
+    "slug": "automatizacion-autonomia-responsable-agentes-ia-procesos-empresariales",
+    "status": "publish",
+    "title": "De la automatización a la autonomía responsable: cómo estudiar agentes de IA para procesos empresariales",
+    "url": "https://eduardoyauriluna.com/es/notas/automatizacion-autonomia-responsable-agentes-ia-procesos-empresariales/"
+  },
+  "read_only": true,
+  "resource": {
+    "id": 42,
+    "type": "insight"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
