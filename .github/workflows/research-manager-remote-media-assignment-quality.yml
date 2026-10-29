@@ -90,6 +90,27 @@ jobs:
           php -l .github/scripts/test-remote-media-assignment-inspection.php
           php -l .github/scripts/test-remote-media-assignment-scope-order.php
 
+      - name: Guard Media assignment Research kind authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          editor = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-media-assignment-editor.php').read_text(encoding='utf-8')
+          rest = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-media-assignment-rest.php').read_text(encoding='utf-8')
+          kinds = "array('line','output','project','software','dataset')"
+
+          if "public function supported_research_kinds(): array" not in editor or f"return {kinds};" not in editor:
+              raise SystemExit('Media Assignment Editor must own the explicit fail-closed Research kind allowlist')
+          if "in_array($kind, $this->supported_research_kinds(), true)" not in editor:
+              raise SystemExit('Media Assignment Editor target resolution must consume its Research kind authority')
+          if "'kinds'=>$this->editor->supported_research_kinds()" not in rest:
+              raise SystemExit('Remote Media Assignment capabilities must derive Research kinds from the Editor')
+          if kinds in rest:
+              raise SystemExit('Remote Media Assignment REST duplicates the Editor-owned Research kind allowlist')
+          PY
+
       - name: Install clean Research WordPress
         shell: bash
         run: |
