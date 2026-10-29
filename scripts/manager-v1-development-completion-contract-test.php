@@ -135,6 +135,7 @@ check(str_contains($v1caps,"'future_multiclient_saas_in_v1'=>false"),'Capabiliti
 check(str_contains($v1caps,"'normal_operation_ssh_required'=>false"),'Capabilities must keep normal SSH bypass disabled');
 check(str_contains($v1caps,"'normal_operation_wordpress_credentials_shared'=>false"),'Capabilities must keep shared WordPress credentials out of normal operation');
 check(str_contains($v1caps,"'arbitrary_wordpress_rest_proxy'=>false"),'Capabilities must keep arbitrary WordPress REST proxy disabled');
+check(false===str_contains($v1caps,"'surfaces'=>array("),'manager_v1_development must not publish a manually maintained surfaces catalog');
 
 $semantic=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-semantic-scope-guard.php');
 $remoteRest=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php');
