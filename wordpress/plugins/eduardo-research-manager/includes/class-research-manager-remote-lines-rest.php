@@ -41,7 +41,7 @@ final class Eduardo_Research_Manager_Remote_Lines_REST {
         $payload=$response->get_data(); if(!is_array($payload)||!is_array($payload['data']??null)) return $response; $data=$payload['data'];
         $read=is_array($data['read_endpoints']??null)?$data['read_endpoints']:array(); $read['research_lines']='research.read'; $read['research_line']='research.read'; $data['read_endpoints']=$read;
         $data['research_line_control']=array(
-            'milestone'=>'M5','inventory'=>true,'inspection'=>true,'operations'=>array('line-create','line-update'),
+            'milestone'=>'M5','inventory'=>true,'inspection'=>true,'operations'=>$this->operations->mutable_operations(),
             'fields'=>array('status','slug','title','excerpt','content','language','evidence_status','research_status','central_question','order','topics','methods'),
             'transport_base'=>'/research-manager/v1/research-lines','lifecycle'=>array('plan','apply','status','verify','rollback'),
             'evidence_gate'=>array('required_for_creation'=>true,'confirmation_field'=>'evidence_confirmed','reference_field'=>'evidence_reference','confirmation_class'=>'evidence-explicit'),
