@@ -5,6 +5,9 @@ on:
     paths:
       - 'wordpress/themes/eduardo-research/header.php'
       - 'wordpress/themes/eduardo-research/inc/research-language.php'
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/inc/research-router.php'
+      - 'wordpress/themes/eduardo-research/inc/research-sitemap.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-rendered-verifier.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-m8-route-language-quality.yml'
@@ -13,6 +16,9 @@ on:
     paths:
       - 'wordpress/themes/eduardo-research/header.php'
       - 'wordpress/themes/eduardo-research/inc/research-language.php'
+      - 'wordpress/themes/eduardo-research/inc/research-preset.php'
+      - 'wordpress/themes/eduardo-research/inc/research-router.php'
+      - 'wordpress/themes/eduardo-research/inc/research-sitemap.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-rendered-verifier.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/workflows/research-m8-route-language-quality.yml'
@@ -95,6 +101,46 @@ jobs:
             echo 'English root leaked the global Spanish WordPress locale.' >&2
             exit 1
           fi
+
+      - name: Prove empty collection surfaces stay out of public routing and sitemaps
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            publications es/publicaciones \
+            projects es/proyectos \
+            software es/software \
+            datasets es/datos; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/${path}/")"
+            test "$code" = "404" || { echo "Expected 404 for /${path}/, got ${code}" >&2; exit 1; }
+          done
+
+          cd /tmp/research-m8-language-wp
+          wp eval '
+          $args = eduardo_research_sitemap_post_query_args([], "page");
+          $excluded = array_map("intval", $args["post__not_in"] ?? []);
+          foreach (["publications","projects","software","datasets"] as $key) {
+              $contract = eduardo_research_page_contract($key);
+              $page = get_page_by_path((string)($contract["wp_slug"] ?? $key));
+              if (! $page || ! in_array((int)$page->ID, $excluded, true)) {
+                  fwrite(STDERR, "Empty collection page missing from sitemap exclusions: {$key}\n");
+                  exit(1);
+              }
+              if (eduardo_research_page_is_publicly_available($key, "en") || eduardo_research_page_is_publicly_available($key, "es")) {
+                  fwrite(STDERR, "Empty collection unexpectedly public: {$key}\n");
+                  exit(1);
+              }
+          }
+          ' --allow-root
+
+          output_id="$(wp post create --post_type=research_output --post_status=publish --post_title='Published output' --porcelain --allow-root)"
+          wp post meta update "$output_id" _research_language en --allow-root
+          wp cache flush --allow-root
+
+          code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/publications/)"
+          test "$code" = "200" || { echo "Expected Publications EN to reopen after first published record, got ${code}" >&2; exit 1; }
+          code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/es/publicaciones/)"
+          test "$code" = "404" || { echo "Expected Publications ES to remain closed without ES records, got ${code}" >&2; exit 1; }
 
       - name: Prove Manager rendered verification for EN and ES Home
         shell: bash
