@@ -12,9 +12,10 @@ final class Eduardo_Research_Manager_Remote_Resource_Inventory_REST {
     public function register(): void {add_action('rest_api_init',array($this,'register_routes'));add_filter('rest_request_after_callbacks',array($this,'augment_capabilities'),10,3);}
     public function register_routes(): void {
         $ns=Eduardo_Research_Manager_Remote_REST::NAMESPACE;
+        $type_pattern=$this->type_route_pattern();
         register_rest_route($ns,'/resources',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'catalog'),'permission_callback'=>fn(WP_REST_Request $r)=>$this->auth->permission($r,'site.read')));
-        register_rest_route($ns,'/resources/(?P<type>pages|insights|lines|outputs|projects|software|datasets)',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'listing'),'permission_callback'=>fn(WP_REST_Request $r)=>$this->type_permission($r)));
-        register_rest_route($ns,'/resources/(?P<type>pages|insights|lines|outputs|projects|software|datasets)/(?P<identifier>[A-Za-z0-9._:-]+)',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'item'),'permission_callback'=>fn(WP_REST_Request $r)=>$this->type_permission($r)));
+        register_rest_route($ns,'/resources/(?P<type>'.$type_pattern.')',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'listing'),'permission_callback'=>fn(WP_REST_Request $r)=>$this->type_permission($r)));
+        register_rest_route($ns,'/resources/(?P<type>'.$type_pattern.')/(?P<identifier>[A-Za-z0-9._:-]+)',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'item'),'permission_callback'=>fn(WP_REST_Request $r)=>$this->type_permission($r)));
     }
     public function catalog(WP_REST_Request $request): WP_REST_Response {return $this->response($request,$this->inventory->catalog());}
     public function listing(WP_REST_Request $request): WP_REST_Response|WP_Error {
@@ -33,6 +34,11 @@ final class Eduardo_Research_Manager_Remote_Resource_Inventory_REST {
             'types'=>$this->inventory->types(),'languages'=>Eduardo_Research_Manager::contract()->languages(),'language_filter'=>true,'max_per_page'=>50,'arbitrary_wordpress_proxy'=>false,
         );
         $response->set_data($payload);return $response;
+    }
+    private function type_route_pattern(): string {
+        $types=array();
+        foreach(array_keys($this->inventory->types()) as $type){$types[]=preg_quote((string) $type,'/');}
+        return implode('|',$types);
     }
     private function type_permission(WP_REST_Request $request): bool|WP_Error {$type=sanitize_key((string) $request['type']);$types=$this->inventory->types();if(!isset($types[$type])){return new WP_Error('validation_failed','Unsupported Manager resource type.',array('status'=>400));}return $this->auth->permission($request,(string) $types[$type]['scope']);}
     private function response(WP_REST_Request $request,array $data): WP_REST_Response {return new WP_REST_Response(array('ok'=>true,'request_id'=>(string) $request->get_header('x-research-manager-request-id'),'data'=>$data),200);}
