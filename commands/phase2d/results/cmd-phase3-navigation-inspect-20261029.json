@@ -1,0 +1,13 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-phase3-navigation-inspect-20261029",
+  "command_sha256": "053f93b93e80d25b31b6756925559558b1eaba1bcc0cc1649ecb986300babd6c",
+  "error": {
+    "code": "execution_failed",
+    "message": "The bounded resource read did not complete successfully."
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
