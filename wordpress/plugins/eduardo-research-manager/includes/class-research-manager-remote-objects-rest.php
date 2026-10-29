@@ -179,7 +179,7 @@ final class Eduardo_Research_Manager_Remote_Objects_REST {
             'inventory'=>true,
             'inspection'=>true,
             'kinds'=>$kinds,
-            'operations'=>array('object-create','object-update'),
+            'operations'=>$this->operations->mutable_operations(),
             'transport_base'=>'/research-manager/v1/research-objects',
             'lifecycle'=>array('plan','apply','status','verify','rollback'),
             'evidence_gate'=>array(
