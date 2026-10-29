@@ -5,6 +5,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Page_State_Editor {
+    private const MUTABLE_FIELDS = array('title','status');
     private const ALLOWED_STATUSES = array('draft','publish');
 
     private Eduardo_Research_Manager_Page_Resource $pages;
@@ -14,6 +15,9 @@ final class Eduardo_Research_Manager_Page_State_Editor {
         $this->pages = $pages ?: Eduardo_Research_Manager::pages();
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
     }
+
+    public static function mutable_fields(): array { return self::MUTABLE_FIELDS; }
+    public static function allowed_statuses(): array { return self::ALLOWED_STATUSES; }
 
     public function inspect(string $key): array|WP_Error {
         $page = $this->pages->inspect(sanitize_key($key), '');
@@ -35,7 +39,8 @@ final class Eduardo_Research_Manager_Page_State_Editor {
     public function preview_update(string $key, array $changes, string $intent = ''): array|WP_Error {
         $before = $this->inspect($key); if (is_wp_error($before)) { return $before; }
         if (! $changes) { return new WP_Error('research_manager_page_state_empty', 'Page state update requires at least one bounded change.'); }
-        $unknown = array_diff(array_keys($changes), array('title','status','slug'));
+        $known_fields = array_merge(self::MUTABLE_FIELDS, array('slug'));
+        $unknown = array_diff(array_keys($changes), $known_fields);
         if ($unknown) { return new WP_Error('research_manager_page_state_field_unknown', 'Unsupported Page state field: ' . implode(', ', array_map('sanitize_key', $unknown))); }
         if (array_key_exists('slug', $changes)) { return new WP_Error('research_manager_page_slug_immutable', 'Theme contract Page slugs are immutable through the Manager.'); }
 
