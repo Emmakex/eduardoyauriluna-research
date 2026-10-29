@@ -1,0 +1,21 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase3-software-list-20261029",
+  "command_sha256": "6b2749f8239aa8854a17fab9d8743e443a93bc4b2f30bbc062091f929f760faf",
+  "data": {
+    "count": 0,
+    "items": [],
+    "kind": "software",
+    "language": ""
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "kind": "software"
+    },
+    "type": "research_object"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
