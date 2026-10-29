@@ -7,6 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_Insight_Pairing_Operations {
     private const PLANS_OPTION = 'eduardo_research_manager_remote_insight_pair_plans';
     private const OPERATIONS_OPTION = 'eduardo_research_manager_remote_insight_pair_operations';
+    private const MUTABLE_OPERATIONS = array('insight-pair','insight-unpair');
     private const PLAN_TTL = 15 * MINUTE_IN_SECONDS;
     private const PLAN_LIMIT = 40;
     private const OPERATION_LIMIT = 80;
@@ -22,9 +23,13 @@ final class Eduardo_Research_Manager_Remote_Insight_Pairing_Operations {
         $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
     }
 
+    public static function mutable_operations(): array {
+        return self::MUTABLE_OPERATIONS;
+    }
+
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('insight-pair','insight-unpair'), true)) {
+        if (! in_array($operation, self::MUTABLE_OPERATIONS, true)) {
             return $this->error('validation_failed', 'Unsupported Research Insight pairing operation.', 400);
         }
 

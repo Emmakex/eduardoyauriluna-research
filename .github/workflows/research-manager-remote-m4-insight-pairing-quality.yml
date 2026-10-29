@@ -13,6 +13,7 @@ on:
       - 'wordpress/themes/eduardo-research/inc/research-insights.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m4-insight-pairing.php'
+      - '.github/scripts/test-remote-m4-insight-pairing-authority-regression.php'
       - '.github/workflows/research-manager-remote-m4-insight-pairing-quality.yml'
   push:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - 'wordpress/themes/eduardo-research/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m4-insight-pairing.php'
+      - '.github/scripts/test-remote-m4-insight-pairing-authority-regression.php'
       - '.github/workflows/research-manager-remote-m4-insight-pairing-quality.yml'
 
 permissions:
@@ -69,6 +71,10 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-insights-rest.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-m4-insight-pairing.php
+          php -l .github/scripts/test-remote-m4-insight-pairing-authority-regression.php
+
+      - name: Verify Insight pairing mutable operation authority
+        run: php .github/scripts/test-remote-m4-insight-pairing-authority-regression.php
 
       - name: Install clean Research WordPress
         shell: bash
