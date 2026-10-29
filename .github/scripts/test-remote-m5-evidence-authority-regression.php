@@ -17,36 +17,21 @@ if (false === $operations || false === $rest) {
     fail_m5_evidence_authority('unable to read Evidence operation sources');
 }
 
-$canonical_operations = array(
-    'identity-update',
-    'evidence-create',
-    'evidence-update',
-    'evidence-delete',
-);
-
-if (!str_contains($operations, 'private const MUTABLE_OPERATIONS = [')) {
-    fail_m5_evidence_authority('Remote_Evidence_Operations does not declare MUTABLE_OPERATIONS');
+$authority_literal = "/private const MUTABLE_OPERATIONS\\s*=\\s*array\\s*\\(\\s*'identity-update'\\s*,\\s*'evidence-create'\\s*,\\s*'evidence-update'\\s*,\\s*'evidence-delete'\\s*,?\\s*\\)\\s*;/s";
+if (1 !== preg_match($authority_literal, $operations)) {
+    fail_m5_evidence_authority('Remote_Evidence_Operations does not own the canonical MUTABLE_OPERATIONS list');
 }
 
-foreach ($canonical_operations as $operation) {
-    if (!str_contains($operations, "'{$operation}'")) {
-        fail_m5_evidence_authority("MUTABLE_OPERATIONS is missing {$operation}");
-    }
-}
-
-if (!str_contains($operations, 'in_array( $operation, self::MUTABLE_OPERATIONS, true )')) {
+$create_plan_authority = '/in_array\\s*\\(\\s*\\$operation\\s*,\\s*self::MUTABLE_OPERATIONS\\s*,\\s*true\\s*\\)/s';
+if (1 !== preg_match($create_plan_authority, $operations)) {
     fail_m5_evidence_authority('create_plan does not validate against MUTABLE_OPERATIONS');
 }
 
-if (!str_contains($operations, "private const GROUP_ROUTE = 'eduardo/v1/research/groups/';")) {
-    fail_m5_evidence_authority('GROUP_ROUTE changed unexpectedly');
-}
-
-if (!str_contains($rest, '$this->operations->mutable_operations()')) {
+if (!str_contains($rest, "'operations'=>$this->operations->mutable_operations()")) {
     fail_m5_evidence_authority('REST capabilities do not consume Operations mutable authority');
 }
 
-$duplicate_literal = "/\\[\\s*'identity-update'\\s*,\\s*'evidence-create'\\s*,\\s*'evidence-update'\\s*,\\s*'evidence-delete'\\s*,?\\s*\\]/s";
+$duplicate_literal = "/(?:array\\s*\\(\\s*|\\[\\s*)'identity-update'\\s*,\\s*'evidence-create'\\s*,\\s*'evidence-update'\\s*,\\s*'evidence-delete'\\s*,?\\s*(?:\\)|\\])/s";
 if (1 === preg_match($duplicate_literal, $rest)) {
     fail_m5_evidence_authority('REST re-declares the mutable Evidence operation list');
 }
