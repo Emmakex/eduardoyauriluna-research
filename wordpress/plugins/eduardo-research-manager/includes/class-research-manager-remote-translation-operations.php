@@ -7,6 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_Translation_Operations {
     private const PLANS_OPTION = 'eduardo_research_manager_remote_translation_plans';
     private const OPERATIONS_OPTION = 'eduardo_research_manager_remote_translation_operations';
+    private const MUTABLE_OPERATIONS = array('translation-pair','translation-unpair');
     private const PLAN_TTL = 15 * MINUTE_IN_SECONDS;
     private const ALLOWED_TYPES = array('research_line','research_output','research_project','research_software','research_dataset');
 
@@ -23,9 +24,13 @@ final class Eduardo_Research_Manager_Remote_Translation_Operations {
 
     public static function allowed_types(): array { return self::ALLOWED_TYPES; }
 
+    public function mutable_operations(): array {
+        return self::MUTABLE_OPERATIONS;
+    }
+
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('translation-pair','translation-unpair'), true)) {
+        if (! in_array($operation, self::MUTABLE_OPERATIONS, true)) {
             return $this->error('validation_failed', 'Unsupported Research translation operation.', 400);
         }
         $evidence_confirmed = ! empty($payload['evidence_confirmed']);
