@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-navigation-gateway-v2-20261029-02",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "navigation"
+  }
+}
