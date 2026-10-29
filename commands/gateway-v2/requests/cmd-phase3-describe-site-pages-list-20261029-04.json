@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-describe-site-pages-list-20261029-04",
+  "tenant": "eduardo-research",
+  "action": "manager.tool.describe",
+  "requested_by": "chatgpt",
+  "payload": {
+    "tool": "site_pages_list"
+  }
+}
