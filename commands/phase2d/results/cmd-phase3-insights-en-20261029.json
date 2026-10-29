@@ -1,0 +1,37 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase3-insights-en-20261029",
+  "command_sha256": "960087bfbc6f666154acc19b1a915ee3ea61d3caa95f4f97ecc8b6b2e2c32290",
+  "data": {
+    "count": 1,
+    "items": [
+      {
+        "content": "<p>Artificial intelligence is moving beyond isolated tools that generate text, classify information or make predictions. Increasingly, AI systems are being designed to plan, use tools, coordinate tasks and act across complete business workflows.</p><p>This shift changes the central research problem. The important question is no longer simply whether an AI system can perform a task. It is whether an autonomous or semi-autonomous system can operate inside a real organisational process while remaining reliable, observable, traceable and governable.</p><h2>Autonomy is not a binary property</h2><p>Business processes contain different levels of operational risk. Some actions can be executed automatically, while others require approval, contextual judgement or explicit accountability. For that reason, autonomy should be treated as a calibrated design variable rather than an all-or-nothing objective.</p><p>A useful research agenda therefore needs to examine how decision authority is divided between people and AI agents, when escalation should occur, and how systems recover when tools, data or intermediate decisions fail.</p><h2>Evaluation must go beyond task completion</h2><p>An agent that completes a task is not necessarily a dependable operational system. Evaluation should also consider error rates, recovery behaviour, latency, cost, traceability, human intervention and the consequences of incorrect actions.</p><p>This perspective is especially relevant in small and medium-sized enterprises, where fragmented systems, limited technical resources and practical integration constraints make reliability and measurable operational value particularly important.</p><h2>A research direction</h2><p>The working research direction is to study architectures and evaluation methods for autonomous and semi-autonomous AI agents in business processes. The aim is not to assume that greater autonomy is always better, but to identify the conditions under which AI-enabled processes can become dependable, governable and useful components of organisations.</p><p>This note defines a research problem and direction. It does not report completed empirical findings.</p>",
+        "excerpt": "A research note outlining why business AI agents should be studied not only by whether they complete tasks, but by how reliably, traceably and governably they operate.",
+        "insight_type": "research_note",
+        "language": "en",
+        "line_ids": [
+          29
+        ],
+        "post_id": 41,
+        "post_type": "post",
+        "scheduled_at": "",
+        "slug": "automation-accountable-autonomy-ai-agents-business-processes",
+        "status": "publish",
+        "title": "From automation to accountable autonomy: framing AI agents for business processes",
+        "url": "https://eduardoyauriluna.com/insights/automation-accountable-autonomy-ai-agents-business-processes/"
+      }
+    ],
+    "language": "en"
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "language": "en"
+    },
+    "type": "insight"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
