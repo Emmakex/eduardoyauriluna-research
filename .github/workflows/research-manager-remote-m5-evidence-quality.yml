@@ -10,6 +10,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php'
       - '.github/scripts/test-remote-m5-evidence.php'
       - '.github/scripts/test-remote-m5-evidence-route-regression.php'
+      - '.github/scripts/test-remote-m5-evidence-authority-regression.php'
       - '.github/workflows/research-manager-remote-m5-evidence-quality.yml'
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/test-remote-m5-evidence.php'
       - '.github/scripts/test-remote-m5-evidence-route-regression.php'
+      - '.github/scripts/test-remote-m5-evidence-authority-regression.php'
       - '.github/workflows/research-manager-remote-m5-evidence-quality.yml'
 
 permissions:
@@ -59,6 +61,9 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-m5-evidence.php
           php -l .github/scripts/test-remote-m5-evidence-route-regression.php
+          php -l .github/scripts/test-remote-m5-evidence-authority-regression.php
+      - name: Verify Evidence mutable operation authority
+        run: php .github/scripts/test-remote-m5-evidence-authority-regression.php
       - name: Install clean Research WordPress
         run: |
           rm -rf /tmp/research-manager-remote-m5-evidence
