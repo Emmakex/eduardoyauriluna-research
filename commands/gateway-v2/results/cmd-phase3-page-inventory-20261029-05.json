@@ -1,0 +1,773 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase3-page-inventory-20261029-05",
+  "command_sha256": "98458d832eee8965177ca1d0f46bda56b79a28acb4e02fc700f64ec82f8c1c86",
+  "data": {
+    "count": 12,
+    "generated_at": "2026-10-29T15:42:52+00:00",
+    "items": [
+      {
+        "exists": true,
+        "key": "home",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "hero-eyebrow",
+              "hero-lead",
+              "hero-primary-target",
+              "hero-secondary-target",
+              "research-lines-heading",
+              "research-lines-intro",
+              "selected-outputs-heading",
+              "selected-outputs-intro",
+              "academic-identifiers-heading",
+              "latest-insights-heading",
+              "final-cta-heading",
+              "final-cta-body",
+              "final-cta-button",
+              "final-cta-target"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "academic-identifiers-heading": "Academic profiles",
+              "final-cta-body": "Explore the research lines, the questions that guide them and the methods proposed for their development.",
+              "final-cta-button": "Explore research",
+              "final-cta-heading": "Research and collaboration",
+              "final-cta-target": "contact",
+              "hero-eyebrow": "Researcher profile",
+              "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
+              "hero-primary-target": "research",
+              "hero-secondary-target": "cv",
+              "latest-insights-heading": "Research notes",
+              "research-lines-heading": "Research agenda",
+              "research-lines-intro": "The research agenda focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.",
+              "selected-outputs-heading": "Research outputs",
+              "selected-outputs-intro": "Research outputs will be listed here as publications, projects, software or datasets become available and are verified."
+            },
+            "language": "en",
+            "stored_slots": {
+              "academic-identifiers-heading": "Academic profiles",
+              "final-cta-body": "Explore the research lines, the questions that guide them and the methods proposed for their development.",
+              "final-cta-button": "Explore research",
+              "final-cta-heading": "Research and collaboration",
+              "hero-eyebrow": "Researcher profile",
+              "hero-lead": "Applied research on how autonomous and semi-autonomous AI systems can be designed, integrated and evaluated in real organisational environments while remaining reliable, traceable and governable.",
+              "latest-insights-heading": "Research notes",
+              "research-lines-heading": "Research agenda",
+              "research-lines-intro": "The research agenda focuses on autonomous AI agents, human–AI collaboration, digital transformation in SMEs and AI-mediated information discovery.",
+              "selected-outputs-heading": "Research outputs",
+              "selected-outputs-intro": "Research outputs will be listed here as publications, projects, software or datasets become available and are verified."
+            },
+            "url": "https://eduardoyauriluna.com/"
+          },
+          "es": {
+            "allowed_slots": [
+              "hero-eyebrow",
+              "hero-lead",
+              "hero-primary-target",
+              "hero-secondary-target",
+              "research-lines-heading",
+              "research-lines-intro",
+              "selected-outputs-heading",
+              "selected-outputs-intro",
+              "academic-identifiers-heading",
+              "latest-insights-heading",
+              "final-cta-heading",
+              "final-cta-body",
+              "final-cta-button",
+              "final-cta-target"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "academic-identifiers-heading": "Perfiles académicos",
+              "final-cta-body": "Explora las líneas de investigación, las preguntas que las orientan y los métodos planteados para su desarrollo.",
+              "final-cta-button": "Explorar investigación",
+              "final-cta-heading": "Investigación y colaboración",
+              "final-cta-target": "contact",
+              "hero-eyebrow": "Perfil investigador",
+              "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
+              "hero-primary-target": "research",
+              "hero-secondary-target": "cv",
+              "latest-insights-heading": "Notas de investigación",
+              "research-lines-heading": "Agenda de investigación",
+              "research-lines-intro": "La agenda de investigación se articula en torno a agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.",
+              "selected-outputs-heading": "Resultados de investigación",
+              "selected-outputs-intro": "Los resultados de investigación se mostrarán aquí a medida que haya publicaciones, proyectos, software o conjuntos de datos disponibles y verificados."
+            },
+            "language": "es",
+            "stored_slots": {
+              "academic-identifiers-heading": "Perfiles académicos",
+              "final-cta-body": "Explora las líneas de investigación, las preguntas que las orientan y los métodos planteados para su desarrollo.",
+              "final-cta-button": "Explorar investigación",
+              "final-cta-heading": "Investigación y colaboración",
+              "hero-eyebrow": "Perfil investigador",
+              "hero-lead": "Investigación aplicada sobre cómo diseñar, integrar y evaluar sistemas de IA autónomos y semiautónomos en entornos organizativos reales manteniendo fiabilidad, trazabilidad y gobernanza.",
+              "latest-insights-heading": "Notas de investigación",
+              "research-lines-heading": "Agenda de investigación",
+              "research-lines-intro": "La agenda de investigación se articula en torno a agentes autónomos de IA, colaboración humano–IA, transformación digital en pymes y descubrimiento de información mediado por IA.",
+              "selected-outputs-heading": "Resultados de investigación",
+              "selected-outputs-intro": "Los resultados de investigación se mostrarán aquí a medida que haya publicaciones, proyectos, software o conjuntos de datos disponibles y verificados."
+            },
+            "url": "https://eduardoyauriluna.com/es/"
+          }
+        },
+        "model": "research-home-v1",
+        "page_id": 8,
+        "role": "front-page"
+      },
+      {
+        "exists": true,
+        "key": "about",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Researcher profile",
+              "lead": "Eduardo Jose Yauri Luna is a researcher focused on autonomous AI agents, human–AI collaboration, SME digital transformation and AI-mediated information discovery.",
+              "sections": [
+                "Research focus",
+                "Professional background"
+              ]
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Researcher profile",
+              "lead": "Eduardo Jose Yauri Luna is a researcher focused on autonomous AI agents, human–AI collaboration, SME digital transformation and AI-mediated information discovery.",
+              "sections": [
+                "Research focus",
+                "Professional background"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/about/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Perfil investigador",
+              "lead": "Eduardo Jose Yauri Luna es un investigador centrado en agentes autónomos de IA, colaboración humano–IA, transformación digital de pymes y descubrimiento de información mediado por IA.",
+              "sections": [
+                "Enfoque de investigación",
+                "Trayectoria profesional"
+              ]
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Perfil investigador",
+              "lead": "Eduardo Jose Yauri Luna es un investigador centrado en agentes autónomos de IA, colaboración humano–IA, transformación digital de pymes y descubrimiento de información mediado por IA.",
+              "sections": [
+                "Enfoque de investigación",
+                "Trayectoria profesional"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/es/perfil/"
+          }
+        },
+        "model": "research-about-v1",
+        "page_id": 9,
+        "role": "profile"
+      },
+      {
+        "exists": true,
+        "key": "research",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research agenda",
+              "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+              "sections": [
+                "Autonomous AI agents",
+                "Human–AI collaboration",
+                "Digital transformation in SMEs",
+                "AI-mediated information discovery",
+                "Methods and evaluation"
+              ]
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research agenda",
+              "lead": "The primary direction examines how autonomous and semi-autonomous AI agents can improve business processes while remaining reliable, observable, recoverable and governable.",
+              "sections": [
+                "Autonomous AI agents",
+                "Human–AI collaboration",
+                "Digital transformation in SMEs",
+                "AI-mediated information discovery",
+                "Methods and evaluation"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/research/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Agenda de investigación",
+              "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+              "sections": [
+                "Agentes autónomos de IA",
+                "Colaboración humano–IA",
+                "Transformación digital en pymes",
+                "Descubrimiento de información mediado por IA",
+                "Métodos y evaluación"
+              ]
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Agenda de investigación",
+              "lead": "La línea principal estudia cómo los agentes de IA autónomos y semiautónomos pueden mejorar procesos empresariales manteniendo fiabilidad, observabilidad, capacidad de recuperación y gobernanza.",
+              "sections": [
+                "Agentes autónomos de IA",
+                "Colaboración humano–IA",
+                "Transformación digital en pymes",
+                "Descubrimiento de información mediado por IA",
+                "Métodos y evaluación"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/es/investigacion/"
+          }
+        },
+        "model": "research-hub-v1",
+        "page_id": 10,
+        "role": "research-hub"
+      },
+      {
+        "exists": true,
+        "key": "publications",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research outputs",
+              "lead": "Scholarly outputs will be listed here by publication type and verified status. No peer-reviewed publications are currently recorded in the controlled academic CV source."
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research outputs",
+              "lead": "Scholarly outputs will be listed here by publication type and verified status. No peer-reviewed publications are currently recorded in the controlled academic CV source."
+            },
+            "url": "https://eduardoyauriluna.com/publications/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Resultados de investigación",
+              "lead": "Los resultados académicos se listarán aquí por tipo de publicación y estado verificado. Actualmente no constan publicaciones revisadas por pares en la fuente controlada del CV académico."
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Resultados de investigación",
+              "lead": "Los resultados académicos se listarán aquí por tipo de publicación y estado verificado. Actualmente no constan publicaciones revisadas por pares en la fuente controlada del CV académico."
+            },
+            "url": "https://eduardoyauriluna.com/es/publicaciones/"
+          }
+        },
+        "model": "research-publications-v1",
+        "page_id": 11,
+        "role": "output-index"
+      },
+      {
+        "exists": true,
+        "key": "projects",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research projects",
+              "lead": "Research projects will be added only when their research question, methodology, role, dates and outputs can be represented with clear provenance."
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research projects",
+              "lead": "Research projects will be added only when their research question, methodology, role, dates and outputs can be represented with clear provenance."
+            },
+            "url": "https://eduardoyauriluna.com/projects/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Proyectos de investigación",
+              "lead": "Los proyectos de investigación se añadirán únicamente cuando su pregunta de investigación, metodología, rol, fechas y resultados puedan representarse con procedencia clara."
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Proyectos de investigación",
+              "lead": "Los proyectos de investigación se añadirán únicamente cuando su pregunta de investigación, metodología, rol, fechas y resultados puedan representarse con procedencia clara."
+            },
+            "url": "https://eduardoyauriluna.com/es/proyectos/"
+          }
+        },
+        "model": "research-projects-v1",
+        "page_id": 12,
+        "role": "project-index"
+      },
+      {
+        "exists": true,
+        "key": "software",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research software",
+              "lead": "Research software and technical artefacts will be published with version, repository, licence, contribution and links to related research when those records are verified."
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research software",
+              "lead": "Research software and technical artefacts will be published with version, repository, licence, contribution and links to related research when those records are verified."
+            },
+            "url": "https://eduardoyauriluna.com/software/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Software de investigación",
+              "lead": "El software de investigación y los artefactos técnicos se publicarán con versión, repositorio, licencia, contribución y relación con la investigación cuando esos registros estén verificados."
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Software de investigación",
+              "lead": "El software de investigación y los artefactos técnicos se publicarán con versión, repositorio, licencia, contribución y relación con la investigación cuando esos registros estén verificados."
+            },
+            "url": "https://eduardoyauriluna.com/es/software/"
+          }
+        },
+        "model": "research-software-v1",
+        "page_id": 13,
+        "role": "software-index"
+      },
+      {
+        "exists": true,
+        "key": "datasets",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research datasets",
+              "lead": "Datasets will be documented with provenance, version, repository, access conditions, licence, generation method and related research context."
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research datasets",
+              "lead": "Datasets will be documented with provenance, version, repository, access conditions, licence, generation method and related research context."
+            },
+            "url": "https://eduardoyauriluna.com/datasets/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Datos de investigación",
+              "lead": "Los conjuntos de datos se documentarán con procedencia, versión, repositorio, condiciones de acceso, licencia, método de generación y contexto de investigación relacionado."
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Datos de investigación",
+              "lead": "Los conjuntos de datos se documentarán con procedencia, versión, repositorio, condiciones de acceso, licencia, método de generación y contexto de investigación relacionado."
+            },
+            "url": "https://eduardoyauriluna.com/es/datos/"
+          }
+        },
+        "model": "research-datasets-v1",
+        "page_id": 14,
+        "role": "dataset-index"
+      },
+      {
+        "exists": true,
+        "key": "cv",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Academic CV",
+              "lead": "Academic and professional background of Eduardo Jose Yauri Luna, focused on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems.",
+              "sections": [
+                "Identity and research profile",
+                "Education",
+                "Research-relevant professional experience",
+                "Research outputs",
+                "Projects and software",
+                "Skills and methods"
+              ]
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Academic CV",
+              "lead": "Academic and professional background of Eduardo Jose Yauri Luna, focused on experience relevant to his research agenda in artificial intelligence, digital transformation and autonomous systems.",
+              "sections": [
+                "Identity and research profile",
+                "Education",
+                "Research-relevant professional experience",
+                "Research outputs",
+                "Projects and software",
+                "Skills and methods"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/cv/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "CV académico",
+              "lead": "Trayectoria académica y profesional de Eduardo Jose Yauri Luna, centrada en experiencia relevante para su agenda de investigación en IA, transformación digital y sistemas autónomos.",
+              "sections": [
+                "Identidad y perfil de investigación",
+                "Formación",
+                "Experiencia profesional relevante para investigación",
+                "Resultados de investigación",
+                "Proyectos y software",
+                "Competencias y métodos"
+              ]
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "CV académico",
+              "lead": "Trayectoria académica y profesional de Eduardo Jose Yauri Luna, centrada en experiencia relevante para su agenda de investigación en IA, transformación digital y sistemas autónomos.",
+              "sections": [
+                "Identidad y perfil de investigación",
+                "Formación",
+                "Experiencia profesional relevante para investigación",
+                "Resultados de investigación",
+                "Proyectos y software",
+                "Competencias y métodos"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/es/cv/"
+          }
+        },
+        "model": "research-cv-v1",
+        "page_id": 15,
+        "role": "academic-cv"
+      },
+      {
+        "exists": true,
+        "key": "insights",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research notes",
+              "lead": "Working notes, explainers and methodological observations related to the research agenda."
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research notes",
+              "lead": "Working notes, explainers and methodological observations related to the research agenda."
+            },
+            "url": "https://eduardoyauriluna.com/insights/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Notas de investigación",
+              "lead": "Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación."
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Notas de investigación",
+              "lead": "Notas de trabajo, explicaciones y observaciones metodológicas relacionadas con la agenda de investigación."
+            },
+            "url": "https://eduardoyauriluna.com/es/notas/"
+          }
+        },
+        "model": "research-insights-v1",
+        "page_id": 16,
+        "role": "editorial-index"
+      },
+      {
+        "exists": true,
+        "key": "contact",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Research contact",
+              "lead": "Contact for academic conversations, collaboration and enquiries related to the research agenda.",
+              "sections": [
+                "Research enquiries",
+                "Academic profiles"
+              ]
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Research contact",
+              "lead": "Contact for academic conversations, collaboration and enquiries related to the research agenda.",
+              "sections": [
+                "Research enquiries",
+                "Academic profiles"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/contact/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Contacto de investigación",
+              "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.",
+              "sections": [
+                "Consultas de investigación",
+                "Perfiles académicos"
+              ]
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Contacto de investigación",
+              "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.",
+              "sections": [
+                "Consultas de investigación",
+                "Perfiles académicos"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/es/contacto/"
+          }
+        },
+        "model": "research-contact-v1",
+        "page_id": 17,
+        "role": "contact"
+      },
+      {
+        "exists": true,
+        "key": "privacy-policy",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Privacy",
+              "lead": "Privacy information for eduardoyauriluna.com.",
+              "sections": [
+                "Data handling",
+                "Contact"
+              ]
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Privacy",
+              "lead": "Privacy information for eduardoyauriluna.com.",
+              "sections": [
+                "Data handling",
+                "Contact"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/privacy-policy/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Privacidad",
+              "lead": "Información de privacidad de eduardoyauriluna.com.",
+              "sections": [
+                "Tratamiento de datos",
+                "Contacto"
+              ]
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Privacidad",
+              "lead": "Información de privacidad de eduardoyauriluna.com.",
+              "sections": [
+                "Tratamiento de datos",
+                "Contacto"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/es/privacidad/"
+          }
+        },
+        "model": "research-legal-v1",
+        "page_id": 3,
+        "role": "legal"
+      },
+      {
+        "exists": true,
+        "key": "legal-notice",
+        "languages": {
+          "en": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Legal notice",
+              "lead": "Legal and ownership information for eduardoyauriluna.com.",
+              "sections": [
+                "Site ownership",
+                "Terms of use"
+              ]
+            },
+            "language": "en",
+            "stored_slots": {
+              "eyebrow": "Legal notice",
+              "lead": "Legal and ownership information for eduardoyauriluna.com.",
+              "sections": [
+                "Site ownership",
+                "Terms of use"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/legal-notice/"
+          },
+          "es": {
+            "allowed_slots": [
+              "eyebrow",
+              "lead",
+              "sections"
+            ],
+            "available": true,
+            "contract_aligned": true,
+            "effective_slots": {
+              "eyebrow": "Aviso legal",
+              "lead": "Información legal y de titularidad de eduardoyauriluna.com.",
+              "sections": [
+                "Titularidad del sitio",
+                "Condiciones de uso"
+              ]
+            },
+            "language": "es",
+            "stored_slots": {
+              "eyebrow": "Aviso legal",
+              "lead": "Información legal y de titularidad de eduardoyauriluna.com.",
+              "sections": [
+                "Titularidad del sitio",
+                "Condiciones de uso"
+              ]
+            },
+            "url": "https://eduardoyauriluna.com/es/aviso-legal/"
+          }
+        },
+        "model": "research-legal-v1",
+        "page_id": 18,
+        "role": "legal"
+      }
+    ],
+    "languages": [
+      "en",
+      "es"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {},
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
