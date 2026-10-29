@@ -31,7 +31,7 @@ if (! str_contains($operations, 'public static function mutable_operations(): ar
     fail_media_metadata_authority('Operations does not expose the canonical mutable operation list');
 }
 
-if (! str_contains($rest, "$media['operations'] = Eduardo_Research_Manager_Remote_Media_Metadata_Operations::mutable_operations();")) {
+if (! str_contains($rest, "\$media['operations'] = Eduardo_Research_Manager_Remote_Media_Metadata_Operations::mutable_operations();")) {
     fail_media_metadata_authority('Media Metadata REST capabilities do not consume Operations authority');
 }
 
