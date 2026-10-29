@@ -66,7 +66,6 @@ final class Eduardo_Research_Manager_V1_Capabilities {
             'normal_operation_wordpress_credentials_shared'=>false,
             'local_admin_shared_service_parity'=>true,
             'arbitrary_wordpress_rest_proxy'=>false,
-            'surfaces'=>array('identity','pages','navigation','insights','research-lines','research-objects','translations','evidence','media','seo-geo','design','connections','audit','operations'),
         );
 
         $payload['data']=$data;$response->set_data($payload);return $response;
