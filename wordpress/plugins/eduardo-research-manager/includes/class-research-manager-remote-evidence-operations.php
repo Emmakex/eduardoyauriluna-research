@@ -10,6 +10,7 @@ final class Eduardo_Research_Manager_Remote_Evidence_Operations {
     private const PLAN_TTL = 15 * MINUTE_IN_SECONDS;
     private const PLAN_LIMIT = 60;
     private const OPERATION_LIMIT = 120;
+    private const MUTABLE_OPERATIONS = array('identity-update','evidence-create','evidence-update','evidence-delete');
 
     private Eduardo_Research_Manager_Evidence_Editor $editor;
     private Eduardo_Research_Manager_Remote_Audit $audit;
@@ -22,9 +23,13 @@ final class Eduardo_Research_Manager_Remote_Evidence_Operations {
         $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
     }
 
+    public function mutable_operations(): array {
+        return self::MUTABLE_OPERATIONS;
+    }
+
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('identity-update','evidence-create','evidence-update','evidence-delete'), true)) {
+        if (! in_array($operation, self::MUTABLE_OPERATIONS, true)) {
             return $this->error('validation_failed', 'Unsupported remote Research evidence operation.', 400);
         }
 
