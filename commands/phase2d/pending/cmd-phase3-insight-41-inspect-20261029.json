@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-insight-41-inspect-20261029",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "insight",
+    "id": 41
+  }
+}
