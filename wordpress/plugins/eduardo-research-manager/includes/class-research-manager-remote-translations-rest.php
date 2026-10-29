@@ -46,7 +46,7 @@ final class Eduardo_Research_Manager_Remote_Translations_REST {
         $read=is_array($data['read_endpoints']??null)?$data['read_endpoints']:array(); $read['research_translation_candidates']='translations.read'; $read['research_translation']='translations.read'; $data['read_endpoints']=$read;
         $data['research_translation_control']=array(
             'milestone'=>'M5','available'=>true,'post_types'=>Eduardo_Research_Manager_Remote_Translation_Operations::allowed_types(),
-            'operations'=>array('translation-pair','translation-unpair'),'transport_base'=>'/research-manager/v1/research-translations',
+            'operations'=>$this->operations->mutable_operations(),'transport_base'=>'/research-manager/v1/research-translations',
             'lifecycle'=>array('plan','apply','status','verify','rollback'),'pair_requirements'=>array('same_supported_type'=>true,'languages'=>array('en','es'),'published_only'=>true,'research_line_evidence_verified'=>true),
             'evidence_reference'=>array('supported'=>true,'stored_for_structured_types'=>true),'collision_protection'=>true,'stale_preview_protection'=>true,'idempotency'=>true,'rendered_verification'=>true,
             'insights_use_dedicated_m4_gateway'=>true,'arbitrary_wordpress_proxy'=>false
