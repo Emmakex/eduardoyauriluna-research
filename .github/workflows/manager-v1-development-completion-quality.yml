@@ -107,6 +107,8 @@ jobs:
           grep -F "Eduardo_Research_Manager_Identity_Profile" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
           grep -F "Eduardo_Research_Manager_Page_State_Editor" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
           grep -F "'identity.write'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
+          grep -F "'theme_canonical_source'=>Eduardo_Research_Manager_Identity_Profile::option_key()" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
+          ! grep -F "'theme_canonical_source'=>'eduardo_research_identity'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php
       - name: Enforce shared Media domain boundary
         shell: bash
         run: |
