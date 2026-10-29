@@ -214,7 +214,7 @@ final class Eduardo_Research_Manager_Remote_Evidence_REST {
             'milestone'=>'M5',
             'available'=>true,
             'groups'=>$groups,
-            'operations'=>array('identity-update','evidence-create','evidence-update','evidence-delete'),
+            'operations'=>$this->operations->mutable_operations(),
             'transport_base'=>'/research-manager/v1/research-evidence',
             'lifecycle'=>array('plan','apply','status','verify','rollback'),
             'read_scope'=>'evidence.read',
