@@ -54,6 +54,31 @@ jobs:
             test -s "$P/$f"
           done
           grep -F 'Version: 0.11.0' "$P/eduardo-research-manager.php"
+
+      - name: Guard rendered record type authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-rendered-verifier.php').read_text(encoding='utf-8')
+          verify_record = source.split('public function verify_record', 1)[1].split('public function verify_media_assignment', 1)[0]
+
+          required = "array_merge($this->contract->research_post_types(), array('post'))"
+          if required not in verify_record:
+              raise SystemExit('Rendered Verifier must derive Research record membership from Contract and keep post explicit')
+
+          duplicated = [
+              post_type for post_type in (
+                  'research_line', 'research_output', 'research_project', 'research_software', 'research_dataset'
+              )
+              if post_type in verify_record
+          ]
+          if duplicated:
+              raise SystemExit(f'Rendered Verifier duplicates Contract-owned Research post types in verify_record: {duplicated}')
+          PY
+
       - name: Lint Manager PHP
         shell: bash
         run: |
