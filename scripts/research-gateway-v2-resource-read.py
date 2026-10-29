@@ -32,7 +32,7 @@ EVIDENCE_GROUPS = {
     "contact",
 }
 PAGE_KEYS = {"home", "about", "research", "cv", "contact"}
-LIST_RESOURCES = {"insight", "research_object", "research_line", "evidence"}
+LIST_RESOURCES = {"insight", "research_object", "research_line", "evidence", "page"}
 INSPECT_RESOURCES = {
     "insight",
     "research_object",
@@ -115,6 +115,11 @@ def validate_list(payload: dict[str, Any]) -> None:
         raise CommandError("manager.resource.list resource is not supported")
     if not isinstance(filters, dict):
         raise CommandError("manager.resource.list filters must be an object")
+
+    if resource == "page":
+        if filters != {}:
+            raise CommandError("Page list accepts no caller-selected filters")
+        return
 
     if resource in {"insight", "research_line"}:
         if not set(filters).issubset({"language"}):
@@ -231,6 +236,8 @@ def execute(command_path: Path, result_dir: Path) -> int:
                 data = client.call("site_research_objects_list", filters)
             elif resource == "research_line":
                 data = client.call("site_research_lines_list", filters)
+            elif resource == "page":
+                data = client.call("site_pages_list", {})
             else:
                 data = client.call("site_evidence_list", {"group": filters["group"]})
             if not isinstance(data, (dict, list)):
@@ -392,6 +399,14 @@ def self_test() -> int:
             "requested_by": "chatgpt",
             "payload": {"resource": "design_variants"},
         },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-resource-pages-list-0011",
+            "tenant": "eduardo-research",
+            "action": LIST_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "page", "filters": {}},
+        },
     ]
     for command in good_commands:
         validate_command(command)
@@ -449,6 +464,15 @@ def self_test() -> int:
         pass
     else:
         raise CommandError("resource read self-test accepted caller-selected Design Variant parameters")
+
+    bad_pages = dict(good_commands[10])
+    bad_pages["payload"] = {"resource": "page", "filters": {"status": "publish"}}
+    try:
+        validate_command(bad_pages)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("resource read self-test accepted caller-selected Page list filters")
 
     print("research-gateway-v2 resource read self-test: OK")
     return 0
