@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-versions-readback-20261029-06",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "versions"
+  }
+}
