@@ -18,6 +18,8 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
@@ -40,6 +42,8 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php'
@@ -79,6 +83,8 @@ jobs:
           relations = (root / 'class-research-manager-blueprint-relations.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
           identity_profile = (root / 'class-research-manager-identity-profile.php').read_text(encoding='utf-8')
+          identity_operations = (root / 'class-research-manager-remote-identity-profile-operations.php').read_text(encoding='utf-8')
+          identity_rest = (root / 'class-research-manager-remote-identity-profile-rest.php').read_text(encoding='utf-8')
           pairing = (root / 'class-research-manager-translation-pairing.php').read_text(encoding='utf-8')
           translation_editor = (root / 'class-research-manager-translation-editor.php').read_text(encoding='utf-8')
 
@@ -201,6 +207,27 @@ jobs:
               raise SystemExit('Identity Profile must expose its canonical option key descriptively')
           if identity_profile.count("'eduardo_research_identity'") != 1:
               raise SystemExit('Identity Profile must not duplicate its canonical option key literal')
+          if 'public function contract_descriptor(): array|WP_Error' not in identity_profile:
+              raise SystemExit('Identity Profile must expose the canonical Identity contract descriptor')
+          descriptor = identity_profile.split('public function contract_descriptor', 1)[1].split('public function inspect', 1)[0]
+          for token in ('contract()->languages()', 'identity_headline_field($language)'):
+              if token not in descriptor:
+                  raise SystemExit(f'Identity Profile contract descriptor lost Theme Contract authority: {token}')
+          inspect = identity_profile.split('public function inspect', 1)[1].split('public function preview_update', 1)[0]
+          if '$this->contract_descriptor()' not in inspect:
+              raise SystemExit('Identity Profile inspect must consume its canonical contract descriptor')
+
+          if '$this->identity->contract_descriptor()' not in identity_operations:
+              raise SystemExit('Remote Identity Operations must derive top-level payload fields from Identity Profile')
+          if "array('name','headline','headline_es')" in identity_operations:
+              raise SystemExit('Remote Identity Operations must not restore a parallel Identity field catalogue')
+
+          if 'contract_descriptor()' not in identity_rest:
+              raise SystemExit('Remote Identity REST capabilities must derive fields and languages from Identity Profile')
+          if "'fields'=>array('name','headline','headline_es')" in identity_rest:
+              raise SystemExit('Remote Identity REST must not restore a parallel Identity field catalogue')
+          if "'languages'=>array('en','es')" in identity_rest:
+              raise SystemExit('Remote Identity REST must not restore a parallel Identity language catalogue')
 
           forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
@@ -233,6 +260,8 @@ jobs:
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php \
+            wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php \
             wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php; do
             php -l "$file"
