@@ -15,6 +15,7 @@ on:
       - 'wordpress/themes/eduardo-research/inc/research-relations.php'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m5-objects.php'
+      - '.github/scripts/test-remote-m5-objects-authority-regression.php'
       - '.github/workflows/research-manager-remote-m5-objects-quality.yml'
   push:
     branches: [main]
@@ -23,6 +24,7 @@ on:
       - 'wordpress/themes/eduardo-research/**'
       - '.github/scripts/ensure-wp-cli.sh'
       - '.github/scripts/test-remote-m5-objects.php'
+      - '.github/scripts/test-remote-m5-objects-authority-regression.php'
       - '.github/workflows/research-manager-remote-m5-objects-quality.yml'
 
 permissions:
@@ -70,6 +72,11 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-objects-rest.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-m5-objects.php
+          php -l .github/scripts/test-remote-m5-objects-authority-regression.php
+
+      - name: Verify Research Object mutable operation authority
+        shell: bash
+        run: php .github/scripts/test-remote-m5-objects-authority-regression.php
 
       - name: Install clean Research WordPress
         shell: bash
