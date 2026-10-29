@@ -5,12 +5,15 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-profile.php';
-require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-baseline.php';
-require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-portability.php';
 
 final class Eduardo_Research_Manager_V1_Capabilities {
     public function register(): void {
-        (new Eduardo_Research_Manager_Portability())->register();
+        $profile = new Eduardo_Research_Manager_Site_Profile();
+        if (! $profile->research_available()) {
+            require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-site-baseline.php';
+            require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-portability.php';
+            (new Eduardo_Research_Manager_Portability())->register();
+        }
         add_action('admin_menu', static function (): void {
             if (! (new Eduardo_Research_Manager_Site_Profile())->research_available()) {
                 remove_menu_page('eduardo-research-workspace');
