@@ -82,14 +82,16 @@ function eduardo_research_navigation_state(): array {
     return eduardo_research_navigation_sanitize_state(is_array($stored) ? $stored : array());
 }
 
-function eduardo_research_navigation_target_is_visible(string $key): bool {
+function eduardo_research_page_is_publicly_available(string $key, ?string $language = null): bool {
+    if (! is_array(eduardo_research_page_contract($key))) { return false; }
     if (! function_exists('eduardo_research_collection_post_type')) { return true; }
+
     $post_type = eduardo_research_collection_post_type($key);
     if ('' === $post_type) { return true; }
 
-    $language = function_exists('eduardo_research_current_language')
+    $language = $language ?: (function_exists('eduardo_research_current_language')
         ? eduardo_research_current_language()
-        : sanitize_key((string) (eduardo_research_preset()['default_language'] ?? ''));
+        : sanitize_key((string) (eduardo_research_preset()['default_language'] ?? '')));
     static $cache = array();
     $cache_key = $language . ':' . $key;
     if (array_key_exists($cache_key, $cache)) { return (bool) $cache[$cache_key]; }
@@ -107,6 +109,10 @@ function eduardo_research_navigation_target_is_visible(string $key): bool {
     $query = new WP_Query($args);
     $cache[$cache_key] = $query->have_posts();
     return (bool) $cache[$cache_key];
+}
+
+function eduardo_research_navigation_target_is_visible(string $key): bool {
+    return eduardo_research_page_is_publicly_available($key);
 }
 
 function eduardo_research_navigation_keys(string $location): array {
