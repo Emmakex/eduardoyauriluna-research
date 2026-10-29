@@ -189,7 +189,7 @@ final class Eduardo_Research_Manager_Remote_Insights_REST {
             ),
             'translation_pairing'=>array(
                 'available'=>true,
-                'operations'=>array('insight-pair','insight-unpair'),
+                'operations'=>Eduardo_Research_Manager_Remote_Insight_Pairing_Operations::mutable_operations(),
                 'languages'=>array('en','es'),
                 'published_only'=>true,
                 'managed_insights_only'=>true,
