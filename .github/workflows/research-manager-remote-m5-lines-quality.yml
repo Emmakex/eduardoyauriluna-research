@@ -10,12 +10,14 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-pairing.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-translation-editor.php'
       - '.github/scripts/test-remote-m5-lines.php'
+      - '.github/scripts/test-remote-m5-lines-authority-regression.php'
       - '.github/workflows/research-manager-remote-m5-lines-quality.yml'
   push:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/**'
       - '.github/scripts/test-remote-m5-lines.php'
+      - '.github/scripts/test-remote-m5-lines-authority-regression.php'
       - '.github/workflows/research-manager-remote-m5-lines-quality.yml'
 
 permissions:
@@ -56,6 +58,9 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-lines-rest.php
           php -l wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php
           php -l .github/scripts/test-remote-m5-lines.php
+          php -l .github/scripts/test-remote-m5-lines-authority-regression.php
+      - name: Verify Research Line mutable operation authority
+        run: php .github/scripts/test-remote-m5-lines-authority-regression.php
       - name: Install clean Research WordPress
         run: |
           rm -rf /tmp/research-manager-remote-m5-lines
