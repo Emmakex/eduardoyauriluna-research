@@ -7,13 +7,16 @@ final class Eduardo_Research_Manager_Remote_Media_Metadata_Operations {
     private const PLANS_OPTION='eduardo_research_manager_remote_media_plans';
     private const OPERATIONS_OPTION='eduardo_research_manager_remote_media_operations';
     private const PLAN_TTL=15*MINUTE_IN_SECONDS;
+    private const MUTABLE_OPERATIONS=array('media-metadata-update');
     private Eduardo_Research_Manager_Media_Editor $editor;
     private Eduardo_Research_Manager_Remote_Audit $audit;
 
     public function __construct(?Eduardo_Research_Manager_Media_Editor $editor=null,?Eduardo_Research_Manager_Remote_Audit $audit=null){ $this->editor=$editor?:new Eduardo_Research_Manager_Media_Editor(); $this->audit=$audit?:Eduardo_Research_Manager::remote_audit(); }
 
+    public static function mutable_operations(): array { return self::MUTABLE_OPERATIONS; }
+
     public function create_plan(string $operation,array $payload,array $actor): array|WP_Error {
-        $operation=sanitize_key($operation); if('media-metadata-update'!==$operation) return $this->error('validation_failed','Unsupported remote Media operation.',400);
+        $operation=sanitize_key($operation); if(!in_array($operation,self::MUTABLE_OPERATIONS,true)) return $this->error('validation_failed','Unsupported remote Media operation.',400);
         $attachment_id=absint($payload['attachment_id']??0); $changes=is_array($payload['changes']??null)?$payload['changes']:array();
         if($attachment_id<=0||!$changes) return $this->error('validation_failed','media-metadata-update requires attachment_id and bounded changes.',400);
         $prepared=$this->editor->preview_update($attachment_id,$changes); if(is_wp_error($prepared)) return $this->normalise($prepared,400);
