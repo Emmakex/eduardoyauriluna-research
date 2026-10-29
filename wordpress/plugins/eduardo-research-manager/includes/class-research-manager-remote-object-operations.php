@@ -7,6 +7,7 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_Object_Operations {
     private const PLANS_OPTION = 'eduardo_research_manager_remote_object_plans';
     private const OPERATIONS_OPTION = 'eduardo_research_manager_remote_object_operations';
+    private const MUTABLE_OPERATIONS = array('object-create','object-update');
     private const PLAN_TTL = 15 * MINUTE_IN_SECONDS;
     private const PLAN_LIMIT = 60;
     private const OPERATION_LIMIT = 120;
@@ -22,9 +23,13 @@ final class Eduardo_Research_Manager_Remote_Object_Operations {
         $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
     }
 
+    public function mutable_operations(): array {
+        return self::MUTABLE_OPERATIONS;
+    }
+
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('object-create','object-update'), true)) {
+        if (! in_array($operation, self::MUTABLE_OPERATIONS, true)) {
             return $this->error('validation_failed', 'Unsupported remote Research Object operation.', 400);
         }
 
