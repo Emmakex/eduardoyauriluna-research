@@ -22,6 +22,17 @@ function eduardo_research_current_page_key(): ?string {
 function eduardo_research_template_include(string $template): string {
     $key = eduardo_research_current_page_key();
     if (null === $key || 'home' === $key) { return $template; }
+
+    $language = function_exists('eduardo_research_current_language') ? eduardo_research_current_language() : null;
+    if (! eduardo_research_page_is_publicly_available($key, $language)) {
+        global $wp_query;
+        if ($wp_query instanceof WP_Query) { $wp_query->set_404(); }
+        status_header(404);
+        nocache_headers();
+        $not_found = get_404_template();
+        return is_string($not_found) && '' !== $not_found ? $not_found : $template;
+    }
+
     $owned = get_template_directory() . '/research-templates/page-research-surface.php';
     return is_readable($owned) ? $owned : $template;
 }
