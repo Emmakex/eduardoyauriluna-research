@@ -24,8 +24,11 @@ final class Eduardo_Research_Manager_Remote_Identity_Profile_Operations {
     public function create_plan(array $payload, array $actor): array|WP_Error {
         $changes = is_array($payload['changes'] ?? null) ? $payload['changes'] : array();
         if (! $changes) {
-            foreach (array('name','headline','headline_es') as $field) {
-                if (array_key_exists($field, $payload)) { $changes[$field] = $payload[$field]; }
+            $descriptor = $this->identity->contract_descriptor();
+            if (is_wp_error($descriptor)) { return $this->normalise($descriptor, 400); }
+            foreach ((array) ($descriptor['fields'] ?? array()) as $field) {
+                $field = sanitize_key((string) $field);
+                if ('' !== $field && array_key_exists($field, $payload)) { $changes[$field] = $payload[$field]; }
             }
         }
         $prepared = $this->identity->preview_update(
