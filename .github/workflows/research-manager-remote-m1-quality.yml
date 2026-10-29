@@ -59,6 +59,20 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-request-guard.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-rest.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-admin.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-inventory.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-resource-inventory-rest.php').read_text(encoding='utf-8')
+          duplicated = 'pages|insights|lines|outputs|projects|software|datasets'
+          if duplicated in source:
+              raise SystemExit('Remote Resource Inventory REST must not duplicate the inventory type alternation')
+          if 'array_keys($this->inventory->types())' not in source:
+              raise SystemExit('Remote Resource Inventory REST must derive route type membership from Resource Inventory')
+          if '$type_pattern=$this->type_route_pattern();' not in source:
+              raise SystemExit('Remote Resource Inventory REST routes must share the derived type pattern')
+          PY
 
       - name: Install clean Research WordPress
         shell: bash
@@ -115,6 +129,18 @@ jobs:
           foreach (array('status','versions','capabilities','readiness','diagnostics') as $endpoint) {
               $route = '/research-manager/v1/' . $endpoint;
               if (! isset($routes[$route])) { fail_m1('route not registered: ' . $route); }
+          }
+
+          $inventory = new Eduardo_Research_Manager_Resource_Inventory();
+          $route_types = array_keys($inventory->types());
+          $escaped_route_types = array_map(static fn(string $type): string => preg_quote($type, '/'), $route_types);
+          $resource_type_pattern = implode('|', $escaped_route_types);
+          foreach (array(
+              '/research-manager/v1/resources',
+              '/research-manager/v1/resources/(?P<type>' . $resource_type_pattern . ')',
+              '/research-manager/v1/resources/(?P<type>' . $resource_type_pattern . ')/(?P<identifier>[A-Za-z0-9._:-]+)',
+          ) as $route) {
+              if (! isset($routes[$route])) { fail_m1('resource inventory route did not follow inventory type authority: ' . $route); }
           }
 
           $unauth = remote_request('status');
