@@ -62,7 +62,7 @@ final class Eduardo_Research_Manager_Remote_Page_State_REST {
         $data=$payload['data']; $control=is_array($data['page_control']??null)?$data['page_control']:array();
         $control['state_lifecycle']=array(
             'available'=>true,'inspect'=>'/research-manager/v1/pages/{key}/state','plan'=>'/research-manager/v1/pages/{key}/state/plan','transport'=>'/research-manager/v1/pages/state',
-            'mutable_fields'=>array('title','status'),'allowed_statuses'=>array('draft','publish'),'archive_status'=>'draft','slug_editable'=>false,'destructive_delete'=>false,
+            'mutable_fields'=>Eduardo_Research_Manager_Page_State_Editor::mutable_fields(),'allowed_statuses'=>Eduardo_Research_Manager_Page_State_Editor::allowed_statuses(),'archive_status'=>'draft','slug_editable'=>false,'destructive_delete'=>false,
             'read_scope'=>'pages.read','write_scopes'=>array('pages.write','operations.apply'),'rollback_scopes'=>array('pages.write','operations.rollback'),'implicit_publish_on_slot_update'=>false,
             'stale_preview_protection'=>true,'idempotency'=>true,
         );
