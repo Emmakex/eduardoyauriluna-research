@@ -2,463 +2,254 @@
 
 ## Status
 
-**Initial architectural audit.**
+**CLOSEOUT RECONCILED — final architectural ledger for Site Architect cleanup tracker #394.**
 
-This document applies `ENGINEERING_RULES.md` and `ENGINEERING_GREENFIELD_RULE.md` to the current Research Manager / Research Theme implementation.
+This document applies `ENGINEERING_RULES.md` and `ENGINEERING_GREENFIELD_RULE.md` to the current Site Architect / Research Theme implementation for `eduardoyauriluna.com`.
 
-The objective is **not** to turn this Greenfield implementation into Site Manager, a generic Brownfield discovery engine, or an unrestricted WordPress proxy.
+The initial audit identified accidental coupling, duplicated contracts, stale capability metadata and historical portability residue. Those findings were then resolved incrementally through bounded microcuts with exact-head CI, no-drift merge checks and post-merge certification.
 
-The objective is to distinguish intentional Greenfield specialization from accidental coupling, duplicated contracts and stale implementation assumptions while preserving the accepted production behavior of `eduardoyauriluna.com`.
+This file now records the **current classification**. The original exploratory wording remains available in Git history; it is no longer the runtime remediation backlog.
 
-## 1. Audit principle
+The objective remains deliberately narrow:
 
-Greenfield is allowed to know the architecture we deliberately created.
+- preserve the accepted Eduardo production path;
+- keep Greenfield deterministic rather than turning it into Brownfield discovery;
+- keep Research semantics where they improve correctness;
+- keep mutation/security boundaries fail-closed;
+- remove active second sources of architectural truth;
+- retain historical identifiers/storage only where they have compatibility, recovery or audit value.
 
-Therefore, a hardcode is not automatically a defect. Every finding is classified as one of:
+## 1. Authority order
 
-- **REMOVE** — accidental instance coupling, stale value or obsolete architectural assumption.
-- **CENTRALIZE** — valid Greenfield knowledge duplicated across multiple layers and requiring one authoritative contract/registry.
-- **KEEP DOMAIN** — deliberate Research/Greenfield specialization that improves semantic correctness and automation.
-- **KEEP SECURITY** — deliberate closed boundary that must remain fail-closed.
-- **EXTRACT LATER** — a proven pattern worth comparing with Brownfield/Site Manager after both tracks have independent production evidence.
+When architectural sources disagree, use this order:
 
-No classification in this document authorizes an automatic storage migration, product rename or production mutation.
+1. `ENGINEERING_RULES.md`
+2. `ENGINEERING_GREENFIELD_RULE.md`
+3. this reconciled audit
+4. current production-proven contracts and code
+5. historical documents only as evidence/history
 
-## 2. Target separation
-
-The desired Greenfield separation is:
+The current separation is:
 
 ```text
-Greenfield governance engine
+Site Architect execution/security guarantees
 ↓
 Greenfield Theme Contract
 ↓
-Research vertical contract / registries
+Research Resource Registry / Research vertical services
 ↓
-Eduardo instance blueprint + WordPress state
+Eduardo active Instance Blueprint + governed WordPress state
 ↓
 WordPress production
 ```
 
-### 2.1 Greenfield governance engine
+No lower layer may silently redefine a fact owned by a higher authoritative contract.
 
-Owns reusable execution guarantees such as:
+## 2. Final classification vocabulary
 
-- authenticated credentials and scopes;
-- request validation and idempotency;
-- audit;
-- plans and previews;
-- apply;
-- verification;
-- snapshots and rollback;
-- stale-state protection;
-- bounded operation records.
+Every current finding is classified using the closeout vocabulary required by #394:
 
-It must not need to know Eduardo's name, biography or canonical domain.
+- **RESOLVED** — the former duplicate/stale/accidental authority has been removed or consumers now derive from the authoritative owner.
+- **KEEP DOMAIN** — deliberate Greenfield/Research/instance specialization that belongs in the declared Theme, vertical or Blueprint contract.
+- **KEEP SECURITY** — explicit fail-closed allowlists, scopes, mutation dispatch, lifecycle checks or other bounded controls that must remain independently restrictive.
+- **COMPATIBILITY ONLY** — historical naming, storage, API or diagnostic/portability behavior retained for production compatibility, rollback, recovery or audit. It must not steer current architecture or roadmap.
 
-### 2.2 Greenfield Theme Contract
+A row may carry more than one KEEP classification when domain semantics and security are intentionally coupled.
 
-Owns the deterministic frontend/site contract we created, including:
+## 3. Current sources of truth
 
-- active preset identity and version;
-- pages and routes;
+### 3.1 Site Architect execution and security
+
+Owned by the current Manager/Gateway execution path and its bounded contracts:
+
+- authentication, credentials and scopes;
+- explicit mutation action dispatch;
+- Plan validation and checksums;
+- Preview / Apply / Verify / Rollback;
+- evidence-required academic mutation gates;
+- stale-state and idempotency protections;
+- exact option/meta/post-field restrictions;
+- bounded operation records and audit.
+
+`Eduardo_Research_Manager_Plan` remains intentionally explicit and fail-closed. Descriptive registries may inform validation/risk, but they do **not** replace the security boundary.
+
+### 3.2 Greenfield Theme Contract
+
+`Eduardo_Research_Manager_Contract` is the Manager-side authority boundary for facts owned by the Research Theme, including:
+
+- expected preset/stylesheet compatibility;
+- live Theme version;
+- pages and front-page role;
 - languages and default language;
-- structured page models/slots;
-- navigation contract;
-- design presets;
-- component variants;
-- UI-copy contract;
-- media surfaces;
-- SEO/GEO surface;
-- frontend-authority rules;
-- storage aliases needed for compatibility.
+- EN/ES physical storage compatibility aliases;
+- Page option-key resolution;
+- Identity headline field resolution;
+- Theme-owned Research editorial/catalog contracts.
 
-This is deterministic Greenfield knowledge, not Brownfield discovery.
+The physical `_es` and `headline_es` names remain production compatibility details, not a second conceptual language model.
 
-### 2.3 Research vertical contract
+### 3.3 Research vertical authority
 
-Owns Research-specific semantics such as:
+`Eduardo_Research_Manager_Resource_Registry` is the descriptive authority for the structured Research vertical:
 
-- researcher identity;
-- Research Lines;
-- outputs/publications;
-- research projects;
-- research software;
-- datasets;
-- evidence-sensitive academic claims;
-- scholarly metadata and identifiers;
-- research resource relationships;
-- Research-specific validation and risk policy.
+- Research Line / Output / Project / Software / Dataset membership;
+- inventory keys and WordPress post types;
+- bounded field vocabulary;
+- field-to-meta storage descriptors;
+- array fields and defaults;
+- creation action descriptors;
+- read scopes and relation-capable resource descriptors.
 
-These semantics are a strength of the Greenfield implementation and are not portability defects.
+Operational service binding remains owned by `Eduardo_Research_Manager`; the Registry does not become a service locator or mutation authority.
 
-### 2.4 Eduardo instance
+### 3.4 Eduardo instance authority
 
-Owns exact instance data such as:
+The active bundled Eduardo Blueprint remains valid instance data and is described by `Eduardo_Research_Manager_Blueprint_Store`.
 
-- `Eduardo Jose Yauri Luna`;
-- `eduardoyauriluna.com`;
-- biography/profile copy;
-- current research agenda;
-- current content;
-- concrete research lines;
-- instance-specific legal/contact copy;
-- verified identifiers and evidence as they become available.
+It may contain Eduardo's exact name, canonical domain, languages and site-specific content because this repository is Eduardo-only. Reusable execution code consumes those values through the active Blueprint/instance boundary instead of embedding them as universal engine constants.
 
-Instance data may legitimately exist in the repository and WordPress. It must simply not become an implicit architectural constant in reusable execution logic when a cleaner boundary exists.
+Live WordPress state remains the source of truth for live website content. The Blueprint is the declared Greenfield instance contract, not a substitute for production readback/verification.
 
-## 3. Audit findings
+## 4. Final reconciliation of the original findings
 
-### 3.1 Exact researcher identity fallback
+| Original finding | Final classification | Closeout result |
+| --- | --- | --- |
+| 3.1 Exact researcher identity fallback | **RESOLVED** | Identity resolution is stored state → active instance Blueprint → WordPress site identity → explicit missing-state error. No embedded personal-name fallback remains in reusable Identity execution. |
+| 3.2 Exact domain inside Eduardo Blueprint | **KEEP DOMAIN** | `eduardoyauriluna.com` remains valid Eduardo instance data. Runtime URL/state is read separately from WordPress and is not replaced by a universal domain constant. |
+| 3.3 Bundled Blueprint treated as universal canonical Blueprint | **RESOLVED** | Active Blueprint descriptor/path/export identity has one store boundary; exact Identity defaults are read as instance data rather than reusable-engine fallbacks. Physical path/name compatibility is intentionally preserved. |
+| 3.4 Theme stylesheet and preset identity | **KEEP DOMAIN** | Requiring the known Research Theme/preset is valid Greenfield specialization. Manager access is centralized through the Theme Contract rather than independently reconstructing Theme authority. |
+| 3.5 Page architecture and Research surfaces | **KEEP DOMAIN** | The known researcher-site page architecture is intentional. Consumers derive Theme page contracts instead of maintaining competing architecture lists. |
+| 3.6 Page target and slot restrictions | **KEEP SECURITY** | Registered Theme targets, bounded slots, immutable contract slugs and destructive-operation restrictions remain closed by design. |
+| 3.7 Page storage keys and `_es` special casing | **RESOLVED** | Existing physical keys remain unchanged, while Page storage-key and language suffix resolution are centralized in the Theme Contract. No storage migration was performed. |
+| 3.8 EN/ES architecture versus implementation branches | **RESOLVED** | Active language/default-language facts derive from the Theme Contract. EN/ES physical aliases are centralized compatibility mappings; language widening was not introduced. |
+| 3.9 Research resource taxonomy | **KEEP DOMAIN** | Research taxonomy is intentional. The repeated descriptive mappings were consolidated into the Research Resource Registry and consumers derive from it. |
+| 3.10 Research evidence/risk semantics | **KEEP DOMAIN / KEEP SECURITY** | Evidence-sensitive academic claims remain a first-class Research rule and continue to require the accepted fail-closed lifecycle. |
+| 3.11 Mutation option/meta/action allowlists | **KEEP SECURITY** | Plan's mutation dispatcher and security allowlists remain explicit on purpose. Only duplicated descriptive facts were centralized; the security boundary was not generalized or widened. |
+| 3.12 Design presets | **KEEP DOMAIN / KEEP SECURITY** | Bounded Theme design dimensions remain intentional; arbitrary CSS/font URL injection remains prohibited and accessibility/safe lifecycle constraints remain enforced. |
+| 3.13 Component variants | **KEEP DOMAIN / KEEP SECURITY** | Known Theme variants remain bounded domain behavior; arbitrary classes/CSS/HTML and unsafe presentation mutation remain outside the contract. |
+| 3.14 Navigation | **KEEP SECURITY** | Navigation remains limited to registered Theme targets with stale-state/verification/rollback protection. Generic arbitrary URL governance was not introduced. |
+| 3.15 Scopes, credentials and historical Manager identifiers | **KEEP SECURITY / COMPATIBILITY ONLY** | Revocable scoped credentials remain security authority. `eduardo_research_manager_*`, REST namespace and token/operation naming are retained compatibility identifiers and are not a reason for mass rename. |
+| 3.16 Stale Theme `1.0.0` capability metadata | **RESOLVED** | Capability reporting derives the live Theme version from the Theme Contract. |
+| 3.17 Duplicated capability/surface lists | **RESOLVED** | Hand-maintained architecture/surface reporting that had no operational consumer was removed. Functional capability/security declarations remain bounded and source-derived where appropriate. |
+| 3.18 Generic WordPress portability layer | **COMPATIBILITY ONLY** | Portability is registered only when the Research profile is unavailable and remains a read-only diagnostic compatibility surface. It does not govern Eduardo's Research runtime or Site Architect roadmap. |
+| 3.19 README predicted Site Manager replacement | **RESOLVED** | README and mandatory engineering rules now describe Site Architect/Greenfield and Site Manager/Brownfield as independent tracks with no predetermined replacement relationship. |
 
-Current identity logic falls back directly to `Eduardo Jose Yauri Luna` when stored identity and the WordPress site name are empty.
+## 5. #394 closeout areas
 
-**Classification: REMOVE.**
+### A. Research vertical authority — CLOSED
 
-The current site is Eduardo-specific, but reusable identity execution logic should resolve identity from authoritative instance state, for example:
+- Resource field/schema/storage descriptors are centralized where they are descriptive.
+- Line, Object, Translation, Blueprint, inventory and capability consumers derive Research facts from the Registry or their bounded service owner.
+- Operational service binding is not stored in the descriptive Registry.
+- Insights remain the explicit non-Registry editorial exception where their WordPress `post` implementation is intentionally distinct.
 
-```text
-stored verified identity
-→ instance blueprint/site configuration
-→ WordPress site identity
-→ explicit missing-state error/default policy
-```
+### B. Theme-contract authority — CLOSED
 
-It should not contain an embedded person's name as the final execution fallback.
+- Theme identity/version access is centralized.
+- Page contract access is centralized.
+- default language is Theme-derived.
+- legacy EN/ES physical storage aliases are centralized.
+- Identity field/language capability description derives from the Theme Contract via Identity Profile.
+- direct Theme helper calls that remain inside the Contract adapter are adapter implementation, not competing authority.
 
-The evidence requirement, stale-preview protection and rollback around identity changes remain **KEEP DOMAIN + KEEP SECURITY**.
+### C. Capability reporting — CLOSED
 
-### 3.2 Exact domain inside Eduardo blueprint
+- Theme version is live/contract-derived.
+- Research Line fields derive from Registry.
+- Identity fields/languages derive from Identity Profile/Theme Contract.
+- Identity storage source key derives from `Identity_Profile::option_key()`.
+- the manually maintained `manager_v1_development.surfaces` catalog was removed rather than replaced with another synthetic registry.
+- transport/security declarations that intentionally describe a closed capability remain explicit.
 
-`blueprints/eduardo-research.json` contains `https://eduardoyauriluna.com` and Eduardo-specific copy.
+### D. Mutation boundaries — CLOSED
 
-**Classification: KEEP as instance data.**
+The mutable-operation authority passes were completed independently for the bounded Evidence, Research Object, Research Line, Translation, Insight Pairing, Media Metadata and Page State lifecycles.
 
-The defect is not that the instance blueprint contains Eduardo's domain. The defect would be treating that value as universal runtime truth.
+Plan remains the explicit fail-closed mutation/security boundary. No cleanup step relaxed:
 
-Runtime site status should distinguish:
+- evidence-required behavior;
+- stale-state protection;
+- idempotency;
+- Verify;
+- Rollback;
+- option/meta/post-field restrictions;
+- arbitrary REST/WordPress proxy restrictions.
 
-- actual WordPress runtime URL (`home_url()` / site state); and
-- declared/expected canonical domain from the Eduardo instance blueprint.
+### E. Historical/portability residue — CLOSED
 
-### 3.3 Bundled blueprint treated as universal canonical blueprint
+Historical implementation names and compatibility storage/API identifiers remain only where they still have production/recovery/audit value.
 
-`class-research-manager-blueprint-store.php` defaults to `blueprints/eduardo-research.json`, falls back to Eduardo's exact name and exports an Eduardo-specific filename.
+The generic portability implementation is not an active authority on the Research profile: it is conditionally registered only when Research is unavailable and remains read-only/diagnostic. It must not be expanded in this repository as a Brownfield roadmap.
 
-**Classification: CENTRALIZE + partial REMOVE.**
+### F. Closeout certification — READY FOR FINAL EXACT-MAIN CERTIFICATION
 
-The current blueprint may remain the default Eduardo instance blueprint, but the active blueprint descriptor/path/name should have one authoritative source. The embedded person-name fallback should be removed.
+Regression coverage now protects the single-source boundaries for Registry, Identity, Theme Contract consumers, fail-closed Plan behavior and capability reporting. The final closeout change also guards this document/README status so documentation cannot silently revert to the pre-closeout architecture narrative.
 
-No immediate physical path or filename migration is required; preserving existing paths first is safer.
+The final certified exact `main` SHA and workflow counts belong in tracker #394's closure evidence rather than as a permanent version literal in this architecture document.
 
-### 3.4 Theme stylesheet and preset identity
+## 6. Explicitly retained hard boundaries
 
-The Manager recognizes the Greenfield Theme through `eduardo_research_preset()`, preset id `research`, minimum preset version and stylesheet `eduardo-research`.
+This closeout must never be interpreted as permission to add:
 
-**Classification: KEEP DOMAIN, but CENTRALIZE access.**
-
-Greenfield is intentionally allowed to require our Theme/contract. We do not need Brownfield theme discovery here.
-
-However, Manager classes should not independently know multiple Theme function names, stylesheet checks and storage details. Access should converge through one trusted Greenfield Theme Contract service.
-
-### 3.5 Page architecture and Research surfaces
-
-The Theme preset intentionally defines:
-
-- home;
-- about;
-- research;
-- publications;
-- projects;
-- software;
-- datasets;
-- CV;
-- insights;
-- contact;
-- privacy policy;
-- legal notice.
-
-**Classification: KEEP DOMAIN.**
-
-This is the known Research website architecture we deliberately created.
-
-Duplicated page/surface allowlists in Plan, Manager capabilities or other services are **CENTRALIZE** findings. The Theme/preset contract should be authoritative.
-
-### 3.6 Page target and slot restrictions
-
-Page hydration permits only registered slots and page-target slots resolve only to registered Theme pages. Page slug changes and destructive deletion are deliberately restricted.
-
-**Classification: KEEP SECURITY.**
-
-Do not replace this with arbitrary URLs, arbitrary options or unrestricted Gutenberg/DOM editing.
-
-Identity-owned slots excluded from generic Page hydration are **KEEP DOMAIN**, but their ownership should be declared once rather than repeated procedurally.
-
-### 3.7 Page storage keys and `_es` special casing
-
-Current Page storage uses patterns such as:
-
-- `eduardo_research_model`;
-- `eduardo_research_model_es`;
-- `eduardo_research_surface_<key>`;
-- `eduardo_research_surface_<key>_es`.
-
-**Classification: CENTRALIZE.**
-
-The current physical option names must remain compatible with production for now. The improvement is to resolve them through one storage-key contract instead of reconstructing naming rules across services.
-
-This is not a request to migrate production data immediately.
-
-### 3.8 EN/ES architecture versus Spanish implementation branches
-
-The current site is intentionally bilingual EN/ES.
-
-**EN/ES as the active Greenfield language contract: KEEP DOMAIN.**
-
-However, several implementations directly special-case Spanish via:
-
-- `/es/`;
-- `_es` suffixes;
-- `headline_es`;
-- direct checks such as `if ('es' === $language)`;
-- default `'en'` literals spread across services.
-
-**Classification: CENTRALIZE.**
-
-The Theme should expose one language registry containing default language, locale, prefix, labels and compatibility storage aliases. Services should ask that registry rather than independently knowing that Spanish is the only secondary language.
-
-This does not imply adding more languages now.
-
-### 3.9 Research resource taxonomy
-
-The system intentionally knows:
-
-- Research Lines;
-- Research Outputs;
-- Research Projects;
-- Research Software;
-- Research Datasets;
-- Insights.
-
-**Classification: KEEP DOMAIN.**
-
-The taxonomy is valid Research specialization.
-
-The mappings between Manager resource names, WordPress post types, metadata fields, scopes and creation/update schemas are currently repeated in Contract, Resource Inventory, Plan, Executor and Theme helpers.
-
-**Repeated mappings: CENTRALIZE** into a Research Resource Registry.
-
-### 3.10 Research evidence/risk semantics
-
-The Manager treats claims such as degrees, affiliations, DOI, grants, awards, publication metadata, research outcomes and other academic evidence as sensitive and may require evidence before Apply.
-
-**Classification: KEEP DOMAIN + KEEP SECURITY.**
-
-This is a core advantage of the Research Greenfield path and must not be weakened to look more generic.
-
-### 3.11 Mutation option/meta allowlists
-
-Plan restricts writable options, post fields, action types and metadata.
-
-**Classification: KEEP SECURITY.**
-
-The concept must remain closed and fail-closed.
-
-However, allowlists duplicated from Theme/storage/resource contracts should be **CENTRALIZE**.
-
-Where metadata allowance is currently expressed broadly through prefix checks such as `_eduardo_research_*` / `_research_*`, the preferred direction is an exact trusted registry or ownership contract rather than widening the proxy surface.
-
-### 3.12 Design presets
-
-Greenfield Design intentionally exposes bounded dimensions such as palette, typography and density, with accessibility checks and no arbitrary CSS/font URLs.
-
-**Bounded Design model: KEEP DOMAIN.**
-
-**No arbitrary CSS/font URL + accessibility validation: KEEP SECURITY.**
-
-The allowed dimensions/presets should be obtained from the Theme design contract rather than separately re-declared in Manager execution code: **CENTRALIZE**.
-
-The safe Preview/Apply/Verify/Rollback lifecycle is **EXTRACT LATER** for eventual comparison with Brownfield.
-
-### 3.13 Component variants
-
-Current variants cover known Theme dimensions such as hero, sections, cards and collections, with bounded generated classes and protections against arbitrary classes/CSS/HTML or content reordering.
-
-**Known Theme variants: KEEP DOMAIN.**
-
-**Safety constraints: KEEP SECURITY.**
-
-The exact dimension list and class contract should have one Theme source: **CENTRALIZE**.
-
-Lifecycle mechanics are **EXTRACT LATER**.
-
-### 3.14 Navigation
-
-Navigation correctly uses registered Theme targets, forbids arbitrary URLs and implements stale-state protection plus verified rollback.
-
-**Registered targets / no arbitrary URLs / lifecycle: KEEP SECURITY.**
-
-Direct knowledge of multiple `eduardo_research_navigation_*` functions across Manager code should be **CENTRALIZE** behind the Greenfield Theme Contract.
-
-The lifecycle itself is **EXTRACT LATER**.
-
-### 3.15 Scopes and credentials
-
-Remote scopes are explicitly enumerated and credentials are revocable/rotatable/scoped.
-
-**Classification: KEEP SECURITY.**
-
-Names such as `eduardo_research_manager_*` options and `erm*` token prefixes are naming/compatibility concerns, not urgent architecture defects.
-
-They should be revisited only during a controlled product rename/migration with backward compatibility: **CENTRALIZE / P2**.
-
-### 3.16 Manager capability metadata contains stale Theme version
-
-The v1 capability reconciliation still reports:
-
-```text
-production_pair.theme = 1.0.0
-```
-
-while the accepted production Theme is newer.
-
-**Classification: REMOVE.**
-
-Runtime capability/status output must not embed a historical Theme version. It should read the active contract/theme version.
-
-### 3.17 Capability/surface lists are duplicated
-
-The Manager v1 capability layer re-declares surfaces such as identity, pages, navigation, insights, research objects, translations, evidence, media, SEO/GEO and Design.
-
-**Classification: CENTRALIZE.**
-
-Capability reporting should be assembled from authoritative registered surfaces/contracts rather than maintained as another hand-written architectural list.
-
-### 3.18 Generic WordPress portability layer in Manager 0.11
-
-The current portability layer can expose a read-only baseline on a WordPress installation without the Research Theme.
-
-Under the new Greenfield/Brownfield separation, this must **not** become a Brownfield product-development path inside this repository.
-
-**Classification: REVIEW RESIDUE / EXTRACT LATER.**
-
-It may remain temporarily for diagnostics, history or comparison, but no new generic WordPress governance should be added here solely to compete with Site Manager.
-
-### 3.19 README still describes extraction into Site Manager
-
-The current repository README still says that Research Manager is transitional, that reusable management capabilities are progressively extracted to Site Manager and that Research Manager code will be removed as Site Manager reaches parity.
-
-That conflicts with the later mandatory Greenfield engineering decision that both tracks evolve independently until evidence-based comparison.
-
-**Classification: REMOVE / UPDATE IMMEDIATELY.**
-
-The README must describe the current independent Greenfield authority and treat Site Manager as a separate Brownfield track, not as the predetermined replacement.
-
-## 4. What must explicitly remain hard-bounded
-
-The audit must never be used as justification to introduce:
-
-- arbitrary PHP execution;
-- arbitrary JavaScript execution;
-- arbitrary REST proxying;
-- arbitrary SQL;
-- arbitrary shell/filesystem access;
-- arbitrary WordPress option/meta mutation;
-- arbitrary CSS or class injection;
+- arbitrary PHP or JavaScript execution;
+- arbitrary SQL, shell or filesystem access;
+- arbitrary WordPress REST proxying;
+- arbitrary option/meta mutation;
+- arbitrary CSS/class/font URL injection;
 - arbitrary navigation URLs;
-- uncontrolled destructive deletion;
+- uncontrolled deletion;
 - caller-selected MCP tools or backend routes;
-- bypass of evidence-sensitive academic validation;
-- bypass of stale-state/idempotency protections;
+- evidence bypass for academic claims;
+- stale-state/idempotency bypass;
 - mutation completion without required verification.
 
-These boundaries are product strengths, not portability defects.
+These are **KEEP SECURITY** constraints.
 
-## 5. Remediation priorities
+## 7. Compatibility rule
 
-### P0 — safe corrections with no storage migration
+Do not mass-rename or migrate solely for visual consistency:
 
-1. Replace the stale hardcoded Theme `1.0.0` capability value with the live Theme contract/version.
-2. Remove the exact Eduardo-name fallback from reusable identity execution logic and resolve instance identity through authoritative state.
-3. Distinguish actual runtime URL from blueprint-declared/expected canonical domain.
-4. Establish one active blueprint descriptor while preserving the current Eduardo blueprint path and data.
-5. Read default language from the Theme contract instead of scattered `'en'` literals where doing so is behavior-preserving.
-6. Update stale README statements that define Site Manager as the predetermined replacement.
-
-### P1 — contract consolidation
-
-1. Introduce one Greenfield Theme Contract boundary consumed by Manager services.
-2. Centralize the language registry/resolver while preserving EN/ES behavior and current storage compatibility.
-3. Centralize storage-key resolution for existing options/meta; do not migrate keys yet.
-4. Create a Research Resource Registry for resource type → post type → metadata/schema → scope ownership.
-5. Generate exact mutation allowlists from trusted registries/contracts where possible.
-6. Resolve Design and component-variant dimensions from Theme public contracts.
-7. Declare page-target ownership and identity-owned slot rules once.
-8. Derive capability reporting from registered/available contracts rather than a manually duplicated surface list.
-
-### P2 — naming and migration only after architecture stabilizes
-
-Do not mass-rename now:
-
-- plugin folder;
-- PHP classes;
-- constants;
+- plugin folder/files;
+- PHP classes/constants;
 - text domain;
-- WordPress option names;
-- metadata names;
+- WordPress option/meta names;
 - REST namespace;
 - operation/token prefixes;
-- Theme functions.
+- Theme functions;
+- historical evidence identifiers.
 
-The eventual Research Manager product rename must have an explicit compatibility/migration strategy and must not jeopardize the accepted production path.
+Any future physical rename/storage migration requires a separate compatibility plan and independent production acceptance.
 
-## 6. Proposed implementation sequence
+## 8. Greenfield / Brownfield boundary
 
-The safest sequence is:
-
-```text
-Audit/document
-→ remove stale documentation/runtime constants
-→ introduce read-only centralized contract facades
-→ prove parity with current production behavior
-→ migrate internal callers incrementally
-→ keep physical storage/API compatibility
-→ only later consider naming/storage migration
-```
-
-At every step, `eduardoyauriluna.com` remains the production authority and existing accepted governance must continue working.
-
-## 7. Greenfield versus Brownfield boundary
-
-This audit does not change the agreed product split:
+The closeout preserves the mandatory split:
 
 ```text
-Greenfield
+Site Architect / Greenfield
 known architecture → build → optimize → govern
 
-Brownfield / Site Manager
+Site Manager / Brownfield
 unknown existing site → discover → understand → adapt → govern
 ```
 
-The Greenfield implementation should become cleaner and less accidentally coupled without sacrificing the value of knowing its architecture.
+Neither is a required stage or predetermined replacement for the other.
 
-Site Manager should independently solve discovery/adaptation for existing client sites.
+This repository remains exclusively the Eduardo Research reference/production implementation. Reusable patterns may be extracted elsewhere only through an explicit later decision; they do not expand this repository's scope.
 
-Cross-project extraction/convergence comes only later, after both have meaningful production evidence.
+## 9. Closeout conclusion
 
-## 8. Immediate conclusion
+The architectural cleanup no longer has an open refactor mandate.
 
-The largest technical problem is **not the number of `eduardo_research_*` strings by itself**.
-
-The real problem is that four kinds of truth are currently interleaved:
+For current Site Architect operation, the active facts have clear owners:
 
 ```text
-execution/security guarantees
-Research vertical semantics
-Theme/site contract
-Eduardo instance data
+execution/security → bounded Site Architect/Plan/lifecycle contracts
+Theme/site structure → Greenfield Theme Contract
+Research taxonomy/descriptors → Research Resource Registry
+Eduardo identity/domain/defaults → active Instance Blueprint + governed state
+live visitor content → verified WordPress production state
 ```
 
-The first Greenfield refactor should separate those responsibilities while retaining the current deterministic Theme-owned architecture and all security boundaries.
+Remaining literals are either declared domain facts, deliberate fail-closed security controls or compatibility-only residue. They are not automatically defects and must not trigger new cleanup work without evidence that they have become an active competing authority.
 
-That gives us a stronger independent Greenfield product without prematurely turning it into the Brownfield Site Manager architecture.
+Future changes should therefore be driven by Eduardo's real website/research needs and protected by these authority boundaries, not by continuing this cleanup as an open-ended refactor programme.
