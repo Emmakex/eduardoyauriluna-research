@@ -6,6 +6,7 @@ if (! defined('ABSPATH')) { exit; }
 final class Eduardo_Research_Manager_Remote_Line_Operations {
     private const PLANS_OPTION = 'eduardo_research_manager_remote_line_plans';
     private const OPERATIONS_OPTION = 'eduardo_research_manager_remote_line_operations';
+    private const MUTABLE_OPERATIONS = array('line-create','line-update');
     private const PLAN_TTL = 15 * MINUTE_IN_SECONDS;
     private Eduardo_Research_Manager_Line_Editor $editor;
     private Eduardo_Research_Manager_Remote_Audit $audit;
@@ -15,9 +16,13 @@ final class Eduardo_Research_Manager_Remote_Line_Operations {
         $this->audit = $audit ?: Eduardo_Research_Manager::remote_audit();
     }
 
+    public function mutable_operations(): array {
+        return self::MUTABLE_OPERATIONS;
+    }
+
     public function create_plan(string $operation, array $payload, array $actor): array|WP_Error {
         $operation = sanitize_key($operation);
-        if (! in_array($operation, array('line-create','line-update'), true)) {
+        if (! in_array($operation, self::MUTABLE_OPERATIONS, true)) {
             return $this->error('validation_failed', 'Unsupported remote Research Line operation.', 400);
         }
         $confirmed = ! empty($payload['evidence_confirmed']);
