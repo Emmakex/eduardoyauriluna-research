@@ -1,0 +1,21 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase3-datasets-list-20261029",
+  "command_sha256": "0e087c074b2717e29f221905ed22ac02dd19443293a06ed8e4fa3e3eca2dd2c6",
+  "data": {
+    "count": 0,
+    "items": [],
+    "kind": "dataset",
+    "language": ""
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "kind": "dataset"
+    },
+    "type": "research_object"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
