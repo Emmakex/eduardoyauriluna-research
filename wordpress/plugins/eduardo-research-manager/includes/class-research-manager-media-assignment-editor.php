@@ -23,6 +23,10 @@ final class Eduardo_Research_Manager_Media_Assignment_Editor {
         $this->rendered = $rendered ?: Eduardo_Research_Manager::rendered();
     }
 
+    public function supported_research_kinds(): array {
+        return array('line','output','project','software','dataset');
+    }
+
     public function preview_assign(array $target, int $attachment_id, string $slot = self::SLOT): array|WP_Error {
         $slot = sanitize_key($slot);
         if (self::SLOT !== $slot) {
@@ -335,7 +339,7 @@ final class Eduardo_Research_Manager_Media_Assignment_Editor {
                 $record = Eduardo_Research_Manager::object_editor()->inspect($kind, $post_id);
             }
             if (is_wp_error($record)) { return $record; }
-            if (! in_array($kind, array('line','output','project','software','dataset'), true)) {
+            if (! in_array($kind, $this->supported_research_kinds(), true)) {
                 return $this->error('validation_failed', 'Unsupported Research Media assignment target kind.', 400);
             }
             return array(
