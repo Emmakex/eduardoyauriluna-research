@@ -22,7 +22,7 @@ Canonical rules:
 
 - [`ENGINEERING_RULES.md`](ENGINEERING_RULES.md) — repository-wide authority and production governance.
 - [`ENGINEERING_GREENFIELD_RULE.md`](ENGINEERING_GREENFIELD_RULE.md) — Greenfield architecture: build from zero with known deterministic contracts.
-- [`docs/63-greenfield-hardcode-coupling-audit.md`](docs/63-greenfield-hardcode-coupling-audit.md) — current hardcode/coupling classification and remediation order.
+- [`docs/63-greenfield-hardcode-coupling-audit.md`](docs/63-greenfield-hardcode-coupling-audit.md) — reconciled architectural authority ledger and retained-boundary classification.
 - [`docs/66-site-architect-client-website-lifecycle.md`](docs/66-site-architect-client-website-lifecycle.md) — canonical Site Architect lifecycle from client brief to continuous governed operation.
 
 ## Current operating model — Site Architect / Greenfield
@@ -121,13 +121,14 @@ Greenfield architecture
 
 Research-specific behavior, evidence rules and bounded Theme contracts are intentional strengths. Accidental instance coupling and duplicated architectural truth should be removed or centralized without weakening security.
 
-The current classification is:
+The architecture closeout classification is now:
 
-- **REMOVE** — accidental/stale coupling;
-- **CENTRALIZE** — valid knowledge duplicated across layers;
-- **KEEP DOMAIN** — deliberate Research/Greenfield semantics;
-- **KEEP SECURITY** — closed allowlists, scopes and fail-closed behavior;
-- **EXTRACT LATER** — patterns to compare with Brownfield only after independent evidence.
+- **RESOLVED** — a former duplicate, stale value or accidental authority has been removed or redirected to its canonical owner;
+- **KEEP DOMAIN** — deliberate Research/Greenfield/instance semantics owned by a bounded contract;
+- **KEEP SECURITY** — explicit fail-closed allowlists, scopes, validation and lifecycle protections;
+- **COMPATIBILITY ONLY** — historical naming, storage, API or diagnostic behavior retained for compatibility/recovery/audit and not allowed to steer current architecture.
+
+The reconciled ledger is [`docs/63-greenfield-hardcode-coupling-audit.md`](docs/63-greenfield-hardcode-coupling-audit.md).
 
 ## Site Architect product model
 
@@ -204,7 +205,7 @@ Never commit API keys, OAuth client secrets, tokens, passwords or private creden
 - Research Theme: operational and remains the deterministic frontend authority.
 - Site Architect: current authoritative Greenfield governance implementation.
 - Site Architect lifecycle: documented from client brief → Blueprint/contracts → provision/compile → Preview/Apply/Verify → launch → continuous optimization.
-- Greenfield hardcode/coupling cleanup: active, preserving production compatibility and security boundaries.
+- Greenfield hardcode/coupling architectural cleanup: **closed**; current single-source boundaries are reconciled in `docs/63` and protected by regression guards.
 - Site Manager: separate Brownfield project; it does not define this repository's roadmap or architecture.
 - Academic profile priority: **ORCID → Google Scholar → OpenAlex → additional research profiles**.
 - LinkedIn: supporting factual source for the website, not the primary academic profile.
