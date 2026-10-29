@@ -22,6 +22,31 @@ final class Eduardo_Research_Manager_Identity_Profile {
         return self::OPTION_KEY;
     }
 
+    public function contract_descriptor(): array|WP_Error {
+        $contract = Eduardo_Research_Manager::contract();
+        $languages = array_values($contract->languages());
+        if (! $languages) {
+            return new WP_Error('research_manager_identity_languages_missing', 'The active Greenfield Theme contract does not expose an identity language.');
+        }
+
+        $headline_fields = array();
+        $identity_language_map = array();
+        foreach ($languages as $language) {
+            $language = sanitize_key((string) $language);
+            $field = $contract->identity_headline_field($language);
+            if (is_wp_error($field)) { return $field; }
+            $headline_fields[$language] = $field;
+            $identity_language_map[$field] = $language;
+        }
+
+        return array(
+            'fields'=>array_merge(array('name'), array_keys($identity_language_map)),
+            'languages'=>$languages,
+            'headline_fields'=>$headline_fields,
+            'identity_language_map'=>$identity_language_map,
+        );
+    }
+
     public function inspect(): array|WP_Error {
         $stored = get_option(self::OPTION_KEY, array());
         if (! is_array($stored)) {
@@ -32,11 +57,11 @@ final class Eduardo_Research_Manager_Identity_Profile {
         $defaults = is_wp_error($defaults) ? array() : $defaults;
         $default_identity = is_array($defaults['identity'] ?? null) ? $defaults['identity'] : array();
         $default_headlines = is_array($default_identity['headlines'] ?? null) ? $default_identity['headlines'] : array();
-        $contract = Eduardo_Research_Manager::contract();
-        $languages = array_values($contract->languages());
-        if (! $languages) {
-            return new WP_Error('research_manager_identity_languages_missing', 'The active Greenfield Theme contract does not expose an identity language.');
-        }
+        $descriptor = $this->contract_descriptor();
+        if (is_wp_error($descriptor)) { return $descriptor; }
+        $languages = (array) ($descriptor['languages'] ?? array());
+        $headline_fields = is_array($descriptor['headline_fields'] ?? null) ? $descriptor['headline_fields'] : array();
+        $identity_language_map = is_array($descriptor['identity_language_map'] ?? null) ? $descriptor['identity_language_map'] : array();
 
         $name = $this->text($stored['name'] ?? '');
         if ('' === $name) { $name = $this->text($default_identity['name'] ?? ''); }
@@ -45,12 +70,13 @@ final class Eduardo_Research_Manager_Identity_Profile {
             return new WP_Error('research_manager_identity_name_missing', 'The Researcher Identity name is missing from stored state, the active instance blueprint and WordPress site identity.');
         }
 
-        $identity_language_map = array();
         $headline_values = array();
         foreach ($languages as $index => $language) {
             $language = sanitize_key((string) $language);
-            $field = $contract->identity_headline_field($language);
-            if (is_wp_error($field)) { return $field; }
+            $field = sanitize_key((string) ($headline_fields[$language] ?? ''));
+            if ('' === $field) {
+                return new WP_Error('research_manager_identity_language_field_unmapped', 'The requested language has no compatible Identity headline field.');
+            }
 
             $value = $this->text($stored[$field] ?? '');
             if ('' === $value) { $value = $this->text($default_headlines[$language] ?? ''); }
@@ -62,7 +88,6 @@ final class Eduardo_Research_Manager_Identity_Profile {
                 );
             }
 
-            $identity_language_map[$field] = $language;
             $headline_values[$field] = $value;
         }
 
@@ -77,7 +102,7 @@ final class Eduardo_Research_Manager_Identity_Profile {
                 'verified_at'=>$this->text($stored['verified_at'] ?? ''),
                 'stored'=>$stored,
                 'revision'=>$this->revision($stored),
-                'fields'=>array_merge(array('name'), array_keys($identity_language_map)),
+                'fields'=>(array) ($descriptor['fields'] ?? array()),
                 'languages'=>$languages,
                 'identity_language_map'=>$identity_language_map,
                 'arbitrary_wordpress_profile_proxy'=>false,
