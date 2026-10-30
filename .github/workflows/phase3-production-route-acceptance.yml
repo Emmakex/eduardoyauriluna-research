@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: phase3-production-route-acceptance-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   contract:
@@ -41,7 +41,7 @@ jobs:
     name: Probe empty collection routes in production
     if: github.event_name != 'pull_request'
     needs: contract
-    runs-on: [self-hosted, Linux, X64, kairoseth-ci, eduardo-research, ovh]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
