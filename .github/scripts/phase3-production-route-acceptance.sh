@@ -5,8 +5,7 @@ readonly BASE_URL="https://eduardoyauriluna.com"
 readonly USER_AGENT="EduardoResearch-Phase3-Acceptance/1.0"
 
 readonly -a HEALTH_ROUTES=(
-  "/en/"
-  "/es/"
+  "/"
 )
 
 readonly -a EMPTY_COLLECTION_ROUTES=(
@@ -26,11 +25,12 @@ fail() {
 }
 
 if [[ "${1:-}" == "--self-test" ]]; then
-  [[ ${#HEALTH_ROUTES[@]} -eq 2 ]] || fail "expected 2 health routes"
+  [[ ${#HEALTH_ROUTES[@]} -eq 1 ]] || fail "expected 1 canonical health route"
+  [[ "${HEALTH_ROUTES[0]}" == "/" ]] || fail "canonical health route must be root"
   [[ ${#EMPTY_COLLECTION_ROUTES[@]} -eq 8 ]] || fail "expected 8 empty collection routes"
   [[ "${EMPTY_COLLECTION_ROUTES[*]}" == *"/en/publications/"* ]] || fail "missing EN publications route"
   [[ "${EMPTY_COLLECTION_ROUTES[*]}" == *"/es/datos/"* ]] || fail "missing ES datasets route"
-  printf 'PASS: contract contains %d health routes and %d empty collection routes.\n' \
+  printf 'PASS: contract contains %d health route and %d empty collection routes.\n' \
     "${#HEALTH_ROUTES[@]}" "${#EMPTY_COLLECTION_ROUTES[@]}"
   exit 0
 fi
@@ -71,7 +71,7 @@ probe() {
 printf 'Phase 3 production route acceptance\n'
 printf 'Target: %s\n' "$BASE_URL"
 
-printf '\nBaseline routes (final status must be 2xx):\n'
+printf '\nBaseline route (final status must be 2xx):\n'
 for path in "${HEALTH_ROUTES[@]}"; do
   line="$(probe "$path")"
   IFS=$'\t' read -r status requested effective <<<"$line"
