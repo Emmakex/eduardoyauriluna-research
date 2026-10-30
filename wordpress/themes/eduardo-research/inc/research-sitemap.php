@@ -5,8 +5,10 @@ if (! defined('ABSPATH')) { exit; }
 
 if (class_exists('WP_Sitemaps_Provider')) {
     final class Eduardo_Research_Language_Sitemap_Provider extends WP_Sitemaps_Provider {
+        public const PROVIDER_NAME = 'researchlanguages';
+
         public function __construct() {
-            $this->name = 'research-languages';
+            $this->name = self::PROVIDER_NAME;
             $this->object_type = 'research_language_page';
         }
 
@@ -32,7 +34,10 @@ if (class_exists('WP_Sitemaps_Provider')) {
 
 function eduardo_research_register_language_sitemap($sitemaps): void {
     if (! class_exists('Eduardo_Research_Language_Sitemap_Provider')) { return; }
-    $sitemaps->registry->add_provider('research-languages', new Eduardo_Research_Language_Sitemap_Provider());
+    $sitemaps->registry->add_provider(
+        Eduardo_Research_Language_Sitemap_Provider::PROVIDER_NAME,
+        new Eduardo_Research_Language_Sitemap_Provider()
+    );
 }
 add_action('wp_sitemaps_init', 'eduardo_research_register_language_sitemap');
 
