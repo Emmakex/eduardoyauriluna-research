@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-research-objects-readback-20261030-08",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "research_object",
+    "filters": {}
+  }
+}
