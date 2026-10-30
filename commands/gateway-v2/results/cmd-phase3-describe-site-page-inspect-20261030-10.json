@@ -1,0 +1,39 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-phase3-describe-site-page-inspect-20261030-10",
+  "command_sha256": "100cbfe12801004cbcd85bee4be95d2f1e1187ada1c9e549468a564a936c4bc7",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Inspect one registered page in an enabled language.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "key": {
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "type": "string"
+        },
+        "language": {
+          "pattern": "^[a-z][a-z0-9-]{1,15}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "language"
+      ],
+      "type": "object"
+    },
+    "name": "site_page_inspect"
+  },
+  "version": "1"
+}
