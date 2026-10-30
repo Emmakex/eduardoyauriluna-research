@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase3-navigation-readback-20261030-09",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "navigation"
+  }
+}
