@@ -1,6 +1,5 @@
 <?php
 /** Regression guard for the Theme-owned localized sitemap provider. */
-declare(strict_types=1);
 
 if (! defined('ABSPATH')) {
     fwrite(STDERR, "WordPress must be loaded before this guard runs.\n");
