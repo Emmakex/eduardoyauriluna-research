@@ -1,0 +1,49 @@
+name: Phase 4 Production SEO Audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/phase4-production-seo-audit.py'
+      - '.github/workflows/phase4-production-seo-audit.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/scripts/phase4-production-seo-audit.py'
+      - '.github/workflows/phase4-production-seo-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase4-production-seo-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Validate Phase 4 audit contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile audit
+        run: python3 -m py_compile .github/scripts/phase4-production-seo-audit.py
+
+      - name: Validate parser contract
+        run: python3 .github/scripts/phase4-production-seo-audit.py --self-test
+
+  production:
+    name: Audit production SEO/GEO
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run read-only production audit
+        run: python3 .github/scripts/phase4-production-seo-audit.py
