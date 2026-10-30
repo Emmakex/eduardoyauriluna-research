@@ -1,0 +1,53 @@
+name: Phase 3 Production Route Acceptance
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/phase3-production-route-acceptance.sh'
+      - '.github/workflows/phase3-production-route-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase3-production-route-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate production route acceptance contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate probe syntax
+        shell: bash
+        run: bash -n .github/scripts/phase3-production-route-acceptance.sh
+
+      - name: Validate probe contract
+        shell: bash
+        run: bash .github/scripts/phase3-production-route-acceptance.sh --self-test
+
+  production:
+    name: Probe empty collection routes in production
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: [self-hosted, Linux, X64, kairoseth-ci, eduardo-research, ovh]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify required transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v curl
+          curl --version
+
+      - name: Run Phase 3 production route acceptance
+        shell: bash
+        run: bash .github/scripts/phase3-production-route-acceptance.sh
