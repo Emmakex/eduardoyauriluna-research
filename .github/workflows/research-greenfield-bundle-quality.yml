@@ -93,13 +93,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - "$GREENFIELD_BUNDLE_DIR/manifest.json" <<'PY'
-          import json, pathlib, sys
+          python3 - "$GREENFIELD_BUNDLE_DIR/manifest.json" wordpress/themes/eduardo-research/style.css <<'PY'
+          import json, pathlib, re, sys
           manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          style = pathlib.Path(sys.argv[2]).read_text(encoding='utf-8')
+          match = re.search(r'^Version:\s*(\S+)\s*$', style, re.MULTILINE)
+          assert match, 'Theme Version metadata missing from style.css'
+          theme_version = match.group(1)
           assert manifest['schema_version'] == 1
           assert manifest['bundle'] == 'eduardo-research-greenfield'
           assert manifest['theme']['slug'] == 'eduardo-research'
-          assert manifest['theme']['version'] == '1.1.1'
+          assert manifest['theme']['version'] == theme_version
           assert manifest['manager']['slug'] == 'eduardo-research-manager'
           assert manifest['manager']['version'] == '0.11.0'
           assert manifest['blueprint']['languages'] == ['en', 'es']
@@ -131,10 +135,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          EXPECTED_THEME_VERSION="$(python3 - "$GREENFIELD_BUNDLE_DIR/manifest.json" <<'PY'
+          import json, pathlib, sys
+          print(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))['theme']['version'])
+          PY
+          )"
           cd /tmp/research-greenfield-target
           test "$(wp theme get eduardo-research --field=status --allow-root)" = "active"
           test "$(wp plugin get eduardo-research-manager --field=status --allow-root)" = "active"
-          test "$(wp theme get eduardo-research --field=version --allow-root)" = "1.1.1"
+          test "$(wp theme get eduardo-research --field=version --allow-root)" = "$EXPECTED_THEME_VERSION"
           test "$(wp plugin get eduardo-research-manager --field=version --allow-root)" = "0.11.0"
           test "$(wp post list --post_type=research_line --post_status=publish --format=count --allow-root)" = "8"
           wp eval '
