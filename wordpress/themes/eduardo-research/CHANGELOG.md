@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.2 — Sitemap route integrity
+
+Closes the Phase 4 production SEO/GEO sitemap defect without changing public content, Research Manager or Gateway behavior.
+
+### Fixed
+
+- Replace the hyphenated localized sitemap provider id with the WordPress-routable `researchlanguages` identifier.
+- Centralize the provider id in `Eduardo_Research_Language_Sitemap_Provider::PROVIDER_NAME` so registry and provider metadata cannot drift.
+- Restore alignment between the native sitemap index URL and WordPress sitemap rewrite routing.
+
+### Quality
+
+- Add a clean-WordPress runtime regression guard that requires a lowercase alphabetic provider id, verifies registry/index alignment and proves the generated sitemap route resolves through native rewrite rules.
+- Version the installable Theme artifact as `eduardo-research-1.1.2.zip`.
+
 ## 1.1.0 — Governable Research Theme
 
 Turns the evolved Research Theme into an explicit, versioned control surface for Research Manager / Gateway governance while keeping the public frontend deterministic and Theme-owned.
