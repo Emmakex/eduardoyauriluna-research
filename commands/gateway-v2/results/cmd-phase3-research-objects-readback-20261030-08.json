@@ -1,0 +1,44 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase3-research-objects-readback-20261030-08",
+  "command_sha256": "96a279ce734fb13bc484326c16a8f9f1a77851eeaf5d7b66a28437601d197c9e",
+  "data": {
+    "count": 0,
+    "groups": {
+      "dataset": {
+        "count": 0,
+        "items": []
+      },
+      "output": {
+        "count": 0,
+        "items": []
+      },
+      "project": {
+        "count": 0,
+        "items": []
+      },
+      "software": {
+        "count": 0,
+        "items": []
+      }
+    },
+    "kind": "",
+    "language": ""
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "research.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {},
+    "type": "research_object"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
