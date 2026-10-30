@@ -5,6 +5,12 @@ on:
     paths:
       - '.github/scripts/phase3-production-route-acceptance.sh'
       - '.github/workflows/phase3-production-route-acceptance.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/scripts/phase3-production-route-acceptance.sh'
+      - '.github/workflows/phase3-production-route-acceptance.yml'
   workflow_dispatch:
 
 permissions:
@@ -33,7 +39,7 @@ jobs:
 
   production:
     name: Probe empty collection routes in production
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request'
     needs: contract
     runs-on: [self-hosted, Linux, X64, kairoseth-ci, eduardo-research, ovh]
     timeout-minutes: 10
