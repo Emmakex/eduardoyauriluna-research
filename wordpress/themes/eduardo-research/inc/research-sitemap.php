@@ -32,6 +32,12 @@ if (class_exists('WP_Sitemaps_Provider')) {
     }
 }
 
+function eduardo_research_filter_sitemap_provider($provider, string $name) {
+    if ('users' === $name) { return false; }
+    return $provider;
+}
+add_filter('wp_sitemaps_add_provider', 'eduardo_research_filter_sitemap_provider', 10, 2);
+
 function eduardo_research_register_language_sitemap($sitemaps): void {
     if (! class_exists('Eduardo_Research_Language_Sitemap_Provider')) { return; }
     $sitemaps->registry->add_provider(
