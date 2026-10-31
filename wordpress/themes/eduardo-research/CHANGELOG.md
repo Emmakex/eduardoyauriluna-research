@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.3 — Author sitemap cleanup
+
+Closes the remaining Phase 4 production SEO/GEO sitemap finding without changing public content, Research Manager, Gateway, navigation or schema semantics.
+
+### Fixed
+
+- Exclude WordPress core's `users` sitemap provider so the low-value `/author/eduardoyauri/` utility route is no longer advertised through the native sitemap index.
+- Preserve the Theme-owned localized `researchlanguages` provider and all existing post/page sitemap behavior.
+
+### Quality
+
+- Extend the clean-WordPress sitemap regression guard to require the `users` provider to be absent and reject any `wp-sitemap-users-*` entry in the native sitemap index.
+- Version the installable Theme artifact as `eduardo-research-1.1.3.zip`.
+
 ## 1.1.2 — Sitemap route integrity
 
 Closes the Phase 4 production SEO/GEO sitemap defect without changing public content, Research Manager or Gateway behavior.
