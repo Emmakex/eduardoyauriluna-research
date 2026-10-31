@@ -31,13 +31,21 @@ if (null !== $server->registry->get_provider('research-languages')) {
     fwrite(STDERR, "Legacy hyphenated sitemap provider id is still registered.\n");
     exit(1);
 }
+if (null !== $server->registry->get_provider('users')) {
+    fwrite(STDERR, "Low-value WordPress users sitemap provider is still registered.\n");
+    exit(1);
+}
 
 $expected_url = home_url('/wp-sitemap-' . $provider_name . '-1.xml');
 $found = false;
 foreach ($server->index->get_sitemap_list() as $entry) {
-    if ($expected_url === (string) ($entry['loc'] ?? '')) {
+    $location = (string) ($entry['loc'] ?? '');
+    if ($expected_url === $location) {
         $found = true;
-        break;
+    }
+    if (false !== strpos($location, '/wp-sitemap-users-')) {
+        fwrite(STDERR, "Low-value users sitemap leaked into the native sitemap index: {$location}\n");
+        exit(1);
     }
 }
 if (! $found) {
@@ -76,4 +84,4 @@ if (! $matched) {
     exit(1);
 }
 
-echo "PASS: Theme sitemap provider id, index URL and native rewrite route are aligned.\n";
+echo "PASS: Theme sitemap provider id, index URL, native rewrite route and author-sitemap exclusion are aligned.\n";
