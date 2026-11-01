@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase5-evidence-education-20261101-05",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "evidence",
+    "filters": {
+      "group": "education"
+    }
+  }
+}
