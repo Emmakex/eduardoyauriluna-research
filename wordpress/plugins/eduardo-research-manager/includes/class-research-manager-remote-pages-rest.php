@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
+require_once __DIR__ . '/class-research-manager-legal-editor.php';
+require_once __DIR__ . '/class-research-manager-remote-legal-operations.php';
+require_once __DIR__ . '/class-research-manager-remote-legal-rest.php';
+
 final class Eduardo_Research_Manager_Remote_Pages_REST {
     private Eduardo_Research_Manager_Remote_REST $auth;
 
@@ -14,6 +18,7 @@ final class Eduardo_Research_Manager_Remote_Pages_REST {
     public function register(): void {
         add_action('rest_api_init', array($this, 'register_routes'));
         add_filter('rest_request_after_callbacks', array($this, 'augment_capabilities'), 10, 3);
+        (new Eduardo_Research_Manager_Remote_Legal_REST($this->auth))->register();
     }
 
     public function register_routes(): void {
