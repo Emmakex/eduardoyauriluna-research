@@ -1,0 +1,74 @@
+name: Phase 6 Legal Content Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-legal-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-legal-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-legal-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-pages-rest.php'
+      - 'bridge/research-manager-mcp/src/a8-*.ts'
+      - 'bridge/research-manager-mcp/src/adapters/research-manager.ts'
+      - 'bridge/research-manager-mcp/src/extended-server.ts'
+      - 'scripts/phase6-legal-content-runner.py'
+      - 'config/research-gateway-v2-action-registry.json'
+      - '.github/workflows/phase6-legal-content-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-legal-editor.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-legal-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-legal-rest.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-pages-rest.php'
+      - 'bridge/research-manager-mcp/src/a8-*.ts'
+      - 'bridge/research-manager-mcp/src/adapters/research-manager.ts'
+      - 'bridge/research-manager-mcp/src/extended-server.ts'
+      - 'scripts/phase6-legal-content-runner.py'
+      - 'config/research-gateway-v2-action-registry.json'
+      - '.github/workflows/phase6-legal-content-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP syntax
+        run: |
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-legal-editor.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-legal-operations.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-legal-rest.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-pages-rest.php
+
+      - name: Gateway contract self-test
+        run: |
+          python3 -m py_compile scripts/phase6-legal-content-runner.py
+          python3 scripts/phase6-legal-content-runner.py --self-test
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('config/research-gateway-v2-action-registry.json').read_text())
+          action=data['actions']['legal.content.update']
+          assert action['runner']=='phase6-legal-content-runner.py'
+          assert action['validator']=='phase6-legal-content-runner.py'
+          assert action['read_only'] is False
+          assert action['required_capabilities']==['pages.read','pages.write','site.diagnostics','operations.apply','operations.rollback']
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: bridge/research-manager-mcp/package-lock.json
+
+      - name: Bridge typecheck and tests
+        working-directory: bridge/research-manager-mcp
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
