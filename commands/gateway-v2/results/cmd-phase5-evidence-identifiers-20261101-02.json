@@ -1,0 +1,33 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase5-evidence-identifiers-20261101-02",
+  "command_sha256": "5326c75aad04155cc02c916d4586f7c13cb4eb76af5f0346ad918e16c80ed0d7",
+  "data": {
+    "count": 0,
+    "group": "identifiers",
+    "items": [],
+    "label": "Academic identifiers",
+    "surfaces": [
+      "about",
+      "contact"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "identifiers"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
