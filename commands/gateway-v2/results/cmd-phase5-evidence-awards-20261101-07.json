@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase5-evidence-awards-20261101-07",
+  "command_sha256": "2a71fe1908626597142c1a05855338b04ddda891d14fdacd34deddbc823e03a7",
+  "data": {
+    "count": 0,
+    "group": "awards",
+    "items": [],
+    "label": "Awards",
+    "surfaces": [
+      "cv"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "awards"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
