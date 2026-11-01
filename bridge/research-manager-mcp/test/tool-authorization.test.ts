@@ -14,6 +14,7 @@ function serverMappings(): Map<string,string> {
     readFileSync(new URL('../src/a5-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a6-write-tools.ts',import.meta.url),'utf8'),
     readFileSync(new URL('../src/a7-write-tools.ts',import.meta.url),'utf8'),
+    readFileSync(new URL('../src/a8-write-tools.ts',import.meta.url),'utf8'),
   ];
   const mappings=new Map<string,string>();
   for(const source of sources){
@@ -33,11 +34,12 @@ function serverMappings(): Map<string,string> {
 test('every registered MCP tool has an authoritative primary commercial capability mapping',()=>{
   const actual=serverMappings();
   const catalogEntries=Object.entries(TOOL_AUTHORIZATION);
-  assert.equal(catalogEntries.length,100);
-  assert.equal(actual.size,100);
+  assert.equal(catalogEntries.length,104);
+  assert.equal(actual.size,104);
   assert.deepEqual([...actual.keys()].sort(),catalogEntries.map(([name])=>name).sort());
   const writeTools=new Set([
     'site_page_slots_plan','site_page_slots_apply','site_page_slots_verify','site_page_slots_rollback',
+    'site_legal_content_plan','site_legal_content_apply','site_legal_content_verify','site_legal_content_rollback',
     'site_insight_create_plan','site_insight_update_plan','site_insight_apply','site_insight_verify','site_insight_rollback',
     'site_insight_pair_plan','site_insight_unpair_plan','site_insight_pairing_apply','site_insight_pairing_verify','site_insight_pairing_rollback',
     'site_research_line_create_plan','site_research_line_update_plan','site_research_line_apply','site_research_line_verify','site_research_line_rollback',
@@ -69,6 +71,12 @@ test('backend scope contracts preserve adapter security boundaries',()=>{
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_plan.backendScopes,['operations.apply']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_verify.backendScopes,['site.read','site.diagnostics']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_rollback.backendScopes,['site.read','operations.rollback']);
+  assert.equal(TOOL_AUTHORIZATION.site_legal_content_plan.commercialCapability,'pages.write');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_legal_content_plan.backendScopes,['operations.apply','pages.write']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_legal_content_apply.backendScopes,['pages.read','operations.apply','pages.write']);
+  assert.deepEqual(TOOL_AUTHORIZATION.site_legal_content_verify.backendScopes,['pages.read','site.diagnostics']);
+  assert.equal(TOOL_AUTHORIZATION.site_legal_content_rollback.commercialCapability,'operations.rollback');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_legal_content_rollback.backendScopes,['pages.read','operations.rollback','pages.write']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_insight_create_plan.backendScopes,['operations.apply']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_insight_verify.backendScopes,['site.read','site.diagnostics']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_insight_pair_plan.backendScopes,['operations.apply','insights.write','translations.write']);
