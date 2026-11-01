@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase5-cv-en-inspect-20261101-08",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "page",
+    "key": "cv",
+    "language": "en"
+  }
+}
