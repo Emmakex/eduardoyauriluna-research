@@ -75,5 +75,5 @@ jobs:
             sleep 1
           done
           bash scripts/phase2c-mcp-remote-acceptance.sh
-          jq -e '.status == "PASS" and .tool_count == 96 and .persistent_telemetry == true and .reference_reads_checked == false' "$MCP_EVIDENCE_DIR/result.json" >/dev/null
+          jq -e '.status == "PASS" and .tool_count == 101 and .persistent_telemetry == true and .reference_reads_checked == false' "$MCP_EVIDENCE_DIR/result.json" >/dev/null
           ! grep -R -F -- "$MCP_TOKEN" "$MCP_EVIDENCE_DIR"

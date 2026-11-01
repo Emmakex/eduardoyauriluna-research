@@ -66,20 +66,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          PLUGIN_MAIN='wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+          grep -F ' * Version: 0.11.1' "$PLUGIN_MAIN"
+          grep -F "define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.1');" "$PLUGIN_MAIN"
           rm -rf dist/manager-package
           mkdir -p dist/manager-package/eduardo-research-manager
           cp -a wordpress/plugins/eduardo-research-manager/. dist/manager-package/eduardo-research-manager/
           (
             cd dist/manager-package
-            zip -qr ../research-manager-0.11.0.zip eduardo-research-manager
+            zip -qr ../research-manager-0.11.1.zip eduardo-research-manager
           )
-          test -s dist/research-manager-0.11.0.zip
-          PLUGIN_SHA256="$(sha256sum dist/research-manager-0.11.0.zip | awk '{print $1}')"
-          printf '%s  %s\n' "$PLUGIN_SHA256" 'research-manager-0.11.0.zip' > dist/research-manager-0.11.0.zip.sha256
-          unzip -l dist/research-manager-0.11.0.zip | grep -F 'eduardo-research-manager/eduardo-research-manager.php'
+          test -s dist/research-manager-0.11.1.zip
+          PLUGIN_SHA256="$(sha256sum dist/research-manager-0.11.1.zip | awk '{print $1}')"
+          printf '%s  %s\n' "$PLUGIN_SHA256" 'research-manager-0.11.1.zip' > dist/research-manager-0.11.1.zip.sha256
+          unzip -l dist/research-manager-0.11.1.zip | grep -F 'eduardo-research-manager/eduardo-research-manager.php'
+          unzip -p dist/research-manager-0.11.1.zip eduardo-research-manager/eduardo-research-manager.php | grep -F ' * Version: 0.11.1'
           jq -n \
-            --arg plugin_version '0.11.0' \
-            --arg plugin_file 'research-manager-0.11.0.zip' \
+            --arg plugin_version '0.11.1' \
+            --arg plugin_file 'research-manager-0.11.1.zip' \
             --arg plugin_sha256 "$PLUGIN_SHA256" \
             --arg source_commit "$GITHUB_SHA" \
             --arg tenant_profile 'generic-wordpress' \
@@ -98,15 +102,15 @@ jobs:
               },
               external_acceptance_project:"Nueva web Emmake",
               external_acceptance_target:"emmake/nuevaweb"
-            }' > dist/research-manager-0.11.0.manifest.json
+            }' > dist/research-manager-0.11.1.manifest.json
 
       - name: Upload portable Manager package
         uses: actions/upload-artifact@v4
         with:
-          name: research-manager-0.11.0
+          name: research-manager-0.11.1
           path: |
-            dist/research-manager-0.11.0.zip
-            dist/research-manager-0.11.0.zip.sha256
-            dist/research-manager-0.11.0.manifest.json
+            dist/research-manager-0.11.1.zip
+            dist/research-manager-0.11.1.zip.sha256
+            dist/research-manager-0.11.1.manifest.json
           if-no-files-found: error
           retention-days: 30

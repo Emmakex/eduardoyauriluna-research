@@ -5,7 +5,7 @@ set -euo pipefail
 : "${MCP_TOKEN:?set MCP_TOKEN to the temporary outer principal bearer}"
 
 INSPECTOR_VERSION="${MCP_INSPECTOR_VERSION:-2.5.0}"
-EXPECTED_TOOL_COUNT="${MCP_EXPECTED_TOOL_COUNT:-96}"
+EXPECTED_TOOL_COUNT="${MCP_EXPECTED_TOOL_COUNT:-101}"
 EXPECTED_ROUTING="${MCP_EXPECTED_ROUTING:-shared}"
 SKIP_REFERENCE_READS="${MCP_SKIP_REFERENCE_READS:-false}"
 ALLOW_INSECURE_HTTP="${MCP_ALLOW_INSECURE_HTTP:-false}"
@@ -120,6 +120,10 @@ required_tools='[
   "site_seo_geo_site",
   "site_design_inspect",
   "site_page_slots_plan",
+  "site_legal_content_plan",
+  "site_legal_content_apply",
+  "site_legal_content_verify",
+  "site_legal_content_rollback",
   "site_insight_create_plan",
   "site_research_object_create_plan",
   "site_translation_pair_plan",

@@ -23,6 +23,10 @@ export const TOOL_AUTHORIZATION = {
   site_page_slots_apply: { commercialCapability:'pages.write', backendScopes:['operations.apply'], readOnly:false },
   site_page_slots_verify: { commercialCapability:'pages.write', backendScopes:['site.read','site.diagnostics'], readOnly:false },
   site_page_slots_rollback: { commercialCapability:'operations.rollback', backendScopes:['site.read','operations.rollback'], readOnly:false },
+  site_legal_content_plan: { commercialCapability:'pages.write', backendScopes:['operations.apply','pages.write'], readOnly:false },
+  site_legal_content_apply: { commercialCapability:'pages.write', backendScopes:['pages.read','operations.apply','pages.write'], readOnly:false },
+  site_legal_content_verify: { commercialCapability:'pages.write', backendScopes:['pages.read','site.diagnostics'], readOnly:false },
+  site_legal_content_rollback: { commercialCapability:'operations.rollback', backendScopes:['pages.read','operations.rollback','pages.write'], readOnly:false },
 
   site_insights_list: { commercialCapability:'insights.read', backendScopes:['site.read'], readOnly:true },
   site_insight_inspect: { commercialCapability:'insights.read', backendScopes:['site.read'], readOnly:true },

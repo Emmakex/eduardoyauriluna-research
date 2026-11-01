@@ -90,6 +90,12 @@ jobs:
           grep -F "'site_design_variant_rollback'" src/a7-write-tools.ts
           grep -F "withCapability('design.write'" src/a7-write-tools.ts
           grep -F "withCapability('operations.rollback'" src/a7-write-tools.ts
+          grep -F "'site_legal_content_plan'" src/a8-write-tools.ts
+          grep -F "'site_legal_content_apply'" src/a8-write-tools.ts
+          grep -F "'site_legal_content_verify'" src/a8-write-tools.ts
+          grep -F "'site_legal_content_rollback'" src/a8-write-tools.ts
+          grep -F "withCapability('pages.write'" src/a8-write-tools.ts
+          grep -F "withCapability('operations.rollback'" src/a8-write-tools.ts
           grep -F "TOOL_AUTHORIZATION" src/tool-authorization.ts
           grep -F "site_translation_apply: { commercialCapability:'translations.write', backendScopes:['translations.read','operations.apply','translations.write']" src/tool-authorization.ts
           grep -F "site_evidence_apply: { commercialCapability:'evidence.write', backendScopes:['evidence.read','operations.apply','evidence.write']" src/tool-authorization.ts
@@ -117,13 +123,19 @@ jobs:
           grep -F "site_design_variant_apply: { commercialCapability:'design.write', backendScopes:['design.read','operations.apply','design.write']" src/tool-authorization.ts
           grep -F "site_design_variant_verify: { commercialCapability:'design.write', backendScopes:['design.read']" src/tool-authorization.ts
           grep -F "site_design_variant_rollback: { commercialCapability:'operations.rollback', backendScopes:['design.read','operations.rollback','design.write']" src/tool-authorization.ts
-          grep -F "catalogEntries.length,96" test/tool-authorization.test.ts
+          grep -F "site_legal_content_plan: { commercialCapability:'pages.write', backendScopes:['operations.apply','pages.write']" src/tool-authorization.ts
+          grep -F "site_legal_content_apply: { commercialCapability:'pages.write', backendScopes:['pages.read','operations.apply','pages.write']" src/tool-authorization.ts
+          grep -F "site_legal_content_verify: { commercialCapability:'pages.write', backendScopes:['pages.read','site.diagnostics']" src/tool-authorization.ts
+          grep -F "site_legal_content_rollback: { commercialCapability:'operations.rollback', backendScopes:['pages.read','operations.rollback','pages.write']" src/tool-authorization.ts
+          grep -F "catalogEntries.length,104" test/tool-authorization.test.ts
+          grep -F "readFileSync(new URL('../src/a8-write-tools.ts',import.meta.url),'utf8')" test/tool-authorization.test.ts
           grep -F "registerResearchWriteTools(server,adapter)" src/extended-server.ts
           grep -F "registerA3WriteTools(server,adapter as SiteControlAdapter&A3WriteAdapter)" src/extended-server.ts
           grep -F "registerA4WriteTools(server,adapter as SiteControlAdapter&A4WriteAdapter)" src/extended-server.ts
           grep -F "registerA5WriteTools(server,adapter as SiteControlAdapter&A5WriteAdapter)" src/extended-server.ts
           grep -F "registerA6WriteTools(server,adapter as SiteControlAdapter&A6WriteAdapter)" src/extended-server.ts
           grep -F "registerA7WriteTools(server,adapter as SiteControlAdapter&A7WriteAdapter)" src/extended-server.ts
+          grep -F "registerA8WriteTools(server,adapter as SiteControlAdapter&A8WriteAdapter)" src/extended-server.ts
           grep -F "from './extended-server.js'" src/http.ts
           grep -F "runWithAuthorizationContext" src/http.ts
           ! grep -R -E "wp-json/wp/v2|registerTool\([^)]*(proxy|route|request)" src
@@ -134,4 +146,5 @@ jobs:
           A5_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a5-write-tools.ts)"
           A6_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a6-write-tools.ts)"
           A7_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a7-write-tools.ts)"
-          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS + A5_WRITE_TOOLS + A6_WRITE_TOOLS + A7_WRITE_TOOLS ))" -eq 96
+          A8_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a8-write-tools.ts)"
+          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS + A5_WRITE_TOOLS + A6_WRITE_TOOLS + A7_WRITE_TOOLS + A8_WRITE_TOOLS ))" -eq 100

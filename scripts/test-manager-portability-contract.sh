@@ -22,8 +22,8 @@ for path in "$MAIN" "$PORTABILITY" "$BASELINE" "$PROFILE" "$V1" "$MCP_TOOL" "$PO
   test -f "$path"
 done
 
-grep -Fq 'Version: 0.11.0' "$MAIN"
-grep -Fq "define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.0')" "$MAIN"
+grep -Fq 'Version: 0.11.1' "$MAIN"
+grep -Fq "define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.1')" "$MAIN"
 grep -Fq "public const GENERIC = 'generic-wordpress'" "$PROFILE"
 grep -Fq "public const RESEARCH = 'research-theme'" "$PROFILE"
 grep -Fq "'/audit/baseline'" "$PORTABILITY"
@@ -91,8 +91,8 @@ if sed -n '/\$allowed = array(/,/);/p' "$PORTABILITY" | grep -Eq '/operations|/p
   exit 1
 fi
 
-# Generic MCP server must not register Research/write tools.
-if grep -Eq 'research_|registerResearchWriteTools|registerA[3-7]WriteTools|site_navigation|site_media|site_seo|site_design' "$GENERIC_SERVER"; then
+# Generic MCP server must not register Research/write tools, including A8 legal writes.
+if grep -Eq 'research_|registerResearchWriteTools|registerA[3-8]WriteTools|site_navigation|site_media|site_seo|site_design|site_legal_content' "$GENERIC_SERVER"; then
   echo 'Generic MCP server unexpectedly registers Research/write tools.' >&2
   exit 1
 fi
@@ -104,4 +104,4 @@ if grep -Eq 'req\.query|request\.url|process\.argv|searchParams\.get' "$EXTERNAL
   exit 1
 fi
 
-echo 'Manager 0.11 portability + UX contract: OK'
+echo 'Manager 0.11.1 portability + UX contract: OK'

@@ -5,12 +5,14 @@ import { ResearchManagerA4WriteClient } from '../a4-write-client.js';
 import { ResearchManagerA5WriteClient } from '../a5-write-client.js';
 import { ResearchManagerA6WriteClient } from '../a6-write-client.js';
 import { ResearchManagerA7WriteClient } from '../a7-write-client.js';
+import { ResearchManagerA8WriteClient } from '../a8-write-client.js';
 import type { TenantConfig } from '../config.js';
 import type * as A3 from '../a3-contracts.js';
 import type * as A4 from '../a4-contracts.js';
 import type * as A5 from '../a5-contracts.js';
 import type * as A6 from '../a6-contracts.js';
 import type * as A7 from '../a7-contracts.js';
+import type * as A8 from '../a8-contracts.js';
 import type * as Site from './site-control.js';
 
 export class ResearchManagerAdapter implements Site.SiteControlAdapter {
@@ -23,6 +25,7 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
   private readonly a5WriteClient:ResearchManagerA5WriteClient;
   private readonly a6WriteClient:ResearchManagerA6WriteClient;
   private readonly a7WriteClient:ResearchManagerA7WriteClient;
+  private readonly a8WriteClient:ResearchManagerA8WriteClient;
   constructor(tenant:TenantConfig,fetchImpl:typeof fetch=fetch){
     this.tenantId=tenant.id; this.tenantLabel=tenant.label; this.languages=tenant.languages; this.productProfile=tenant.productProfile??'research-theme';
     this.client=new ResearchManagerClient(tenant,fetchImpl);
@@ -32,6 +35,7 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
     this.a5WriteClient=new ResearchManagerA5WriteClient(tenant,fetchImpl);
     this.a6WriteClient=new ResearchManagerA6WriteClient(tenant,fetchImpl);
     this.a7WriteClient=new ResearchManagerA7WriteClient(tenant,fetchImpl);
+    this.a8WriteClient=new ResearchManagerA8WriteClient(tenant,fetchImpl);
   }
   status():Promise<unknown>{return this.client.status();}
   versions():Promise<unknown>{return this.client.versions();}
@@ -94,6 +98,10 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
   applyNavigation(request:A6.NavigationApplyRequest):Promise<unknown>{return this.a6WriteClient.apply(request);}
   verifyNavigation(request:A6.NavigationVerifyRequest):Promise<unknown>{return this.a6WriteClient.verify(request);}
   rollbackNavigation(request:A6.NavigationRollbackRequest):Promise<unknown>{return this.a6WriteClient.rollback(request);}
+  planLegalContent(request:A8.LegalContentPlanRequest):Promise<unknown>{this.requireLanguage(request.language,'Legal content');return this.a8WriteClient.plan(request);}
+  applyLegalContent(request:A8.LegalContentApplyRequest):Promise<unknown>{return this.a8WriteClient.apply(request);}
+  verifyLegalContent(request:A8.LegalContentVerifyRequest):Promise<unknown>{return this.a8WriteClient.verify(request);}
+  rollbackLegalContent(request:A8.LegalContentRollbackRequest):Promise<unknown>{return this.a8WriteClient.rollback(request);}
   listMedia(request:Site.SiteMediaListRequest):Promise<unknown>{return this.client.mediaInventory(request);}
   inspectMedia(request:Site.SiteMediaInspectionRequest):Promise<unknown>{return this.client.mediaItem(request.attachmentId);}
   mediaDiagnostics(request:Site.SiteMediaDiagnosticsRequest):Promise<unknown>{return this.client.mediaDiagnostics(request.limit);}
