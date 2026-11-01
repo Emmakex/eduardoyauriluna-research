@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase5-evidence-experience-20261101-06",
+  "command_sha256": "112c1b3b7b8b35610c2d8af496d60d5a5c594175ceff2f5d0e16167cb0d9f8cf",
+  "data": {
+    "count": 0,
+    "group": "experience",
+    "items": [],
+    "label": "Experience",
+    "surfaces": [
+      "cv"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "experience"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
