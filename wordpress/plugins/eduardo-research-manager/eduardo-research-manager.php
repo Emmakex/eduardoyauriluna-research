@@ -3,7 +3,7 @@
  * Plugin Name: Site Architect
  * Plugin URI: https://kairoseth.com/
  * Description: Greenfield WordPress architecture and governance control plane for deterministic Theme-owned sites.
- * Version: 0.11.0
+ * Version: 0.11.1
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Author: Emmake by Kairoseth
@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
-define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.0');
+define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.1');
 define('EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME', 'Site Architect');
 define('EDUARDO_RESEARCH_MANAGER_FILE', __FILE__);
 define('EDUARDO_RESEARCH_MANAGER_DIR', plugin_dir_path(__FILE__));
