@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase5-page-inventory-20261101-01",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "page",
+    "filters": {}
+  }
+}
