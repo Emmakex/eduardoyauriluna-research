@@ -1,0 +1,67 @@
+name: Phase 6 Production Visitor Audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/phase6-production-visitor-audit.py'
+      - '.github/scripts/phase6-production-mobile-audit.mjs'
+      - '.github/workflows/phase6-production-visitor-audit.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/scripts/phase6-production-visitor-audit.py'
+      - '.github/scripts/phase6-production-mobile-audit.mjs'
+      - '.github/workflows/phase6-production-visitor-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase6-production-visitor-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Validate Phase 6 audit contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile visitor audit
+        run: python3 -m py_compile .github/scripts/phase6-production-visitor-audit.py
+
+      - name: Validate visitor parser contract
+        run: python3 .github/scripts/phase6-production-visitor-audit.py --self-test
+
+      - name: Validate mobile audit syntax
+        run: node --check .github/scripts/phase6-production-mobile-audit.mjs
+
+  production:
+    name: Audit production visitor surfaces
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Audit rendered legal, utility and accessibility surfaces
+        run: python3 .github/scripts/phase6-production-visitor-audit.py
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pinned Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.64.1
+          npx playwright install --with-deps chromium
+
+      - name: Audit rendered mobile experience
+        run: node .github/scripts/phase6-production-mobile-audit.mjs
