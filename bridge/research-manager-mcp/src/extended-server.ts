@@ -9,6 +9,8 @@ import type { A6WriteAdapter } from './a6-contracts.js';
 import { registerA6WriteTools } from './a6-write-tools.js';
 import type { A7WriteAdapter } from './a7-contracts.js';
 import { registerA7WriteTools } from './a7-write-tools.js';
+import type { A8WriteAdapter } from './a8-contracts.js';
+import { registerA8WriteTools } from './a8-write-tools.js';
 import type { SiteControlAdapter } from './adapters/site-control.js';
 import { createGenericBridgeServer } from './generic-server.js';
 import { registerPortableTools } from './portable-tools.js';
@@ -28,5 +30,6 @@ export function createBridgeServer(adapter:SiteControlAdapter):McpServer{
   registerA5WriteTools(server,adapter as SiteControlAdapter&A5WriteAdapter);
   registerA6WriteTools(server,adapter as SiteControlAdapter&A6WriteAdapter);
   registerA7WriteTools(server,adapter as SiteControlAdapter&A7WriteAdapter);
+  registerA8WriteTools(server,adapter as SiteControlAdapter&A8WriteAdapter);
   return server;
 }
