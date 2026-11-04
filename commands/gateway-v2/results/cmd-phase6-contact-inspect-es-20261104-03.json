@@ -1,0 +1,72 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-phase6-contact-inspect-es-20261104-03",
+  "command_sha256": "44f1eff35222c6491838464966a04980506b0aa79db89e1b5c63da4b0706314c",
+  "data": {
+    "allowed_slots": [
+      "eyebrow",
+      "lead",
+      "sections"
+    ],
+    "contract_aligned": true,
+    "contract_slug": "contact",
+    "effective_slots": {
+      "eyebrow": "Contacto de investigación",
+      "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.",
+      "sections": [
+        "Consultas de investigación",
+        "Perfiles académicos"
+      ]
+    },
+    "expected_model": "research-contact-v1",
+    "expected_role": "contact",
+    "key": "contact",
+    "language": "es",
+    "model": "research-contact-v1",
+    "option_key": "eduardo_research_surface_contact_es",
+    "page_id": 17,
+    "published": true,
+    "role": "contact",
+    "slug": "contact",
+    "state_policy": {
+      "allowed_statuses": [
+        "draft",
+        "publish"
+      ],
+      "archive_status": "draft",
+      "destructive_delete": false,
+      "slug_editable": false,
+      "slug_source": "theme-contract",
+      "status_editable": true,
+      "title_editable": true
+    },
+    "status": "publish",
+    "stored_slots": {
+      "eyebrow": "Contacto de investigación",
+      "lead": "Contacto para conversaciones académicas, colaboración y cuestiones relacionadas con la agenda de investigación.",
+      "sections": [
+        "Consultas de investigación",
+        "Perfiles académicos"
+      ]
+    },
+    "title": "Contact",
+    "url": "https://eduardoyauriluna.com/es/contacto/"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "key": "contact",
+    "language": "es",
+    "type": "page"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
