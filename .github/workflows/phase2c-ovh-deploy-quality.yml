@@ -50,6 +50,25 @@ jobs:
             bridge/research-manager-mcp/compose.production.example.yml \
             .github/workflows/research-manager-mcp-publish-image.yml
 
+      - name: Post-cutover Research MCP deployment contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          flow = Path('.github/workflows/phase2c-ovh-deploy.yml').read_text()
+          assert 'MCP_ACCEPTANCE_TOKEN' not in flow, 'retired acceptance secret must remain retired'
+          assert 'denied_tenant_id is required' not in flow, 'retired isolation tenant must stay optional'
+          assert 'environment: production' in flow
+          assert 'environment: phase2d-production' in flow
+          assert "format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN)" in flow
+          assert "MCP_EXPECTED_TOOL_COUNT: '101'" in flow
+          assert 'bash scripts/phase2c-mcp-remote-acceptance.sh' in flow
+          assert 'rollback-after-acceptance-failure:' in flow
+          assert "needs.acceptance.result != 'success'" in flow
+          assert 'phase2c-ovh-deploy.sh' in flow
+          print('PASS: existing research-ops acceptance, immutable deployment and rollback')
+          PY
+
       - name: Validate frozen release provenance and shared-edge handoff
         shell: bash
         run: |
