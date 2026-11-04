@@ -1,0 +1,78 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-phase6-postdeploy-legal-plan-describe-20261104-01",
+  "command_sha256": "18c8631a3646e56dfdbec03fc48fe5bf5d02b7bfb0ad9714047a34459110f438",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "success",
+  "tenant": "eduardo-research",
+  "tool": {
+    "description": "Create an exact stored Preview for bounded EN/ES Privacy or Legal Notice sections. Plain text only; this tool never applies the change.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "enum": [
+            "privacy-policy",
+            "legal-notice"
+          ],
+          "type": "string"
+        },
+        "language": {
+          "enum": [
+            "en",
+            "es"
+          ],
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 256,
+          "type": "string"
+        },
+        "sections": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "body": {
+                "maxLength": 4000,
+                "minLength": 45,
+                "pattern": "^[^<>]+$",
+                "type": "string"
+              },
+              "title": {
+                "maxLength": 120,
+                "minLength": 1,
+                "pattern": "^[^<>]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "body"
+            ],
+            "type": "object"
+          },
+          "maxItems": 6,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "language",
+        "sections"
+      ],
+      "type": "object"
+    },
+    "name": "site_legal_content_plan"
+  },
+  "version": "1"
+}
