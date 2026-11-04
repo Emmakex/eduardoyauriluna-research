@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-legal-contact-evidence-20261104-01",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.list",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "evidence",
+    "filters": {
+      "group": "contact"
+    }
+  }
+}
