@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-postdeploy-legal-plan-describe-20261104-01",
+  "tenant": "eduardo-research",
+  "action": "manager.tool.describe",
+  "requested_by": "chatgpt",
+  "payload": {
+    "tool": "site_legal_content_plan"
+  }
+}
