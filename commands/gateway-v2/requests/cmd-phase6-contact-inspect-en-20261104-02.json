@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-contact-inspect-en-20261104-02",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "page",
+    "key": "contact",
+    "language": "en"
+  }
+}
