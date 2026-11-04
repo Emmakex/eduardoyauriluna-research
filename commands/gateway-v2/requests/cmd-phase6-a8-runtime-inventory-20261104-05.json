@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-a8-runtime-inventory-20261104-05",
+  "tenant": "eduardo-research",
+  "action": "manager.tools.list",
+  "requested_by": "chatgpt",
+  "payload": {}
+}
