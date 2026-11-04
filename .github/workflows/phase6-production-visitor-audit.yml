@@ -54,11 +54,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Audit rendered legal, utility and accessibility surfaces
-        run: python3 .github/scripts/phase6-production-visitor-audit.py
-
+      # Read all four public legal surfaces before the fail-closed visitor gate.
+      # This preserves factual diagnostics even when the first legal page is incomplete.
       - name: Read back rendered legal copy
         run: python3 .github/scripts/phase6-production-legal-readback.py
+
+      - name: Audit rendered legal, utility and accessibility surfaces
+        run: python3 .github/scripts/phase6-production-visitor-audit.py
 
   production-404:
     name: Audit localized 404 recovery
