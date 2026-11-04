@@ -7,6 +7,7 @@ on:
       - '.github/scripts/phase6-production-privacy-technical-inventory.py'
       - '.github/scripts/phase6-production-legal-readback.py'
       - '.github/scripts/phase6-production-mobile-audit.mjs'
+      - '.github/scripts/phase6-production-browser-privacy-observation.mjs'
       - '.github/workflows/phase6-production-visitor-audit.yml'
   push:
     branches:
@@ -16,6 +17,7 @@ on:
       - '.github/scripts/phase6-production-privacy-technical-inventory.py'
       - '.github/scripts/phase6-production-legal-readback.py'
       - '.github/scripts/phase6-production-mobile-audit.mjs'
+      - '.github/scripts/phase6-production-browser-privacy-observation.mjs'
       - '.github/workflows/phase6-production-visitor-audit.yml'
   workflow_dispatch:
 
@@ -49,6 +51,9 @@ jobs:
 
       - name: Validate mobile audit syntax
         run: node --check .github/scripts/phase6-production-mobile-audit.mjs
+
+      - name: Validate browser privacy observation syntax
+        run: node --check .github/scripts/phase6-production-browser-privacy-observation.mjs
 
   production:
     name: Audit production visitor surfaces
@@ -115,3 +120,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Inspect public HTML and HTTP response metadata only
         run: python3 .github/scripts/phase6-production-privacy-technical-inventory.py
+
+  privacy-browser:
+    name: Observe anonymous browser privacy signals
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.64.1
+          npx playwright install --with-deps chromium
+      - name: Validate metadata-only browser observation
+        run: node .github/scripts/phase6-production-browser-privacy-observation.mjs --self-test
+      - name: Observe fixed public EN/ES paths with no interaction
+        run: node .github/scripts/phase6-production-browser-privacy-observation.mjs
