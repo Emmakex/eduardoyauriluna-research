@@ -177,6 +177,9 @@ jobs:
       MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-remote-acceptance
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
       - name: Require production read principal and validate live MCP
         shell: bash
         run: |
