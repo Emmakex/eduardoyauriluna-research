@@ -60,15 +60,39 @@ jobs:
       - name: Read back rendered legal copy
         run: python3 .github/scripts/phase6-production-legal-readback.py
 
+  production-404:
+    name: Audit localized 404 recovery
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit English and Spanish 404 routes independently
+        run: |
+          python3 - <<'PY'
+          import runpy
+          auditor = runpy.run_path('.github/scripts/phase6-production-visitor-audit.py')
+          auditor['audit_404']('en', '/phase6-not-found-acceptance/', 'Page not found')
+          auditor['audit_404']('es', '/es/phase6-not-found-acceptance/', 'Página no encontrada')
+          print('PASS: localized 404 routes and researcher recovery links')
+          PY
+
+  production-mobile:
+    name: Audit production mobile independently
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Install pinned Playwright Chromium
         run: |
           npm install --no-save playwright@1.64.1
           npx playwright install --with-deps chromium
-
       - name: Audit rendered mobile experience
         run: node .github/scripts/phase6-production-mobile-audit.mjs
