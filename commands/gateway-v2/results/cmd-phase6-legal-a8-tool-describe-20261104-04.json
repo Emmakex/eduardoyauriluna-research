@@ -1,0 +1,21 @@
+{
+  "action": "manager.tool.describe",
+  "command_id": "cmd-phase6-legal-a8-tool-describe-20261104-04",
+  "command_sha256": "2bdc3a0a265c3c143265015a99bcd5498020647b80262d01224a00e68f7d8636",
+  "error": {
+    "code": "execution_failed",
+    "message": "The bounded Manager read operation did not complete successfully."
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
