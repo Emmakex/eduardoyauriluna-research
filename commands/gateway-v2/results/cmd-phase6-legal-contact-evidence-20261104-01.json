@@ -1,0 +1,32 @@
+{
+  "action": "manager.resource.list",
+  "command_id": "cmd-phase6-legal-contact-evidence-20261104-01",
+  "command_sha256": "98f99af7b63e4b57bb1bd6f15112d8f98ad109732273f80079e6dafb17130079",
+  "data": {
+    "count": 0,
+    "group": "contact",
+    "items": [],
+    "label": "Research contact",
+    "surfaces": [
+      "contact"
+    ]
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "evidence.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "filters": {
+      "group": "contact"
+    },
+    "type": "evidence"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
