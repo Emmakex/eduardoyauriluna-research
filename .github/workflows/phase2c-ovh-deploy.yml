@@ -26,7 +26,7 @@ on:
         default: eduardo-research
         type: string
       denied_tenant_id:
-        description: Existing second tenant that the acceptance principal is NOT allowed to access; required for deploy acceptance
+        description: Optional existing other tenant to prove research-ops access denial; do not recreate a retired acceptance tenant
         required: false
         type: string
 
@@ -45,7 +45,6 @@ jobs:
     env:
       OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
       OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
-      MCP_ACCEPTANCE_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
       DEPLOY_ACTION: ${{ inputs.action }}
       MCP_IMAGE_REF: ${{ inputs.image_ref }}
       MCP_PUBLIC_HOST: ${{ inputs.public_host }}
@@ -66,10 +65,10 @@ jobs:
           [[ "$MCP_REFERENCE_TENANT_ID" =~ ^[a-z0-9][a-z0-9-]{1,62}$ ]]
           if [ "$DEPLOY_ACTION" = deploy ]; then
             [[ "$MCP_IMAGE_REF" =~ ^ghcr\.io/emmakex/site-control-mcp@sha256:[0-9a-f]{64}$ ]]
-            : "${MCP_DENIED_TENANT_ID:?denied_tenant_id is required for full two-tenant deployment acceptance}"
-            [[ "$MCP_DENIED_TENANT_ID" =~ ^[a-z0-9][a-z0-9-]{1,62}$ ]]
-            test "$MCP_DENIED_TENANT_ID" != "$MCP_REFERENCE_TENANT_ID"
-            : "${MCP_ACCEPTANCE_TOKEN:?MCP_ACCEPTANCE_TOKEN production secret is required for deploy acceptance}"
+            if [ -n "$MCP_DENIED_TENANT_ID" ]; then
+              [[ "$MCP_DENIED_TENANT_ID" =~ ^[a-z0-9][a-z0-9-]{1,62}$ ]]
+              test "$MCP_DENIED_TENANT_ID" != "$MCP_REFERENCE_TENANT_ID"
+            fi
           fi
 
       - name: Configure strict SSH trust
@@ -135,21 +134,8 @@ jobs:
           done
           exit 1
 
-      - name: Run full remote read and two-tenant acceptance
-        if: inputs.action == 'deploy' && steps.https.outcome == 'success'
-        id: acceptance
-        continue-on-error: true
-        shell: bash
-        env:
-          MCP_SERVER_URL: https://${{ inputs.public_host }}/mcp/${{ inputs.reference_tenant_id }}
-          MCP_TOKEN: ${{ secrets.MCP_ACCEPTANCE_TOKEN }}
-          MCP_EXPECTED_ROUTING: shared
-          MCP_DENIED_TENANT_URL: https://${{ inputs.public_host }}/mcp/${{ inputs.denied_tenant_id }}
-          MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-remote-acceptance
-        run: bash scripts/phase2c-mcp-remote-acceptance.sh
-
-      - name: Roll back automatically when public acceptance fails
-        if: inputs.action == 'deploy' && (steps.https.outcome == 'failure' || steps.acceptance.outcome == 'failure')
+      - name: Roll back automatically when public health fails
+        if: inputs.action == 'deploy' && steps.https.outcome == 'failure'
         shell: bash
         run: |
           set -euo pipefail
@@ -159,21 +145,9 @@ jobs:
             "$MCP_PUBLIC_HOST" '/opt/site-control-mcp/phase2c-ovh-deploy.sh'
           "${SSH[@]}" "$SSH_TARGET" "$REMOTE_CMD"
 
-      - name: Upload sanitized acceptance evidence
-        if: inputs.action == 'deploy' && steps.acceptance.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase2c-ovh-acceptance-${{ github.run_id }}
-          path: ${{ runner.temp }}/phase2c-remote-acceptance
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Fail deployment after rollback if acceptance did not pass
-        if: inputs.action == 'deploy' && (steps.https.outcome == 'failure' || steps.acceptance.outcome == 'failure')
-        shell: bash
-        run: |
-          echo 'OVH deployment was rolled back because public Phase 2C acceptance did not pass.' >&2
-          exit 1
+      - name: Fail deploy after rollback if public health failed
+        if: inputs.action == 'deploy' && steps.https.outcome == 'failure'
+        run: exit 1
 
       - name: Clean remote staging directory
         if: always()
@@ -186,3 +160,72 @@ jobs:
             ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
               "$SSH_TARGET" "rm -rf '$REMOTE_TMP'" || true
           fi
+
+  acceptance:
+    name: Verify deployed Research MCP using existing research-ops principal
+    needs: deploy
+    if: inputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: phase2d-production
+    env:
+      MCP_SERVER_URL: https://${{ inputs.public_host }}/mcp/${{ inputs.reference_tenant_id }}
+      MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
+      MCP_EXPECTED_ROUTING: shared
+      MCP_EXPECTED_TOOL_COUNT: '101'
+      MCP_DENIED_TENANT_URL: ${{ inputs.denied_tenant_id && format('https://{0}/mcp/{1}', inputs.public_host, inputs.denied_tenant_id) || '' }}
+      MCP_EVIDENCE_DIR: ${{ runner.temp }}/phase2c-remote-acceptance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - name: Require production read principal and validate live MCP
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${MCP_TOKEN:?Existing phase2d-production read principal required}"
+          bash scripts/phase2c-mcp-remote-acceptance.sh
+      - name: Publish sanitized live acceptance
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2c-research-ops-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/phase2c-remote-acceptance
+          if-no-files-found: error
+          retention-days: 30
+
+  rollback-after-acceptance-failure:
+    name: Restore prior image if current research-ops acceptance fails
+    needs: [deploy, acceptance]
+    if: ${{ always() && inputs.action == 'deploy' && needs.deploy.result == 'success' && needs.acceptance.result != 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    env:
+      OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+      OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+    steps:
+      - name: Configure strict SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?missing SSH key}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?missing trusted host key}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+      - name: Roll back to prior accepted digest on OVH
+        shell: bash
+        env:
+          MCP_PUBLIC_HOST: ${{ inputs.public_host }}
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          printf -v REMOTE_CMD 'MCP_DEPLOY_ACTION=rollback MCP_PUBLIC_HOST=%q bash %q' \
+            "$MCP_PUBLIC_HOST" '/opt/site-control-mcp/phase2c-ovh-deploy.sh'
+          "${SSH[@]}" "$SSH_TARGET" "$REMOTE_CMD"
