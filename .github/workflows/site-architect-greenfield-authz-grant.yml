@@ -1,0 +1,75 @@
+name: Site Architect Greenfield Protected Authorization Grant
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-greenfield-authz-grant.py'
+
+permissions:
+  contents: read
+
+# Serialize with the existing production deploy; no concurrent image or env changes.
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  grant:
+    name: Add only two commercial operations.apply grants on OVH
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate bounded grant and preflight contracts locally
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-greenfield-authz-grant.py scripts/site-architect-greenfield-authz-preflight.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/site-architect-greenfield-authz-grant.py --self-test
+
+      - name: Establish pinned production SSH host identity
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?existing production SSH key required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?existing verified host identity required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Apply two protected grants and recreate same MCP digest with automatic rollback
+        shell: bash
+        env:
+          OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+          OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?existing production host required}"
+          : "${OVH_MCP_USER:?existing production SSH user required}"
+          TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          REMOTE_DIR="/tmp/site-architect-grant-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          cleanup() { "${SSH[@]}" "$TARGET" "rm -rf -- '$REMOTE_DIR'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "${SSH[@]}" "$TARGET" "umask 077; mkdir -m 700 -- '$REMOTE_DIR'"
+          "${SCP[@]}" scripts/site-architect-greenfield-authz-preflight.py "$TARGET:$REMOTE_DIR/site-architect-greenfield-authz-preflight.py"
+          "${SCP[@]}" scripts/site-architect-greenfield-authz-grant.py "$TARGET:$REMOTE_DIR/site-architect-greenfield-authz-grant.py"
+          "${SSH[@]}" "$TARGET" "python3 '$REMOTE_DIR/site-architect-greenfield-authz-grant.py' --grant"
+          "${SSH[@]}" "$TARGET" "python3 '$REMOTE_DIR/site-architect-greenfield-authz-preflight.py' --env-file /opt/site-control-mcp/.env.production"
+
+      - name: Confirm canonical public MCP health without performing Apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 https://mcp.kairoseth.com/healthz \
+            | jq -e '.ok == true and .routing == "shared" and .persistent_telemetry == true' >/dev/null
+          echo 'PUBLIC_HEALTH_OK public_apply=not_executed'
