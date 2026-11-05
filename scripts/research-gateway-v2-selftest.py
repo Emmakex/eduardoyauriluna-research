@@ -110,6 +110,20 @@ def assert_contract_invariants() -> None:
     assert worker.contract.required_capabilities(page_read, registry) == ["pages.read"]
     assert worker.contract.required_capabilities(navigation_read, registry) == ["pages.read"]
     assert worker.contract.required_capabilities(status_read, registry) == ["site.read"]
+    greenfield_read = {
+        "action": "manager.resource.inspect",
+        "payload": {"resource": "greenfield_lifecycle"},
+    }
+    assert worker.contract.required_capabilities(greenfield_read, registry) == ["site.read", "pages.read"]
+    try:
+        worker.contract.preflight(greenfield_read, {"granted_scopes": ["site.read"]}, registry)
+    except worker.contract.ScopeDenied as exc:
+        assert exc.missing == ["pages.read"]
+    else:
+        raise AssertionError("Greenfield lifecycle inspection accepted a credential lacking pages.read")
+    assert worker.contract.preflight(
+        greenfield_read, {"granted_scopes": ["site.read", "pages.read"]}, registry
+    )["granted"] is True
     assert worker.contract.required_capabilities(versions_read, registry) == ["site.read"]
     assert worker.contract.required_capabilities(nav_write, registry) == [
         "pages.read",
