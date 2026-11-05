@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TenantConfig } from './config.js';
 import { ResearchManagerError } from './manager-client.js';
+import { summarizeCanonicalGreenfieldPlan } from './greenfield-canonical-plan.js';
 import type {
   ResearchObjectKind,
   SiteInsightApplyRequest,
@@ -87,6 +88,18 @@ export class ResearchManagerWriteClient {
     this.token = config.managerWriteToken;
     this.timeoutMs = config.managerTimeoutMs;
     this.fetchImpl = fetchImpl;
+  }
+
+  /**
+   * Create only the WordPress-owned, versioned canonical Greenfield Plan.
+   * It persists a private Preview snapshot; there is NO Apply exposed here.
+   */
+  async planCanonicalGreenfield(): Promise<unknown> {
+    const plan = await this.post('/operations/plan', {
+      operation: 'greenfield-canonical',
+      payload: {},
+    }, 'greenfield-canonical-plan');
+    return summarizeCanonicalGreenfieldPlan(plan);
   }
 
   planPageSlots(request: SitePageSlotsPlanRequest): Promise<unknown> {
