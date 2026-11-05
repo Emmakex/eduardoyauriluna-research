@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/scripts/phase6-production-visitor-audit.py'
       - '.github/scripts/phase6-production-privacy-technical-inventory.py'
+      - '.github/scripts/phase6-production-hosting-observation.py'
       - '.github/scripts/phase6-production-legal-readback.py'
       - '.github/scripts/phase6-production-mobile-audit.mjs'
       - '.github/scripts/phase6-production-browser-privacy-observation.mjs'
@@ -15,6 +16,7 @@ on:
     paths:
       - '.github/scripts/phase6-production-visitor-audit.py'
       - '.github/scripts/phase6-production-privacy-technical-inventory.py'
+      - '.github/scripts/phase6-production-hosting-observation.py'
       - '.github/scripts/phase6-production-legal-readback.py'
       - '.github/scripts/phase6-production-mobile-audit.mjs'
       - '.github/scripts/phase6-production-browser-privacy-observation.mjs'
@@ -42,12 +44,16 @@ jobs:
           python3 -m py_compile .github/scripts/phase6-production-visitor-audit.py
           python3 -m py_compile .github/scripts/phase6-production-legal-readback.py
           python3 -m py_compile .github/scripts/phase6-production-privacy-technical-inventory.py
+          python3 -m py_compile .github/scripts/phase6-production-hosting-observation.py
 
       - name: Validate visitor parser contract
         run: python3 .github/scripts/phase6-production-visitor-audit.py --self-test
 
       - name: Validate privacy observation parser contract
         run: python3 .github/scripts/phase6-production-privacy-technical-inventory.py --self-test
+
+      - name: Validate public hosting observation redaction
+        run: python3 .github/scripts/phase6-production-hosting-observation.py --self-test
 
       - name: Validate mobile audit syntax
         run: node --check .github/scripts/phase6-production-mobile-audit.mjs
@@ -140,3 +146,14 @@ jobs:
         run: node .github/scripts/phase6-production-browser-privacy-observation.mjs --self-test
       - name: Observe fixed public EN/ES paths with no interaction
         run: node .github/scripts/phase6-production-browser-privacy-observation.mjs
+
+  hosting-public:
+    name: Observe public DNS and hosting route hints
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect public DNS, authoritative nameserver hints and HTTPS headers
+        run: python3 .github/scripts/phase6-production-hosting-observation.py
