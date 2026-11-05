@@ -1,0 +1,70 @@
+name: Site Architect Greenfield Protected Grant Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-greenfield-authz-grant.py'
+      - '.github/workflows/site-architect-greenfield-authz-grant.yml'
+      - '.github/workflows/site-architect-greenfield-authz-grant-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-greenfield-authz-grant.py'
+      - '.github/workflows/site-architect-greenfield-authz-grant.yml'
+      - '.github/workflows/site-architect-greenfield-authz-grant-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test bounded change with synthetic credentials only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-greenfield-authz-grant.py scripts/site-architect-greenfield-authz-preflight.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/site-architect-greenfield-authz-grant.py --self-test
+
+      - name: Enforce production-only protected mutation and independent MCP gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          flow = Path('.github/workflows/site-architect-greenfield-authz-grant.yml').read_text()
+          script = Path('scripts/site-architect-greenfield-authz-grant.py').read_text()
+          authz = Path('bridge/research-manager-mcp/src/tool-authorization.ts').read_text()
+          assert "environment: production" in flow
+          assert "branches: [main]" in flow
+          assert "group: phase2c-ovh-production" in flow
+          assert "github.run_attempt == 1" in flow
+          assert "StrictHostKeyChecking=yes" in flow
+          assert "UserKnownHostsFile=" in flow
+          assert "permissions:\n  contents: read" in flow
+          assert not re.search(r"^\s*(?:workflow_dispatch|schedule|pull_request):", flow, re.M)
+          assert flow.count("secrets.OVH_MCP_SSH_KEY") == 1
+          assert flow.count("secrets.OVH_MCP_SSH_KNOWN_HOSTS") == 1
+          assert '"eduardo-research"' in script and '"research-ops"' in script
+          assert 'CAPABILITY = "operations.apply"' in script
+          assert 'def atomic_write(' in script and 'def restart(' in script
+          assert "--force-recreate" in script
+          assert '"--grant"' in script
+          assert "site_greenfield_canonical_plan" in authz
+          assert not re.search(r"site_.*_apply\s*\(", script)
+          print('PASS: production only, exact two grants and same-digest restart')
+          PY
+
+      - name: Lint protected GitHub Actions workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/site-architect-greenfield-authz-grant.yml
