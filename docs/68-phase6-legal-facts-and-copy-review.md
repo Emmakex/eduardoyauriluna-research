@@ -26,7 +26,8 @@
 | Initial HTML contains a www.googletagmanager.com preconnect hint | **Observed**, not evidence of loaded analytics | Do not infer GTM tags, analytics, consent or third-party transfers from the hint | GitHub run 41899408356 |
 | Server access/security logs: fields, purpose and retention | **Unknown** | Must be verified before any final Privacy text | Hosting/platform configuration |
 | Email provider and email retention for messages sent to hola@emmake.com | **Unknown** | Must be verified before naming processors/retention | Mail account/provider configuration |
-| Residence/contact postal address and application of economic activity/LSSI | **Unknown** | Needs user/legal assessment; do not publish guessed location, address or tax ID | Owner review |
+| LSSI applicability to this personal academic site | **Conditional on economic activity** | Do not demand personal address or NIF solely on the basis of having a personal website; verify direct/indirect revenue first | Official Spanish LSSI FAQ: https://lssi.digital.gob.es/lssi/la-ley/preguntas-frecuentes |
+| Residence/contact postal address | **Not supplied** | Do not publish guessed address or tax identifier; assess disclosure only after determining applicable requirements | Owner/legal review |
 | Legal bases, transfer destinations, categories of processors/recipients and retention by purpose | **Review required** | Must be grounded in actual operation before Apply | Processing inventory and legal review |
 
 Provider documentation:
@@ -75,6 +76,22 @@ Only the following statements use facts directly confirmed by the user or the pu
 **Your rights.** You may request information about the processing of your personal data and, where applicable, exercise rights of access, rectification, erasure, objection, restriction and portability by emailing hola@emmake.com. You may also lodge a complaint with the Spanish Data Protection Agency (www.aepd.es).
 
 **Pending:** processing purposes and lawful bases, data categories, actual providers/processors, retention, international transfers, security, server logs, analytics and cookies. Do not present these unknowns as established facts.
+
+## 3A. Governed contact-evidence authorization checkpoint — 2026-11-05
+
+- The production MCP catalog contains `site_evidence_create_plan`, `site_evidence_apply`, `site_evidence_verify` and `site_evidence_rollback`. These are already implemented by the backend M5 lifecycle; no alternate WordPress write path is justified.
+- Gateway v2 read-only `manager.capability.check` was expanded in [PR #444](https://github.com/Emmakex/eduardoyauriluna-research/pull/444) strictly to **inspect** `evidence.write` without granting it. [Production read run 41996484136](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/41996484136), command `cmd-phase6-evidence-write-scope-20261105-01`, `status=success`, returned true for `evidence.read`, `evidence.write`, `operations.apply` and `operations.rollback` on the **WordPress Manager credential**.
+- The canonical GitHub MCP principal configuration `config/phase2e-gateway-capabilities.json` includes `evidence.read` but **does not** grant the separate commercial `evidence.write` entitlement. The backend Manager scope check does not override this independent MCP authorization boundary.
+- The existing Gateway v2 action registry has no evidence-contact-create mutation route. There has been **no production M5 evidence write** and the last verified public contact-evidence count was zero. Do not claim the email is stored or published because it is authorised in issue #315.
+- Any future contact publication must be tightly scoped to the user-approved legal contact `hola@emmake.com`, accompanied by a separate authorization decision for the broader `evidence.write` commercial entitlement, bounded operation validation, provenance, stored/rendered Verify and rollback. Do **not** silently add broad `evidence.write` privileges to the canonical Gateway principal as a side effect of this documentary cut.
+- This contact-evidence pathway is distinct from A8 legal content, which uses `pages.write` and remains blocked by missing verified privacy treatment/provider facts.
+
+## 3B. LSSI scope checkpoint — 2026-11-05
+
+- [Official Spanish LSSI FAQ](https://lssi.digital.gob.es/lssi/la-ley/preguntas-frecuentes): a purely personal website without economic activity is **not** within the LSSI merely because it is online. Direct or indirect income from the website, including paid advertising or sponsorship, changes the analysis.
+- The Eduardo Research public content is positioned as an academic profile; this does **not**, by itself, prove the absence of paid activity, sponsorships or other economic uses. Do not prematurely assert legal exemption or applicability.
+- Only once economic activity has been confirmed or ruled out should the relevant public owner/contact identifiers (including address or tax identifier when required) be considered. Do not place private address/tax IDs in GitHub, this dossier or public logs.
+- GDPR/LOPDGDD information obligations require a separate processing analysis irrespective of the LSSI assessment. No global `no logs`, `no cookies`, `no recipients` or `no data processing` statements follow from anonymous-browser probes.
 
 ## 4. Publication gate — must be fail-closed
 
