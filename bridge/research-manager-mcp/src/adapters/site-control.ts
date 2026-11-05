@@ -204,6 +204,8 @@ export interface SiteControlAdapter {
   status(): Promise<unknown>;
   versions(): Promise<unknown>;
   capabilities(): Promise<unknown>;
+  /** Optional Greenfield-only canonical Blueprint stored Plan, never Apply. */
+  planCanonicalGreenfield?(): Promise<unknown>;
   listPages(): Promise<unknown>;
   inspectPage(request: SitePageInspectionRequest): Promise<unknown>;
   planPageSlots(request: SitePageSlotsPlanRequest): Promise<unknown>;
