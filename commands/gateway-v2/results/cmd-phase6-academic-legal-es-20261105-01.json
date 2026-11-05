@@ -1,0 +1,30 @@
+{
+  "action": "legal.content.update",
+  "command_id": "cmd-phase6-academic-legal-es-20261105-01",
+  "command_sha256": "487c4fafabf3b8243137b91b4166844cb9cf8ee267bdf97c8146c926dd3ff008",
+  "correlation": {
+    "operation_id": "erm-legal-op-7f5e77f9fa9141be9f78a9a21e03929d",
+    "plan_id": "erm-legal-plan-2eb8941d7926825aab7b-af729bba"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "site.diagnostics",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "key": "legal-notice",
+    "language": "es",
+    "section_count": 4
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}

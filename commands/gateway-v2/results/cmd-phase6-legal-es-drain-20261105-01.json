@@ -1,0 +1,66 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-phase6-legal-es-drain-20261105-01",
+  "command_sha256": "a03ba71fdd51ab8deae2ff2c9333584ce240c69039a45ed63ed68bef5768df7a",
+  "data": {
+    "canonical_domain": "https://eduardoyauriluna.com",
+    "canonical_domain_source": "active-instance-blueprint",
+    "declared_canonical_domain": "https://eduardoyauriluna.com",
+    "languages": [
+      "en",
+      "es"
+    ],
+    "manager_version": "0.11.1",
+    "mode": {
+      "capabilities": {
+        "direct_contract_creation": true,
+        "legacy_discovery": false,
+        "legacy_mapping": false,
+        "legacy_url_preservation": false,
+        "migration_preview": false
+      },
+      "greenfield": true,
+      "migration": false,
+      "mode": "greenfield"
+    },
+    "preset": {
+      "compatible": true,
+      "id": "research",
+      "version": 6
+    },
+    "readiness": {
+      "generated_at": "2026-11-05T08:55:47+00:00",
+      "ready": true,
+      "summary": {
+        "fail": 0,
+        "pass": 22,
+        "warning": 0
+      }
+    },
+    "remote": {
+      "connection_id": "rmc_3cce882026084269bc0b366dbd6f641e",
+      "enabled": true,
+      "generation": 4,
+      "last_used_at": "2026-11-05T08:55:47+00:00",
+      "writes_enabled": true
+    },
+    "runtime_matches_declared_canonical": true,
+    "runtime_url": "https://eduardoyauriluna.com/",
+    "theme_version": "1.1.3"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "status"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
