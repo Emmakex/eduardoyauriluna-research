@@ -1,0 +1,24 @@
+{
+  "action": "site.blueprint.preview",
+  "command_id": "cmd-site-architect-greenfield-canonical-preview-20261105-01",
+  "command_sha256": "72b731219338b14b6a94754d6abc9681cf4500ba6306a88a079624b75303d536",
+  "error": {
+    "code": "greenfield_plan_failed",
+    "diagnostic": "{\"error\":{\"code\":\"tool_is_error\",\"message\":\"Tool 'site_greenfield_canonical_plan' returned isError:true.\"}}\nMCP tool payload: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Commercial entitlement denied: operations.apply (tenant_not_entitled)\"}],\"isError\":true}}",
+    "message": "Canonical Greenfield Plan was not verified; no Apply was requested.",
+    "stage": "authorization"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "operations.apply"
+    ]
+  },
+  "public_site_apply": "not_executed",
+  "read_only": false,
+  "status": "failed",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
