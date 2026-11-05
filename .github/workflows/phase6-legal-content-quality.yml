@@ -11,6 +11,8 @@ on:
       - 'bridge/research-manager-mcp/src/adapters/research-manager.ts'
       - 'bridge/research-manager-mcp/src/extended-server.ts'
       - 'scripts/phase6-legal-content-runner.py'
+      - 'scripts/phase6-privacy-release-gate.py'
+      - 'config/phase6-privacy-release-evidence.json'
       - 'config/research-gateway-v2-action-registry.json'
       - '.github/workflows/phase6-legal-content-quality.yml'
   push:
@@ -24,6 +26,8 @@ on:
       - 'bridge/research-manager-mcp/src/adapters/research-manager.ts'
       - 'bridge/research-manager-mcp/src/extended-server.ts'
       - 'scripts/phase6-legal-content-runner.py'
+      - 'scripts/phase6-privacy-release-gate.py'
+      - 'config/phase6-privacy-release-evidence.json'
       - 'config/research-gateway-v2-action-registry.json'
       - '.github/workflows/phase6-legal-content-quality.yml'
   workflow_dispatch:
@@ -47,7 +51,9 @@ jobs:
 
       - name: Gateway contract self-test
         run: |
-          python3 -m py_compile scripts/phase6-legal-content-runner.py
+          python3 -m py_compile scripts/phase6-legal-content-runner.py scripts/phase6-privacy-release-gate.py
+          python3 scripts/phase6-privacy-release-gate.py --self-test
+          python3 scripts/phase6-privacy-release-gate.py
           python3 scripts/phase6-legal-content-runner.py --self-test
           python3 - <<'PY'
           import json
