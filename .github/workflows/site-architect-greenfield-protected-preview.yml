@@ -1,0 +1,83 @@
+name: Site Architect Greenfield Protected Research-Ops Preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-greenfield-protected-preview.py'
+
+permissions:
+  contents: read
+
+# Shared production lane. Never overlap protected grants, image deployments or
+# the specific one-shot Plan attempt.
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Run canonical Greenfield Plan once as existing research-ops on OVH
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1 && github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate immutable canonical Preview locally with synthetic fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-greenfield-protected-preview.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/research-gateway-v2-greenfield-plan.py --self-test
+          python3 scripts/site-architect-greenfield-protected-preview.py --self-test
+
+      - name: Establish strictly verified existing OVH SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?existing protected key required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?existing verified host required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Execute exactly one protected research-ops canonical Plan and sanitized readback
+        shell: bash
+        env:
+          OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+          OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?existing production host required}"
+          : "${OVH_MCP_USER:?existing production user required}"
+          TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          DIR="/tmp/site-architect-458-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          cleanup() { "${SSH[@]}" "$TARGET" "rm -rf -- '$DIR'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "${SSH[@]}" "$TARGET" "umask 077; mkdir -m 700 -- '$DIR'"
+          "${SCP[@]}" \
+            scripts/site-architect-greenfield-protected-preview.py \
+            scripts/site-architect-greenfield-authz-preflight.py \
+            scripts/research-gateway-v2-greenfield-plan.py \
+            scripts/phase2d-command-runner.py \
+            "$TARGET:$DIR/"
+          # The remote script reads bearer material locally, prints only an
+          # allowlisted canonical Plan result, and never runs a public Apply.
+          "${SSH[@]}" "$TARGET" "python3 '$DIR/site-architect-greenfield-protected-preview.py' --preview-once"
+
+      - name: Confirm public MCP remains healthy after Plan/Preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 https://mcp.kairoseth.com/healthz \
+            | jq -e '.ok == true and .routing == "shared" and .persistent_telemetry == true' >/dev/null
+          echo 'GREENFIELD_PREVIEW_PUBLIC_HEALTH_OK public_site_apply=not_executed'
