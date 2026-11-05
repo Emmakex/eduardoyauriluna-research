@@ -253,9 +253,14 @@ def self_test() -> int:
     assert response_object(json_bytes, "application/json", 2) == valid_response["result"]
     sse_bytes = b"event: message\ndata: " + json_bytes + b"\n\n"
     assert response_object(sse_bytes, "text/event-stream", 2) == valid_response["result"]
-    for bad in (b"not-json", json.dumps({**valid_response, "id": 3}).encode(), sse_bytes * 2):
+    invalid_responses = (
+        (b"not-json", "application/json"),
+        (json.dumps({**valid_response, "id": 3}).encode(), "application/json"),
+        (sse_bytes * 2, "text/event-stream"),
+    )
+    for bad, media_type in invalid_responses:
         try:
-            response_object(bad, "text/event-stream" if bad is sse_bytes * 2 else "application/json", 2)
+            response_object(bad, media_type, 2)
         except PreviewError:
             pass
         else:
