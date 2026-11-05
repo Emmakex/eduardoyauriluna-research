@@ -1,0 +1,48 @@
+{
+  "version": "1",
+  "tenant": "eduardo-research",
+  "resource": "privacy-policy",
+  "release_authorized": false,
+  "languages": {
+    "en": "draft",
+    "es": "draft"
+  },
+  "requirements": {
+    "controller_and_contact": {
+      "status": "verified",
+      "evidence": "issue:315 — person Eduardo Jose Yauri Luna and authorized hola@emmake.com"
+    },
+    "technical_site_processing": {
+      "status": "observed",
+      "evidence": "production-run:42010871067 — HTTP and anonymous Chromium"
+    },
+    "email_processing": {
+      "status": "observed",
+      "evidence": "connected Gmail delivery observation 2026-11-05 — no message content inspected"
+    },
+    "lawful_bases": {
+      "status": "pending",
+      "evidence": ""
+    },
+    "contractual_host_and_email_processors": {
+      "status": "pending",
+      "evidence": ""
+    },
+    "recipients_and_international_transfers": {
+      "status": "pending",
+      "evidence": ""
+    },
+    "purpose_specific_retention": {
+      "status": "pending",
+      "evidence": ""
+    },
+    "browser_storage_and_analytics": {
+      "status": "observed",
+      "evidence": "production-run:42010871067 — anonymous browser snapshot only"
+    },
+    "owner_review_of_final_bilingual_policy": {
+      "status": "pending",
+      "evidence": ""
+    }
+  }
+}
