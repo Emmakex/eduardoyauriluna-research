@@ -34,10 +34,11 @@ function serverMappings(): Map<string,string> {
 test('every registered MCP tool has an authoritative primary commercial capability mapping',()=>{
   const actual=serverMappings();
   const catalogEntries=Object.entries(TOOL_AUTHORIZATION);
-  assert.equal(catalogEntries.length,104);
-  assert.equal(actual.size,104);
+  assert.equal(catalogEntries.length,105);
+  assert.equal(actual.size,105);
   assert.deepEqual([...actual.keys()].sort(),catalogEntries.map(([name])=>name).sort());
   const writeTools=new Set([
+    'site_greenfield_canonical_plan',
     'site_page_slots_plan','site_page_slots_apply','site_page_slots_verify','site_page_slots_rollback',
     'site_legal_content_plan','site_legal_content_apply','site_legal_content_verify','site_legal_content_rollback',
     'site_insight_create_plan','site_insight_update_plan','site_insight_apply','site_insight_verify','site_insight_rollback',
@@ -68,6 +69,9 @@ test('backend scope contracts preserve adapter security boundaries',()=>{
   assert.equal(TOOL_AUTHORIZATION.site_baseline_audit.commercialCapability,'diagnostics.read');
   assert.deepEqual(TOOL_AUTHORIZATION.site_baseline_audit.backendScopes,['site.diagnostics']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_pages_list.backendScopes,['site.read']);
+  assert.equal(TOOL_AUTHORIZATION.site_greenfield_canonical_plan.commercialCapability,'operations.apply');
+  assert.deepEqual(TOOL_AUTHORIZATION.site_greenfield_canonical_plan.backendScopes,['operations.apply']);
+  assert.equal(TOOL_AUTHORIZATION.site_greenfield_canonical_plan.readOnly,false);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_plan.backendScopes,['operations.apply']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_verify.backendScopes,['site.read','site.diagnostics']);
   assert.deepEqual(TOOL_AUTHORIZATION.site_page_slots_rollback.backendScopes,['site.read','operations.rollback']);
