@@ -22,6 +22,7 @@ ACTION = "manager.capability.check"
 CHECKABLE_CAPABILITIES = {
     "design.write",
     "evidence.read",
+    "evidence.write",
     "insights.read",
     "insights.write",
     "media.write",
@@ -165,6 +166,10 @@ def self_test() -> int:
         },
     }
     validate_command(good)
+
+    # The read-only scope check can inspect the evidence.write gate without granting it.
+    evidence_write_probe = {**good, "payload": {"capabilities": ["evidence.read", "evidence.write"]}}
+    validate_command(evidence_write_probe)
 
     bad = dict(good)
     bad["payload"] = {"capabilities": ["navigation.write"]}
