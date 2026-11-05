@@ -60,6 +60,39 @@ def public_nameservers() -> dict:
     return {"status": "observed", "records": sorted(set(records))}
 
 
+MAIL_DOMAIN = "emmake.com"
+
+
+def parse_public_mx(text: str) -> list[dict[str, str | int]]:
+    """Return a bounded list of public MX hosts, never mailbox existence."""
+    records: set[tuple[int, str]] = set()
+    for line in text.splitlines()[:30]:
+        pieces = line.strip().lower().split()
+        if len(pieces) != 2 or not pieces[0].isdigit():
+            continue
+        priority = int(pieces[0])
+        host = pieces[1].rstrip(".")
+        if 0 <= priority <= 65535 and re.fullmatch(r"[a-z0-9.-]{1,250}", host):
+            records.add((priority, host))
+    return [{"priority": priority, "host": host} for priority, host in sorted(records)[:20]]
+
+
+def public_mail_mx() -> dict:
+    """Observe only the route for the confirmed public legal-contact domain."""
+    if shutil.which("dig") is None:
+        return {"status": "unavailable", "reason": "dig not installed", "records": []}
+    try:
+        query = subprocess.run(
+            ["dig", "+time=3", "+tries=1", "+short", "MX", MAIL_DOMAIN],
+            capture_output=True, text=True, timeout=8, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {"status": "unavailable", "reason": "DNS query failed", "records": []}
+    if query.returncode != 0:
+        return {"status": "unavailable", "reason": "DNS query failed", "records": []}
+    return {"status": "observed", "domain": MAIL_DOMAIN, "records": parse_public_mx(query.stdout)}
+
+
 def safe_headers(headers) -> dict[str, str]:
     return {
         name: str(headers.get(name, "")).strip()[:MAX_HEADER_LEN]
@@ -97,6 +130,11 @@ def selftest() -> None:
     result = safe_headers(Headers())
     assert result == {"server": "LiteSpeed", "x-powered-by": "PHP/8.3"}
     assert "DO-NOT-LOG" not in json.dumps(result)
+    assert parse_public_mx("10 ASPMX.L.GOOGLE.COM.\n5 ALT1.ASPMX.L.GOOGLE.COM.\nsecret") == [
+        {"priority": 5, "host": "alt1.aspmx.l.google.com"},
+        {"priority": 10, "host": "aspmx.l.google.com"},
+    ]
+    assert parse_public_mx("10 mx.example.com. victim@example.org") == []
     print("PASS: bounded hosting provenance observation self-test")
 
 
@@ -118,12 +156,15 @@ def main() -> None:
         "target": SITE,
         "dns": dns,
         "nameservers": public_nameservers(),
+        "legal_contact_mail_mx": public_mail_mx(),
         "https": https,
         "not_established": [
             "WordPress contractual hosting vendor and account owner",
             "origin server behind any reverse proxy or CDN",
             "server log categories, retention period and location",
             "identity/contract of any personal-data processor",
+            "mailbox delivery/existence or legal-contract details despite observable MX route",
+            "email message retention and sub-processors",
         ],
         "privacy": "Public records and allowlisted response headers only; no body, cookies or private data",
     }, indent=2, ensure_ascii=False))
