@@ -41,6 +41,9 @@ RESOURCE_READ_CAPABILITIES = {
     # Design state and bounded Theme variants share the existing Manager design.read scope.
     "design": "design.read",
     "design_variants": "design.read",
+    # One closed Site Architect Greenfield inspection reads status and Theme-owned pages/navigation.
+    # Require every underlying Manager scope; never infer pages.read from site.read.
+    "greenfield_lifecycle": ("site.read", "pages.read"),
 }
 
 
@@ -228,8 +231,10 @@ def required_capabilities(
             raise ContractError("manager resource command payload is invalid")
         resource = payload.get("resource")
         capability = RESOURCE_READ_CAPABILITIES.get(resource)
-        if capability is not None:
+        if isinstance(capability, str):
             return [capability]
+        if isinstance(capability, tuple) and capability:
+            return list(capability)
         raise ContractError("manager resource command has no bounded capability mapping")
     if resolver == "operation_rollback":
         return _rollback_required_capabilities(command, source_registry, request_dir)
