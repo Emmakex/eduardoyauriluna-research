@@ -1,0 +1,77 @@
+name: Site Architect 462 Editorial Triage Quality
+
+on:
+  pull_request:
+    paths:
+      - 'docs/68-site-architect-hydration-editorial-triage.md'
+      - 'scripts/site-architect-editorial-baseline-462.py'
+      - '.github/workflows/site-architect-editorial-baseline-462.yml'
+      - '.github/workflows/site-architect-editorial-baseline-462-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/68-site-architect-hydration-editorial-triage.md'
+      - 'scripts/site-architect-editorial-baseline-462.py'
+      - '.github/workflows/site-architect-editorial-baseline-462.yml'
+      - '.github/workflows/site-architect-editorial-baseline-462-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Offline editorial slot and provenance tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-editorial-baseline-462.py
+          python3 scripts/site-architect-editorial-baseline-462.py --self-test
+          python3 scripts/site-architect-hydration-readonly-audit.py --self-test
+
+      - name: Guard 28-slot inventory, authorization, and purely read-only MCP surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          py = Path('scripts/site-architect-editorial-baseline-462.py').read_text()
+          flow = Path('.github/workflows/site-architect-editorial-baseline-462.yml').read_text()
+          quality = Path('.github/workflows/site-architect-editorial-baseline-462-quality.yml').read_text()
+          report = Path('docs/68-site-architect-hydration-editorial-triage.md').read_text()
+          assert 'PAIRS = ("home", "about", "cv", "contact")' in py
+          assert 'SNAPSHOTS = {' in py and 'EXPECTED_DELTAS = {' in py
+          assert 'mod.read_live_inventory()' in py
+          assert 'read_only' in py and 'values_exported' in py
+          assert 'public_site_apply' in py and 'not_executed' in py
+          assert 'current_archival_matches' in py
+          assert '14 KEEP LIVE + 2 ADOPT BLUEPRINT + 2 NEW COPY + 10 DEFER' in report
+          assert 'no apply' in report.lower()
+          assert 'environment: production' in flow
+          assert 'github.run_attempt == 1' in flow
+          assert 'group: phase2c-ovh-production' in flow
+          assert 'StrictHostKeyChecking=yes' in flow
+          assert 'UserKnownHostsFile=' in flow
+          assert 'site-architect-editorial-baseline-462.py' in flow
+          assert 'permissions:\n  contents: read' in flow
+          assert 'permissions:\n  contents: read' in quality
+          assert 'workflow_dispatch:' not in flow
+          assert 'site_greenfield_canonical_plan' not in py
+          assert 'site_page_slots_apply' not in py
+          assert 'subprocess.run(' not in py
+          print('PASS: editorial triage 28 decisions and protected read-only live baseline')
+          PY
+
+      - name: Validate protected workflow YAML
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" \
+            .github/workflows/site-architect-editorial-baseline-462.yml \
+            .github/workflows/site-architect-editorial-baseline-462-quality.yml

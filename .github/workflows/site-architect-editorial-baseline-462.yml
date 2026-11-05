@@ -1,0 +1,92 @@
+name: Site Architect 462 Editorial Baseline Read-Only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-editorial-baseline-462.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Read one protected Theme inventory and verify editorial baseline
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1 && github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Synthetic editorial and canonical-provenance checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-editorial-baseline-462.py scripts/site-architect-hydration-readonly-audit.py
+          python3 scripts/site-architect-editorial-baseline-462.py --self-test
+          python3 scripts/site-architect-hydration-readonly-audit.py --self-test
+
+      - name: Pinned SSH trust for existing production OVH host
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?existing production SSH key required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?existing verified SSH host identity required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Check public editorial slot baseline without exporting page content
+        shell: bash
+        env:
+          OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+          OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?production host missing}"
+          : "${OVH_MCP_USER:?production SSH user missing}"
+          TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          DIR="/tmp/site-architect-editorial-462-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          cleanup() { "${SSH[@]}" "$TARGET" "rm -rf -- '$DIR'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "${SSH[@]}" "$TARGET" "umask 077; mkdir -m 700 -p -- '$DIR/editorial-snapshots'"
+          "${SCP[@]}" \
+            scripts/site-architect-editorial-baseline-462.py \
+            scripts/site-architect-hydration-readonly-audit.py \
+            scripts/site-architect-greenfield-protected-preview.py \
+            scripts/site-architect-greenfield-authz-preflight.py \
+            scripts/research-gateway-v2-greenfield-plan.py \
+            scripts/phase2d-command-runner.py \
+            "$TARGET:$DIR/"
+          "${SCP[@]}" wordpress/plugins/eduardo-research-manager/blueprints/eduardo-research.json \
+            "$TARGET:$DIR/eduardo-research-blueprint-audit.json"
+          "${SCP[@]}" \
+            commands/gateway-v2/results/cmd-v2-resource-page-home-en-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-home-es-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-about-en-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-about-es-20261028-01.json \
+            commands/gateway-v2/results/cmd-phase5-cv-en-inspect-20261101-08.json \
+            commands/gateway-v2/results/cmd-phase5-cv-es-inspect-20261101-09.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-contact-en-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-contact-es-20261028-01.json \
+            "$TARGET:$DIR/editorial-snapshots/"
+          "${SSH[@]}" "$TARGET" "python3 '$DIR/site-architect-editorial-baseline-462.py' --inspect-live"
+
+      - name: Public MCP health remains unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 https://mcp.kairoseth.com/healthz \
+            | jq -e '.ok == true and .routing == "shared" and .persistent_telemetry == true' >/dev/null
+          echo 'EDITORIAL_BASELINE_HEALTH_OK public_site_apply=not_executed'
