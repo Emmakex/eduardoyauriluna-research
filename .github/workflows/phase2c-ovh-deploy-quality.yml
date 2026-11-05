@@ -68,7 +68,11 @@ jobs:
           assert 'environment: production' in flow
           assert 'environment: phase2d-production' in flow
           assert "format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN)" in flow
-          assert "MCP_EXPECTED_TOOL_COUNT: '101'" in flow
+          runner = Path('scripts/phase2c-mcp-remote-acceptance.sh').read_text()
+          assert 'EXPECTED_TOOL_COUNT="${MCP_EXPECTED_TOOL_COUNT:-102}"' in runner
+          assert not any(line.strip().startswith('MCP_EXPECTED_TOOL_COUNT:') for line in flow.splitlines()), (
+              'production deployment must use the same closed tool-count authority as the acceptance runner'
+          )
           assert 'bash scripts/phase2c-mcp-remote-acceptance.sh' in flow
           assert 'rollback-after-acceptance-failure:' in flow
           assert "needs.acceptance.result != 'success'" in flow
