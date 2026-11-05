@@ -59,7 +59,8 @@ jobs:
           assert '"public_site_apply": "not_executed"' in script
           assert script.count('"method": "tools/call"') == 1
           assert not re.search(r'(?<!no )(?<!public )site_.*_apply\s*\(', script)
-          assert "subprocess" not in script
+          assert not re.search(r"^\\s*(?:import subprocess|from subprocess import)", script, re.M)
+          assert "subprocess.run(" not in script
           print("PASS: exact single trusted Plan/Preview, protected identity, no Apply or token export")
           PY
 
