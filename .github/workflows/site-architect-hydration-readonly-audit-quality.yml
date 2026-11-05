@@ -1,0 +1,70 @@
+name: Site Architect Hydration Read-Only Audit Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-hydration-readonly-audit.py'
+      - '.github/workflows/site-architect-hydration-readonly-audit.yml'
+      - '.github/workflows/site-architect-hydration-readonly-audit-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-hydration-readonly-audit.py'
+      - '.github/workflows/site-architect-hydration-readonly-audit.yml'
+      - '.github/workflows/site-architect-hydration-readonly-audit-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and self-test the read-only delta audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-hydration-readonly-audit.py
+          python3 scripts/site-architect-hydration-readonly-audit.py --self-test
+          python3 scripts/site-architect-greenfield-protected-preview.py --self-test
+
+      - name: Enforce audit has one read-only MCP tool and cannot run Apply or Preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          script = Path('scripts/site-architect-hydration-readonly-audit.py').read_text()
+          flow = Path('.github/workflows/site-architect-hydration-readonly-audit.yml').read_text()
+          assert 'READ_TOOL = "site_pages_list"' in script
+          assert 'EXPECTED_CHANGE_COUNT = 17' in script
+          assert 'EXPECTED_PAGE_COUNT = 12' in script
+          assert "blueprint_sha256" in script
+          assert "changed_slot_names" in script
+          assert "values_exported" in script
+          assert "protected.ProtectedMcp" in script
+          assert script.count('"method": "tools/call"') == 1
+          assert '"params": {"name": READ_TOOL, "arguments": {}}' in script
+          assert "protected.resolve_bearer(" in script
+          assert "site_page_slots_apply" not in script
+          assert "site_greenfield_canonical_plan" not in script
+          assert "subprocess.run(" not in script
+          assert "environment: production" in flow
+          assert "github.run_attempt == 1" in flow
+          assert "group: phase2c-ovh-production" in flow
+          assert "StrictHostKeyChecking=yes" in flow
+          assert "UserKnownHostsFile=" in flow
+          assert "permissions:\n  contents: read" in flow
+          assert not re.search(r'^\s*(?:workflow_dispatch|schedule):', flow, re.M)
+          print("PASS: read-only single MCP inventory call, protected source, no Apply or Preview")
+          PY
+
+      - name: Actionlint protected read-only workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/site-architect-hydration-readonly-audit.yml
