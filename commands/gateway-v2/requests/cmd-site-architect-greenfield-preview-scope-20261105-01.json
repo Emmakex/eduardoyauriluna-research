@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "command_id": "cmd-site-architect-greenfield-preview-scope-20261105-01",
+  "tenant": "eduardo-research",
+  "action": "manager.capability.check",
+  "requested_by": "chatgpt",
+  "payload": {
+    "capabilities": [
+      "operations.apply"
+    ]
+  }
+}
