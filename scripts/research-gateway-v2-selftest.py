@@ -16,6 +16,7 @@ RUNNER_SELFTESTS = (
     ROOT / "scripts" / "research-gateway-v2-resource-read.py",
     ROOT / "scripts" / "research-gateway-v2-capability-check.py",
     ROOT / "scripts" / "research-gateway-v2-operation-rollback.py",
+    ROOT / "scripts" / "research-gateway-v2-greenfield-plan.py",
     ROOT / "scripts" / "phase2e-navigation-runner.py",
     ROOT / "scripts" / "phase2e-design-runner.py",
     ROOT / "scripts" / "phase2e-media-metadata-runner.py",
@@ -54,6 +55,22 @@ def assert_contract_invariants() -> None:
     assert "manager.capability.check" in actions
     assert "navigation.update" in actions
     assert "operation.rollback" in actions
+    assert "site.blueprint.preview" in actions
+    plan = {
+        "action": "site.blueprint.preview", "payload": {}
+    }
+    assert worker.contract.required_capabilities(plan, registry) == ["operations.apply"]
+    assert worker.contract.runner_path("site.blueprint.preview", registry).name == "research-gateway-v2-greenfield-plan.py"
+    assert actions["site.blueprint.preview"]["read_only"] is False
+    try:
+        worker.contract.preflight(plan, {"granted_scopes": ["site.read", "pages.read"]}, registry)
+    except worker.contract.ScopeDenied as exc:
+        assert exc.missing == ["operations.apply"]
+    else:
+        raise AssertionError("Greenfield Plan was admitted without existing operations.apply scope")
+    assert worker.contract.preflight(
+        plan, {"granted_scopes": ["operations.apply"]}, registry
+    )["granted"] is True
     assert "manager.research.lines.list.pair" not in actions
     assert "manager.evidence.contact.audit" not in actions
     assert "manager.evidence.about.audit" not in actions
