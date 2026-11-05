@@ -5,12 +5,14 @@ on:
     paths:
       - 'scripts/phase2c-mcp-remote-acceptance.sh'
       - '.github/workflows/phase2c-mcp-remote-acceptance-quality.yml'
+      - '.github/workflows/phase2c-ovh-deploy.yml'
       - 'bridge/research-manager-mcp/**'
   push:
     branches: [main]
     paths:
       - 'scripts/phase2c-mcp-remote-acceptance.sh'
       - '.github/workflows/phase2c-mcp-remote-acceptance-quality.yml'
+      - '.github/workflows/phase2c-ovh-deploy.yml'
       - 'bridge/research-manager-mcp/**'
 
 permissions:
@@ -31,6 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           bash -n scripts/phase2c-mcp-remote-acceptance.sh
+          # One authoritative expected-tool count: the smoke runner default.
+          # An overriding workflow value previously forced a false acceptance
+          # failure and automatic rollback of the correct immutable image.
+          grep -F 'EXPECTED_TOOL_COUNT="${MCP_EXPECTED_TOOL_COUNT:-102}"' scripts/phase2c-mcp-remote-acceptance.sh
+          ! grep -Eq '^[[:space:]]*MCP_EXPECTED_TOOL_COUNT:' .github/workflows/phase2c-ovh-deploy.yml
           grep -F 'live remote acceptance requires an HTTPS MCP_SERVER_URL' scripts/phase2c-mcp-remote-acceptance.sh
           grep -F 'MCP_REQUIRE_PERSISTENT_TELEMETRY' bridge/research-manager-mcp/.env.example
           grep -F 'MCP_TOKEN' scripts/phase2c-mcp-remote-acceptance.sh
