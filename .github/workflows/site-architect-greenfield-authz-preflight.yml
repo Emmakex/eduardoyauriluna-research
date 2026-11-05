@@ -1,0 +1,54 @@
+name: Site Architect Greenfield Authorization Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-architect-greenfield-authz-read
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Inspect protected Greenfield gates without exposing credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare pinned SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?existing production SSH key required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?existing trusted host key required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Check tenant, research-ops and write-token references read-only
+        shell: bash
+        env:
+          OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+          OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?existing production host required}"
+          : "${OVH_MCP_USER:?existing production SSH user required}"
+          TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          REMOTE_DIR="/tmp/site-architect-authz-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          cleanup() { "${SSH[@]}" "$TARGET" "rm -rf -- '$REMOTE_DIR'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "${SSH[@]}" "$TARGET" "umask 077; mkdir -m 700 -- '$REMOTE_DIR'"
+          "${SCP[@]}" scripts/site-architect-greenfield-authz-preflight.py "$TARGET:$REMOTE_DIR/preflight.py"
+          # Output contains only named boolean gates and no secret-bearing values.
+          "${SSH[@]}" "$TARGET" "python3 '$REMOTE_DIR/preflight.py' --env-file /opt/site-control-mcp/.env.production"
