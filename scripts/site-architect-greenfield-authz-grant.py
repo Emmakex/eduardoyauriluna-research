@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location(
@@ -175,6 +176,24 @@ def restart(image: str) -> None:
     raise GrantError("MCP container did not become healthy")
 
 
+def verify_public_health() -> None:
+    """Require the existing canonical ingress to serve healthy shared MCP."""
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen("https://mcp.kairoseth.com/healthz", timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read(4096))
+                    if (isinstance(data, dict) and data.get("ok") is True
+                            and data.get("routing") == "shared"
+                            and data.get("persistent_telemetry") is True):
+                        return
+        except (OSError, ValueError, TimeoutError):
+            pass
+        if attempt < 4:
+            time.sleep(3)
+    raise GrantError("canonical public MCP health was not verified")
+
+
 def grant() -> int:
     if not ENV.is_file() or not COMPOSE.is_file() or not IMAGE_REF.is_file():
         raise GrantError("required protected deployment files missing")
@@ -194,6 +213,7 @@ def grant() -> int:
         restart(image)
         if preflight.inspect(preflight.protected_vars(ENV))["status"] != "ready":
             raise GrantError("post-restart protected preflight failed")
+        verify_public_health()
     except Exception:
         if changed:
             atomic_write(original, info)
@@ -203,7 +223,7 @@ def grant() -> int:
                 raise GrantError("grant failed; rollback restart also failed") from None
         raise GrantError("grant failed; original protected configuration restored") from None
     print("GREENFIELD_AUTHZ_READY tenant=eduardo-research principal=research-ops capability=operations.apply")
-    print("MCP_SAME_DIGEST_RESTART_HEALTHY public_apply=not_executed")
+    print("MCP_SAME_DIGEST_RESTART_HEALTHY public_health=verified public_apply=not_executed")
     return 0
 
 
