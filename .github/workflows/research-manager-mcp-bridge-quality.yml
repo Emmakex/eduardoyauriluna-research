@@ -48,6 +48,8 @@ jobs:
           grep -F "| '/design' | '/design/variants' | '/design/readiness';" src/manager-client.ts
           grep -F "'site_seo_geo_site'" src/server.ts
           grep -F "'site_design_readiness'" src/server.ts
+          grep -F "'site_greenfield_canonical_plan'" src/server.ts
+          grep -F "site_greenfield_canonical_plan: { commercialCapability:'operations.apply', backendScopes:['operations.apply'], readOnly:false }" src/tool-authorization.ts
           grep -F "'site_page_slots_verify'" src/server.ts
           grep -F "'site_insight_create_plan'" src/server.ts
           grep -F "'site_insight_pair_plan'" src/server.ts
@@ -127,7 +129,7 @@ jobs:
           grep -F "site_legal_content_apply: { commercialCapability:'pages.write', backendScopes:['pages.read','operations.apply','pages.write']" src/tool-authorization.ts
           grep -F "site_legal_content_verify: { commercialCapability:'pages.write', backendScopes:['pages.read','site.diagnostics']" src/tool-authorization.ts
           grep -F "site_legal_content_rollback: { commercialCapability:'operations.rollback', backendScopes:['pages.read','operations.rollback','pages.write']" src/tool-authorization.ts
-          grep -F "catalogEntries.length,104" test/tool-authorization.test.ts
+          grep -F "catalogEntries.length,105" test/tool-authorization.test.ts
           grep -F "readFileSync(new URL('../src/a8-write-tools.ts',import.meta.url),'utf8')" test/tool-authorization.test.ts
           grep -F "registerResearchWriteTools(server,adapter)" src/extended-server.ts
           grep -F "registerA3WriteTools(server,adapter as SiteControlAdapter&A3WriteAdapter)" src/extended-server.ts
@@ -147,4 +149,4 @@ jobs:
           A6_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a6-write-tools.ts)"
           A7_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a7-write-tools.ts)"
           A8_WRITE_TOOLS="$(grep -c "server.registerTool(" src/a8-write-tools.ts)"
-          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS + A5_WRITE_TOOLS + A6_WRITE_TOOLS + A7_WRITE_TOOLS + A8_WRITE_TOOLS ))" -eq 100
+          test "$(( BASE_TOOLS + RESEARCH_WRITE_TOOLS + A3_WRITE_TOOLS + A4_WRITE_TOOLS + A5_WRITE_TOOLS + A6_WRITE_TOOLS + A7_WRITE_TOOLS + A8_WRITE_TOOLS ))" -eq 101
