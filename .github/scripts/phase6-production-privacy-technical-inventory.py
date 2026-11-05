@@ -81,7 +81,14 @@ class TechnicalParser(HTMLParser):
             if self._in_form and input_type in {"text", "search"}:
                 # The only intended direct entry on the academic site is search.
                 if field_name not in {"s", "q", "search", "search_query", "query"}:
-                    self.collection_risks.add("non-search-entry-field")
+                    # The Theme's research Insights EN/ES use this exact scoped
+                    # GET parameter. Keep it limited to those two canonical routes.
+                    insights_url = urlsplit(self.page_url).path.rstrip("/")
+                    is_insight_search = field_name == "insight_search" and insights_url in {
+                        "/insights", "/es/notas"
+                    }
+                    if not is_insight_search:
+                        self.collection_risks.add("non-search-entry-field")
             if self._in_form and input_type in {"number", "date", "datetime-local"}:
                 self.collection_risks.add("structured-data-entry-field")
         if tag not in ASSET_ATTRS:
@@ -145,6 +152,15 @@ def self_test() -> None:
     search.feed('<form method="GET" action="/"><input name="s" type="search"></form>')
     assert search.report()["collection_risks"] == []
     assert search.report()["forms"] == [{"method": "get", "action_host": "same-site"}]
+    # Exact Theme field name (inc/research-insights.php), both locales.
+    for route in ("/insights/", "/es/notas/"):
+        exact = TechnicalParser(BASE + route)
+        exact.feed('<form method="get" action="' + route + '"><input type="search" name="insight_search"><select name="insight_type"><option value="">All</option></select></form>')
+        assert exact.report()["collection_risks"] == [], route
+    # Do not silently allow this non-generic parameter on unrelated surfaces.
+    unrelated = TechnicalParser(BASE + "/contact/")
+    unrelated.feed('<form method="get"><input type="search" name="insight_search"></form>')
+    assert unrelated.report()["collection_risks"] == ["non-search-entry-field"]
     lead = TechnicalParser(BASE + "/contact/")
     lead.feed('<form method="post" action="/submit"><input type="email" name="email" value="SECRET"><textarea name="message">PRIVATE</textarea></form>')
     assert lead.report()["collection_risks"] == [
