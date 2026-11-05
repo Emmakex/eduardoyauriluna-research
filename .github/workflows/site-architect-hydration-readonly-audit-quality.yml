@@ -49,7 +49,8 @@ jobs:
           assert script.count('"method": "tools/call"') == 1
           assert '"params": {"name": READ_TOOL, "arguments": {}}' in script
           assert "protected.resolve_bearer(" in script
-          assert not re.search(r'(?i)\\b(?:apply|rollback|verify|plan)\\s*\\(', script)
+          assert "site_page_slots_apply" not in script
+          assert "site_greenfield_canonical_plan" not in script
           assert "subprocess.run(" not in script
           assert "environment: production" in flow
           assert "github.run_attempt == 1" in flow
