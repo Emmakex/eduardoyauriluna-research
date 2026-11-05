@@ -172,7 +172,8 @@ jobs:
       MCP_SERVER_URL: https://${{ inputs.public_host }}/mcp/${{ inputs.reference_tenant_id }}
       MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
       MCP_EXPECTED_ROUTING: shared
-      MCP_EXPECTED_TOOL_COUNT: '101'
+      # Use the single closed tool-count contract in scripts/phase2c-mcp-remote-acceptance.sh.
+      # Do not override it here: stale 101 caused valid 102-tool images to roll back.
       MCP_DENIED_TENANT_URL: ${{ inputs.denied_tenant_id && format('https://{0}/mcp/{1}', inputs.public_host, inputs.denied_tenant_id) || '' }}
     steps:
       - uses: actions/checkout@v4
