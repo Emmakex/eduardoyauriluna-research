@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-academic-legal-es-20261105-01",
+  "tenant": "eduardo-research",
+  "action": "legal.content.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "legal-notice",
+    "language": "es",
+    "sections": [
+      {
+        "title": "Titularidad y naturaleza del sitio",
+        "body": "eduardoyauriluna.com es el sitio académico personal de Eduardo Jose Yauri Luna, que actúa como persona física. Esta web presenta su perfil investigador, sus intereses académicos y contenidos vinculados a la investigación y la divulgación."
+      },
+      {
+        "title": "Finalidad de la información",
+        "body": "Los contenidos de esta web se ofrecen con finalidad académica e informativa. Su consulta permite conocer el perfil del investigador y los materiales que decida compartir. La presencia de información sobre actividades o experiencias no convierte esta página en una oferta de servicios profesionales."
+      },
+      {
+        "title": "Contacto y rectificaciones",
+        "body": "Para consultas sobre este sitio, comunicaciones relativas a sus contenidos o solicitudes de corrección de información, puede escribir a hola@emmake.com. Eduardo Jose Yauri Luna es el titular de esta web como persona física; el dominio del correo utilizado para contactar no atribuye su titularidad a ninguna empresa."
+      },
+      {
+        "title": "Referencias y contenidos externos",
+        "body": "Este sitio puede incluir citas, referencias y enlaces a recursos o publicaciones de terceros con finalidad informativa o académica. Cada material mantiene la autoría y las condiciones de utilización que le correspondan. La inclusión de un enlace no implica que el titular de esta web gestione o controle el sitio de destino."
+      }
+    ]
+  }
+}
