@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-evidence-write-scope-20261105-01",
+  "tenant": "eduardo-research",
+  "action": "manager.capability.check",
+  "requested_by": "chatgpt",
+  "payload": {
+    "capabilities": [
+      "evidence.read",
+      "evidence.write",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  }
+}
