@@ -43,6 +43,7 @@ INSPECT_RESOURCES = {
     "versions",
     "design",
     "design_variants",
+    "greenfield_lifecycle",
 }
 SENSITIVE_KEY_PARTS = (
     "token",
@@ -140,12 +141,108 @@ def validate_list(payload: dict[str, Any]) -> None:
         raise CommandError("Evidence list requires exactly one registered group")
 
 
+def summarize_greenfield_lifecycle(status: Any, pages: Any, navigation: Any) -> dict[str, Any]:
+    """Read-only, data-minimized Site Architect health view; not a public launch decision.
+
+    The live Manager's status, Theme-owned Page inventory and Navigation inspection
+    are the only authorities. Do not treat an empty resource list or absent
+    readiness keys as proof that the Greenfield instance is complete.
+    """
+    if not isinstance(status, dict) or not isinstance(pages, dict) or not isinstance(navigation, dict):
+        raise CommandError("Greenfield lifecycle read returned an invalid shape")
+    mode = status.get("mode")
+    preset = status.get("preset")
+    readiness = status.get("readiness")
+    langs = status.get("languages")
+    items = pages.get("items")
+    nav_state = navigation.get("state")
+    nav_contract = navigation.get("contract")
+    if (
+        not isinstance(mode, dict) or not isinstance(preset, dict)
+        or not isinstance(readiness, dict) or not isinstance(langs, list)
+        or not langs or any(lang not in {"en", "es"} for lang in langs)
+        or len(set(langs)) != len(langs)
+        or not isinstance(items, list) or not items or len(items) > 40
+        or not isinstance(pages.get("count"), int) or pages["count"] != len(items)
+        or not isinstance(nav_state, dict) or not isinstance(nav_contract, dict)
+        or not isinstance(nav_state.get("primary"), list)
+        or not isinstance(nav_state.get("footer"), list)
+    ):
+        raise CommandError("Greenfield lifecycle authority data is incomplete")
+    keys: list[str] = []
+    aligned = 0
+    for page in items:
+        if not isinstance(page, dict) or not isinstance(page.get("key"), str):
+            raise CommandError("Greenfield Page identity is invalid")
+        key = page["key"]
+        if not key or len(key) > 80 or key in keys:
+            raise CommandError("Greenfield Page key is missing or duplicated")
+        keys.append(key)
+        localizations = page.get("languages")
+        if not isinstance(localizations, dict):
+            raise CommandError("Greenfield Page localization data is missing")
+        if page.get("exists") is True and all(
+            isinstance(localizations.get(language), dict)
+            and localizations[language].get("available") is True
+            and localizations[language].get("contract_aligned") is True
+            for language in langs
+        ):
+            aligned += 1
+    nav_primary, nav_footer = nav_state["primary"], nav_state["footer"]
+    if (
+        any(not isinstance(key, str) or len(key) > 80 for key in nav_primary + nav_footer)
+        or len(nav_primary) > 20 or len(nav_footer) > 20
+    ):
+        raise CommandError("Greenfield Navigation state is not bounded")
+
+    checks = {
+        "greenfield_mode": mode.get("greenfield") is True and mode.get("migration") is False,
+        "theme_contract": preset.get("compatible") is True,
+        "canonical_domain": status.get("canonical_domain_source") == "active-instance-blueprint"
+            and status.get("runtime_matches_declared_canonical") is True,
+        "manager_diagnostics": readiness.get("ready") is True,
+        "theme_pages_localized": aligned == len(items),
+        "bounded_navigation": nav_contract.get("arbitrary_urls") is False
+            and len(nav_primary) > 0 and len(nav_footer) > 0,
+    }
+    return {
+        "product": "Site Architect",
+        "track": "Greenfield",
+        "site": "eduardoyauriluna.com",
+        "kind": "technical-governance-inspection",
+        "read_only": True,
+        "technical_operational_ready": all(checks.values()),
+        "checks": checks,
+        "page_inventory": {
+            "count": len(items),
+            "fully_aligned": aligned,
+            "keys": keys,
+            "languages": list(langs),
+        },
+        "navigation": {
+            "primary_count": len(nav_primary),
+            "footer_count": len(nav_footer),
+            "arbitrary_urls": nav_contract["arbitrary_urls"],
+        },
+        "manager_diagnostics": {
+            "ready": readiness["ready"] is True,
+            "summary": sanitize(readiness.get("summary", {})),
+        },
+        "exclusions": {
+            "public_visitor_and_legal_acceptance": "not_evaluated",
+            "academic_evidence_and_publications": "not_evaluated",
+            "greenfield_blueprint_apply": "not_executed",
+            "release_or_launch_approval": "not_granted",
+        },
+    }
+
+
 def validate_inspect(payload: dict[str, Any]) -> None:
     resource = payload.get("resource")
     if resource not in INSPECT_RESOURCES:
         raise CommandError("manager.resource.inspect resource is not supported")
 
-    if resource in {"navigation", "status", "versions", "design", "design_variants"}:
+    if resource in {"navigation", "status", "versions", "design", "design_variants", "greenfield_lifecycle"}:
         if set(payload) != {"resource"}:
             raise CommandError(f"{resource} inspect accepts no caller-selected parameters")
         return
@@ -247,6 +344,13 @@ def execute(command_path: Path, result_dir: Path) -> int:
             resource = str(payload["resource"])
             if resource == "navigation":
                 data = client.call("site_navigation_inspect", {})
+                descriptor = {"type": resource}
+            elif resource == "greenfield_lifecycle":
+                data = summarize_greenfield_lifecycle(
+                    client.call("research_status", {}),
+                    client.call("site_pages_list", {}),
+                    client.call("site_navigation_inspect", {}),
+                )
                 descriptor = {"type": resource}
             elif resource == "status":
                 data = client.call("research_status", {})
@@ -407,9 +511,59 @@ def self_test() -> int:
             "requested_by": "chatgpt",
             "payload": {"resource": "page", "filters": {}},
         },
+        {
+            "version": "1",
+            "command_id": "cmd-selftest-greenfield-lifecycle-0012",
+            "tenant": "eduardo-research",
+            "action": INSPECT_ACTION,
+            "requested_by": "chatgpt",
+            "payload": {"resource": "greenfield_lifecycle"},
+        },
     ]
     for command in good_commands:
         validate_command(command)
+
+    # The synthetic lifecycle fixture exercises shape, readiness and closed summary.
+    fixture_status = {
+        "mode": {"greenfield": True, "migration": False},
+        "preset": {"compatible": True},
+        "readiness": {"ready": True, "summary": {"pass": 22, "warning": 0, "fail": 0}},
+        "languages": ["en", "es"],
+        "canonical_domain_source": "active-instance-blueprint",
+        "runtime_matches_declared_canonical": True,
+    }
+    fixture_pages = {"count": 1, "items": [{
+        "key": "home", "exists": True,
+        "languages": {
+            "en": {"available": True, "contract_aligned": True, "stored_slots": {"secret": "DO_NOT_EXPOSE"}},
+            "es": {"available": True, "contract_aligned": True},
+        },
+    }]}
+    fixture_navigation = {
+        "state": {"primary": ["about"], "footer": ["legal-notice"]},
+        "contract": {"arbitrary_urls": False},
+    }
+    overview = summarize_greenfield_lifecycle(fixture_status, fixture_pages, fixture_navigation)
+    assert overview["technical_operational_ready"] is True
+    assert overview["exclusions"]["release_or_launch_approval"] == "not_granted"
+    assert "DO_NOT_EXPOSE" not in str(overview)
+    partial = dict(fixture_pages)
+    partial["items"] = [{**fixture_pages["items"][0], "exists": False}]
+    assert summarize_greenfield_lifecycle(fixture_status, partial, fixture_navigation)["technical_operational_ready"] is False
+    try:
+        summarize_greenfield_lifecycle(fixture_status, {"count": 0, "items": []}, fixture_navigation)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("lifecycle inspection accepted an empty Page inventory")
+    bad_lifecycle = dict(good_commands[-1])
+    bad_lifecycle["payload"] = {"resource": "greenfield_lifecycle", "tool": "arbitrary"}
+    try:
+        validate_command(bad_lifecycle)
+    except CommandError:
+        pass
+    else:
+        raise CommandError("lifecycle inspection accepted arbitrary backend selection")
 
     bad = dict(good_commands[1])
     bad["payload"] = {"resource": "research_line", "filters": {"raw_tool": "x"}}
