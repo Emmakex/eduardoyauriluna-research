@@ -1,0 +1,71 @@
+name: Site Architect Greenfield Protected Preview Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-greenfield-protected-preview.py'
+      - '.github/workflows/site-architect-greenfield-protected-preview.yml'
+      - '.github/workflows/site-architect-greenfield-protected-preview-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-greenfield-protected-preview.py'
+      - '.github/workflows/site-architect-greenfield-protected-preview.yml'
+      - '.github/workflows/site-architect-greenfield-protected-preview-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test canonical Preview in synthetic mode only
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-greenfield-protected-preview.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/research-gateway-v2-greenfield-plan.py --self-test
+          python3 scripts/site-architect-greenfield-protected-preview.py --self-test
+
+      - name: Enforce protected caller, single named tool, same authorization and no Apply
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          flow = Path('.github/workflows/site-architect-greenfield-protected-preview.yml').read_text()
+          script = Path('scripts/site-architect-greenfield-protected-preview.py').read_text()
+          assert "environment: production" in flow
+          assert "group: phase2c-ovh-production" in flow
+          assert "github.run_attempt == 1" in flow
+          assert "github.actor == 'Emmakex'" in flow
+          assert "StrictHostKeyChecking=yes" in flow
+          assert "UserKnownHostsFile=" in flow
+          assert "permissions:\n  contents: read" in flow
+          assert not re.search(r'^\s*(?:workflow_dispatch|schedule):', flow, re.M)
+          assert "site-architect-greenfield-protected-preview.py' --preview-once" in flow
+          assert "research-gateway-v2-greenfield-plan.py" in flow
+          assert "ATTEMPT = Path(" in script
+          assert "os.O_EXCL" in script and "os.O_NOFOLLOW" in script
+          assert 'PRINCIPAL = "research-ops"' in script
+          assert 'PATH = "/mcp/eduardo-research"' in script
+          assert 'TOOL = "site_greenfield_canonical_plan"' in script
+          assert '"method": "tools/call"' in script
+          assert '"params": {"name": TOOL, "arguments": {}}' in script
+          assert "canonical.safe_plan(plan)" in script
+          assert '"public_site_apply": "not_executed"' in script
+          assert script.count('"method": "tools/call"') == 1
+          assert not re.search(r'(?<!no )(?<!public )site_.*_apply\s*\(', script)
+          assert not re.search(r"^\\s*(?:import subprocess|from subprocess import)", script, re.M)
+          assert "subprocess.run(" not in script
+          print("PASS: exact single trusted Plan/Preview, protected identity, no Apply or token export")
+          PY
+
+      - name: Lint workflow using pinned actionlint
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/site-architect-greenfield-protected-preview.yml
