@@ -1,0 +1,67 @@
+name: Site Architect Greenfield Authorization Preflight Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-greenfield-authz-preflight.py'
+      - '.github/workflows/site-architect-greenfield-authz-preflight.yml'
+      - '.github/workflows/site-architect-greenfield-authz-preflight-quality.yml'
+      - 'bridge/research-manager-mcp/src/tool-authorization.ts'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-greenfield-authz-preflight.py'
+      - '.github/workflows/site-architect-greenfield-authz-preflight.yml'
+      - '.github/workflows/site-architect-greenfield-authz-preflight-quality.yml'
+      - 'bridge/research-manager-mcp/src/tool-authorization.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile and exercise offline protected registry fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-greenfield-authz-preflight.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+
+      - name: Confirm manually dispatched read-only posture and narrow commercial tool mapping
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          script = Path('scripts/site-architect-greenfield-authz-preflight.py').read_text()
+          flow = Path('.github/workflows/site-architect-greenfield-authz-preflight.yml').read_text()
+          manifest = Path('bridge/research-manager-mcp/src/tool-authorization.ts').read_text()
+          assert "environment: production" in flow
+          assert "workflow_dispatch:" in flow
+          assert "permissions:\n  contents: read" in flow
+          assert "StrictHostKeyChecking=yes" in flow
+          assert "UserKnownHostsFile=" in flow
+          assert "python3 '$REMOTE_DIR/preflight.py' --env-file /opt/site-control-mcp/.env.production" in flow
+          assert not re.search(r'^\s*(?:pull_request|push|schedule):', flow, re.M)
+          assert 'def protected_vars(' in script and 'def inspect(' in script
+          assert 'read_only": True' in script
+          assert "path.write_text" in script.split("def self_test()", 1)[1], "only the synthetic self-test may write"
+          assert "path.write_text" not in script.split("def self_test()", 1)[0]
+          # operations.apply must remain exclusive to this plan-only MCP tool
+          hits = re.findall(r"^\s*(\w+): \{ commercialCapability:'operations\.apply'", manifest, re.M)
+          assert hits == ['site_greenfield_canonical_plan'], hits
+          print('PASS: protected read-only audit and exclusive Greenfield plan capability')
+          PY
+
+      - name: Validate protected workflow with pinned actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/site-architect-greenfield-authz-preflight.yml
