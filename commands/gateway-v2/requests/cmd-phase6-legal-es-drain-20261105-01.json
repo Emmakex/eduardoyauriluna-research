@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-legal-es-drain-20261105-01",
+  "tenant": "eduardo-research",
+  "action": "manager.resource.inspect",
+  "requested_by": "chatgpt",
+  "payload": {
+    "resource": "status"
+  }
+}
