@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-academic-legal-en-20261105-01",
+  "tenant": "eduardo-research",
+  "action": "legal.content.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "legal-notice",
+    "language": "en",
+    "sections": [
+      {
+        "title": "Ownership and purpose of this website",
+        "body": "eduardoyauriluna.com is the personal academic website of Eduardo Jose Yauri Luna, acting in an individual capacity. It presents his research profile, academic interests and information related to research and knowledge sharing."
+      },
+      {
+        "title": "Informational and academic use",
+        "body": "The material on this website is provided for academic and informational purposes. It allows visitors to learn about the researcher's profile and any materials he chooses to share. References to activities or experience do not turn this website into an offer of professional services."
+      },
+      {
+        "title": "Contact and corrections",
+        "body": "For questions about this website, concerns regarding its content or requests to correct published information, please write to hola@emmake.com. Eduardo Jose Yauri Luna owns this website in an individual capacity; the domain of the contact email does not transfer ownership to a company."
+      },
+      {
+        "title": "References and third-party materials",
+        "body": "This website may include citations, references and links to third-party publications or resources for academic or informational purposes. Each item remains subject to its applicable authorship and terms of use. A link does not mean that the owner of this website operates or controls the linked destination."
+      }
+    ]
+  }
+}
