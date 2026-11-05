@@ -1,0 +1,46 @@
+name: Phase 6 Legal Facts Dossier Quality
+
+on:
+  pull_request:
+    paths:
+      - 'docs/68-phase6-legal-facts-and-copy-review.md'
+      - '.github/workflows/phase6-legal-facts-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/68-phase6-legal-facts-and-copy-review.md'
+      - '.github/workflows/phase6-legal-facts-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Validate legal dossier remains internal and fail-closed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bounded Phase 6 legal fact review
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('docs/68-phase6-legal-facts-and-copy-review.md').read_text(encoding='utf-8')
+          for phrase in (
+              'INTERNAL REVIEW ONLY',
+              'NOT AUTHORISED FOR LIVE PUBLICATION',
+              'Eduardo Jose Yauri Luna',
+              'hola@emmake.com',
+              '### Spanish — Aviso legal',
+              '### English — Legal notice',
+              '### Spanish — Política de privacidad',
+              '### English — Privacy policy',
+              'Preview → Apply',
+              'Phase 7',
+          ):
+              assert phrase in text, f'missing legal review invariant: {phrase}'
+          assert text.count('**Pending:**') >= 4, 'unverified legal facts must remain explicit'
+          assert 'EMMake is the data controller/website owner | **Contradicted by user**' in text
+          assert 'No WordPress content Apply' not in text or 'NOT LIVE' in text
+          print('PASS: bilingual legal dossier stays evidence-bound and non-publishable')
+          PY
