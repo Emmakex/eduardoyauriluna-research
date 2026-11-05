@@ -8,7 +8,7 @@
 - Website: https://eduardoyauriluna.com — Eduardo Research, Site Architect Greenfield.
 - Live website changes are only allowed through the governed Manager/Gateway lifecycle; the Theme renders the site. Site Manager is a separate Brownfield product and out of scope.
 - Last infrastructure observation: GitHub Actions Phase 6 production run 41993094728 on 2026-11-05, main commit 78325491a9f4b115a77a1fb4cd5c36aaeddc739b.
-- Current state: four public legal URLs return HTTP 200 but contain zero substantive legal sections; visitor audit must remain red until factual EN/ES content passes.
+- Current production state (2026-11-05): **Legal Notice ES and EN each have four substantive sections, published and rendered-verified through A8**. The two Privacy Policy pages remain unpublished/zero-section pending verified processing facts; the overall visitor audit must remain red until all four pages pass.
 
 ## 1. Fact and evidence ledger
 
@@ -43,7 +43,7 @@ Provider documentation:
 
 ## 3. Bilingual copy ready for factual verification (NOT LIVE)
 
-Only the following statements use facts directly confirmed by the user or the public purpose of the site. They are not a complete, publishable Privacy Policy or Legal Notice. The final copy must satisfy each page's 2–6 substantive-section contract without placeholders.
+The following are original evidence-bound copy fragments retained for traceability; **the complete Legal Notice texts were subsequently published by A8 in both languages (see §3C)**. Privacy Policy fragments are not a complete or publishable Privacy Policy. Any new Privacy copy must satisfy each page's 2–6 substantive-section contract without placeholders.
 
 ### Spanish — Aviso legal (approved identity and contact fragments)
 
@@ -93,13 +93,23 @@ Only the following statements use facts directly confirmed by the user or the pu
 - Only once economic activity has been confirmed or ruled out should the relevant public owner/contact identifiers (including address or tax identifier when required) be considered. Do not place private address/tax IDs in GitHub, this dossier or public logs.
 - GDPR/LOPDGDD information obligations require a separate processing analysis irrespective of the LSSI assessment. No global `no logs`, `no cookies`, `no recipients` or `no data processing` statements follow from anonymous-browser probes.
 
+## 3C. Production Legal Notice EN/ES acceptance — 2026-11-05
+
+- The user confirmed that the site is a **personal academic website**. This does not, by itself, prove the absence of economic activity; do not assert an unconditional LSSI exemption without establishing whether any direct or indirect monetisation exists.
+- **ES Legal Notice:** https://eduardoyauriluna.com/es/aviso-legal/ — 4 sections, key `legal-notice`, language `es`. Immutable command `cmd-phase6-academic-legal-es-20261105-01`, [Gateway v2 run 41998123585](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/41998123585), `status=success`, `verified=true`. Exact A8 operation `erm-legal-op-7f5e77f9fa9141be9f78a9a21e03929d`.
+- **EN Legal Notice:** https://eduardoyauriluna.com/legal-notice/ — 4 sections, key `legal-notice`, language `en`. Immutable command `cmd-phase6-academic-legal-en-20261105-01`, [Gateway v2 run 41998336132](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/41998336132), `status=success`, `verified=true`. Exact A8 operation `erm-legal-op-21a5f11cc8494ddd9aa8e0908268a6d6`.
+- A8 Preview → Apply → **rendered** Verify completed successfully for both; the text uses only factual owner, academic purpose, contact and conditional third-party references. No unverified provider/retention/cookie assertions or LSSI exemption were published.
+- The first ES attempt in [Gateway run 41997650324](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/41997650324) failed **before** Preview because the A8 runner required `--command` while Gateway v2 passes a positional command path. [PR #446](https://github.com/Emmakex/eduardoyauriluna-research/pull/446) repaired the CLI with regression testing and exact-head/post-merge quality, without changing backend semantics. A subsequent new read-only request triggered the unresolved immutable ES command's execution and verification.
+- **Still blocked:** Privacy Policy ES and EN. No legal policy has been published for these. The separate user-facing public visitor gate, and Phase 6/Phase 7 gate, remain **incomplete** pending processing/provider/email/server-log/retention facts and Privacy A8 acceptance.
+- Site Manager remains out of scope. Do not use this internal dossier as a WordPress source of truth; production readback + governed operation evidence are authoritative.
+
 ## 4. Publication gate — must be fail-closed
 
 1. Confirm the owner-approved public details required by the applicable law, without publishing private residential identifiers in GitHub issues or public repositories.
 2. Verify actual host and email-provider contractual entity, legal terms and data-processing terms, and the CMS/server log and analytics/cookie configuration.
 3. Assess and confirm purpose, data categories, lawful basis, recipients/transfers and retention for each real processing activity. Resolve every PENDING item above; do not publish markers or example terms.
 4. Final human/legal editorial review of all four EN/ES texts. Ensure 2–6 substantive plain-text sections per page with titles of 1–120 characters and bodies of 45–4000 characters.
-5. Use the existing governed Gateway action legal.content.update for each of privacy-policy and legal-notice in EN/ES: Preview → Apply → stored/rendered Verify, with rollback when verification fails.
+5. Legal Notice EN and ES were applied and rendered-verified as documented in §3C. **Only Privacy Policy ES and EN remain to publish** through the governed Gateway action legal.content.update: Preview → Apply → stored/rendered Verify, with rollback if verification fails.
 6. Re-run independently the full Phase 6 production visitor audit. Open Phase 7 only when four legal routes and all visitor-surface checks are proven green.
 
 References: issue https://github.com/Emmakex/eduardoyauriluna-research/issues/315 ; Phase 6 production audit workflow https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/41993094728 .
