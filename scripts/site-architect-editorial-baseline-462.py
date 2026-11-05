@@ -155,7 +155,7 @@ def self_test() -> None:
     assert len(SNAPSHOTS) == 8 and set(POLICY) == set(PAIRS)
     assert sum(len(v) for v in POLICY.values()) * 2 == 18
     assert all(set(POLICY[k]) == EXPECTED_DELTAS[k] for k in PAIRS)
-    desired = {f"k{i}": {lang: {"lead": "desired"} for lang in LANGUAGES} for i in range(12)}
+    desired = {f"k{i}": {lang: {"lead": "desired"} for lang in LANGUAGES} for i in range(8)}
     desired.update({k: {lang: dict.fromkeys(EXPECTED_DELTAS[k], "new") for lang in LANGUAGES}
                     for k in PAIRS})
     items, snaps = [], {}
