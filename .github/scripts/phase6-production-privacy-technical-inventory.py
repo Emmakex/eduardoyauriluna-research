@@ -53,16 +53,37 @@ class TechnicalParser(HTMLParser):
         self.page_url = page_url
         self.third_party: dict[str, set[str]] = defaultdict(set)
         self.forms: list[dict[str, str]] = []
+        self.collection_risks: set[str] = set()
+        self._in_form = False
 
     def handle_starttag(self, tag: str, attributes: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
         attrs = {str(k).lower(): str(v or "") for k, v in attributes}
         if tag == "form":
             action_host = host_of(self.page_url, attrs.get("action", "")) or SITE_HOST
+            method = (attrs.get("method") or "get").strip().lower()[:12]
             self.forms.append({
-                "method": (attrs.get("method") or "get").strip().lower()[:12],
+                "method": method,
                 "action_host": "same-site" if action_host == SITE_HOST else action_host,
             })
+            self._in_form = True
+            if method != "get":
+                self.collection_risks.add("non-get-form")
+            if action_host != SITE_HOST:
+                self.collection_risks.add("external-form-endpoint")
+        if tag == "textarea":
+            self.collection_risks.add("free-text-submission-field")
+        if tag == "input":
+            input_type = attrs.get("type", "text").strip().lower()
+            field_name = attrs.get("name", "").strip().lower()
+            if input_type in {"email", "tel", "password", "file"}:
+                self.collection_risks.add("personal-data-input-type")
+            if self._in_form and input_type in {"text", "search"}:
+                # The only intended direct entry on the academic site is search.
+                if field_name not in {"s", "q", "search", "search_query", "query"}:
+                    self.collection_risks.add("non-search-entry-field")
+            if self._in_form and input_type in {"number", "date", "datetime-local"}:
+                self.collection_risks.add("structured-data-entry-field")
         if tag not in ASSET_ATTRS:
             return
         if tag == "link" and not (set(attrs.get("rel", "").lower().split()) & LINK_RELS):
@@ -71,9 +92,14 @@ class TechnicalParser(HTMLParser):
         if host and host != SITE_HOST:
             self.third_party[tag].add(host)
 
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() == "form":
+            self._in_form = False
+
     def report(self) -> dict:
         return {
             "forms": self.forms,
+            "collection_risks": sorted(self.collection_risks),
             "external_hosts": {
                 kind: sorted(self.third_party.get(kind, set()))
                 for kind in ("script", "iframe", "img", "link")
@@ -114,6 +140,18 @@ def self_test() -> None:
     )
     result = parser.report()
     assert result["forms"] == [{"method": "post", "action_host": "same-site"}]
+    assert result["collection_risks"] == ["non-get-form"]
+    search = TechnicalParser(BASE + "/insights/")
+    search.feed('<form method="GET" action="/"><input name="s" type="search"></form>')
+    assert search.report()["collection_risks"] == []
+    assert search.report()["forms"] == [{"method": "get", "action_host": "same-site"}]
+    lead = TechnicalParser(BASE + "/contact/")
+    lead.feed('<form method="post" action="/submit"><input type="email" name="email" value="SECRET"><textarea name="message">PRIVATE</textarea></form>')
+    assert lead.report()["collection_risks"] == [
+        "free-text-submission-field", "non-get-form", "personal-data-input-type"
+    ]
+    assert "SECRET" not in json.dumps(lead.report())
+    assert "PRIVATE" not in json.dumps(lead.report())
     assert result["external_hosts"]["script"] == ["cdn.example.org"]
     assert result["external_hosts"]["iframe"] == ["video.example.net"]
     assert "NOT-LOGGED" not in json.dumps(result)
@@ -138,11 +176,14 @@ def main() -> None:
         cookies.update(page["set_cookie_names"])
         for name, hosts in page["external_hosts"].items():
             grouped[name].update(hosts)
+    risks = {name for page in pages for name in page["collection_risks"]}
     result = {
         "status": "OBSERVED_ONLY",
         "site": BASE,
         "pages_checked": len(pages),
         "anonymous_forms_seen": sum(len(page["forms"]) for page in pages),
+        "personal_data_collection_form_risks": sorted(risks),
+        "no_direct_collection_forms_observed": not risks,
         "cookie_names_seen": sorted(cookies),
         "external_hosts_seen": {name: sorted(hosts) for name, hosts in grouped.items()},
         "pages": pages,
@@ -153,6 +194,10 @@ def main() -> None:
         ),
     }
     print(json.dumps(result, indent=2, ensure_ascii=False))
+    # Enforce the user-confirmed "no lead/contact forms" public contract.
+    # A technical visit can still create server logs or voluntary email messages.
+    if risks:
+        raise RuntimeError("Unexpected public personal-data collection form on academic website")
 
 
 if __name__ == "__main__":
