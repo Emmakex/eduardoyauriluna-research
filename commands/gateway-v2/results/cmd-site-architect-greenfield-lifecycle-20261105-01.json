@@ -1,0 +1,78 @@
+{
+  "action": "manager.resource.inspect",
+  "command_id": "cmd-site-architect-greenfield-lifecycle-20261105-01",
+  "command_sha256": "868b738e33664587fd608eb411afeffe847cd3fb61cf8b4d18eccf76e7b13355",
+  "data": {
+    "checks": {
+      "bounded_navigation": true,
+      "canonical_domain": true,
+      "greenfield_mode": true,
+      "manager_diagnostics": true,
+      "theme_contract": true,
+      "theme_pages_localized": true
+    },
+    "exclusions": {
+      "academic_evidence_and_publications": "not_evaluated",
+      "greenfield_blueprint_apply": "not_executed",
+      "public_visitor_and_legal_acceptance": "not_evaluated",
+      "release_or_launch_approval": "not_granted"
+    },
+    "kind": "technical-governance-inspection",
+    "manager_diagnostics": {
+      "ready": true,
+      "summary": {
+        "fail": 0,
+        "pass": 22,
+        "warning": 0
+      }
+    },
+    "navigation": {
+      "arbitrary_urls": false,
+      "footer_count": 2,
+      "primary_count": 5
+    },
+    "page_inventory": {
+      "count": 12,
+      "fully_aligned": 12,
+      "keys": [
+        "home",
+        "about",
+        "research",
+        "publications",
+        "projects",
+        "software",
+        "datasets",
+        "cv",
+        "insights",
+        "contact",
+        "privacy-policy",
+        "legal-notice"
+      ],
+      "languages": [
+        "en",
+        "es"
+      ]
+    },
+    "product": "Site Architect",
+    "read_only": true,
+    "site": "eduardoyauriluna.com",
+    "technical_operational_ready": true,
+    "track": "Greenfield"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read",
+      "pages.read"
+    ]
+  },
+  "read_only": true,
+  "resource": {
+    "type": "greenfield_lifecycle"
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
