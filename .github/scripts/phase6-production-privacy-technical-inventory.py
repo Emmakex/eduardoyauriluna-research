@@ -140,7 +140,7 @@ def self_test() -> None:
     )
     result = parser.report()
     assert result["forms"] == [{"method": "post", "action_host": "same-site"}]
-    assert result["collection_risks"] == ["non-get-form"]
+    assert result["collection_risks"] == ["non-get-form", "non-search-entry-field"]
     search = TechnicalParser(BASE + "/insights/")
     search.feed('<form method="GET" action="/"><input name="s" type="search"></form>')
     assert search.report()["collection_risks"] == []
