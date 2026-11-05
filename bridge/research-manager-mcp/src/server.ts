@@ -62,11 +62,7 @@ export function createBridgeServer(adapter:SiteControlAdapter):McpServer{
   // Site Architect/Greenfield only. Plan stores a private bounded WordPress Preview;
   // it does not Apply or offer an unbounded blueprint, URL or WP operation.
   if(adapter.productProfile==='research-theme' && adapter.planCanonicalGreenfield){
-    server.registerTool('site_greenfield_canonical_plan',{
-      title:'Preview canonical Site Architect Greenfield Blueprint',
-      description:'Create a stored Preview of the pre-bundled Greenfield Blueprint only. Requires existing operations.apply authorization. Returns a data-minimized Plan with expiry; DOES NOT APPLY.',
-      annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},
-    },async()=>withCapability('operations.apply',()=>adapter.planCanonicalGreenfield!()));
+    server.registerTool('site_greenfield_canonical_plan',{title:'Preview Site Architect canonical Greenfield Blueprint',description:'Create only a stored Preview of the pre-bundled Greenfield Blueprint through operations.apply; data-minimized result, no Apply.',annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false}},async()=>withCapability('operations.apply',()=>adapter.planCanonicalGreenfield!()));
   }
   server.registerTool('site_pages_list',{title:'List managed pages',description:'List Theme-owned page inventory.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>withCapability('pages.read',()=>adapter.listPages()));
   server.registerTool('site_page_inspect',{title:'Inspect managed page',description:'Inspect one registered page in an enabled language.',inputSchema:z.object({key:z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/),language:languageSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async({key,language})=>withCapability('pages.read',()=>adapter.inspectPage({key,language})));
