@@ -40,6 +40,10 @@ export class ResearchManagerAdapter implements Site.SiteControlAdapter {
   status():Promise<unknown>{return this.client.status();}
   versions():Promise<unknown>{return this.client.versions();}
   capabilities():Promise<unknown>{return this.client.capabilities();}
+  planCanonicalGreenfield():Promise<unknown>{
+    if(this.productProfile!=='research-theme')throw new Error('Canonical Greenfield Plan requires the registered Research Theme profile');
+    return this.writeClient.planCanonicalGreenfield();
+  }
   listPages():Promise<unknown>{return this.client.pages();}
   inspectPage(request:Site.SitePageInspectionRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.client.page(request.key,request.language);}
   planPageSlots(request:Site.SitePageSlotsPlanRequest):Promise<unknown>{this.requireLanguage(request.language,'Page');return this.writeClient.planPageSlots(request);}
