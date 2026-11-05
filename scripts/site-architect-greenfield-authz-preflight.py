@@ -85,7 +85,8 @@ def inspect(values: dict[str, str]) -> dict[str, Any]:
     write_ref_valid = isinstance(write_reference, str) and KEY_RE.fullmatch(write_reference) is not None
     checks = {
         "tenant_registered": tenant is not None,
-        "research_theme_profile": bool(tenant and tenant.get("profile") == "research-theme"),
+        # Match runtime config.ts::productProfile(): missing/null/empty defaults to research-theme.
+        "research_theme_profile": bool(tenant and tenant.get("profile") in (None, "", "research-theme")),
         "tenant_entitled_operations_apply": bool(tenant and includes(tenant.get("entitlements"), CAPABILITY)),
         "research_ops_principal_registered": principal is not None,
         "research_ops_tenant_allowed": bool(principal and includes(principal.get("tenants"), TENANT)),
@@ -139,6 +140,16 @@ def self_test() -> int:
     assert third["status"] == "ready" and all(third["checks"].values())
     assert inspect(sample(tenant_grant=True, principal_grant=True, write_ref=False))["status"] == "blocked"
     assert inspect(sample(tenant_grant=True, principal_grant=True, profile="generic-wordpress"))["status"] == "blocked"
+    # Production may omit profile: the runtime treats it as research-theme.
+    implicit = sample(tenant_grant=True, principal_grant=True)
+    configured = json.loads(implicit["MCP_TENANTS_JSON"])
+    configured[0].pop("profile")
+    implicit["MCP_TENANTS_JSON"] = json.dumps(configured, separators=(",", ":"))
+    assert inspect(implicit)["checks"]["research_theme_profile"] is True
+    assert inspect(implicit)["status"] == "ready"
+    configured[0]["profile"] = ""
+    implicit["MCP_TENANTS_JSON"] = json.dumps(configured, separators=(",", ":"))
+    assert inspect(implicit)["status"] == "ready"
     assert "NEVER_EXPOSE" not in json.dumps(third)
     for keys in ("MCP_TENANTS_JSON", "MCP_PRINCIPALS_JSON"):
         malformed = sample()
