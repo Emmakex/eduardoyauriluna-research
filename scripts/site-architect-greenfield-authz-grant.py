@@ -255,7 +255,7 @@ def self_test() -> int:
     assert json.loads(parse_lines(updated)["MCP_PRINCIPALS_JSON"])[0] == principals[0]
     try:
         rewrite(raw.replace("MCP_SHARED_ROUTING=true", "MCP_SHARED_ROUTING=false"))
-    except GrantError:
+    except (GrantError, preflight.ProtectedConfigError):
         pass
     else:
         raise AssertionError("unsafe configuration was accepted")
