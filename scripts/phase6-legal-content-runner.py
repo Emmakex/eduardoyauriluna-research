@@ -125,14 +125,40 @@ def self_test()->int:
         try:validate_command(candidate)
         except CommandError:continue
         raise CommandError('legal content self-test accepted an invalid command')
+    # Exact CLI shape used by research-gateway-v2-worker.py must stay supported.
+    positional=parse_cli(['commands/gateway-v2/requests/accepted.json','--result-dir','commands/gateway-v2/results'])
+    assert positional.command==Path('commands/gateway-v2/requests/accepted.json')
+    assert positional.result_dir==Path('commands/gateway-v2/results')
+    legacy=parse_cli(['--command','commands/gateway-v2/requests/accepted.json','--result-dir','commands/gateway-v2/results'])
+    assert legacy.command==positional.command and legacy.result_dir==positional.result_dir
+    try:parse_cli(['a.json','--command','b.json'])
+    except SystemExit as exc:
+        assert exc.code==2
+    else:raise CommandError('legal CLI accepted competing command selectors')
     print('PASS: Phase 6 legal content runner self-test');return 0
 
 
+def parse_cli(argv:list[str]|None=None)->argparse.Namespace:
+    parser=argparse.ArgumentParser()
+    # The Gateway v2 dispatcher always passes the immutable request as argv[1].
+    # Keep --command for older manual callers, without changing the MCP lifecycle.
+    parser.add_argument('command',nargs='?',type=Path)
+    parser.add_argument('--command',dest='legacy_command',type=Path)
+    parser.add_argument('--result-dir',type=Path)
+    parser.add_argument('--self-test',action='store_true')
+    args=parser.parse_args(argv)
+    if args.command is not None and args.legacy_command is not None:
+        parser.error('provide the command path only once')
+    args.command=args.command or args.legacy_command
+    return args
+
+
 def main()->int:
-    parser=argparse.ArgumentParser();parser.add_argument('--self-test',action='store_true');parser.add_argument('--command');parser.add_argument('--result-dir');args=parser.parse_args()
+    args=parse_cli()
     if args.self_test:return self_test()
-    if not args.command or not args.result_dir:raise CommandError('--command and --result-dir are required')
-    return execute(Path(args.command),Path(args.result_dir))
+    if args.command is None or args.result_dir is None:
+        raise CommandError('a command path and --result-dir are required')
+    return execute(args.command,args.result_dir)
 
 if __name__=='__main__':
     try:raise SystemExit(main())
