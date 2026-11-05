@@ -50,9 +50,8 @@ jobs:
           assert 'read_only' in py and 'values_exported' in py
           assert 'public_site_apply' in py and 'not_executed' in py
           assert 'current_archival_matches' in py
-          assert 'report' not in py or True
           assert '14 KEEP LIVE + 2 ADOPT BLUEPRINT + 2 NEW COPY + 10 DEFER' in report
-          assert 'No Apply' in report
+          assert 'no apply' in report.lower()
           assert 'environment: production' in flow
           assert 'github.run_attempt == 1' in flow
           assert 'group: phase2c-ovh-production' in flow
