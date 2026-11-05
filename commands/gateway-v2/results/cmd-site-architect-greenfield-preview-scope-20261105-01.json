@@ -1,0 +1,22 @@
+{
+  "action": "manager.capability.check",
+  "all_granted": true,
+  "checks": {
+    "operations.apply": true
+  },
+  "command_id": "cmd-site-architect-greenfield-preview-scope-20261105-01",
+  "command_sha256": "469af47fc5edb5868c3eecefb1731c08b3b95188eaf7664a14a76981c361bb31",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "scope_source": "research-manager-read-credential",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
