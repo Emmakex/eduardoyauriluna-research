@@ -18,6 +18,11 @@ ALLOWED_KEYS=('privacy-policy','legal-notice')
 ALLOWED_LANGUAGES=('en','es')
 PLAN_RE=re.compile(r'^erm-legal-plan-[a-f0-9]{20}-[a-f0-9]{8}$')
 OP_RE=re.compile(r'^erm-legal-op-[a-f0-9]{32}$')
+PRIVACY_GATE_PATH=ROOT/'scripts'/'phase6-privacy-release-gate.py'
+privacy_spec=importlib.util.spec_from_file_location('phase6_privacy_release_gate',PRIVACY_GATE_PATH)
+if privacy_spec is None or privacy_spec.loader is None:raise SystemExit('unable to load Privacy release gate')
+privacy_gate=importlib.util.module_from_spec(privacy_spec)
+privacy_spec.loader.exec_module(privacy_gate)
 
 spec=importlib.util.spec_from_file_location('phase6_legal_base',BASE_RUNNER)
 if spec is None or spec.loader is None: raise SystemExit('unable to load Phase 2D command runner')
@@ -89,7 +94,30 @@ def execute(command_path:Path,result_dir:Path)->int:
     if not token: raise CommandError('PHASE2D_MCP_TOKEN is required')
     base_url=os.environ.get('PHASE2D_MCP_BASE_URL',base.DEFAULT_BASE_URL).strip().rstrip('/')
     if base_url!=base.DEFAULT_BASE_URL: raise CommandError('legal content execution only permits the production MCP base URL')
-    payload=command['payload'];tenant=str(command['tenant']);client=base.McpClient(f'{base_url}/{tenant}',token)
+    payload=command['payload'];tenant=str(command['tenant'])
+    # Privacy content is never mutated without approved factual and owner-review evidence.
+    # Seal failed requests with a sanitized result; do not leave unresolved queue work.
+    if payload['key']=='privacy-policy':
+        try:
+            privacy_gate.assert_release_ready(
+                privacy_gate.load_ledger(),str(payload['language']),payload['sections']
+            )
+        except privacy_gate.PrivacyReleaseBlocked:
+            result={
+                'version':'1','status':'failed','tenant':tenant,
+                'action':ACTION,'command_id':command_id,'verified':False,
+                'error':{
+                    'code':'privacy_evidence_not_approved',
+                    'message':'Privacy publication requires a verified factual and owner approval ledger.'
+                },
+                'resource':{'key':'privacy-policy','language':payload['language']},
+                'privacy_release_authorized':False,
+                'rollback':{'attempted':False}
+            }
+            path=write_result(result_dir,command_id,result)
+            print(f'PRIVACY_BLOCKED {path}',file=sys.stderr)
+            return 1
+    client=base.McpClient(f'{base_url}/{tenant}',token)
     plan_id=None;operation_id=None;rollback_ok=None
     try:
         client.initialize();client.call('research_capabilities')
@@ -135,6 +163,12 @@ def self_test()->int:
     except SystemExit as exc:
         assert exc.code==2
     else:raise CommandError('legal CLI accepted competing command selectors')
+    try:
+        privacy_gate.assert_release_ready(privacy_gate.load_ledger(),'en',good['payload']['sections'])
+    except privacy_gate.PrivacyReleaseBlocked:
+        pass
+    else:
+        raise CommandError('A8 accepted unapproved Privacy release facts')
     print('PASS: Phase 6 legal content runner self-test');return 0
 
 
