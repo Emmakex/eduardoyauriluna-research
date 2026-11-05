@@ -1,0 +1,25 @@
+{
+  "action": "manager.capability.check",
+  "all_granted": true,
+  "checks": {
+    "evidence.read": true,
+    "evidence.write": true,
+    "operations.apply": true,
+    "operations.rollback": true
+  },
+  "command_id": "cmd-phase6-evidence-write-scope-20261105-01",
+  "command_sha256": "afc33afe1d52ccff07808ceea8400f6558fc2ed8af571c3f05cb133ad733a83e",
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": true,
+    "required_capabilities": [
+      "site.read"
+    ]
+  },
+  "read_only": true,
+  "scope_source": "research-manager-read-credential",
+  "status": "success",
+  "tenant": "eduardo-research",
+  "version": "1"
+}
