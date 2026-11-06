@@ -59,7 +59,8 @@ jobs:
           assert 'StrictHostKeyChecking=yes' in flow and 'UserKnownHostsFile=' in flow
           assert 'permissions:\n  contents: read' in flow
           assert 'workflow_dispatch:' not in flow
-          assert 'script' not in str(type(tree)) or True
+          assert isinstance(tree, ast.Module)
+          assert "site_page_slots_plan: { commercialCapability:'pages.write', backendScopes:['operations.apply']" in Path('bridge/research-manager-mcp/src/tool-authorization.ts').read_text()
           print('PASS: closed authorization boolean audit, no grant, Plan, Apply or secret logging')
           PY
 
