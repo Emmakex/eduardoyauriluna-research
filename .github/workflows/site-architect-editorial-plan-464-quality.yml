@@ -1,0 +1,74 @@
+name: Site Architect 464 Editorial Plan Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-editorial-plan-464.py'
+      - '.github/workflows/site-architect-editorial-plan-464.yml'
+      - '.github/workflows/site-architect-editorial-plan-464-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-editorial-plan-464.py'
+      - '.github/workflows/site-architect-editorial-plan-464.yml'
+      - '.github/workflows/site-architect-editorial-plan-464-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline synthetic contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-editorial-plan-464.py
+          python3 scripts/site-architect-editorial-plan-464.py --self-test
+          python3 scripts/site-architect-editorial-baseline-462.py --self-test
+
+      - name: Verify immutable scope and single-use production operation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+          s = Path('scripts/site-architect-editorial-plan-464.py').read_text()
+          w = Path('.github/workflows/site-architect-editorial-plan-464.yml').read_text()
+          tree = ast.parse(s)
+          functions = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+          assert 'COPIES = (' in s and 'PLAN_TOOL = "site_page_slots_plan"' in s
+          assert 'READ_TOOL = "site_pages_list"' in s
+          assert '"pages.write" in principal["capabilities"]' in s
+          assert '"pages.write" in tenant["entitlements"]' in s
+          assert 'validate_live(inventory, desired, archive)' in s
+          assert 'os.O_EXCL' in s
+          assert '"public_site_apply": "not_executed"' in s
+          assert 'confirmation_required' in s and 'before_sha256' in s and 'after_sha256' in s
+          assert s.count('"method": "tools/call"') == 2
+          assert 'PLAN_TOOL' in s and 'READ_TOOL' in s
+          assert 'subprocess.run(' not in s
+          assert 'site_page_slots_apply' not in s
+          assert 'site_greenfield_canonical_plan' not in s
+          assert 'workflow_dispatch:' not in w and 'schedule:' not in w
+          assert 'environment: production' in w and 'group: phase2c-ovh-production' in w
+          assert "github.actor == 'Emmakex'" in w and 'github.run_attempt == 1' in w
+          assert 'StrictHostKeyChecking=yes' in w and 'UserKnownHostsFile=' in w
+          assert 'permissions:\n  contents: read' in w
+          assert 'scripts/site-architect-editorial-plan-464.py' in w
+          assert {'authorized','validate_live','safe_plan','execute','self_test'}.issubset(functions)
+          print("PASS: four bounded one-slot Plans and separate live read, no Apply")
+          PY
+
+      - name: Pinned actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" \
+            .github/workflows/site-architect-editorial-plan-464.yml \
+            .github/workflows/site-architect-editorial-plan-464-quality.yml
