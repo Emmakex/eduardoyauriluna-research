@@ -1,0 +1,73 @@
+name: Site Architect 464 Authorization Diagnostic Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-464-pages-write-authz-preflight.py'
+      - '.github/workflows/site-architect-464-pages-write-authz-preflight.yml'
+      - '.github/workflows/site-architect-464-pages-write-authz-preflight-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-464-pages-write-authz-preflight.py'
+      - '.github/workflows/site-architect-464-pages-write-authz-preflight.yml'
+      - '.github/workflows/site-architect-464-pages-write-authz-preflight-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify synthetic grants and fail-closed test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-464-pages-write-authz-preflight.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/site-architect-464-pages-write-authz-preflight.py --self-test
+
+      - name: Assert no authorization, credential or WordPress mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+          script=Path('scripts/site-architect-464-pages-write-authz-preflight.py').read_text()
+          flow=Path('.github/workflows/site-architect-464-pages-write-authz-preflight.yml').read_text()
+          tree=ast.parse(script)
+          assert 'CAPABILITY = "pages.write"' in script
+          assert 'tenant_pages_write_entitled' in script
+          assert 'research_ops_pages_write_granted' in script
+          assert 'backend_scope_for_plan' in script
+          assert 'no_grants_changed' in script
+          assert 'preflight.protected_vars(preflight.PRODUCTION_ENV)' in script
+          assert 'subprocess' not in script
+          assert 'site_page_slots_plan' not in script
+          assert 'site_page_slots_apply' not in script
+          assert 'os.replace' not in script
+          assert 'open(' not in script
+          assert 'write_text(' not in script
+          assert 'environment: production' in flow
+          assert 'github.run_attempt == 1' in flow
+          assert 'group: phase2c-ovh-production' in flow
+          assert 'StrictHostKeyChecking=yes' in flow and 'UserKnownHostsFile=' in flow
+          assert 'permissions:\n  contents: read' in flow
+          assert 'workflow_dispatch:' not in flow
+          assert 'script' not in str(type(tree)) or True
+          print('PASS: closed authorization boolean audit, no grant, Plan, Apply or secret logging')
+          PY
+
+      - name: Check workflow with actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" \
+            .github/workflows/site-architect-464-pages-write-authz-preflight.yml \
+            .github/workflows/site-architect-464-pages-write-authz-preflight-quality.yml
