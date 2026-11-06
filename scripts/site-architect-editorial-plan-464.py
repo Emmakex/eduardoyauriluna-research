@@ -148,8 +148,10 @@ def validate_live(inventory: dict[str, Any], desired: dict[str, Any],
         expected = archived[(page, lang)]
         if stored != expected or slot not in stored:
             raise PlanError("selected Page slot has drifted since editorial acceptance")
-        if desired[page][lang].get(slot) == new_text:
-            raise PlanError("requested text already matches bundled Blueprint; no change")
+        if page == "about" and desired[page][lang].get(slot) != new_text:
+            raise PlanError("About must match the evidence-reviewed canonical Blueprint")
+        if page == "home" and desired[page][lang].get(slot) == new_text:
+            raise PlanError("Home must use the distinct evidence-reviewed new draft")
         if stored[slot] == new_text:
             raise PlanError("requested text already stored; no new plan needed")
         before[(page, lang)] = stored
