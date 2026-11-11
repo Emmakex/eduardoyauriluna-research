@@ -1,0 +1,30 @@
+{
+  "action": "legal.content.update",
+  "command_id": "cmd-phase6-minimal-privacy-es-20261111-01",
+  "command_sha256": "ffc1cd75f5d2c5cdce89b701fc4942edffe2a853420558ff8d633b6ccfac82d9",
+  "correlation": {
+    "operation_id": "erm-legal-op-68f66a2cdf66456e969aca05472d048e",
+    "plan_id": "erm-legal-plan-e4f89bc9fd4bd1f98cf0-cf3e6807"
+  },
+  "preflight": {
+    "checked": true,
+    "granted": true,
+    "read_only": false,
+    "required_capabilities": [
+      "pages.read",
+      "pages.write",
+      "site.diagnostics",
+      "operations.apply",
+      "operations.rollback"
+    ]
+  },
+  "resource": {
+    "key": "privacy-policy",
+    "language": "es",
+    "section_count": 4
+  },
+  "status": "success",
+  "tenant": "eduardo-research",
+  "verified": true,
+  "version": "1"
+}
