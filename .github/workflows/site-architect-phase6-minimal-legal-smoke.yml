@@ -1,0 +1,88 @@
+name: Site Architect Minimal Public Legal Closeout
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/site-architect-phase6-minimal-legal-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/site-architect-phase6-minimal-legal-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-legal:
+    name: Verify four public academic legal pages only
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Minimal HTTPS legal readback (EN/ES), no accounts, credentials or writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from urllib.request import Request, urlopen
+          from urllib.parse import urlencode
+          import re
+
+          paths = (
+              ("/privacy-policy/", "en", "privacy"),
+              ("/es/privacidad/", "es", "privacy"),
+              ("/legal-notice/", "en", "legal"),
+              ("/es/aviso-legal/", "es", "legal"),
+          )
+          class Sections(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.active = 0
+                  self.chunks = []
+                  self.sections = []
+              def handle_starttag(self, tag, attrs):
+                  attrs = dict(attrs)
+                  if tag.lower() == "section" and "research-legal-section" in (attrs.get("class") or "").split():
+                      if self.active:
+                          raise RuntimeError("unexpected nested legal section")
+                      self.active = 1
+                      self.chunks = []
+                  elif self.active:
+                      self.active += 1
+              def handle_endtag(self, tag):
+                  if not self.active: return
+                  self.active -= 1
+                  if self.active == 0:
+                      self.sections.append(" ".join(self.chunks).casefold())
+                      self.chunks = []
+              def handle_data(self, value):
+                  if self.active and value.strip(): self.chunks.append(value.strip())
+          for path, lang, kind in paths:
+              url = "https://eduardoyauriluna.com" + path + "?" + urlencode({"privacy-closeout": "20261111"})
+              req = Request(url, headers={
+                  "User-Agent": "Site-Architect-Academic-Minimal-Legal-Smoke/1.0",
+                  "Cache-Control": "no-cache",
+                  "Pragma": "no-cache",
+                  "Accept": "text/html",
+              })
+              with urlopen(req, timeout=20) as response:
+                  if response.status != 200 or "text/html" not in response.headers.get("Content-Type", "").lower():
+                      raise RuntimeError(f"{path}: unexpected public HTTP response")
+                  body = response.read(1_000_001)
+                  if len(body) > 1_000_000:
+                      raise RuntimeError(f"{path}: response is unbounded")
+                  html = body.decode(response.headers.get_content_charset() or "utf-8", "replace")
+              parser = Sections()
+              parser.feed(html); parser.close()
+              if len(parser.sections) != 4:
+                  raise RuntimeError(f"{path}: expected exactly four substantive legal sections, got {len(parser.sections)}")
+              complete = " ".join(parser.sections)
+              required = ("eduardo jose yauri luna", "hola@emmake.com")
+              if kind == "privacy":
+                  required += ("aepd.es", "legitimate interest" if lang == "en" else "interés legítimo")
+              if any(token not in complete for token in required):
+                  raise RuntimeError(f"{path}: minimum academic legal disclosure missing")
+              print(f"PUBLIC_LEGAL_OK {path} lang={lang} sections=4")
+          print("PHASE6_MINIMAL_LEGAL_PUBLIC_CLOSEOUT_OK pages=4 privacy=2 legal=2")
+          PY
