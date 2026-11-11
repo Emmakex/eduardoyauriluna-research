@@ -205,7 +205,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         return self_test() if args.self_test else apply_grant()
-    except Exception:
+    except Exception as exc:
+        if args.self_test:
+            import traceback
+            frames = traceback.extract_tb(exc.__traceback__)
+            last = frames[-1] if frames else None
+            print("SELF_TEST_DIAGNOSTIC " + type(exc).__name__ + " in " + (last.name if last else "unknown") + ":" + str(last.lineno if last else 0), file=sys.stderr)
         print("ERROR: bounded principal-only pages.write grant failed; no config, token or secret exported", file=sys.stderr)
         return 1
 
