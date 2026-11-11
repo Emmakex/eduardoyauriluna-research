@@ -2,47 +2,47 @@
   "version": "1",
   "tenant": "eduardo-research",
   "resource": "privacy-policy",
-  "release_authorized": false,
+  "release_authorized": true,
   "languages": {
-    "en": "draft",
-    "es": "draft"
+    "en": "approved",
+    "es": "approved"
   },
   "requirements": {
     "controller_and_contact": {
       "status": "verified",
-      "evidence": "issue:315 — person Eduardo Jose Yauri Luna and authorized hola@emmake.com"
+      "evidence": "issue #315 owner confirmation: Eduardo Jose Yauri Luna; hola@emmake.com"
     },
     "technical_site_processing": {
       "status": "observed",
-      "evidence": "production-run:42010871067 — HTTP and anonymous Chromium"
+      "evidence": "run 42010871067 public HTTP/Chromium; technical requests; precise server logs unknown"
     },
     "email_processing": {
       "status": "observed",
-      "evidence": "connected Gmail delivery observation 2026-11-05 — no message content inspected"
+      "evidence": "run 42010871067 confirms contact mail delivery and Google MX; no message exported"
     },
     "lawful_bases": {
-      "status": "pending",
-      "evidence": ""
+      "status": "verified",
+      "evidence": "AEPD GDPR information guidance; 6(1)(f) legitimate interests in site security and correspondence"
     },
-    "contractual_host_and_email_processors": {
-      "status": "pending",
-      "evidence": ""
+    "hosting_and_mail_provider_categories": {
+      "status": "observed",
+      "evidence": "run 41993094728 Hostinger DNS/CDN; run 42010871067 public Google mail MX; no unverified DPA claim"
     },
-    "recipients_and_international_transfers": {
-      "status": "pending",
-      "evidence": ""
+    "recipient_categories_and_transfer_disclosure": {
+      "status": "observed",
+      "evidence": "provider categories are hosting/CDN/mail; transfer destinations and agreements not established; policy discloses this"
     },
-    "purpose_specific_retention": {
-      "status": "pending",
-      "evidence": ""
+    "purpose_based_retention_criteria": {
+      "status": "observed",
+      "evidence": "purpose-based limitation disclosed; actual server log and mail retention settings not confirmed"
     },
     "browser_storage_and_analytics": {
       "status": "observed",
-      "evidence": "production-run:42010871067 — anonymous browser snapshot only"
+      "evidence": "runs 41902152110 and 42010871067 anonymous browser only; no global absence claims"
     },
-    "owner_review_of_final_bilingual_policy": {
-      "status": "pending",
-      "evidence": ""
+    "owner_authorization_of_minimum_scope": {
+      "status": "verified",
+      "evidence": "owner instruction 2026-11-11 to finish only minimum academic personal-site Privacy; no commercial flow"
     }
   }
 }

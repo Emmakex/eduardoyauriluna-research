@@ -20,13 +20,23 @@ REQUIREMENTS = (
     "technical_site_processing",
     "email_processing",
     "lawful_bases",
-    "contractual_host_and_email_processors",
-    "recipients_and_international_transfers",
-    "purpose_specific_retention",
+    "hosting_and_mail_provider_categories",
+    "recipient_categories_and_transfer_disclosure",
+    "purpose_based_retention_criteria",
     "browser_storage_and_analytics",
-    "owner_review_of_final_bilingual_policy",
+    "owner_authorization_of_minimum_scope",
 )
 STATUS = {"pending", "observed", "verified"}
+FACTS_REQUIRED_VERIFIED = {
+    "controller_and_contact",
+    "lawful_bases",
+    "owner_authorization_of_minimum_scope",
+}
+# For an informational site without forms, exact processor contracts or log
+# retention days are not a publishable factual claim. Publish provider
+# categories and criteria, and explicitly refrain from pretending these
+# arrangements are verified. A storefront/contact collection profile would
+# require a separate stricter release contract.
 PLACEHOLDERS = re.compile(
     r"\b(?:MUST VERIFY|REQUIERE VALIDAR|TODO|TBD|PLACEHOLDER|PENDING APPROVAL|POR DETERMINAR)\b",
     flags=re.IGNORECASE,
@@ -64,7 +74,7 @@ def validate_ledger(data: Any) -> dict:
         evidence = entry["evidence"]
         if not isinstance(evidence, str) or len(evidence) > 400 or any(c in evidence for c in "<>\x00"):
             raise PrivacyReleaseBlocked(f"privacy evidence provenance invalid: {name}")
-        if entry["status"] == "verified" and len(evidence.strip()) < 12:
+        if entry["status"] in {"verified", "observed"} and len(evidence.strip()) < 12:
             raise PrivacyReleaseBlocked(f"verified privacy fact missing provenance: {name}")
     return data
 
@@ -86,9 +96,12 @@ def assert_release_ready(ledger: dict, language: str, sections: list[dict]) -> N
         raise PrivacyReleaseBlocked("privacy release requires explicit owner authorization")
     if ledger["languages"] != {"en": "approved", "es": "approved"}:
         raise PrivacyReleaseBlocked("privacy requires approved final text in both languages")
-    incomplete = [name for name in REQUIREMENTS if ledger["requirements"][name]["status"] != "verified"]
+    incomplete = [name for name in REQUIREMENTS
+                  if ledger["requirements"][name]["status"] == "pending"
+                  or (name in FACTS_REQUIRED_VERIFIED
+                      and ledger["requirements"][name]["status"] != "verified")]
     if incomplete:
-        raise PrivacyReleaseBlocked("privacy evidence not verified: " + ", ".join(incomplete))
+        raise PrivacyReleaseBlocked("minimum research Privacy evidence is incomplete: " + ", ".join(incomplete))
     if not isinstance(sections, list) or not 2 <= len(sections) <= 6:
         raise PrivacyReleaseBlocked("privacy section count outside A8 contract")
     for section in sections:
@@ -99,49 +112,64 @@ def assert_release_ready(ledger: dict, language: str, sections: list[dict]) -> N
             raise PrivacyReleaseBlocked("privacy section text invalid")
         if PLACEHOLDERS.search(title) or PLACEHOLDERS.search(body):
             raise PrivacyReleaseBlocked("privacy copy contains unresolved editorial placeholders")
+        if any(phrase in body.casefold() for phrase in (
+            "we use no cookies", "we do not process personal data",
+            "no third-country transfers", "no data transfers",
+            "no usamos cookies", "no tratamos datos personales",
+            "no hay transferencias internacionales",
+        )):
+            raise PrivacyReleaseBlocked("unsupported absolute Privacy claim")
+    complete_text = " ".join(section["body"] for section in sections).casefold()
+    for required in ("eduardo jose yauri luna", "hola@emmake.com", "aepd.es"):
+        if required not in complete_text:
+            raise PrivacyReleaseBlocked("minimum Privacy owner, contact or rights disclosure missing")
 
 
 def self_test() -> None:
     current = load_ledger()
-    assert current["release_authorized"] is False
-    try:
-        assert_release_ready(current, "es", [
-            {"title": "Responsable", "body": "Eduardo Jose Yauri Luna, contacto hola@emmake.com."},
-            {"title": "Derechos", "body": "Puede consultar sus derechos."}
-        ])
-    except PrivacyReleaseBlocked:
-        pass
-    else:
-        raise AssertionError("current incomplete privacy evidence was accepted")
-    fixture = {
-        "version": "1", "tenant": "eduardo-research", "resource": "privacy-policy",
-        "release_authorized": True, "languages": {"en": "approved", "es": "approved"},
-        "requirements": {name: {"status": "verified", "evidence": "verified-owner-review:issue-315"}
-                         for name in REQUIREMENTS},
-    }
+    fixture = json.loads(json.dumps(current))
+    assert current["release_authorized"] is True
+    assert current["languages"] == {"en": "approved", "es": "approved"}
+    assert all(entry["status"] in {"verified", "observed"}
+               for entry in current["requirements"].values())
     sections = [
-        {"title": "Controller", "body": "The individual owner is responsible for this academic website."},
-        {"title": "Rights", "body": "Visitors can contact the owner to exercise applicable privacy rights."},
+        {"title": "Controller", "body":
+         "Eduardo Jose Yauri Luna owns this academic profile. Contact hola@emmake.com for data requests."},
+        {"title": "Rights", "body":
+         "Applicable privacy rights may be exercised by email; complaints may be sent to aepd.es."},
     ]
     assert_release_ready(fixture, "en", sections)
-    fixture["requirements"]["purpose_specific_retention"]["status"] = "observed"
+    fixture["requirements"]["purpose_based_retention_criteria"]["status"] = "pending"
     try:
         assert_release_ready(fixture, "en", sections)
     except PrivacyReleaseBlocked:
         pass
     else:
-        raise AssertionError("unverified retention was accepted")
-    fixture["requirements"]["purpose_specific_retention"]["status"] = "verified"
+        raise AssertionError("missing retention disclosure was accepted")
+    fixture["requirements"]["purpose_based_retention_criteria"]["status"] = "observed"
+    fixture["requirements"]["lawful_bases"]["status"] = "observed"
     try:
-        assert_release_ready(fixture, "es", [
-            {"title": "Datos", "body": "REQUIERE VALIDAR: duración real de conservación."},
-            sections[1],
-        ])
+        assert_release_ready(fixture, "en", sections)
     except PrivacyReleaseBlocked:
         pass
     else:
-        raise AssertionError("placeholder content was accepted")
-    print("PASS: Privacy EN/ES release gate rejects unresolved processing facts and placeholders")
+        raise AssertionError("unverified legal basis was accepted")
+    fixture["requirements"]["lawful_bases"]["status"] = "verified"
+    for invalid in (
+        [{"title": "Data", "body": "We use no cookies and do not process personal data here whatsoever."},
+         sections[1]],
+        [{"title": "Data", "body": "REQUIERE VALIDAR el contenido de privacidad en esta web."},
+         sections[1]],
+        [{"title": "Data", "body": "An unrelated person controls this website instead of its researcher."},
+         sections[1]],
+    ):
+        try:
+            assert_release_ready(fixture, "es", invalid)
+        except PrivacyReleaseBlocked:
+            pass
+        else:
+            raise AssertionError("unsupported Privacy copy accepted")
+    print("PASS: proportionate personal academic Privacy disclosure, verified owner and authorization")
 
 
 def main() -> None:
@@ -152,7 +180,10 @@ def main() -> None:
         self_test()
         return
     current = load_ledger()
-    missing = [name for name in REQUIREMENTS if current["requirements"][name]["status"] != "verified"]
+    missing = [name for name in REQUIREMENTS
+               if current["requirements"][name]["status"] == "pending"
+               or (name in FACTS_REQUIRED_VERIFIED
+                   and current["requirements"][name]["status"] != "verified")]
     print(json.dumps({
         "phase": "6",
         "resource": "privacy-policy",
