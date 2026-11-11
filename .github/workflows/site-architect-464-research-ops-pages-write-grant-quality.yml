@@ -1,0 +1,79 @@
+name: Site Architect 464 Research-Ops Grant Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-464-research-ops-pages-write-grant.py'
+      - '.github/workflows/site-architect-464-research-ops-pages-write-grant.yml'
+      - '.github/workflows/site-architect-464-research-ops-pages-write-grant-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-464-research-ops-pages-write-grant.py'
+      - '.github/workflows/site-architect-464-research-ops-pages-write-grant.yml'
+      - '.github/workflows/site-architect-464-research-ops-pages-write-grant-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify exact one-principal privilege change on synthetic protected registries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-464-research-ops-pages-write-grant.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/site-architect-464-pages-write-authz-preflight.py --self-test
+          python3 scripts/site-architect-464-research-ops-pages-write-grant.py --self-test
+
+      - name: Verify frozen tenant, no token rotation, approved principal and exact protected path
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+
+          script = Path('scripts/site-architect-464-research-ops-pages-write-grant.py').read_text()
+          flow = Path('.github/workflows/site-architect-464-research-ops-pages-write-grant.yml').read_text()
+          ast.parse(script)
+          assert 'TARGET = "research-ops"' in script
+          assert 'TENANT = "eduardo-research"' in script
+          assert 'CAPABILITY = "pages.write"' in script
+          assert 'REGISTRY = "MCP_PRINCIPALS_JSON"' in script
+          assert 'MCP_TENANTS_JSON' in script
+          assert 'before[key] != after[key] for key in before if key != REGISTRY' in script
+          assert 'other principal would change' in script
+          assert 'base.atomic_write(original, info)' in script
+          assert 'base.restart(image)' in script
+          assert 'base.verify_public_health()' in script
+          assert 'public_apply=not_executed' in script
+          assert 'site_page_slots_apply' not in script
+          assert 'site_page_slots_plan' not in script
+          assert 'site_greenfield_canonical_plan' not in script
+          assert 'environment: production' in flow
+          assert 'group: phase2c-ovh-production' in flow
+          assert 'github.run_attempt == 1' in flow
+          assert "github.actor == 'Emmakex'" in flow
+          assert 'StrictHostKeyChecking=yes' in flow
+          assert 'UserKnownHostsFile=' in flow
+          assert 'permissions:\n  contents: read' in flow
+          assert 'workflow_dispatch:' not in flow
+          assert 'schedule:' not in flow
+          print("PASS: exact principal-only grant, no other scopes, no Apply, rollback required")
+          PY
+
+      - name: Lint both protected authorization workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" \
+            .github/workflows/site-architect-464-research-ops-pages-write-grant.yml \
+            .github/workflows/site-architect-464-research-ops-pages-write-grant-quality.yml
