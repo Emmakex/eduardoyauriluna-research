@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-minimal-privacy-en-20261111-01",
+  "tenant": "eduardo-research",
+  "action": "legal.content.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "privacy-policy",
+    "language": "en",
+    "sections": [
+      {
+        "title": "Who is responsible for this website",
+        "body": "eduardoyauriluna.com is a personal academic website operated by Eduardo Jose Yauri Luna. For privacy questions or requests, write to hola@emmake.com. The site has no visitor accounts, contact or registration forms, newsletter registration or checkout."
+      },
+      {
+        "title": "Technical visits and search",
+        "body": "When you visit, the website and its delivery systems may handle technical request details such as IP address, date, requested page and browser information to serve the pages and maintain security. The Research Notes search is a same-site GET search: avoid putting personal information in search terms. The applicable basis for operating and protecting this site is legitimate interest."
+      },
+      {
+        "title": "Email, service providers and retention",
+        "body": "If you voluntarily email hola@emmake.com, your address and message are used to consider and answer your enquiry, based on the legitimate interest in handling correspondence. Hosting, content delivery and email providers support the site's technical operation. Technical records are subject to the operational retention settings relevant to delivery and security; correspondence is retained according to the time needed to respond and any applicable legal obligations. Provider-specific retention and any international processing arrangements have not been independently confirmed; you can request more information by email. No claim of zero international transfers is made."
+      },
+      {
+        "title": "Browser storage and your rights",
+        "body": "Limited anonymous checks of the public pages have not detected non-essential tracking cookies, but this does not establish the behaviour of every visit or external linked website. If non-essential tracking is introduced, the applicable information and consent controls will need updating. You may request access, rectification, erasure, restriction, objection or portability when applicable by emailing hola@emmake.com. You may complain to the Spanish Data Protection Agency at www.aepd.es."
+      }
+    ]
+  }
+}
