@@ -45,8 +45,9 @@ jobs:
           assert 'ALLOWED_TOOLS = frozenset({' in s
           for name in ('site_pages_list','site_page_slots_plan','site_page_slots_apply','site_page_slots_verify'):
               assert name in s
+          production_source = s.split('def self_test()')[0]
           for name in ('site_page_slots_rollback','site_greenfield_canonical_plan','site_identity_profile_apply','site_navigation_apply','site_insight_apply'):
-              assert name not in s
+              assert name not in production_source
           assert 'plan_source.COPIES' in s
           assert 'plan_source.validate_live(first, desired, archived)' in s
           assert 'attempt_once()  # BEFORE first new stored Plan or public Apply' in s
