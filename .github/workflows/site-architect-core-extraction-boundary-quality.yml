@@ -46,5 +46,11 @@ jobs:
           assert 'Site Architect' in rules and 'Site Manager' in rules
           assert 'LEGACY-COMPAT' in extraction
           assert 'No WordPress Apply' in report
+          assert '283 distinct assertions' in report
+          assert 'PASS_OFFLINE_ONLY' in report
+          assert 'genuine_wordpress_plugin_activation_certified=false' in report
+          assert 'eea6d690dd7b790ad34f99d17221f7bb680184a162559716c35cbc3e85920d40' in report
+          assert '6c6b58e11e943628d9deff3cc75614de5f3fece12271c2c44fba19612329a6c8' in report
+          assert '2ba903a71d727b2dba410c2bb630960afb6d425bdc20253995900f4b97ed3fc9' in report
           print('PASS: independent Core artifact recorded, Eduardo Research boundary and legacy compatibility preserved')
           PY
