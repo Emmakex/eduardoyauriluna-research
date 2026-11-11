@@ -20,7 +20,7 @@
 | The website uses Hostinger-managed DNS | **Publicly observed; provider documentation corroborates** | May cite DNS operator, not a processor contract | GitHub run 41993094728 DNS records lunar.dns-parking.com and solar.dns-parking.com; Hostinger DNS support |
 | A Hostinger CDN/edge serves the public site | **Strong public network evidence** | May describe observed delivery stack, not infer contractual data-processing arrangements | GitHub run 41993094728 header Server: hcdn, Hostinger CDN docs |
 | Production WordPress host, account owner and precise contracting legal entity | **Not yet verified contractually** | Do not name a processor or country in public legal copy yet | Provider account / invoice / DPA needed |
-| Public site has two anonymous GET search forms (insights EN/ES), and no visible contact forms | **Observed on 16-page HTML snapshot** | Describe only the tested anonymous public behavior | GitHub run 41899408356 |
+| Public site has two anonymous GET search forms (insights EN/ES), and no visible contact forms | **Observed on 16-page HTML snapshot; user additionally confirmed no contact/lead forms** | Describe bounded direct-entry observation and retain a failing regression guard; no assertion about all forms globally | GitHub run 41899408356, owner confirmation 2026-11-05 |
 | A Chromium snapshot of eight routes saw no external network hosts, no cookies or localStorage keys | **Observed in bounded anonymous browser test** | May cite in engineering evidence only; cannot claim no tracking exists in all sessions | GitHub run 41902152110 |
 | Chromium saw the WordPress sessionStorage key wpEmojiSettingsSupports | **Observed** | Technical inventory; do not misrepresent it as absence of browser storage | GitHub run 41902152110 |
 | Initial HTML contains a www.googletagmanager.com preconnect hint | **Observed**, not evidence of loaded analytics | Do not infer GTM tags, analytics, consent or third-party transfers from the hint | GitHub run 41899408356 |
@@ -150,6 +150,36 @@ The text below is an **editorial proposal**, not a statement that all indicated 
 - `scripts/phase6-legal-content-runner.py` calls the guard **only for `privacy-policy`** before any MCP Preview / Apply, and writes a sanitized terminal failure if authorization is incomplete. `legal-notice` is unaffected; the two successfully verified live notices remain untouched.
 - This gate cannot by itself confirm the accuracy of a human assertion. Every release status must be reviewed against evidence; never flip a `pending` / `observed` flag to `verified` without checking the underlying configuration and obtaining the website owner's documented approval.
 - No privacy content is published or represented as accepted by this cut. Its expected CI outcome while blocked is a **successful gate self-test** showing `release_ready=false`, not a false production-privacy certification.
+
+## 3F. Academic site — no direct visitor-data collection contract (2026-11-05)
+
+- The owner has confirmed that `eduardoyauriluna.com` is an academic website **without contact, account-registration or lead-capture forms**. This does **not** mean zero personal data: server/IP access logging and voluntary messages sent to the authorized public mailbox are separate possible processing activities.
+- An earlier 16-page anonymous public HTML inspection found two same-site **GET search forms** on Insights EN/ES, not contact forms. Search requests can still appear in web server access logs, including query strings; therefore do not claim that searches cannot produce personal or identifiable information.
+- The independent production inventory now **fails closed** if any of these direct-collection signals appear in the rendered public HTML: POST/other-than-GET form, external form action, email/telephone/password/file input, textarea, or non-search text/number/date entry field. It allows simple same-origin GET search fields, without logging visitor-submitted values. A regression fixture verifies search is permitted and lead capture is rejected.
+- This check covers only the 16 fixed anonymous HTML page snapshots; it does not prove there is no JavaScript-injected form after interaction or any form on unvisited/authenticated pages. Browser and technical observations remain separate evidence.
+- In the final ES/EN Privacy copy, prefer a plain statement that **this website does not ask visitors to submit data through contact or registration forms** and acknowledge server-connection records and voluntary email correspondence. Avoid the false categorical statement **"no se recogen ni conservan datos"**.
+- Retention language must describe actual practice: GDPR Article 13 accepts a real, determinable retention *criterion* when an exact fixed period cannot be given, but neither "as long as needed" nor an invented number of days substitutes for reviewing the owner's actual practices and providers. See https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-de-informacion and https://knowledge.workspace.google.com/admin/gmail/advanced/manage-email-storage-with-auto-delete-settings.
+
+## 3G. Exact, minimal owner/account evidence needed for Privacy release (2026-11-05)
+
+The no-contact-form evidence narrows Privacy to **technical delivery logs** and **optional emails initiated outside the website**. It does **not** justify a universal claim that no visitor data is ever processed. This is a minimal accountable checklist, not a request for private logs, messages, passwords, account identifiers or tax documents.
+
+**A. Hosting administrator — production site only**
+1. In the actual account for `eduardoyauriluna.com`, check **hPanel → Websites → Manage site → Traffic → Access logs**. Hostinger [documents](https://www.hostinger.com/support/5650167-how-to-use-the-traffic-section-on-hostinger-dashboard-at-hostinger/) that HTTP requests and IPs can appear here.
+2. Establish the real **log retention/rotation policy** and provider identity for this hosting plan using account support or contractual settings. **Do not equate the seven-day *filter/view range* with a seven-day storage period.** Confirm if site-specific application/PHP logs are enabled and how long they are kept, without copying entries.
+3. Check for any analytics/tracking scripts beyond the bounded anonymous-browser observations. Absence of observed cookies on eight fixed routes is not global proof.
+
+**B. Workspace administrator — only the mailbox receiving `hola@emmake.com`**
+1. Identify the actual mailbox/alias and whether received academic emails are currently retained manually or under an organization-wide policy. Connected Gmail delivery was verified, but mailbox contents should not be copied into engineering records.
+2. Inspect **Admin Console → Apps → Google Workspace → Gmail → Compliance → Email and chat auto-deletion**, plus Google Vault retention if used. [Google's instructions](https://knowledge.workspace.google.com/admin/gmail/advanced/manage-email-storage-with-auto-delete-settings?hl=es) explain configurable periods and exceptions. **Do not assume the 30-day Trash period is the regular inbox retention period.**
+3. Record only the **policy outcome** (e.g. actual retention period or understandable determinable criteria, deletion/archival procedure and relevant exceptions), the processor/transfer posture and internal evidence reference, not personal emails or protected account details.
+
+**C. Controller review and bilingual release**
+1. Confirm that replies to voluntary academic contact are the only public mailbox purpose for this site; determine and document the legal basis and the period/criterion actually applied to such enquiries.
+2. Confirm the technical-purpose basis for hosting security/delivery, categories of recipients/providers and international transfers if applicable. Do not name specific legal entities or fixed periods without evidence.
+3. Compare complete **Spanish + English** text. It must plainly say **no contact/registration or lead-capture forms**, distinguish GET site search from voluntary external email, and disclose relevant technical access data, real retention criteria, rights and controller contact.
+4. The [AEPD guidance](https://www.aepd.es/guias/informe-politicas-de-privacidad-adaptacion-rgpd.pdf) rejects indeterminate retention expressions such as *«mientras exista un interés mutuo»*; the visitor must be able to understand approximately how long data is kept. Keep `config/phase6-privacy-release-evidence.json` **fail-closed** until all substantive requirements have real evidence and the owner has approved both languages.
+5. Then and only then, use the existing **A8 Preview → Apply → rendered Verify** on the two Privacy resources, followed by the independent Phase 6 visitor audit. The publication guard and checks are not a legal opinion.
 
 ## 4. Publication gate — must be fail-closed
 
