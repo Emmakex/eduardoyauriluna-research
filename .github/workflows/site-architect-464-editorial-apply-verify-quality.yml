@@ -1,0 +1,79 @@
+name: Site Architect 464 Editorial Apply and Verify Quality
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-464-editorial-apply-verify.py'
+      - '.github/workflows/site-architect-464-editorial-apply-verify.yml'
+      - '.github/workflows/site-architect-464-editorial-apply-verify-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-464-editorial-apply-verify.py'
+      - '.github/workflows/site-architect-464-editorial-apply-verify.yml'
+      - '.github/workflows/site-architect-464-editorial-apply-verify-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Synthetic owner-authorized exact scope, Apply and rendered Verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-464-editorial-apply-verify.py
+          python3 scripts/site-architect-editorial-plan-464.py --self-test
+          python3 scripts/site-architect-464-editorial-apply-verify.py --self-test
+
+      - name: Static safeguards against any unauthorized MCP operation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+
+          s=Path('scripts/site-architect-464-editorial-apply-verify.py').read_text()
+          w=Path('.github/workflows/site-architect-464-editorial-apply-verify.yml').read_text()
+          ast.parse(s)
+          assert 'ALLOWED_TOOLS = frozenset({' in s
+          for name in ('site_pages_list','site_page_slots_plan','site_page_slots_apply','site_page_slots_verify'):
+              assert name in s
+          production_source = s.split('def self_test()')[0]
+          for name in ('site_page_slots_rollback','site_greenfield_canonical_plan','site_identity_profile_apply','site_navigation_apply','site_insight_apply'):
+              assert name not in production_source
+          assert 'plan_source.COPIES' in s
+          assert 'plan_source.validate_live(first, desired, archived)' in s
+          assert 'attempt_once()  # BEFORE first new stored Plan or public Apply' in s
+          assert 'os.O_EXCL' in s and 'os.O_NOFOLLOW' in s
+          assert 'confirm": True' in s and 'rendered": True' in s
+          assert 'validate_applied(applied, safe, desired_text)' in s
+          assert 'validate_verified(verified, safe, desired_text, operation_id)' in s
+          assert 'compare_final(baseline, copy_slots(final))' in s
+          assert 'all(text in reviewed for _, _, _, text in COPIES)' in s
+          assert 'subprocess.run(' not in s
+          assert 'environment: production' in w
+          assert 'group: phase2c-ovh-production' in w
+          assert 'github.run_attempt == 1' in w
+          assert "github.actor == 'Emmakex'" in w
+          assert 'StrictHostKeyChecking=yes' in w and 'UserKnownHostsFile=' in w
+          assert 'permissions:\n  contents: read' in w
+          assert 'workflow_dispatch:' not in w and 'schedule:' not in w
+          assert 'site-architect-464-editorial-apply-verify.py' in w
+          print('PASS: exactly four owner-authorized editorial slots, rendered Verify, final no-drift readback')
+          PY
+
+      - name: Lint both workflow files
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" \
+            .github/workflows/site-architect-464-editorial-apply-verify.yml \
+            .github/workflows/site-architect-464-editorial-apply-verify-quality.yml
