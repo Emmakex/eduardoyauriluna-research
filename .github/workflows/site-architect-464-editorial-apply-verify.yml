@@ -1,0 +1,94 @@
+name: Site Architect 464 Approved Editorial Apply and Rendered Verify
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-464-editorial-apply-verify.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  apply-verify:
+    name: Owner-approved four Page slot Apply and rendered Verify on OVH
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1 && github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test exactly four authorized EN-ES slot operations and immutable readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-464-editorial-apply-verify.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/site-architect-editorial-plan-464.py --self-test
+          python3 scripts/site-architect-464-editorial-apply-verify.py --self-test
+
+      - name: Install existing pinned OVH SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?existing protected SSH key required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?existing pinned host identity required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Apply exactly four owner-approved Page slots and verify publicly rendered state
+        shell: bash
+        env:
+          OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+          OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?existing OVH host required}"
+          : "${OVH_MCP_USER:?existing OVH user required}"
+          TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          DIR="/tmp/site-architect-464-apply-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          cleanup() { "${SSH[@]}" "$TARGET" "rm -rf -- '$DIR'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "${SSH[@]}" "$TARGET" "umask 077; mkdir -m 700 -p -- '$DIR/editorial-snapshots'"
+          "${SCP[@]}" \
+            scripts/site-architect-464-editorial-apply-verify.py \
+            scripts/site-architect-editorial-plan-464.py \
+            scripts/site-architect-greenfield-protected-preview.py \
+            scripts/site-architect-greenfield-authz-preflight.py \
+            scripts/research-gateway-v2-greenfield-plan.py \
+            scripts/site-architect-hydration-readonly-audit.py \
+            scripts/site-architect-editorial-baseline-462.py \
+            scripts/phase2d-command-runner.py \
+            "$TARGET:$DIR/"
+          "${SCP[@]}" \
+            wordpress/plugins/eduardo-research-manager/blueprints/eduardo-research.json \
+            "$TARGET:$DIR/eduardo-research-blueprint-audit.json"
+          "${SCP[@]}" docs/68-site-architect-hydration-editorial-triage.md \
+            "$TARGET:$DIR/reviewed-editorial-464.md"
+          "${SCP[@]}" \
+            commands/gateway-v2/results/cmd-v2-resource-page-home-en-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-home-es-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-about-en-20261028-01.json \
+            commands/gateway-v2/results/cmd-v2-resource-page-about-es-20261028-01.json \
+            "$TARGET:$DIR/editorial-snapshots/"
+          "${SSH[@]}" "$TARGET" "python3 '$DIR/site-architect-464-editorial-apply-verify.py' --apply-verify-once"
+
+      - name: Independently verify public MCP health after all four Applies
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 https://mcp.kairoseth.com/healthz \
+            | jq -e '.ok == true and .routing == "shared" and .persistent_telemetry == true' >/dev/null
+          echo 'EDITORIAL_464_APPROVED_APPLY_PUBLIC_MCP_HEALTH_OK'
