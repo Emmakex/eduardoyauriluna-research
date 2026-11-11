@@ -61,6 +61,21 @@ jobs:
       - name: Validate browser privacy observation syntax
         run: node --check .github/scripts/phase6-production-browser-privacy-observation.mjs
 
+  privacy-form-contract:
+    name: Verify academic no-capture forms on live EN/ES routes
+    # Read-only PR acceptance independent from the incomplete legal/visitor audit.
+    # Do not extend this to authenticated routes, form submissions or query values.
+    if: github.event_name == 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect only the fixed anonymous HTML routes and reject data collection forms
+        run: python3 .github/scripts/phase6-production-privacy-technical-inventory.py
+
   production:
     name: Audit production visitor surfaces
     if: github.event_name != 'pull_request'
