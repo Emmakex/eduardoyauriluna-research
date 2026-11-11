@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "command_id": "cmd-phase6-minimal-privacy-es-20261111-01",
+  "tenant": "eduardo-research",
+  "action": "legal.content.update",
+  "requested_by": "chatgpt",
+  "payload": {
+    "key": "privacy-policy",
+    "language": "es",
+    "sections": [
+      {
+        "title": "Responsable y contacto",
+        "body": "eduardoyauriluna.com es la web académica personal de Eduardo Jose Yauri Luna, que actúa como responsable de su funcionamiento. Para consultas de privacidad o ejercicio de derechos puede escribir a hola@emmake.com. La web no ofrece cuentas de usuario, formularios de contacto o registro, suscripción a boletines ni procesos de compra."
+      },
+      {
+        "title": "Visitas técnicas y búsqueda",
+        "body": "Al visitar el sitio, la web y sus sistemas de entrega pueden gestionar datos técnicos de la petición, como dirección IP, fecha, página solicitada e información del navegador, para servir el contenido y mantener la seguridad. La búsqueda de notas utiliza un formulario GET de la propia web: evite incluir datos personales en las búsquedas. La base jurídica para el funcionamiento y la protección de esta web es el interés legítimo."
+      },
+      {
+        "title": "Correos, proveedores y conservación",
+        "body": "Si escribe voluntariamente a hola@emmake.com, se utilizarán su dirección y su mensaje para valorar y responder la consulta, sobre la base del interés legítimo en atender la correspondencia. Intervienen servicios de alojamiento, distribución de contenido y correo necesarios para la operación técnica. Los registros técnicos están sujetos a la configuración operativa de conservación relacionada con el servicio y su seguridad; la correspondencia se conserva según el tiempo necesario para responder y las obligaciones legales aplicables. No se han confirmado de forma independiente los plazos específicos de cada proveedor ni sus posibles tratamientos internacionales; puede pedir más detalles por correo. No se afirma la ausencia de transferencias internacionales."
+      },
+      {
+        "title": "Almacenamiento del navegador y derechos",
+        "body": "Las comprobaciones anónimas limitadas de las páginas públicas no han detectado cookies de seguimiento no esenciales, lo que no garantiza el comportamiento de todas las visitas ni el de los sitios externos enlazados. Si se añadiera seguimiento no esencial, deberían actualizarse la información y los mecanismos de consentimiento aplicables. Puede solicitar acceso, rectificación, supresión, limitación, oposición o portabilidad cuando proceda mediante hola@emmake.com. También puede reclamar ante la Agencia Española de Protección de Datos en www.aepd.es."
+      }
+    ]
+  }
+}
