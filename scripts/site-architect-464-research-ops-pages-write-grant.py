@@ -178,7 +178,7 @@ def self_test() -> int:
         altered.pop(missing)
         try:
             rewrite("\n".join(k + "=" + v for k, v in altered.items()) + "\n")
-        except (GrantError, preflight.ProtectedConfigError, KeyError, ValueError):
+        except (GrantError, preflight.ProtectedConfigError, audit.preflight.ProtectedConfigError, KeyError, ValueError):
             pass
         else:
             raise AssertionError("incomplete protected authorization was accepted")
