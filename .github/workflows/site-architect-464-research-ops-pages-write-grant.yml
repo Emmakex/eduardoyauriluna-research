@@ -1,0 +1,80 @@
+name: Site Architect 464 Exact Research-Ops Pages Write Grant
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-464-research-ops-pages-write-grant.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2c-ovh-production
+  cancel-in-progress: false
+
+jobs:
+  grant:
+    name: Add pages.write to research-ops only, verify and rollback if unhealthy
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1 && github.actor == 'Emmakex'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Synthetic exact-grant self-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/site-architect-464-research-ops-pages-write-grant.py
+          python3 scripts/site-architect-greenfield-authz-preflight.py --self-test
+          python3 scripts/site-architect-464-pages-write-authz-preflight.py --self-test
+          python3 scripts/site-architect-464-research-ops-pages-write-grant.py --self-test
+
+      - name: Install already-verified pinned OVH SSH trust
+        shell: bash
+        env:
+          OVH_MCP_SSH_KEY: ${{ secrets.OVH_MCP_SSH_KEY }}
+          OVH_MCP_SSH_KNOWN_HOSTS: ${{ secrets.OVH_MCP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_SSH_KEY:?existing SSH key required}"
+          : "${OVH_MCP_SSH_KNOWN_HOSTS:?verified host identity required}"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$OVH_MCP_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$OVH_MCP_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Make exactly one principal grant and verify same-digest OVH MCP
+        shell: bash
+        env:
+          OVH_MCP_HOST: ${{ secrets.OVH_MCP_HOST }}
+          OVH_MCP_USER: ${{ secrets.OVH_MCP_USER }}
+        run: |
+          set -euo pipefail
+          : "${OVH_MCP_HOST:?existing production host required}"
+          : "${OVH_MCP_USER:?existing production SSH user required}"
+          TARGET="${OVH_MCP_USER}@${OVH_MCP_HOST}"
+          DIR="/tmp/site-architect-pages-grant-464-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          SCP=(scp -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          cleanup() { "${SSH[@]}" "$TARGET" "rm -rf -- '$DIR'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "${SSH[@]}" "$TARGET" "umask 077; mkdir -m 700 -- '$DIR'"
+          "${SCP[@]}" \
+            scripts/site-architect-greenfield-authz-preflight.py \
+            scripts/site-architect-greenfield-authz-grant.py \
+            scripts/site-architect-464-pages-write-authz-preflight.py \
+            scripts/site-architect-464-research-ops-pages-write-grant.py \
+            "$TARGET:$DIR/"
+          "${SSH[@]}" "$TARGET" "python3 '$DIR/site-architect-464-research-ops-pages-write-grant.py' --grant"
+          "${SSH[@]}" "$TARGET" "python3 '$DIR/site-architect-464-pages-write-authz-preflight.py' --inspect-production"
+
+      - name: Independently confirm shared MCP health without WordPress Apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 https://mcp.kairoseth.com/healthz \
+            | jq -e '.ok == true and .routing == "shared" and .persistent_telemetry == true' >/dev/null
+          echo 'SITE_ARCHITECT_464_PAGES_GRANT_PUBLIC_HEALTH_OK public_apply=not_executed'
