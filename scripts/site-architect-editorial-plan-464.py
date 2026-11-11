@@ -253,6 +253,10 @@ def self_test() -> None:
         blocked["MCP_TENANTS_JSON" if p is tenants else "MCP_PRINCIPALS_JSON"] = json.dumps(updated)
         assert authorized(blocked) is False
     assert len(COPIES) == len(set((p, l, slot) for p, l, slot, _ in COPIES)) == 4
+    # The intended public copy must match the reviewed, versioned academic source
+    # before *any* protected Plan script can be deployed for this cut.
+    reviewed = (HERE.parent / "docs/68-site-architect-hydration-editorial-triage.md").read_text(encoding="utf-8")
+    assert all(text in reviewed for _, _, _, text in COPIES)
     plan = {
         "operation": "page-slots-update", "status": "planned", "confirmation_required": True,
         "apply_allowed": True, "risk": "editorial-review", "confirmation_class": "explicit",
