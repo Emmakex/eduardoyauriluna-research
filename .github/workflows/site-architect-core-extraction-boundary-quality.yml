@@ -1,0 +1,50 @@
+name: Site Architect Core Extraction Boundary Quality
+
+on:
+  pull_request:
+    paths:
+      - 'docs/69-site-architect-core-extraction-reference-boundary.md'
+      - '.github/workflows/site-architect-core-extraction-boundary-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/69-site-architect-core-extraction-reference-boundary.md'
+      - '.github/workflows/site-architect-core-extraction-boundary-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Preserve Eduardo Research vertical and immutable WordPress runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check existing Research vertical and Theme contract delegates remain intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
+          python3 - <<'PY'
+          from pathlib import Path
+
+          report = Path('docs/69-site-architect-core-extraction-reference-boundary.md').read_text(encoding='utf-8')
+          blueprint = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php').read_text(encoding='utf-8')
+          registry = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php').read_text(encoding='utf-8')
+          rules = Path('ENGINEERING_GREENFIELD_RULE.md').read_text(encoding='utf-8')
+          extraction = Path('docs/SITE_ARCHITECT_EXTRACTION_MAP.md').read_text(encoding='utf-8')
+          assert '02cc336f4d264264d9bbd38c178645b5ecc134125b4a29c8c28c1d860018e1fe' in report
+          assert '41 assertions' in report and 'candidate v0.1.0' in report
+          assert 'runtime unchanged' in report.lower()
+          assert 'not a byte-for-byte' in report.lower()
+          assert 'Eduardo_Research_Manager_Resource_Registry::vertical_blueprint_resource_keys()' in blueprint
+          assert 'array(\'pages\')' in blueprint
+          assert 'function vertical_blueprint_resource_keys()' in registry
+          assert 'Site Architect' in rules and 'Site Manager' in rules
+          assert 'LEGACY-COMPAT' in extraction
+          assert 'No WordPress Apply' in report
+          print('PASS: independent Core artifact recorded, Eduardo Research boundary and legacy compatibility preserved')
+          PY
