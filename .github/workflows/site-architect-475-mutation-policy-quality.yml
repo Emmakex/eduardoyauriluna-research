@@ -75,6 +75,8 @@ jobs:
           assert 'Eduardo_Research_Manager_Resource_Registry' not in risk
           assert 'str_contains($key' not in risk
           assert "if (empty($plan['evidence_confirmed']))" in plan
+          assert "(string) $plan['risk'] !== (string) $rebuilt['risk']" in plan
+          assert "return new WP_Error('research_manager_plan_changed'" in plan
           assert "trim((string) $plan['evidence_reference'])" in plan
           assert "self::evidence_blocker_message($policy, 'confirmation')" in plan
           assert "self::evidence_blocker_message($policy, 'reference')" in plan
