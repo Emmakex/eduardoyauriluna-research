@@ -60,8 +60,11 @@ final class Eduardo_Research_Manager_Plan {
             'evidence_reference'=>(string) $plan['evidence_reference'],
         ), $policy, $contract);
         if (is_wp_error($rebuilt)) { return $rebuilt; }
-        if (! hash_equals((string) $rebuilt['checksum'], (string) $plan['checksum'])) {
-            return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum does not match its contents. Re-preview the change.');
+        if (! hash_equals((string) $rebuilt['checksum'], (string) $plan['checksum'])
+            || (string) $plan['risk'] !== (string) $rebuilt['risk']) {
+            // Risk is a derived security property. A caller must not downgrade
+            // evidence-required to standard while keeping a valid checksum.
+            return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum or derived risk does not match its contents. Re-preview the change.');
         }
         return true;
     }
