@@ -150,7 +150,7 @@ final class Eduardo_Research_Manager_Plan {
             $post_id = absint($action['post_id'] ?? 0);
             $key = sanitize_key((string) ($action['key'] ?? ''));
             if ($post_id <= 0 || ! get_post($post_id)) { return new WP_Error('research_manager_invalid_post', 'Post metadata mutation requires an existing WordPress resource.'); }
-            if (! self::allowed_meta_key($key)) { return new WP_Error('research_manager_meta_not_allowed', 'This metadata key is outside the Research Theme contract.'); }
+            if (! self::allowed_meta_key($key, $policy)) { return new WP_Error('research_manager_meta_not_allowed', 'This metadata key is outside the Research Theme contract.'); }
             return array('type'=>'post_meta','post_id'=>$post_id,'key'=>$key,'value'=>$action['value'] ?? null);
         }
         if ('post_field' === $type) {
@@ -550,25 +550,9 @@ final class Eduardo_Research_Manager_Plan {
         return false;
     }
 
-    private static function allowed_meta_key(string $key): bool {
-        $shared = array(
-            '_eduardo_research_role',
-            '_eduardo_research_model',
-            '_eduardo_research_manager_creation_token',
-            '_eduardo_research_translation_evidence',
-            '_research_language',
-            '_research_insight_type',
-            '_research_insight_line_relations',
-            '_research_translation_en',
-            '_research_translation_es',
-        );
-        if (in_array($key, $shared, true)) { return true; }
-
-        foreach (Eduardo_Research_Manager_Resource_Registry::all() as $resource) {
-            $meta = is_array($resource['meta'] ?? null) ? $resource['meta'] : array();
-            if (in_array($key, array_values($meta), true)) { return true; }
-        }
-        return false;
+    private static function allowed_meta_key(string $key, Site_Architect_Mutation_Policy $policy): bool {
+        // Do not grant rights merely because a descriptive registry knows a key.
+        return in_array($key, $policy->allowed_meta_keys(), true);
     }
 
     private static function sanitize_post_field_value(string $field, mixed $value): mixed {
