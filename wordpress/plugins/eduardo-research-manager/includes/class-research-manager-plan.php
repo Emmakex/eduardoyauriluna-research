@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-mutation-policy.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-mutation-policy.php';
+
 final class Eduardo_Research_Manager_Plan {
-    private const ALLOWED_OPTIONS = array(
-        'eduardo_research_evidence','eduardo_research_model','eduardo_research_model_es',
-        'eduardo_research_identity','eduardo_research_native_languages',
-    );
     private const ALLOWED_POST_FIELDS = array('post_title','post_excerpt','post_content','menu_order','post_status');
     private const MAX_TITLE_BYTES = 200;
     private const MAX_EXCERPT_BYTES = 1000;
     private const MAX_CONTENT_BYTES = 60000;
 
-    public static function create(string $intent, array $actions, array $context = array()): array|WP_Error {
+    public static function create(string $intent, array $actions, array $context = array(), ?Site_Architect_Mutation_Policy $policy = null, ?Eduardo_Research_Manager_Contract $contract = null): array|WP_Error {
+        $policy = $policy ?? new Eduardo_Research_Manager_Research_Mutation_Policy();
+        $contract = $contract ?? new Eduardo_Research_Manager_Contract();
         $intent = sanitize_text_field($intent);
         if ('' === $intent) { return new WP_Error('research_manager_missing_intent', 'A human-readable mutation intent is required.'); }
         if (! $actions) { return new WP_Error('research_manager_empty_plan', 'At least one mutation action is required.'); }
@@ -24,7 +25,7 @@ final class Eduardo_Research_Manager_Plan {
         $risk = 'standard';
         foreach ($actions as $index => $action) {
             if (! is_array($action)) { return new WP_Error('research_manager_invalid_action', sprintf('Action %d must be an array.', $index)); }
-            $normalized = self::normalize_action($action);
+            $normalized = self::normalize_action($action, $policy, $contract);
             if (is_wp_error($normalized)) { return $normalized; }
             $signature = self::target_signature($normalized);
             if (isset($targets[$signature])) { return new WP_Error('research_manager_duplicate_target', 'A mutation plan may change each target only once.'); }
@@ -49,7 +50,7 @@ final class Eduardo_Research_Manager_Plan {
         );
     }
 
-    public static function validate(array $plan): bool|WP_Error {
+    public static function validate(array $plan, ?Site_Architect_Mutation_Policy $policy = null, ?Eduardo_Research_Manager_Contract $contract = null): bool|WP_Error {
         $required = array('id','version','intent','actions','risk','evidence_confirmed','evidence_reference','checksum');
         foreach ($required as $key) {
             if (! array_key_exists($key, $plan)) { return new WP_Error('research_manager_invalid_plan', 'Mutation plan is missing a required field: ' . $key); }
@@ -57,7 +58,7 @@ final class Eduardo_Research_Manager_Plan {
         $rebuilt = self::create((string) $plan['intent'], is_array($plan['actions']) ? $plan['actions'] : array(), array(
             'evidence_confirmed'=>! empty($plan['evidence_confirmed']),
             'evidence_reference'=>(string) $plan['evidence_reference'],
-        ));
+        ), $policy, $contract);
         if (is_wp_error($rebuilt)) { return $rebuilt; }
         if (! hash_equals((string) $rebuilt['checksum'], (string) $plan['checksum'])) {
             return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum does not match its contents. Re-preview the change.');
@@ -65,8 +66,8 @@ final class Eduardo_Research_Manager_Plan {
         return true;
     }
 
-    public static function apply_gate(array $plan): bool|WP_Error {
-        $valid = self::validate($plan);
+    public static function apply_gate(array $plan, ?Site_Architect_Mutation_Policy $policy = null, ?Eduardo_Research_Manager_Contract $contract = null): bool|WP_Error {
+        $valid = self::validate($plan, $policy, $contract);
         if (is_wp_error($valid)) { return $valid; }
         if ('evidence-required' === (string) $plan['risk']) {
             if (empty($plan['evidence_confirmed'])) {
@@ -117,10 +118,17 @@ final class Eduardo_Research_Manager_Plan {
         return 'standard';
     }
 
-    private static function normalize_action(array $action): array|WP_Error {
+    private static function normalize_action(array $action, Site_Architect_Mutation_Policy $policy, Eduardo_Research_Manager_Contract $contract): array|WP_Error {
         $type = sanitize_key((string) ($action['type'] ?? ''));
+        // Explicit authorization before any normalization. No runtime request or Registry grants an operation.
+        if (! in_array($type, $policy->allowed_action_types(), true)) {
+            return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
+        }
         if ('option' === $type) {
             $key = sanitize_key((string) ($action['key'] ?? ''));
+            if (! self::allowed_option_key($key, $policy, $contract)) {
+                return new WP_Error('research_manager_option_not_allowed', 'This WordPress option is outside the Research Manager mutation contract.');
+            }
             if ('show_on_front' === $key) {
                 $value = sanitize_key((string) ($action['value'] ?? ''));
                 if ('page' !== $value || self::theme_home_page_id() <= 0) {
@@ -136,7 +144,6 @@ final class Eduardo_Research_Manager_Plan {
                 }
                 return array('type'=>'option','key'=>$key,'value'=>$home_id);
             }
-            if (! self::allowed_option_key($key)) { return new WP_Error('research_manager_option_not_allowed', 'This WordPress option is outside the Research Manager mutation contract.'); }
             return array('type'=>'option','key'=>$key,'value'=>$action['value'] ?? null);
         }
         if ('post_meta' === $type) {
@@ -530,11 +537,11 @@ final class Eduardo_Research_Manager_Plan {
         return in_array($scheme, array('http','https'), true) ? $url : '';
     }
 
-    private static function allowed_option_key(string $key): bool {
-        if (in_array($key, self::ALLOWED_OPTIONS, true)) { return true; }
-        $contract = new Eduardo_Research_Manager_Contract();
+    private static function allowed_option_key(string $key, Site_Architect_Mutation_Policy $policy, Eduardo_Research_Manager_Contract $contract): bool {
+        if (in_array($key, $policy->allowed_option_keys(), true)) { return true; }
+        // Exact, finite page option set: declared pages × explicitly mapped languages.
+        // Never use a prefix/wildcard check or infer unknown storage keys.
         foreach (array_keys($contract->pages()) as $page_key) {
-            if ('home' === $page_key) { continue; }
             foreach ($contract->languages() as $language) {
                 $option_key = $contract->page_option_key((string) $page_key, (string) $language);
                 if (! is_wp_error($option_key) && $option_key === $key) { return true; }

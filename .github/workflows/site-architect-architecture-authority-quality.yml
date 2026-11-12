@@ -67,6 +67,7 @@ jobs:
 
           root = Path('wordpress/plugins/eduardo-research-manager/includes')
           plan = (root / 'class-research-manager-plan.php').read_text(encoding='utf-8')
+          mutation_policy = (root / 'class-research-manager-research-mutation-policy.php').read_text(encoding='utf-8')
           registry = (root / 'class-research-manager-resource-registry.php').read_text(encoding='utf-8')
           line_resource = (root / 'class-research-manager-line-resource.php').read_text(encoding='utf-8')
           line_editor = (root / 'class-research-manager-line-editor.php').read_text(encoding='utf-8')
@@ -106,9 +107,14 @@ jobs:
           if missing:
               raise SystemExit(f'Plan mutation dispatcher lost explicit fail-closed actions: {missing}')
 
-          allowed_options = plan.split('private const ALLOWED_OPTIONS', 1)[1].split(');', 1)[0]
+          # Research options remain exact and reviewable, but are owned by the explicit vertical policy.
+          allowed_options = mutation_policy.split('public function allowed_option_keys()', 1)[1].split(');', 1)[0]
           if "'eduardo_research_identity'" not in allowed_options:
-              raise SystemExit('Plan must keep the Identity option explicit in its fail-closed security allowlist')
+              raise SystemExit('Research mutation policy must keep the canonical Identity option explicit')
+          if '$policy->allowed_option_keys()' not in plan or '$policy->allowed_action_types()' not in plan:
+              raise SystemExit('Plan must enforce both policy allowlists before normalization')
+          if 'private const ALLOWED_OPTIONS' in plan:
+              raise SystemExit('Plan must not recreate Research-only option permissions in Core')
 
           for method in ('by_creation_action', 'resource_fields', 'editable_fields', 'auxiliary_fields', 'resource_meta_fields', 'array_fields', 'defaults', 'object_resource_keys', 'blueprint_resource_label'):
               if f'public static function {method}' not in registry:

@@ -102,7 +102,7 @@ check(false===stripos($resource,'wp/v2'),'Resource inventory must not proxy arbi
 $executor=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php');
 check(str_contains($executor,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),'Executor must resolve Research execution specs from the Registry');
 foreach(array('research_manager_line_creation_conflict','research_manager_output_creation_conflict','research_manager_project_creation_conflict','research_manager_software_creation_conflict','research_manager_dataset_creation_conflict') as $duplicate){check(false===str_contains($executor,$duplicate),'Executor must not duplicate Registry conflict mapping: '.$duplicate);}
-check(str_contains($executor,'Eduardo_Research_Manager_Plan::validate($plan)'),'Executor must continue validating the fail-closed Plan before execution');
+check(str_contains($executor,'Eduardo_Research_Manager_Plan::validate($plan, $this->mutation_policy, $this->theme_contract)'),'Executor must validate fail-closed Plan using the same policy and Theme Contract before execution');
 
 $connections=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-connections-rest.php');
 foreach(array('orcid','google_scholar','crossref','zenodo','openalex','github') as $provider){check(str_contains($connections,$provider),'Academic connection provider missing: '.$provider);}
