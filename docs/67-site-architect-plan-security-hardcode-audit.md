@@ -133,8 +133,12 @@ supplies **copy only**, never a bypass.
 
 `Executor::preview` uses the same injected policy and Theme Contract as Plan.
 The full Research old-risk behavior and alternative Theme (including evidence
-blocking, checksum tamper rejection and invalid-risk fallback) are regression
-tested. Remaining work: type-aware ownership and Research-specific normalizers
+blocking, checksum and **derived-risk tamper rejection** and invalid-risk fallback)
+are regression tested. This cut also closed the original Plan validation gap:
+previously a caller could change only the stored `risk` field without touching
+the checksum and bypass the evidence gate. Validation now compares the submitted
+risk to the freshly reconstructed risk, returning the established
+`research_manager_plan_changed` code and unchanged message on drift. Remaining work: type-aware ownership and Research-specific normalizers
 still located in the generic Plan; this is **not** second-client acceptance.
 
 ## Update — Site Architect #475.4 (12 November 2026)
