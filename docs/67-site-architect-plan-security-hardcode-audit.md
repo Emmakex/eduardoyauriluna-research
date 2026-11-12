@@ -114,6 +114,27 @@ Not allowed:
 prefix match → writable option
 ```
 
+## Update — Site Architect #475.4 (12 November 2026)
+
+The analysis in §4 records the **historical** prefix/policy concern. The current
+Plan on the #475.4 branch already used an exact allowlist, but that list was
+built automatically from the descriptive Research Resource Registry. That could
+silently grant new metadata writes if a new Registry field was added.
+
+#475.4 replaces that dynamic grant with `Site_Architect_Mutation_Policy::allowed_meta_keys()`.
+The Research implementation lists **49 explicit, existing keys** (9 shared,
+including provenance and translations, plus 40 additional Registry-backed keys).
+`Plan` now accepts an exact key only when explicitly present in the active
+mutation policy. There is no prefix/wildcard authorization and no implication
+that merely registering a resource permits a mutation. Tests enumerate all
+previously accepted metadata, reject unknown Research prefixes and WordPress
+internal meta, and prove a second Theme cannot inherit Research keys.
+
+This is only a policy-authority extraction. Per-resource ownership and typed
+field schemas remain further hardening work, and the current vertical evidence
+risk rules are not changed by #475.4. No production site or plugin version is
+changed by this source-level microcut.
+
 ## 4. Metadata allowlist needs hardening
 
 Current Plan accepts post meta when the key starts with either:
