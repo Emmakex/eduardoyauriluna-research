@@ -63,6 +63,13 @@ jobs:
           assert 'private const ALLOWED_OPTIONS' not in plan
           assert '$policy->allowed_option_keys()' in plan
           assert '$policy->allowed_action_types()' in plan
+          assert '$policy->allowed_meta_keys()' in plan
+          assert 'public function allowed_meta_keys(): array;' in generic
+          assert 'public function allowed_meta_keys(): array' in vertical
+          meta_gate = plan.split('private static function allowed_meta_key', 1)[1].split('private static function sanitize_post_field_value', 1)[0]
+          assert 'in_array($key, $policy->allowed_meta_keys(), true)' in meta_gate
+          assert 'Resource_Registry::all()' not in meta_gate
+          assert 'str_starts_with' not in meta_gate
           assert "if ('create_dataset' === $type)" in plan
           assert "if ('create_insight' === $type)" in plan
           assert 'Eduardo_Research_Manager_Plan::apply_gate($plan, $this->mutation_policy, $this->theme_contract)' in executor
