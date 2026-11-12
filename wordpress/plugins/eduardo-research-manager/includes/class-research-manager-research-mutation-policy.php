@@ -82,4 +82,56 @@ final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Ar
             '_research_venue',
         );
     }
+
+    /**
+     * Exact Research 0.11.1 action-risk semantics, transferred out of generic Plan.
+     * The Resource Registry supplies descriptive facts only, never write authority.
+     */
+    public function risk_for_action(array $action, callable $is_theme_owned_page): string {
+        $type = (string) ($action['type'] ?? '');
+        if ('create_page' === $type) { return 'standard'; }
+        if ('create_insight' === $type) { return 'editorial-review'; }
+        if (Eduardo_Research_Manager_Resource_Registry::by_creation_action($type)) { return 'evidence-required'; }
+
+        $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
+        $post_id = absint($action['post_id'] ?? 0);
+        if ('post_field' === $type && 'post_title' === $key) {
+            $post = get_post($post_id);
+            if ($post instanceof WP_Post && in_array((string) $post->post_type, Eduardo_Research_Manager_Resource_Registry::post_types(), true)) {
+                return 'evidence-required';
+            }
+        }
+        if ('post_field' === $type && 'post_status' === $key && $is_theme_owned_page($post_id)) {
+            return 'standard';
+        }
+        if ('post_meta' === $type && in_array($key, array('_eduardo_research_role','_eduardo_research_model'), true) && $is_theme_owned_page($post_id)) {
+            return 'standard';
+        }
+
+        foreach (array(
+            'doi','review_status','output_type','identifier','evidence','affiliation','award','grant',
+            'publication_date','venue','publisher','authors','line_ids','project_status','question','role',
+            'start_date','end_date','partner','funding','methods','project_url','software_status','software_version',
+            'release_date','repository_url','archive_url','documentation_url','programming_languages','license',
+            'dataset_version','repository','access_level','formats','methodology','provenance','ethics_notes','size',
+            'research_status','central_question','topics','research_order',
+        ) as $needle) {
+            if (str_contains($key, $needle)) { return 'evidence-required'; }
+        }
+        if (in_array($key, array('post_title','post_excerpt','post_content','_research_language','_research_insight_type'), true)
+            || str_starts_with($key, 'eduardo_research_model') || str_starts_with($key, 'eduardo_research_surface_')) {
+            return 'editorial-review';
+        }
+        return 'standard';
+    }
+
+    public function evidence_blocker_message(string $reason): string {
+        if ('confirmation' === $reason) {
+            return 'This mutation changes an evidence-sensitive academic claim. Confirm evidence and rebuild the plan before Apply.';
+        }
+        if ('reference' === $reason) {
+            return 'Evidence-sensitive mutations require a source or verification reference before Apply.';
+        }
+        return '';
+    }
 }
