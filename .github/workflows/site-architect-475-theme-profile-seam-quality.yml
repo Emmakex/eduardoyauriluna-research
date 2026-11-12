@@ -64,8 +64,16 @@ jobs:
                          "'es'=>array('suffix'=>'_es','identity_headline_field'=>'headline_es')"):
               assert phrase in vertical, f'Research profile missing accepted contract: {phrase}'
           for phrase in ('new Eduardo_Research_Manager_Research_Theme_Profile()',
-                         '$this->theme_profile->preset()', '$this->theme_profile->language_storage()'):
+                         '$this->theme_profile->preset()', '$this->theme_profile->language_storage()',
+                         '$this->theme_profile->page_option_key($key, $suffix)'):
               assert phrase in contract, f'Contract did not delegate to Theme profile: {phrase}'
+          for phrase in ("'home' === $key", "'eduardo_research_model' . $suffix",
+                         "'eduardo_research_surface_' . $key . $suffix"):
+              assert phrase in vertical, f'Research-only option storage rule missing: {phrase}'
+              assert phrase not in contract, f'Research option storage leaked back into generic Contract: {phrase}'
+          assert 'public function page_option_key(string $key, string $suffix): string;' in generic
+          assert "if ('' === $key)" in contract
+          assert '$this->language_storage($language)' in contract
           assert "Plugin Name: Site Architect" in bootstrap
           assert "Version: 0.11.1" in bootstrap
           assert "define('EDUARDO_RESEARCH_MANAGER_VERSION', '0.11.1')" in bootstrap
