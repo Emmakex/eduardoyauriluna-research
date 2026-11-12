@@ -91,11 +91,17 @@ jobs:
 
           actions = ('create_line', 'create_output', 'create_project', 'create_software', 'create_dataset')
 
-          risk = plan.split('public static function action_risk', 1)[1].split('private static function normalize_action', 1)[0]
+          # Risk semantics are Research vertical; Core may only apply the strict gate.
+          risk = mutation_policy.split('public function risk_for_action', 1)[1].split('public function evidence_blocker_message', 1)[0]
+          core_risk = plan.split('public static function action_risk', 1)[1].split('private static function evidence_blocker_message', 1)[0]
+          if 'Resource_Registry::' in core_risk or "str_contains($key" in core_risk:
+              raise SystemExit('Research risk classification leaked back into generic Plan')
+          if '$policy->risk_for_action(' not in core_risk or "'evidence-required'" not in core_risk:
+              raise SystemExit('Plan lost explicit risk policy with strict unknown-classification fallback')
           signature = plan.split('private static function target_signature', 1)[1].split('private static function checksum', 1)[0]
           normalizer = plan.split('private static function normalize_action', 1)[1].split('private static function normalize_page_creation', 1)[0]
 
-          for section_name, section in (('action_risk', risk), ('target_signature', signature)):
+          for section_name, section in (('Research risk policy', risk), ('target_signature', signature)):
               leaked = [action for action in actions if action in section]
               if leaked:
                   raise SystemExit(f'{section_name} duplicates Research creation taxonomy: {leaked}')
