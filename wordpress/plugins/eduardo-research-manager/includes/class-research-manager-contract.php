@@ -192,9 +192,9 @@ final class Eduardo_Research_Manager_Contract {
         if ('' === $key) {
             return new WP_Error('research_manager_page_key_required', 'A Theme Page key is required for storage resolution.');
         }
-        return 'home' === $key
-            ? 'eduardo_research_model' . $suffix
-            : 'eduardo_research_surface_' . $key . $suffix;
+        // The contract validates language/key before the selected vertical
+        // maps them to physical WordPress option names.
+        return $this->theme_profile->page_option_key($key, $suffix);
     }
 
     public function identity_headline_field(string $language): string|WP_Error {
