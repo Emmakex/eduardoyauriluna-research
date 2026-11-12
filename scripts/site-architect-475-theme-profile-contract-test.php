@@ -61,6 +61,10 @@ expect($contract->language_storage_contract() === [
 expect($contract->page_option_key('home', 'en') === 'eduardo_research_model', 'Home EN option unchanged');
 expect($contract->page_option_key('home', 'es') === 'eduardo_research_model_es', 'Home ES option unchanged');
 expect($contract->page_option_key('about', 'es') === 'eduardo_research_surface_about_es', 'About ES option unchanged');
+expect($contract->page_option_key('research', 'en') === 'eduardo_research_surface_research', 'Research EN surface option unchanged');
+expect($contract->page_option_key('privacy-policy', 'es') === 'eduardo_research_surface_privacy-policy_es', 'Research hyphenated page option unchanged');
+expect(is_wp_error($contract->page_option_key(' ', 'en')), 'empty sanitized page key remains rejected');
+expect(is_wp_error($contract->page_option_key('home', 'de')), 'unknown locale cannot resolve a Research page option');
 expect($contract->identity_headline_field('es') === 'headline_es', 'Identity ES field unchanged');
 expect(is_wp_error($contract->language_storage('fr')), 'unregistered language remains fail-closed');
 expect(Eduardo_Research_Manager_Contract::EXPECTED_PRESET === 'research', 'legacy preset constant remains available');
@@ -96,6 +100,9 @@ final class SiteArchitectOtherThemeProfile implements Site_Architect_Theme_Profi
         return ['fr'=>['suffix'=>'_fr', 'identity_headline_field'=>'headline_fr'],
                 'de'=>['suffix'=>'_de', 'identity_headline_field'=>'headline_de']];
     }
+    public function page_option_key(string $key, string $suffix): string {
+        return 'sa_sample_' . $key . $suffix;
+    }
 }
 $other = new Eduardo_Research_Manager_Contract(new SiteArchitectOtherThemeProfile());
 expect($other->compatible(), 'explicit alternate Theme profile is compatible');
@@ -103,6 +110,9 @@ expect($other->languages() === ['fr','de'], 'alternate languages from profile');
 expect($other->default_language() === 'fr', 'alternate default from contract');
 expect($other->front_page_key() === 'landing', 'alternate registered front page from contract');
 expect($other->language_storage_contract()['de']['suffix'] === '_de', 'alternate locale storage declared, not inferred');
+expect($other->page_option_key('landing', 'fr') === 'sa_sample_landing_fr', 'alternate Theme page option naming is profile-owned');
+expect($other->page_option_key('home', 'de') === 'sa_sample_home_de', 'alternate Theme does not inherit Research home storage');
+expect(is_wp_error($other->page_option_key('landing', 'en')), 'alternate Theme denies unknown locale page storage');
 expect($other->theme_version() === '1.2.3', 'alternate stylesheet selected');
 expect(is_wp_error($other->language_storage('en')), 'other site does not inherit Research language');
 expect($other->theme_available(), 'profile availability is explicit');

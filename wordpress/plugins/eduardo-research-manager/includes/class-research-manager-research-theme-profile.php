@@ -39,4 +39,11 @@ final class Eduardo_Research_Manager_Research_Theme_Profile implements Site_Arch
             'es'=>array('suffix'=>'_es','identity_headline_field'=>'headline_es'),
         );
     }
+
+    /** Legacy Research option naming belongs to this vertical, not Core. */
+    public function page_option_key(string $key, string $suffix): string {
+        return 'home' === $key
+            ? 'eduardo_research_model' . $suffix
+            : 'eduardo_research_surface_' . $key . $suffix;
+    }
 }
