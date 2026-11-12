@@ -43,9 +43,12 @@ check(str_contains($identity,"'name'=>\$name"),'Identity profile must expose can
 check(str_contains($identity,'$contract->identity_headline_field($language)'),'Identity profile must resolve language-bound headline fields through the Greenfield Theme Contract');
 check(str_contains($identity,"'identity_language_map'=>\$identity_language_map"),'Identity profile must expose its runtime language/field compatibility map');
 check(str_contains($identity,'public function contract_descriptor(): array|WP_Error'),'Identity profile must own the descriptive field/language contract');
-check(str_contains($contract,"'identity_headline_field'=>'headline'"),'Greenfield Theme Contract must preserve the primary headline storage field');
-check(str_contains($contract,"'identity_headline_field'=>'headline_es'"),'Greenfield Theme Contract must preserve the Spanish headline storage field');
-check(str_contains($contract,'private const LEGACY_LANGUAGE_STORAGE'),'Legacy EN/ES physical storage compatibility must have one contract owner');
+$themeProfile=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-theme-profile.php');
+check(str_contains($themeProfile,"'identity_headline_field'=>'headline'"),'Research Theme Profile must preserve the primary headline storage field');
+check(str_contains($themeProfile,"'identity_headline_field'=>'headline_es'"),'Research Theme Profile must preserve the Spanish headline storage field');
+check(str_contains($themeProfile,'public function language_storage(): array'),'Research Theme Profile must be the sole owner of EN/ES storage aliases');
+check(false===str_contains($contract,'private const LEGACY_LANGUAGE_STORAGE'),'Core-facing Theme Contract must not duplicate Research physical storage');
+check(str_contains($contract,'$this->theme_profile->language_storage()'),'Contract must resolve physical storage through the selected Theme Profile');
 check(str_contains($identity,'preview_update'),'Identity profile must expose Preview');
 check(str_contains($identity,'apply_preview'),'Identity profile must expose Apply');
 check(str_contains($identity,'public function verify'),'Identity profile must expose Verify');
