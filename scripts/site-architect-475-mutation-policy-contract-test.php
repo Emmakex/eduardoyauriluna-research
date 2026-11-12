@@ -14,6 +14,13 @@ final class WP_Post {
     public function __construct(public int $ID, public string $post_type = 'page') {}
 }
 final class Eduardo_Research_Manager_Snapshots {}
+/** Read-only DB stand-in: Executor Preview must never write during this offline test. */
+final class SiteArchitectPreviewReadOnlyDb {
+    public string $postmeta = 'wp_postmeta';
+    public function prepare(string $sql, mixed ...$values): string { return $sql; }
+    public function get_var(string $sql): mixed { return null; }
+}
+$GLOBALS['wpdb'] = new SiteArchitectPreviewReadOnlyDb();
 function is_wp_error(mixed $v): bool { return $v instanceof WP_Error; }
 function sanitize_key(string $v): string { return preg_replace('/[^a-z0-9_-]/', '', strtolower($v)) ?? ''; }
 function sanitize_text_field(string $v): string { return trim(strip_tags($v)); }
