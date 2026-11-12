@@ -25,7 +25,7 @@ final class Eduardo_Research_Manager_Executor {
             $rows[] = array(
                 'action'=>$action,'before'=>$before,'after'=>$this->desired_value($action),
                 'changed'=>! $this->state_matches_action($before, $action),
-                'risk'=>Eduardo_Research_Manager_Plan::action_risk($action),
+                'risk'=>Eduardo_Research_Manager_Plan::action_risk($action, $this->mutation_policy, $this->theme_contract),
             );
         }
         $gate = Eduardo_Research_Manager_Plan::apply_gate($plan, $this->mutation_policy, $this->theme_contract);
