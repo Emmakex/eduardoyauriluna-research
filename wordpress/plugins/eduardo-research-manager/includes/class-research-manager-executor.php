@@ -6,13 +6,17 @@ if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Executor {
     private Eduardo_Research_Manager_Snapshots $snapshots;
+    private Site_Architect_Mutation_Policy $mutation_policy;
+    private Eduardo_Research_Manager_Contract $theme_contract;
 
-    public function __construct(?Eduardo_Research_Manager_Snapshots $snapshots = null) {
+    public function __construct(?Eduardo_Research_Manager_Snapshots $snapshots = null, ?Site_Architect_Mutation_Policy $mutation_policy = null, ?Eduardo_Research_Manager_Contract $theme_contract = null) {
         $this->snapshots = $snapshots ?: new Eduardo_Research_Manager_Snapshots();
+        $this->mutation_policy = $mutation_policy ?? new Eduardo_Research_Manager_Research_Mutation_Policy();
+        $this->theme_contract = $theme_contract ?? new Eduardo_Research_Manager_Contract();
     }
 
     public function preview(array $plan): array|WP_Error {
-        $valid = Eduardo_Research_Manager_Plan::validate($plan);
+        $valid = Eduardo_Research_Manager_Plan::validate($plan, $this->mutation_policy, $this->theme_contract);
         if (is_wp_error($valid)) { return $valid; }
         $rows = array();
         foreach ($plan['actions'] as $action) {
@@ -24,7 +28,7 @@ final class Eduardo_Research_Manager_Executor {
                 'risk'=>Eduardo_Research_Manager_Plan::action_risk($action),
             );
         }
-        $gate = Eduardo_Research_Manager_Plan::apply_gate($plan);
+        $gate = Eduardo_Research_Manager_Plan::apply_gate($plan, $this->mutation_policy, $this->theme_contract);
         return array(
             'plan_id'=>$plan['id'],'intent'=>$plan['intent'],'risk'=>$plan['risk'],'checksum'=>$plan['checksum'],
             'apply_allowed'=>! is_wp_error($gate),'apply_blocker'=>is_wp_error($gate) ? $gate->get_error_message() : '',
@@ -34,7 +38,7 @@ final class Eduardo_Research_Manager_Executor {
 
     public function apply(array $plan): array|WP_Error {
         if (! current_user_can('manage_options')) { return new WP_Error('research_manager_forbidden', 'You are not allowed to apply Research Manager mutations.'); }
-        $gate = Eduardo_Research_Manager_Plan::apply_gate($plan);
+        $gate = Eduardo_Research_Manager_Plan::apply_gate($plan, $this->mutation_policy, $this->theme_contract);
         if (is_wp_error($gate)) { return $gate; }
         $preview = $this->preview($plan);
         if (is_wp_error($preview)) { return $preview; }
@@ -68,7 +72,7 @@ final class Eduardo_Research_Manager_Executor {
     }
 
     public function verify(array $plan): array|WP_Error {
-        $valid = Eduardo_Research_Manager_Plan::validate($plan);
+        $valid = Eduardo_Research_Manager_Plan::validate($plan, $this->mutation_policy, $this->theme_contract);
         if (is_wp_error($valid)) { return $valid; }
         $results = array(); $verified = true;
         foreach ($plan['actions'] as $action) {
