@@ -105,6 +105,6 @@ expect($other->front_page_key() === 'landing', 'alternate registered front page 
 expect($other->language_storage_contract()['de']['suffix'] === '_de', 'alternate locale storage declared, not inferred');
 expect($other->theme_version() === '1.2.3', 'alternate stylesheet selected');
 expect(is_wp_error($other->language_storage('en')), 'other site does not inherit Research language');
-expect(! $other->theme_available() === false, 'profile availability is explicit');
+expect($other->theme_available(), 'profile availability is explicit');
 
 echo "PASS: Site Architect Theme profile seam preserves Research 0.11.1, fail-closed storage and alternate contract injection\n";
