@@ -105,8 +105,10 @@ jobs:
         run: |
           set -euo pipefail
           grep -F "function eduardo_research_canonical_identity_headline" wordpress/themes/eduardo-research/inc/research-model.php
-          grep -F "private const LEGACY_LANGUAGE_STORAGE" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
-          grep -F "'identity_headline_field'=>'headline_es'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
+          grep -F "public function language_storage(): array" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-theme-profile.php
+          grep -F "'identity_headline_field'=>'headline_es'" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-theme-profile.php
+          grep -F '$this->theme_profile->language_storage()' wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
+          ! grep -F "private const LEGACY_LANGUAGE_STORAGE" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
           grep -F "\$contract->identity_headline_field(\$language)" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php
           grep -F "Eduardo_Research_Manager_Identity_Profile" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
           grep -F "Eduardo_Research_Manager_Page_State_Editor" wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-controls-admin.php
