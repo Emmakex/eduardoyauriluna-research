@@ -64,7 +64,7 @@ final class Eduardo_Research_Manager_Plan {
             || (string) $plan['risk'] !== (string) $rebuilt['risk']) {
             // Risk is a derived security property. A caller must not downgrade
             // evidence-required to standard while keeping a valid checksum.
-            return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum or derived risk does not match its contents. Re-preview the change.');
+            return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum does not match its contents. Re-preview the change.');
         }
         return true;
     }
