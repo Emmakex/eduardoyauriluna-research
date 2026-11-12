@@ -14,4 +14,6 @@ interface Site_Architect_Mutation_Policy {
     public function allowed_action_types(): array;
     /** Exact WordPress option names; page slots are separately contract-resolved. */
     public function allowed_option_keys(): array;
+    /** Explicit finite post_meta keys, NEVER inherited from descriptive resources. */
+    public function allowed_meta_keys(): array;
 }
