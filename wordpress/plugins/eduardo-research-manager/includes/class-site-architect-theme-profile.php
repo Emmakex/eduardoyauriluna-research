@@ -18,4 +18,6 @@ interface Site_Architect_Theme_Profile {
     public function stylesheet(): string;
     /** Physical language storage map owned by the selected instance adapter. */
     public function language_storage(): array;
+    /** Resolve a previously validated page key using a declared physical suffix. */
+    public function page_option_key(string $key, string $suffix): string;
 }
