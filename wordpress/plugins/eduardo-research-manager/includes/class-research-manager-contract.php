@@ -5,45 +5,41 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-resource-registry.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-theme-profile.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-theme-profile.php';
 
 final class Eduardo_Research_Manager_Contract {
     public const EXPECTED_PRESET = 'research';
     public const EXPECTED_STYLESHEET = 'eduardo-research';
     public const MIN_PRESET_VERSION = 4;
 
-    /**
-     * Physical production storage aliases retained for backward compatibility.
-     *
-     * These are not the conceptual language model. They describe how the
-     * currently accepted EN/ES Greenfield installation stores language-bound
-     * state so callers do not independently reconstruct `_es` conventions.
-     */
-    private const LEGACY_LANGUAGE_STORAGE = array(
-        'en'=>array('suffix'=>'','identity_headline_field'=>'headline'),
-        'es'=>array('suffix'=>'_es','identity_headline_field'=>'headline_es'),
-    );
+    private Site_Architect_Theme_Profile $theme_profile;
+
+    public function __construct(?Site_Architect_Theme_Profile $theme_profile = null) {
+        // Preserve the installed Eduardo Research profile by default.
+        // Other site profiles are explicit dependencies, not inferred from WordPress.
+        $this->theme_profile = $theme_profile ?: new Eduardo_Research_Manager_Research_Theme_Profile();
+    }
 
     public function theme_available(): bool {
-        return function_exists('eduardo_research_preset');
+        return $this->theme_profile->available();
     }
 
     public function preset(): array {
-        if (! $this->theme_available()) { return array(); }
-        $preset = eduardo_research_preset();
-        return is_array($preset) ? $preset : array();
+        return $this->theme_profile->preset();
     }
 
     public function compatible(): bool {
         $preset = $this->preset();
-        return self::EXPECTED_PRESET === (string) ($preset['id'] ?? '')
-            && self::MIN_PRESET_VERSION <= (int) ($preset['version'] ?? 0)
+        return $this->theme_profile->preset_id() === (string) ($preset['id'] ?? '')
+            && $this->theme_profile->minimum_preset_version() <= (int) ($preset['version'] ?? 0)
             && 'theme' === (string) ($preset['frontend_authority'] ?? '');
     }
 
     public function theme_version(): string {
         $theme = wp_get_theme();
-        if (self::EXPECTED_STYLESHEET !== $theme->get_stylesheet()) {
-            $theme = wp_get_theme(self::EXPECTED_STYLESHEET);
+        if ($this->theme_profile->stylesheet() !== $theme->get_stylesheet()) {
+            $theme = wp_get_theme($this->theme_profile->stylesheet());
         }
         return $theme->exists() ? (string) $theme->get('Version') : '';
     }
@@ -167,20 +163,22 @@ final class Eduardo_Research_Manager_Contract {
         if (! in_array($language, $this->languages(), true)) {
             return new WP_Error('research_manager_unknown_language', 'The requested language is outside the active Greenfield Theme contract.');
         }
-        if (! isset(self::LEGACY_LANGUAGE_STORAGE[$language])) {
+        $map = $this->theme_profile->language_storage();
+        if (! is_array($map[$language] ?? null)) {
             return new WP_Error(
                 'research_manager_language_storage_unmapped',
                 sprintf('Language "%s" has no compatible production storage mapping.', $language)
             );
         }
-        return self::LEGACY_LANGUAGE_STORAGE[$language];
+        return $map[$language];
     }
 
     public function language_storage_contract(): array {
         $contract = array();
+        $map = $this->theme_profile->language_storage();
         foreach ($this->languages() as $language) {
-            if (isset(self::LEGACY_LANGUAGE_STORAGE[$language])) {
-                $contract[$language] = self::LEGACY_LANGUAGE_STORAGE[$language];
+            if (is_array($map[$language] ?? null)) {
+                $contract[$language] = $map[$language];
             }
         }
         return $contract;
