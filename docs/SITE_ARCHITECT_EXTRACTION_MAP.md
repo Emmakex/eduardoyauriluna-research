@@ -185,3 +185,34 @@ Pending: complete extraction of remaining Research services, independent
 installable packaging of the REAL current product, isolated Theme Research
 clone parity, and reversible Eduardo cutover only after equivalence.
 Site Architect 0.11.1 in Eduardo production is not changed by this cut.
+
+
+## #475.12 — Theme-owned Blueprint resources and Greenfield services
+
+The current Site Architect 0.11.1 Core Blueprint, Compiler and Greenfield services
+consume an explicit `Site_Architect_Blueprint_Resource_Provider` rather than
+calling `Eduardo_Research_Manager_Resource_Registry` directly or treating a
+global Research service map as universal.
+
+The real Research provider `Eduardo_Research_Manager_Research_Blueprint_Resources`
+declares the exact six existing vertical Blueprint keys and their labels,
+binds the seven existing service objects including Pages and owns the
+Research-only Line slug/language read-only idempotency preflight.
+
+Security: a provider belongs to one exact Theme id; Blueprint and Greenfield
+must agree on their resource catalogs; missing/misaligned bindings fail closed.
+Describing or binding a resource is not authorization to mutate it.
+Plan/Executor, ownership policy, evidence, snapshots, verification and
+rollback remain unchanged and mandatory.
+
+Compatibility: the historical `research_services()` facade, Research
+Resource Registry, legacy class names/options/meta and the 0.11.1 plugin
+header remain in place. The Theme Research is still the source of rendering.
+
+The isolated PHP 8.1/8.2 contract test verifies exact Research resource
+order, labels, Blueprint summary, evidence and Plan compile shape, Line
+idempotency and positive/negative scenarios with an independent second Theme.
+Existing WordPress Greenfield/Blueprint tests are also required to pass.
+
+Not yet an independent installable distribution, WordPress-clone parity or
+a production cutover. Continue under issue #475 before extending to a client.
