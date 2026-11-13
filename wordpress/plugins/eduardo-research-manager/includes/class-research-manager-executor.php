@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-execution-spec.php';
+
 final class Eduardo_Research_Manager_Executor {
     private Eduardo_Research_Manager_Snapshots $snapshots;
     private Site_Architect_Mutation_Policy $mutation_policy;
@@ -99,6 +101,7 @@ final class Eduardo_Research_Manager_Executor {
 
     private function read_state(array $action): array|WP_Error {
         $type = (string) ($action['type'] ?? '');
+        if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research creation is outside the active Theme execution contract.'); }
         if ('option' === $type) {
             $marker = new stdClass(); $value = get_option($action['key'], $marker);
             return array('exists'=>$value !== $marker,'value'=>$value === $marker ? null : $value);
@@ -175,6 +178,7 @@ final class Eduardo_Research_Manager_Executor {
 
     private function write_action(array $action): bool|WP_Error {
         $type = (string) ($action['type'] ?? '');
+        if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research creation is outside the active Theme execution contract.'); }
         if ('option' === $type) { update_option((string) $action['key'], $action['value'], false); }
         elseif ('post_meta' === $type) { update_post_meta((int) $action['post_id'], (string) $action['key'], $action['value']); }
         elseif ('post_field' === $type) {
@@ -239,6 +243,7 @@ final class Eduardo_Research_Manager_Executor {
         foreach (array_reverse($records) as $record) {
             if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { continue; }
             $action = $record['action']; $state = $record['state']; $type = (string) ($action['type'] ?? '');
+            if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research rollback is outside the active Theme execution contract.'); }
             if ('option' === $type) { empty($state['exists']) ? delete_option((string) $action['key']) : update_option((string) $action['key'], $state['value'], false); }
             elseif ('post_meta' === $type) { empty($state['exists']) ? delete_post_meta((int) $action['post_id'], (string) $action['key']) : update_post_meta((int) $action['post_id'], (string) $action['key'], $state['value']); }
             elseif ('post_field' === $type) {
@@ -325,35 +330,25 @@ final class Eduardo_Research_Manager_Executor {
         return '' !== (string) ($stored['url'] ?? '');
     }
 
-    /**
-     * Resolve execution metadata from the descriptive Research Resource Registry.
-     *
-     * This method does not authorize an action. Eduardo_Research_Manager_Plan
-     * remains the fail-closed mutation boundary before Executor is reached.
-     */
+    /** Actual Research policy and Theme identity must both match. */
+    private function research_execution_allowed(): bool {
+        return $this->mutation_policy instanceof Eduardo_Research_Manager_Research_Mutation_Policy
+            && 'research' === (string) ($this->theme_contract->preset()['id'] ?? '');
+    }
+
+    private function research_creation_blocked(string $action_type): bool {
+        return in_array($action_type, Eduardo_Research_Manager_Research_Execution_Spec::creation_actions(), true)
+            && (! $this->research_execution_allowed()
+                || ! in_array($action_type, $this->mutation_policy->allowed_action_types(), true));
+    }
+
+    /** Compatibility delegate; Research post types are now owned by the vertical. */
     private function research_object_spec(string $action_type): array {
-        $registered = Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type);
-        if (! $registered) { return array(); }
-
-        $post_type = sanitize_key((string) ($registered['post_type'] ?? ''));
-        $creation_conflict = sanitize_key((string) ($registered['creation_conflict'] ?? ''));
-        $rollback_conflict = sanitize_key((string) ($registered['rollback_conflict'] ?? ''));
-        $meta = is_array($registered['meta'] ?? null) ? $registered['meta'] : array();
-        $array_fields = is_array($registered['array_fields'] ?? null) ? array_values($registered['array_fields']) : array();
-        $defaults = is_array($registered['defaults'] ?? null) ? $registered['defaults'] : array();
-
-        if ('' === $post_type || '' === $creation_conflict || '' === $rollback_conflict || ! $meta) {
+        if (! $this->research_execution_allowed()
+            || ! in_array($action_type, $this->mutation_policy->allowed_action_types(), true)) {
             return array();
         }
-
-        return array(
-            'post_type'=>$post_type,
-            'creation_conflict'=>$creation_conflict,
-            'rollback_conflict'=>$rollback_conflict,
-            'meta'=>$meta,
-            'array_fields'=>$array_fields,
-            'defaults'=>$defaults,
-        );
+        return Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type);
     }
 
     private function states_equal(array $left, array $right): bool {

@@ -327,4 +327,55 @@ expect(error_code(Eduardo_Research_Manager_Plan::create('Research policy on fore
 expect(error_code(Eduardo_Research_Manager_Research_Creation_Normalizer::normalize('create_arbitrary', []),
     'research_manager_action_not_allowed'), 'Research normalizer has no dynamic Registry fallback');
 
+
+/** #475.7: Research execution identity and rollback cannot bleed across Themes. */
+$expected_research_post_types = [
+    'create_line'=>'research_line',
+    'create_output'=>'research_output',
+    'create_project'=>'research_project',
+    'create_software'=>'research_software',
+    'create_dataset'=>'research_dataset',
+];
+expect(Eduardo_Research_Manager_Research_Execution_Spec::creation_actions() === [
+    'create_insight','create_line','create_output','create_project','create_software','create_dataset',
+], 'Research execution has a fixed six-action identity set');
+$spec_reflection = new ReflectionMethod(Eduardo_Research_Manager_Executor::class, 'research_object_spec');
+$read_reflection = new ReflectionMethod(Eduardo_Research_Manager_Executor::class, 'read_state');
+$write_reflection = new ReflectionMethod(Eduardo_Research_Manager_Executor::class, 'write_action');
+$restore_reflection = new ReflectionMethod(Eduardo_Research_Manager_Executor::class, 'restore_records');
+$research_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $research, new Eduardo_Research_Manager_Contract());
+$foreign_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $other_policy, $other_contract);
+$mixed_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $research, $other_contract);
+$borrowed_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $forged_research_policy, new Eduardo_Research_Manager_Contract());
+foreach ($expected_research_post_types as $action_type => $post_type) {
+    $spec = Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type);
+    $registry = Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type);
+    expect(is_array($spec) && $spec['post_type'] === $post_type
+        && $spec['meta'] === $registry['meta']
+        && $spec['array_fields'] === $registry['array_fields']
+        && $spec['defaults'] === $registry['defaults']
+        && $spec['creation_conflict'] === $registry['creation_conflict']
+        && $spec['rollback_conflict'] === $registry['rollback_conflict']
+        && $spec_reflection->invoke($research_executor, $action_type) === $spec,
+        'Research execution retains exactly the accepted schema for ' . $action_type);
+    expect([] === $spec_reflection->invoke($foreign_executor, $action_type)
+        && [] === $spec_reflection->invoke($mixed_executor, $action_type)
+        && [] === $spec_reflection->invoke($borrowed_executor, $action_type),
+        'foreign Theme or mutation policy cannot resolve Research spec for ' . $action_type);
+}
+foreach (['create_arbitrary','create_insight','option','post_meta'] as $action_type) {
+    expect([] === Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type),
+        'Resource Registry cannot supply an unreviewed action spec for ' . $action_type);
+}
+$foreign_create = ['type'=>'create_insight','creation_token'=>str_repeat('b', 32),'slug'=>'cross-theme'];
+foreach ([$foreign_executor, $mixed_executor, $borrowed_executor] as $outsider) {
+    expect(error_code($read_reflection->invoke($outsider, $foreign_create), 'research_manager_action_not_allowed'),
+        'Research Insight read-state is not inherited by another Theme');
+    expect(error_code($write_reflection->invoke($outsider, $foreign_create), 'research_manager_action_not_allowed'),
+        'Research Insight write is not inherited by another Theme');
+    expect(error_code($restore_reflection->invoke($outsider, [
+        ['action'=>$foreign_create,'state'=>['exists'=>false,'value'=>null]],
+    ]), 'research_manager_action_not_allowed'), 'Research Insight rollback is not inherited by another Theme');
+}
+
 echo "PASS: Research risk/evidence parity, non-degrading fallback and alternate Theme policy\n";

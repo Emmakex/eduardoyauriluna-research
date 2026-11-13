@@ -289,3 +289,25 @@ that historical action name. Registry data still never confers write rights.
 This is **not** a generic typed-normalizer/executor plugin API yet; typed
 ownership and a reviewed second-Theme executor remain for future cuts.
 No Theme or production WordPress migration accompanies this source refactor.
+
+## Update — #475.7 Research resource execution ownership (13 November 2026)
+
+The Research execution spec resolver moved out of the generic Executor into
+`Eduardo_Research_Manager_Research_Execution_Spec`. Only the five exact
+Research structured creation action → post-type mappings are recognized in
+this vertical adapter. Descriptive Resource Registry entries do not grant
+additional executable actions or post types; existing metadata/defaults and
+conflict/rollback codes are preserved byte-for-byte for recognized resources.
+
+The Executor retains only a narrow legacy compatibility delegator and requires
+the actual Research mutation policy **and** a Research Theme Contract identity.
+It enforces this boundary before Research read-state, write and rollback
+operations, including Insight creation. This is independent of the Plan's
+pre-existing fail-closed action authorization, checksum, evidence and
+verification gates. Regression tests cover both Research schema parity and
+cross-Theme rejects for read/write/rollback (without invoking WordPress writes).
+
+This step does **not** change existing post_meta/post_field resource ownership
+or make arbitrary second-Theme types executable. Those require a separate
+typed-resource compatibility inventory and a reviewed executor extension seam.
+No Theme, REST/MCP, storage, version or production WordPress change.
