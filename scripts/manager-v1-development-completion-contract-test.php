@@ -100,7 +100,13 @@ check(str_contains($resource,"'language'=>\$language"),'Resource inventory must 
 check(false===stripos($resource,'wp/v2'),'Resource inventory must not proxy arbitrary WordPress REST');
 
 $executor=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php');
-check(str_contains($executor,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),'Executor must resolve Research execution specs from the Registry');
+$researchExecutionSpec=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php');
+check(str_contains($executor,'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)'),
+    'Executor must delegate Research execution specs to the reviewed vertical owner');
+check(str_contains($researchExecutionSpec,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),
+    'Research execution adapter must preserve Registry metadata compatibility after exact-action checks');
+check(false===str_contains($executor,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),
+    'Generic Executor must not directly interpret the Research Resource Registry');
 foreach(array('research_manager_line_creation_conflict','research_manager_output_creation_conflict','research_manager_project_creation_conflict','research_manager_software_creation_conflict','research_manager_dataset_creation_conflict') as $duplicate){check(false===str_contains($executor,$duplicate),'Executor must not duplicate Registry conflict mapping: '.$duplicate);}
 check(str_contains($executor,'Eduardo_Research_Manager_Plan::validate($plan, $this->mutation_policy, $this->theme_contract)'),'Executor must validate fail-closed Plan using the same policy and Theme Contract before execution');
 
