@@ -12,13 +12,18 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
         ?Eduardo_Research_Manager_Blueprint $blueprints = null,
         ?Eduardo_Research_Manager_Greenfield $greenfield = null
     ) {
-        $this->blueprints = $blueprints ?: new Eduardo_Research_Manager_Blueprint();
         $this->greenfield = $greenfield ?: new Eduardo_Research_Manager_Greenfield();
+        $this->blueprints = $blueprints ?: new Eduardo_Research_Manager_Blueprint(
+            $this->greenfield->resource_provider(), $this->greenfield->contract()
+        );
     }
 
     public function compile(array $blueprint): array|WP_Error {
         $ready = $this->greenfield->ready();
         if (is_wp_error($ready)) { return $ready; }
+        if ($this->blueprints->resource_keys() !== array_merge(array('pages'), $this->greenfield->resource_provider()->resource_keys())) {
+            return new WP_Error('research_manager_blueprint_catalog_mismatch', 'Blueprint and Greenfield catalogs do not match.');
+        }
         $normalized = $this->blueprints->validate($blueprint);
         if (is_wp_error($normalized)) { return $normalized; }
         $resources = $this->greenfield->resources();
@@ -29,7 +34,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
             if (! is_array($record)) { return $this->record_error('pages', $index, 'Each Page blueprint record must be an object-like array.'); }
             $key = sanitize_key((string) ($record['key'] ?? ''));
             if ('' === $key) { return $this->record_error('pages', $index, 'Page blueprint records require a key.'); }
-            $state = Eduardo_Research_Manager::contract()->page_state($key);
+            $state = $this->greenfield->contract()->page_state($key);
             if (! empty($state['exists'])) {
                 $skipped[] = array('resource'=>'pages','index'=>$index,'key'=>$key,'reason'=>'already_exists');
                 continue;
@@ -39,7 +44,7 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
             $plans[] = array('resource'=>'pages','index'=>$index,'key'=>$key,'plan'=>$plan);
         }
 
-        foreach (Eduardo_Research_Manager_Resource_Registry::vertical_blueprint_resource_keys() as $resource_key) {
+        foreach ($this->greenfield->resource_provider()->resource_keys() as $resource_key) {
             foreach ($normalized[$resource_key] as $index => $record) {
                 if (! is_array($record)) { return $this->record_error($resource_key, $index, 'Blueprint resource records must be object-like arrays.'); }
                 $payload = $record;
@@ -47,19 +52,19 @@ final class Eduardo_Research_Manager_Blueprint_Compiler {
                 if (is_wp_error($context)) { return $this->record_error($resource_key, $index, $context->get_error_message()); }
                 unset($payload['evidence'], $payload['translation_key'], $payload['line_refs']);
 
-                if ('lines' === $resource_key) {
-                    $slug = sanitize_title((string) ($payload['slug'] ?? $payload['title'] ?? ''));
-                    $language = sanitize_key((string) ($payload['language'] ?? Eduardo_Research_Manager::contract()->default_language()));
-                    if ('' !== $slug) {
-                        $existing = $resources['lines']->find_by_slug($slug, $language);
-                        if ($existing > 0) {
-                            $skipped[] = array('resource'=>'lines','index'=>$index,'slug'=>$slug,'language'=>$language,'reason'=>'already_exists','post_id'=>$existing);
-                            continue;
-                        }
-                    }
+                $existing = $this->greenfield->resource_provider()->existing_record(
+                    $resource_key, $payload, $resources, $this->greenfield->contract()->default_language()
+                );
+                if (is_wp_error($existing)) { return $existing; }
+                if ($existing) {
+                    $skipped[] = array_merge(array('resource'=>$resource_key,'index'=>$index), $existing);
+                    continue;
                 }
 
-                $singular = Eduardo_Research_Manager_Resource_Registry::blueprint_resource_label($resource_key);
+                $singular = $this->greenfield->resource_provider()->resource_label($resource_key);
+                if ('' === $singular) {
+                    return $this->record_error($resource_key, $index, 'Blueprint resource label is missing from the Theme catalog.');
+                }
                 $intent = sprintf('Greenfield blueprint: create %s record %d', $singular, $index + 1);
                 $plan = $resources[$resource_key]->build_creation_plan($payload, $intent, $context);
                 if (is_wp_error($plan)) { return $plan; }
