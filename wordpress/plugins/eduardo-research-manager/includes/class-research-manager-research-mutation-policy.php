@@ -6,6 +6,7 @@ if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-mutation-policy.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-resource-ownership-policy.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-resource-fields.php';
 
 final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Architect_Mutation_Policy, Site_Architect_Resource_Ownership_Policy {
     public function allowed_action_types(): array {
@@ -94,10 +95,7 @@ final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Ar
         // Historical 0.11.1 editorial edits may target ordinary Pages.
         // Metadata and structural publish still require the exact Theme Page.
         if ('page' === $post_type) { return $is_theme_owned_page || 'post_field' === $action_type; }
-        return in_array($post_type, array(
-            'post','research_line','research_output','research_project',
-            'research_software','research_dataset',
-        ), true);
+        return Eduardo_Research_Manager_Research_Resource_Fields::supports_post_type($post_type);
     }
 
     /**
@@ -106,19 +104,11 @@ final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Ar
      * This is NOT a grant from Resource_Registry.
      */
     public function allowed_resource_meta_keys(string $post_type): array {
-        if (! in_array($post_type, array(
-            'page','post','research_line','research_output','research_project',
-            'research_software','research_dataset',
-        ), true)) { return array(); }
-        return $this->allowed_meta_keys();
+        return Eduardo_Research_Manager_Research_Resource_Fields::legacy_meta_keys($post_type, $this->allowed_meta_keys());
     }
 
     public function allowed_resource_post_fields(string $post_type): array {
-        if (! in_array($post_type, array(
-            'page','post','research_line','research_output','research_project',
-            'research_software','research_dataset',
-        ), true)) { return array(); }
-        return array('post_title','post_excerpt','post_content','menu_order','post_status');
+        return Eduardo_Research_Manager_Research_Resource_Fields::legacy_post_fields($post_type);
     }
 
     /**
