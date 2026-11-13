@@ -10,6 +10,8 @@ if (! defined('ABSPATH')) { exit; }
  * scopes, evidence and snapshot verification still authorize every write.
  */
 interface Site_Architect_Blueprint_Resource_Provider {
+    /** Exact Theme identity that owns this vertical catalog. */
+    public function theme_id(): string;
     /** Exact non-Page top-level Blueprint keys, in deterministic order. */
     public function resource_keys(): array;
     /** Human-readable label for a previously declared resource key. */
