@@ -188,7 +188,7 @@ $foreign_plan = Eduardo_Research_Manager_Plan::create('foreign meta', [
 expect(is_array($foreign_plan) &&
     Eduardo_Research_Manager_Plan::validate($foreign_plan, $foreign_meta, $other_contract) === true,
     'other Theme allows one exact own metadata field');
-expect(error_code(Eduardo_Research_Manager_Plan::validate($foreign_plan), 'research_manager_meta_not_allowed'),
+expect(error_code(Eduardo_Research_Manager_Plan::validate($foreign_plan), 'research_manager_resource_not_allowed'),
     'Research default cannot validate foreign metadata');
 foreach (['_research_doi','_eduardo_research_model','sa_sample_flag_extra','_wp_capabilities'] as $key) {
     expect(error_code(Eduardo_Research_Manager_Plan::create('forbid unrelated meta', [
@@ -292,7 +292,7 @@ expect(is_array($foreign_preview) && $foreign_preview['risk'] === 'evidence-requ
     && $foreign_preview['apply_allowed'] === false,
     'Executor preview classifies and blocks the same explicit evidence-sensitive action');
 expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($foreign_evidence),
-    'research_manager_meta_not_allowed'), 'Default Research cannot validate foreign evidence Plan');
+    'research_manager_resource_not_allowed'), 'Default Research cannot validate foreign evidence Plan');
 
 
 /** #475.6: Research typed schemas live in the vertical, and remain fail-closed. */
