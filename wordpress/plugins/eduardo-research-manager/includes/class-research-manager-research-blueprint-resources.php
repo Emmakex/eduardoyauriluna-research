@@ -18,6 +18,8 @@ final class Eduardo_Research_Manager_Research_Blueprint_Resources implements Sit
         'datasets'=>'research dataset',
     );
 
+    public function theme_id(): string { return 'research'; }
+
     public function resource_keys(): array {
         return array_keys(self::LABELS);
     }
