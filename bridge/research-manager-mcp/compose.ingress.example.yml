@@ -2,6 +2,12 @@ services:
   research-manager-mcp:
     image: "${MCP_IMAGE_REF:?set MCP_IMAGE_REF to an immutable MCP image tag or digest}"
     restart: unless-stopped
+    # Bounded json-file logs; applied during a separately controlled recreate.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - .env.production
     expose:
