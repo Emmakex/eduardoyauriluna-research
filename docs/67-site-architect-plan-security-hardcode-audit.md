@@ -327,3 +327,7 @@ No Theme, REST/MCP, storage, version or production WordPress change.
 ### Evidencia añadida: aceptación histórica de Pages editoriales
 
 El workflow `Research Manager Identity Policy` prueba cambios y rollback de `post_title` tanto para `post` como para páginas `page` de WordPress creadas fuera de las páginas estructurales del Theme. El gate #475.8 **no debe romper esa aceptación**: se autoriza ese `post_field` heredado bajo la política y Theme Research correctos, con los límites y riesgos existentes. Esto no autoriza `post_meta` en páginas ajenas; `post_status` mantiene la guarda exacta `publish` + Page del contrato. Una futura reducción deberá tener su propia compatibilidad y prueba productiva.
+
+### Compatibilidad adicional M4: rollback del estado de Insights
+
+El gate `Research Manager Remote M4 Insight Status Quality` demuestra que `InsightEditor` guarda snapshots con acción `post_field/post_status` para publicar/despublicar y delega su rollback a `Executor`, sin usar un Plan genérico de publicación de páginas. La nueva comprobación de **pertenencia** permite ese read/write/rollback en recursos `post` del vertical Research, pero la restricción preexistente de `Plan::normalize_action` sigue impidiendo construir nuevas acciones genéricas `post_status` sobre Insights. No redefinir el contrato M4 ni reimplementar su motor.

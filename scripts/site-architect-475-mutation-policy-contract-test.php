@@ -40,6 +40,7 @@ function maybe_serialize(mixed $v): string { return serialize($v); }
 function get_post(int $post_id): ?WP_Post {
     if (17 === $post_id) { return new WP_Post(17); }
     if (23 === $post_id) { return new WP_Post(23, 'research_line'); }
+    if (53 === $post_id) { return new WP_Post(53, 'post'); }
     if (in_array($post_id, [31, 32], true)) { return new WP_Post($post_id); }
     return 45 === $post_id ? new WP_Post(45, 'product') : null;
 }
@@ -429,6 +430,14 @@ foreach ([
 expect(is_array(Eduardo_Research_Manager_Plan::create('Owned Research CPT', [
     ['type'=>'post_field','post_id'=>23,'field'=>'post_title','value'=>'Research title'],
 ])), 'owned Research line retains bounded post_field authorization');
+expect(Eduardo_Research_Manager_Plan::resource_mutation_gate([
+    'type'=>'post_field','post_id'=>53,'field'=>'post_status','value'=>'publish',
+], $research, new Eduardo_Research_Manager_Contract()) === true,
+    'existing Insight post_status rollback can still inspect an owned post');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Non Page status mutation remains blocked', [
+    ['type'=>'post_field','post_id'=>53,'field'=>'post_status','value'=>'publish'],
+]), 'research_manager_post_status_not_allowed'),
+    'new generic Plan cannot directly publish an Insight instead of using its lifecycle');
 expect(error_code(Eduardo_Research_Manager_Plan::create('Foreign Theme targets Research page', [
     ['type'=>'post_meta','post_id'=>17,'key'=>'sa_sample_flag','value'=>'1'],
 ], [], $foreign_meta, $other_contract), 'research_manager_resource_not_allowed'),

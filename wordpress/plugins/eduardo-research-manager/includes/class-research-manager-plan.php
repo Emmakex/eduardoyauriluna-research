@@ -266,10 +266,9 @@ final class Eduardo_Research_Manager_Plan {
                 || ! in_array($field, $policy->allowed_resource_post_fields($post_type), true)) {
                 return new WP_Error('research_manager_post_field_not_allowed', 'This post field cannot be mutated by the Manager foundation.');
             }
-            if ('post_status' === $field
-                && ('publish' !== (string) ($action['value'] ?? '') || ! $is_theme_page)) {
-                return new WP_Error('research_manager_post_status_not_allowed', 'Research Manager may only publish an existing Theme-controlled Research Page during structural remediation.');
-            }
+            // Plan::normalize_action separately restricts *new* post_status
+            // mutations to publishing the Theme Page. Executor rollback must
+            // still restore historical Insight draft/publish status snapshots.
         }
         return true;
     }
