@@ -192,7 +192,7 @@ expect(error_code(Eduardo_Research_Manager_Plan::validate($foreign_plan), 'resea
     'Research default cannot validate foreign metadata');
 foreach (['_research_doi','_eduardo_research_model','sa_sample_flag_extra','_wp_capabilities'] as $key) {
     expect(error_code(Eduardo_Research_Manager_Plan::create('forbid unrelated meta', [
-        ['type'=>'post_meta','post_id'=>17,'key'=>$key,'value'=>'x'],
+        ['type'=>'post_meta','post_id'=>31,'key'=>$key,'value'=>'x'],
     ], [], $foreign_meta, $other_contract), 'research_manager_meta_not_allowed'),
         "foreign Theme cannot write $key");
 }
