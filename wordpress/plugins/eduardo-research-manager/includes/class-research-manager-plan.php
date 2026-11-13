@@ -166,12 +166,12 @@ final class Eduardo_Research_Manager_Plan {
             return array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>$value);
         }
         if ('create_page' === $type) { return self::normalize_page_creation($action); }
-        if ('create_insight' === $type) { return self::normalize_research_creation($type, $action, $policy); }
-        if ('create_line' === $type) { return self::normalize_research_creation($type, $action, $policy); }
-        if ('create_output' === $type) { return self::normalize_research_creation($type, $action, $policy); }
-        if ('create_project' === $type) { return self::normalize_research_creation($type, $action, $policy); }
-        if ('create_software' === $type) { return self::normalize_research_creation($type, $action, $policy); }
-        if ('create_dataset' === $type) { return self::normalize_research_creation($type, $action, $policy); }
+        if ('create_insight' === $type) { return self::normalize_research_creation($type, $action, $policy, $contract); }
+        if ('create_line' === $type) { return self::normalize_research_creation($type, $action, $policy, $contract); }
+        if ('create_output' === $type) { return self::normalize_research_creation($type, $action, $policy, $contract); }
+        if ('create_project' === $type) { return self::normalize_research_creation($type, $action, $policy, $contract); }
+        if ('create_software' === $type) { return self::normalize_research_creation($type, $action, $policy, $contract); }
+        if ('create_dataset' === $type) { return self::normalize_research_creation($type, $action, $policy, $contract); }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
@@ -205,9 +205,12 @@ final class Eduardo_Research_Manager_Plan {
      * Research creation schemas simply by declaring the same action names.
      * New verticals need independently reviewed Plan AND Executor adapters.
      */
-    private static function normalize_research_creation(string $type, array $action, Site_Architect_Mutation_Policy $policy): array|WP_Error {
-        if (! ($policy instanceof Eduardo_Research_Manager_Research_Mutation_Policy)) {
-            return new WP_Error('research_manager_action_not_allowed', 'Research creation requires the explicit Research mutation policy.');
+    private static function normalize_research_creation(string $type, array $action, Site_Architect_Mutation_Policy $policy, Eduardo_Research_Manager_Contract $contract): array|WP_Error {
+        // Both the executable policy and the active Theme preset must be Research.
+        // A foreign Theme cannot borrow this vertical by injecting a Research policy.
+        if (! ($policy instanceof Eduardo_Research_Manager_Research_Mutation_Policy)
+            || 'research' !== (string) ($contract->preset()['id'] ?? '')) {
+            return new WP_Error('research_manager_action_not_allowed', 'Research creation requires the explicit Research Theme and mutation policy.');
         }
         return Eduardo_Research_Manager_Research_Creation_Normalizer::normalize($type, $action);
     }
