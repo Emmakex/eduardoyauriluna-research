@@ -8,24 +8,20 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-bluep
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-resource-registry.php';
 
 final class Eduardo_Research_Manager_Research_Blueprint_Resources implements Site_Architect_Blueprint_Resource_Provider {
-    /** Explicitly reviewed Resource Registry keys; no implicit expansion. */
-    private const LABELS = array(
-        'insights'=>'insight',
-        'lines'=>'research line',
-        'outputs'=>'research output',
-        'projects'=>'research project',
-        'software'=>'research software',
-        'datasets'=>'research dataset',
-    );
+    /** Exact reviewed keys; Registry descriptions cannot add a new Blueprint resource. */
+    private const KEYS = array('insights','lines','outputs','projects','software','datasets');
 
     public function theme_id(): string { return 'research'; }
 
     public function resource_keys(): array {
-        return array_keys(self::LABELS);
+        return self::KEYS;
     }
 
+    /** Keep Research intent vocabulary in its descriptive Registry. */
     public function resource_label(string $resource_key): string {
-        return self::LABELS[$resource_key] ?? '';
+        return in_array($resource_key, self::KEYS, true)
+            ? Eduardo_Research_Manager_Resource_Registry::blueprint_resource_label($resource_key)
+            : '';
     }
 
     /** Bind exactly the existing Site Architect 0.11.1 Research services. */
