@@ -6,18 +6,21 @@ if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-execution-spec.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-object-execution.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-insight-execution.php';
 
 final class Eduardo_Research_Manager_Executor {
     private Eduardo_Research_Manager_Snapshots $snapshots;
     private Site_Architect_Mutation_Policy $mutation_policy;
     private Eduardo_Research_Manager_Contract $theme_contract;
     private Eduardo_Research_Manager_Research_Object_Execution $research_objects;
+    private Eduardo_Research_Manager_Research_Insight_Execution $research_insights;
 
     public function __construct(?Eduardo_Research_Manager_Snapshots $snapshots = null, ?Site_Architect_Mutation_Policy $mutation_policy = null, ?Eduardo_Research_Manager_Contract $theme_contract = null) {
         $this->snapshots = $snapshots ?: new Eduardo_Research_Manager_Snapshots();
         $this->mutation_policy = $mutation_policy ?? new Eduardo_Research_Manager_Research_Mutation_Policy();
         $this->theme_contract = $theme_contract ?? new Eduardo_Research_Manager_Contract();
         $this->research_objects = new Eduardo_Research_Manager_Research_Object_Execution($this->mutation_policy, $this->theme_contract);
+        $this->research_insights = new Eduardo_Research_Manager_Research_Insight_Execution($this->mutation_policy, $this->theme_contract);
     }
 
     public function preview(array $plan): array|WP_Error {
@@ -121,7 +124,7 @@ final class Eduardo_Research_Manager_Executor {
             return array('exists'=>property_exists($post, $field),'value'=>$post->{$field} ?? null);
         }
         if ('create_page' === $type) { return $this->read_page_creation_state($action); }
-        if ('create_insight' === $type) { return $this->read_insight_creation_state($action); }
+        if ('create_insight' === $type) { return $this->research_insights->read_state($action); }
         if ($this->research_object_spec($type)) { return $this->research_objects->read_state($action); }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
@@ -148,20 +151,6 @@ final class Eduardo_Research_Manager_Executor {
         ),'site_front'=>$site_front);
     }
 
-    private function read_insight_creation_state(array $action): array {
-        $post = $this->find_post_by_creation_token((string) $action['creation_token'], 'post');
-        if (! $post instanceof WP_Post) { $post = $this->find_post_by_slug((string) $action['slug'], 'post'); }
-        if (! $post instanceof WP_Post) { return array('exists'=>false,'value'=>null); }
-        return array('exists'=>true,'value'=>array(
-            'post_id'=>(int) $post->ID,'post_type'=>(string) $post->post_type,'status'=>(string) $post->post_status,
-            'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,
-            'content'=>(string) $post->post_content,'language'=>$this->private_meta_string((int) $post->ID, '_research_language', Eduardo_Research_Manager::contract()->default_language()),
-            'insight_type'=>$this->private_meta_string((int) $post->ID, '_research_insight_type', 'research_note'),
-            'creation_token'=>$this->private_meta_string((int) $post->ID, '_eduardo_research_manager_creation_token'),
-            'url'=>(string) get_permalink($post),
-        ));
-    }
-
     private function write_action(array $action): bool|WP_Error {
         $type = (string) ($action['type'] ?? '');
         if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research creation is outside the active Theme execution contract.'); }
@@ -176,7 +165,7 @@ final class Eduardo_Research_Manager_Executor {
             if (is_wp_error($result)) { return $result; }
         }
         elseif ('create_page' === $type) { $result = $this->create_page($action); if (is_wp_error($result)) { return $result; } }
-        elseif ('create_insight' === $type) { $result = $this->create_insight($action); if (is_wp_error($result)) { return $result; } }
+        elseif ('create_insight' === $type) { $result = $this->research_insights->create($action); if (is_wp_error($result)) { return $result; } }
         elseif ($this->research_object_spec($type)) { $result = $this->research_objects->create($action); if (is_wp_error($result)) { return $result; } }
         else { return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.'); }
 
@@ -194,18 +183,6 @@ final class Eduardo_Research_Manager_Executor {
         ), true);
         if (is_wp_error($id)) { return $id; }
         if (! empty($action['front_page'])) { update_option('show_on_front', 'page'); update_option('page_on_front', (int) $id); }
-        clean_post_cache((int) $id); $this->refresh_theme_routes(); return true;
-    }
-
-    private function create_insight(array $action): bool|WP_Error {
-        if ($this->find_post_by_slug((string) $action['slug'], 'post') instanceof WP_Post) { return new WP_Error('research_manager_insight_creation_conflict', 'A WordPress post already occupies the planned Insight slug. Nothing was overwritten.'); }
-        if ($this->find_post_by_creation_token((string) $action['creation_token'], 'post') instanceof WP_Post) { return new WP_Error('research_manager_creation_token_collision', 'The Insight creation provenance token is already in use.'); }
-        $id = wp_insert_post(array(
-            'post_type'=>'post','post_status'=>$action['status'],'post_name'=>$action['slug'],'post_title'=>$action['title'],
-            'post_excerpt'=>$action['excerpt'],'post_content'=>$action['content'],
-            'meta_input'=>array('_research_language'=>$action['language'],'_research_insight_type'=>$action['insight_type'],'_eduardo_research_manager_creation_token'=>$action['creation_token']),
-        ), true);
-        if (is_wp_error($id)) { return $id; }
         clean_post_cache((int) $id); $this->refresh_theme_routes(); return true;
     }
 
@@ -234,9 +211,8 @@ final class Eduardo_Research_Manager_Executor {
                 $this->refresh_theme_routes();
             }
             elseif ('create_insight' === $type) {
-                $result = $this->restore_created_resource($action, $state, 'post', 'research_manager_insight_rollback_conflict');
+                $result = $this->research_insights->restore($action, $state);
                 if (is_wp_error($result)) { return $result; }
-                $this->refresh_theme_routes();
             }
             elseif ($this->research_object_spec($type)) {
                 $result = $this->research_objects->restore($action, $state);
@@ -268,9 +244,7 @@ final class Eduardo_Research_Manager_Executor {
         if ('create_page' === $type) {
             return array('post_type'=>'page','status'=>'publish','wp_slug'=>$action['wp_slug'],'title'=>$action['title'],'role'=>$action['role'],'model'=>$action['model'],'creation_token'=>$action['creation_token'],'front_page'=>! empty($action['front_page']));
         }
-        if ('create_insight' === $type) {
-            return array('post_type'=>'post','status'=>$action['status'],'slug'=>$action['slug'],'title'=>$action['title'],'excerpt'=>$action['excerpt'],'content'=>$action['content'],'language'=>$action['language'],'insight_type'=>$action['insight_type'],'creation_token'=>$action['creation_token']);
-        }
+        if ('create_insight' === $type) { return $this->research_insights->desired_value($action); }
         if ($this->research_object_spec($type)) { return $this->research_objects->desired_value($action); }
         return $action['value'] ?? null;
     }
