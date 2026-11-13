@@ -319,6 +319,11 @@ expect(error_code(Eduardo_Research_Manager_Plan::create('Foreign policy cannot c
      'creation_token'=>str_repeat('a', 32)],
 ], [], $forged_research_policy, $other_contract), 'research_manager_action_not_allowed'),
     'merely declaring Research creation does not authorize another Theme');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Research policy on foreign Theme', [
+    ['type'=>'create_insight','title'=>'Cross-Theme','slug'=>'cross-theme',
+     'creation_token'=>str_repeat('a', 32)],
+], [], $research, $other_contract), 'research_manager_action_not_allowed'),
+    'foreign Theme cannot borrow Research creation even with Research policy injection');
 expect(error_code(Eduardo_Research_Manager_Research_Creation_Normalizer::normalize('create_arbitrary', []),
     'research_manager_action_not_allowed'), 'Research normalizer has no dynamic Registry fallback');
 
