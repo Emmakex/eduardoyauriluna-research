@@ -15,6 +15,8 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-resources.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-resource-provider.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
@@ -39,6 +41,8 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-dataset-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-v1-capabilities.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-compiler.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-resources.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-resource-provider.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
@@ -81,6 +85,8 @@ jobs:
           }
           capabilities = (root / 'class-research-manager-v1-capabilities.php').read_text(encoding='utf-8')
           compiler = (root / 'class-research-manager-blueprint-compiler.php').read_text(encoding='utf-8')
+          research_blueprint_provider = (root / 'class-research-manager-research-blueprint-resources.php').read_text(encoding='utf-8')
+          generic_blueprint_provider = (root / 'class-site-architect-blueprint-resource-provider.php').read_text(encoding='utf-8')
           relations = (root / 'class-research-manager-blueprint-relations.php').read_text(encoding='utf-8')
           hydrator = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
           identity_profile = (root / 'class-research-manager-identity-profile.php').read_text(encoding='utf-8')
@@ -175,10 +181,18 @@ jobs:
           if re.search(r"return\s+array\(\s*'output'\s*=>", object_admin_kinds):
               raise SystemExit('Object Admin must not restore a literal Research Object membership map')
 
-          if 'Resource_Registry::blueprint_resource_label($resource_key)' not in compiler:
-              raise SystemExit('Blueprint Compiler must derive Research resource intent labels from Resource Registry')
+          if '$this->greenfield->resource_provider()->resource_label($resource_key)' not in compiler:
+              raise SystemExit('Blueprint Compiler must derive intent labels from the active typed vertical provider')
+          if 'Resource_Registry::blueprint_resource_label($resource_key)' in compiler:
+              raise SystemExit('Blueprint Compiler must not select the Research Registry directly')
+          if 'Resource_Registry::blueprint_resource_label($resource_key)' not in research_blueprint_provider:
+              raise SystemExit('Research provider must preserve Registry-owned intent labels')
+          if 'private const KEYS' not in research_blueprint_provider:
+              raise SystemExit('Research provider must pin exactly reviewed Blueprint resource keys')
+          if 'Resource_Registry' in generic_blueprint_provider:
+              raise SystemExit('Generic provider contract must not depend on Research Registry')
           if "array('insights'=>'insight','lines'=>'research line'" in compiler:
-              raise SystemExit('Blueprint Compiler must not restore a literal Research resource label taxonomy')
+              raise SystemExit('Blueprint Compiler must not restore literal Research resource labels')
 
           relation_specs = registry.split('public static function relation_blueprint_specs', 1)[1].split('public static function inventory_specs', 1)[0]
           if "'service'=>" in relation_specs:
