@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-mutation-policy.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-resource-ownership-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-mutation-policy.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-resource-ownership-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
@@ -46,6 +48,7 @@ jobs:
           set -euo pipefail
           ROOT=wordpress/plugins/eduardo-research-manager/includes
           php -l "$ROOT/class-site-architect-mutation-policy.php"
+          php -l "$ROOT/class-site-architect-resource-ownership-policy.php"
           php -l "$ROOT/class-research-manager-research-mutation-policy.php"
           php -l "$ROOT/class-research-manager-research-creation-normalizer.php"
           php -l "$ROOT/class-research-manager-research-execution-spec.php"
@@ -60,6 +63,7 @@ jobs:
           from pathlib import Path
           root = Path('wordpress/plugins/eduardo-research-manager')
           generic = (root/'includes/class-site-architect-mutation-policy.php').read_text()
+          ownership = (root/'includes/class-site-architect-resource-ownership-policy.php').read_text()
           vertical = (root/'includes/class-research-manager-research-mutation-policy.php').read_text()
           plan = (root/'includes/class-research-manager-plan.php').read_text()
           executor = (root/'includes/class-research-manager-executor.php').read_text()
@@ -71,6 +75,12 @@ jobs:
           assert '$policy->allowed_action_types()' in plan
           assert '$policy->allowed_meta_keys()' in plan
           assert 'public function allowed_meta_keys(): array;' in generic
+          assert 'public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page): bool;' in ownership
+          assert 'interface Site_Architect_Resource_Ownership_Policy' in ownership
+          assert 'Research_Manager' not in ownership and 'eduardo_research' not in ownership
+          assert 'implements Site_Architect_Mutation_Policy, Site_Architect_Resource_Ownership_Policy' in vertical
+          assert 'resource_mutation_gate(' in plan
+          assert executor.count('Eduardo_Research_Manager_Plan::resource_mutation_gate(') == 3
           assert 'public function allowed_meta_keys(): array' in vertical
           assert 'public function risk_for_action(array $action, callable $is_theme_owned_page): string;' in generic
           assert 'public function evidence_blocker_message(string $reason): string;' in generic
