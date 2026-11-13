@@ -110,7 +110,7 @@ check(str_contains($executor,'return $this->research_objects->spec($action_type)
     'Generic Executor must delegate all five Research object execution routes to the Research adapter');
 check(str_contains($researchObjectExecution,'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)')
     && str_contains($researchObjectExecution,'instanceof Eduardo_Research_Manager_Research_Mutation_Policy')
-    && str_contains($researchObjectExecution,"'research' !== (string) ($this->theme_contract->preset()['id'] ?? '')"),
+    && str_contains($researchObjectExecution,"'research' !== (string) (\$this->theme_contract->preset()['id'] ?? '')"),
     'Research execution adapter must guard the exact Theme and policy before resolving a reviewed spec');
 check(str_contains($researchExecutionSpec,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),
     'Research execution adapter must preserve Registry metadata compatibility after exact-action checks');
