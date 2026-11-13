@@ -359,6 +359,25 @@ $borrowed_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_
 foreach ($expected_research_post_types as $action_type => $post_type) {
     $spec = Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type);
     $registry = Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type);
+    $reviewed_creation_meta = Eduardo_Research_Manager_Research_Resource_Fields::creation_meta($post_type);
+    expect($reviewed_creation_meta === $registry['meta'] && ! empty($reviewed_creation_meta),
+        'reviewed Research resource native fields preserve the exact creation schema for ' . $post_type);
+    expect(Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, $registry['meta']),
+        'reviewed Research field map accepts its own unchanged resource schema');
+    $unexpected_meta = $reviewed_creation_meta;
+    $unexpected_meta['unreviewed_field'] = '_wp_capabilities';
+    expect(! Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, $unexpected_meta),
+        'Registry cannot add an arbitrary metadata field to ' . $post_type);
+    $removed_meta = $reviewed_creation_meta;
+    unset($removed_meta[array_key_first($removed_meta)]);
+    expect(! Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, $removed_meta),
+        'Registry cannot omit a reviewed metadata field without an explicit compatibility cut');
+    $remapped_meta = $reviewed_creation_meta;
+    $remapped_meta[array_key_first($remapped_meta)] = '_wp_capabilities';
+    expect(! Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, $remapped_meta),
+        'Registry cannot remap reviewed fields to arbitrary WordPress metadata');
+    expect(! Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, array_reverse($reviewed_creation_meta, true)),
+        'Registry field reordering requires an explicit reviewed schema update');
     expect(is_array($spec) && $spec['post_type'] === $post_type
         && $spec['meta'] === $registry['meta']
         && $spec['array_fields'] === $registry['array_fields']
@@ -387,6 +406,29 @@ foreach ([$foreign_executor, $mixed_executor, $borrowed_executor] as $outsider) 
     ]), 'research_manager_action_not_allowed'), 'Research Insight rollback is not inherited by another Theme');
 }
 
+
+/** #475.9: distinguish reviewed native create fields from legacy mutable fields. */
+expect([] === Eduardo_Research_Manager_Research_Resource_Fields::creation_meta('post')
+    && [] === Eduardo_Research_Manager_Research_Resource_Fields::creation_meta('page')
+    && [] === Eduardo_Research_Manager_Research_Resource_Fields::creation_meta('product'),
+    'native creation schemas are closed to general WordPress types');
+foreach (['page','post','research_line','research_output','research_project','research_software','research_dataset'] as $legacy_post_type) {
+    expect(Eduardo_Research_Manager_Research_Resource_Fields::supports_post_type($legacy_post_type),
+        'historical Research resource type remains recognized: ' . $legacy_post_type);
+    expect($research->allowed_resource_meta_keys($legacy_post_type) === $research->allowed_meta_keys(),
+        'all 49 historically accepted post_meta keys remain available to owned resources');
+    expect($research->allowed_resource_post_fields($legacy_post_type) === [
+        'post_title','post_excerpt','post_content','menu_order','post_status',
+    ], 'all five bounded post fields remain unchanged');
+}
+expect(! Eduardo_Research_Manager_Research_Resource_Fields::supports_post_type('product')
+    && ! Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches('product', ['unexpected'=>'_wp_capabilities']),
+    'unreviewed types cannot borrow the Research creation contract');
+expect(! in_array('_research_project_status',
+    array_values(Eduardo_Research_Manager_Research_Resource_Fields::creation_meta('research_line')), true),
+    'a Line native creation schema cannot silently inherit Project metadata');
+expect(in_array('_research_project_status', $research->allowed_resource_meta_keys('research_line'), true),
+    'legacy generic post_meta allowance is deliberately preserved pending separate evidence');
 
 /** #475.8: no Theme can inherit post fields from a global action/key allowlist. */
 expect($research instanceof Site_Architect_Resource_Ownership_Policy, 'Research declares resource ownership explicitly');
@@ -462,4 +504,4 @@ expect(error_code($read_reflection->invoke($mixed_executor, [
     'type'=>'post_meta','post_id'=>31,'key'=>'_research_doi',
 ]), 'research_manager_resource_not_allowed'), 'foreign Theme cannot read Research metadata via Research policy');
 
-echo "PASS: Research risk/evidence parity, resource ownership and alternate Theme policy\n";
+echo "PASS: Research risk/evidence parity, code-owned native field schemas, resource ownership and alternate Theme policy\n";

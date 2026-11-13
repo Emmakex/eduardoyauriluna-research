@@ -5,6 +5,7 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-resource-registry.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-resource-fields.php';
 
 final class Eduardo_Research_Manager_Research_Execution_Spec {
     /** Exact action-to-post-type map. Registry alone never enables a new write path. */
@@ -35,7 +36,10 @@ final class Eduardo_Research_Manager_Research_Execution_Spec {
         $array_fields = is_array($registered['array_fields'] ?? null) ? array_values($registered['array_fields']) : array();
         $defaults = is_array($registered['defaults'] ?? null) ? $registered['defaults'] : array();
 
-        if ('' === $post_type || '' === $creation_conflict || '' === $rollback_conflict || ! $meta) {
+        if ('' === $post_type || '' === $creation_conflict || '' === $rollback_conflict
+            || ! Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, $meta)) {
+            // The Registry describes resources; it cannot extend executable
+            // field ownership without a separately reviewed vertical contract.
             return array();
         }
 

@@ -8,6 +8,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-resource-fields.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
       - 'scripts/site-architect-475-mutation-policy-contract-test.php'
@@ -20,6 +21,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-resource-fields.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
       - 'scripts/site-architect-475-mutation-policy-contract-test.php'
@@ -52,6 +54,7 @@ jobs:
           php -l "$ROOT/class-research-manager-research-mutation-policy.php"
           php -l "$ROOT/class-research-manager-research-creation-normalizer.php"
           php -l "$ROOT/class-research-manager-research-execution-spec.php"
+          php -l "$ROOT/class-research-manager-research-resource-fields.php"
           php -l "$ROOT/class-research-manager-plan.php"
           php -l "$ROOT/class-research-manager-executor.php"
           php -l scripts/site-architect-475-mutation-policy-contract-test.php
@@ -111,6 +114,14 @@ jobs:
               assert 'private static function normalize_' + type_name + '_creation' in research_normalizer
           assert "return new WP_Error('research_manager_action_not_allowed'" in research_normalizer
           execution_spec = (root/'includes/class-research-manager-research-execution-spec.php').read_text()
+          resource_fields = (root/'includes/class-research-manager-research-resource-fields.php').read_text()
+          assert 'Resource_Registry' not in resource_fields and '$_REQUEST' not in resource_fields
+          assert 'private const CREATION_META' in resource_fields
+          assert 'creation_meta_matches' in resource_fields
+          assert 'Eduardo_Research_Manager_Research_Resource_Fields::creation_meta_matches($post_type, $meta)' in execution_spec
+          assert 'Eduardo_Research_Manager_Research_Resource_Fields::legacy_meta_keys' in vertical
+          assert 'Eduardo_Research_Manager_Research_Resource_Fields::legacy_post_fields' in vertical
+          assert 'Eduardo_Research_Manager_Research_Resource_Fields::' not in executor
           assert 'Eduardo_Research_Manager_Resource_Registry::' not in executor
           assert 'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)' in executor
           assert executor.count('research_creation_blocked($type)') == 3
