@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
-final class Eduardo_Research_Manager_Blueprint_Relations {
+final class Eduardo_Research_Manager_Blueprint_Relations implements Site_Architect_Greenfield_Relationship_Phase {
     private Eduardo_Research_Manager_Blueprint $blueprints;
     private Eduardo_Research_Manager_Line_Resource $lines;
     private Eduardo_Research_Manager_Executor $executor;
@@ -18,6 +18,9 @@ final class Eduardo_Research_Manager_Blueprint_Relations {
         $this->lines = $lines ?: Eduardo_Research_Manager::lines();
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
     }
+
+    /** The Research vertical exclusively owns this relation behavior. */
+    public function theme_id(): string { return 'research'; }
 
     public function preview(array $blueprint): array|WP_Error {
         $operations = $this->resolve_operations($blueprint);

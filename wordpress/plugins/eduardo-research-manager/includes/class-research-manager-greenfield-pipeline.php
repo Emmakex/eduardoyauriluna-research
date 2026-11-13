@@ -6,26 +6,32 @@ if (! defined('ABSPATH')) { exit; }
 
 final class Eduardo_Research_Manager_Greenfield_Pipeline {
     private Eduardo_Research_Manager_Bootstrap $bootstrap;
-    private Eduardo_Research_Manager_Blueprint_Pairing $pairing;
+    private Site_Architect_Greenfield_Relationship_Phase $pairing;
     private Eduardo_Research_Manager_Blueprint_Hydrator $hydrator;
-    private Eduardo_Research_Manager_Blueprint_Relations $relations;
+    private Site_Architect_Greenfield_Relationship_Phase $relations;
+    private Site_Architect_Blueprint_Resource_Provider $resource_provider;
 
     public function __construct(
         ?Eduardo_Research_Manager_Bootstrap $bootstrap = null,
-        ?Eduardo_Research_Manager_Blueprint_Pairing $pairing = null,
+        ?Site_Architect_Greenfield_Relationship_Phase $pairing = null,
         ?Eduardo_Research_Manager_Blueprint_Hydrator $hydrator = null,
-        ?Eduardo_Research_Manager_Blueprint_Relations $relations = null
+        ?Site_Architect_Greenfield_Relationship_Phase $relations = null,
+        ?Site_Architect_Blueprint_Resource_Provider $resource_provider = null
     ) {
         $this->bootstrap = $bootstrap ?: Eduardo_Research_Manager::bootstrap();
         $this->pairing = $pairing ?: Eduardo_Research_Manager::blueprint_pairing();
         $this->hydrator = $hydrator ?: Eduardo_Research_Manager::hydrator();
         $this->relations = $relations ?: Eduardo_Research_Manager::blueprint_relations();
+        $this->resource_provider = $resource_provider ?: Eduardo_Research_Manager::greenfield()->resource_provider();
     }
 
     public function preview(array $blueprint): array|WP_Error {
         if (! Eduardo_Research_Manager_Mode::is_greenfield()) {
             return new WP_Error('research_manager_greenfield_mode_required', 'The Greenfield site pipeline requires Greenfield mode.');
         }
+
+        $authority = $this->relationship_authority();
+        if (is_wp_error($authority)) { return $authority; }
 
         $bootstrap = $this->bootstrap->preview($blueprint);
         if (is_wp_error($bootstrap)) { return $bootstrap; }
@@ -73,6 +79,9 @@ final class Eduardo_Research_Manager_Greenfield_Pipeline {
             return new WP_Error('research_manager_greenfield_mode_required', 'The Greenfield site pipeline requires Greenfield mode.');
         }
 
+        $authority = $this->relationship_authority();
+        if (is_wp_error($authority)) { return $authority; }
+
         $completed = array();
         $bootstrap = $this->bootstrap->apply($blueprint);
         if (is_wp_error($bootstrap)) { return $this->failure('bootstrap', $bootstrap, $completed); }
@@ -106,6 +115,9 @@ final class Eduardo_Research_Manager_Greenfield_Pipeline {
         if (! current_user_can('manage_options')) {
             return new WP_Error('research_manager_forbidden', 'You are not allowed to rollback the Greenfield site pipeline.');
         }
+        $authority = $this->relationship_authority();
+        if (is_wp_error($authority)) { return $authority; }
+
         $results = array();
         foreach (array('relations','hydration','pairing','bootstrap') as $phase) {
             $ids = is_array($snapshots[$phase] ?? null) ? $snapshots[$phase] : array();
@@ -126,6 +138,20 @@ final class Eduardo_Research_Manager_Greenfield_Pipeline {
             'snapshot_count'=>array_sum(array_map(static fn(array $row): int => (int) ($row['snapshot_count'] ?? 0), $results)),
             'rolled_back_at'=>gmdate(DATE_W3C),
         );
+    }
+
+    /** A vertical phase is never authorized by its mere presence in the pipeline. */
+    private function relationship_authority(): bool|WP_Error {
+        $theme_id = $this->resource_provider->theme_id();
+        if ('' === $theme_id
+            || $theme_id !== $this->pairing->theme_id()
+            || $theme_id !== $this->relations->theme_id()) {
+            return new WP_Error(
+                'research_manager_greenfield_relationship_theme_mismatch',
+                'Greenfield relationship phases must belong to the exact active Theme resource provider.'
+            );
+        }
+        return true;
     }
 
     private function failure(string $phase, WP_Error $error, array $completed): WP_Error {
