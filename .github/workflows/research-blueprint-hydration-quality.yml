@@ -6,6 +6,8 @@ on:
       - 'config/research-site-blueprint.json'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-bootstrap.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
@@ -74,19 +76,25 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php')
-          source = path.read_text(encoding='utf-8')
-          forbidden = (
-              "$slots['en']",
-              "$slots['es']",
-              "$seed['headline']",
-              "$seed['headline_es']",
-          )
+          root = Path('wordpress/plugins/eduardo-research-manager/includes')
+          source = (root / 'class-research-manager-blueprint-hydrator.php').read_text(encoding='utf-8')
+          research = (root / 'class-research-manager-research-blueprint-identity.php').read_text(encoding='utf-8')
+          contract = (root / 'class-site-architect-blueprint-identity-resolver.php').read_text(encoding='utf-8')
+          forbidden = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']",
+                       'researcher-name', 'researcher-headline')
           leaked = [token for token in forbidden if token in source]
           if leaked:
-              raise SystemExit('Blueprint Hydrator reconstructs legacy language storage directly: ' + ', '.join(leaked))
-          if '$contract->identity_headline_field($language)' not in source:
-              raise SystemExit('Blueprint Hydrator must resolve Identity headline storage through the Greenfield Theme Contract')
+              raise SystemExit('Blueprint Hydrator reconstructs Research identity storage directly: ' + ', '.join(leaked))
+          if '$contract->identity_headline_field($language)' not in research:
+              raise SystemExit('Research identity resolver must resolve Identity headline storage through the Theme Contract')
+          if 'Eduardo_Research_Manager_Identity_Profile::option_key()' not in research:
+              raise SystemExit('Research identity resolver must derive the canonical Profile option')
+          if "return 'research';" not in research or 'research_manager_blueprint_identity_mismatch' not in research:
+              raise SystemExit('Research identity resolver dropped Theme or legacy EN/ES mismatch restriction')
+          if 'Eduardo_Research' in contract or 'researcher-name' in contract:
+              raise SystemExit('Generic identity contract must not know the Research vertical')
+          if '$this->identity_resolver->seed($normalized)' not in source or source.count('$this->identity_authority()') != 3:
+              raise SystemExit('Hydrator must delegate identity resolution with exact Theme authority')
           PY
 
       - name: Install WordPress, Theme and Manager
