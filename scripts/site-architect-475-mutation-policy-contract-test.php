@@ -445,6 +445,39 @@ foreach ([$foreign_executor, $mixed_executor, $borrowed_executor] as $outsider) 
 }
 
 
+/** #475.11: Research Insight execution follows its own exact Theme-bound adapter. */
+$insight_action = $insight['actions'][0];
+$research_insights = new Eduardo_Research_Manager_Research_Insight_Execution($research, new Eduardo_Research_Manager_Contract());
+$foreign_insights = new Eduardo_Research_Manager_Research_Insight_Execution($other_policy, $other_contract);
+$mixed_insights = new Eduardo_Research_Manager_Research_Insight_Execution($research, $other_contract);
+$borrowed_insights = new Eduardo_Research_Manager_Research_Insight_Execution($forged_research_policy, new Eduardo_Research_Manager_Contract());
+$insight_desired = $research_insights->desired_value($insight_action);
+expect($insight_desired === [
+    'post_type'=>'post','status'=>$insight_action['status'],'slug'=>$insight_action['slug'],
+    'title'=>$insight_action['title'],'excerpt'=>$insight_action['excerpt'],'content'=>$insight_action['content'],
+    'language'=>$insight_action['language'],'insight_type'=>$insight_action['insight_type'],
+    'creation_token'=>$insight_action['creation_token'],
+], 'Insight desired state preserves complete accepted 0.11.1 fields and order');
+expect($research_insights->read_state($insight_action) === ['exists'=>false,'value'=>null],
+    'Insight adapter read preserves missing-state Preview without WordPress writes');
+expect($read_reflection->invoke($research_executor, $insight_action) === ['exists'=>false,'value'=>null],
+    'Executor delegates the accepted missing Insight state to its Research adapter');
+foreach ([$foreign_insights, $mixed_insights, $borrowed_insights] as $outside_insight) {
+    expect(error_code($outside_insight->read_state($insight_action), 'research_manager_action_not_allowed'),
+        'foreign policy or Theme cannot read Insight creation state');
+    expect(error_code($outside_insight->create($insight_action), 'research_manager_action_not_allowed'),
+        'foreign policy or Theme cannot create an Insight');
+    expect(error_code($outside_insight->restore($insight_action, ['exists'=>false,'value'=>null]), 'research_manager_action_not_allowed'),
+        'foreign policy or Theme cannot rollback an Insight');
+    expect(error_code($outside_insight->desired_value($insight_action), 'research_manager_action_not_allowed'),
+        'foreign policy or Theme cannot describe Insight creation');
+}
+$spoofed_insight_action = $insight_action;
+$spoofed_insight_action['type'] = 'create_line';
+expect(error_code($research_insights->create($spoofed_insight_action), 'research_manager_action_not_allowed')
+    && error_code($research_insights->read_state($spoofed_insight_action), 'research_manager_action_not_allowed'),
+    'Insight adapter cannot execute another Research resource action');
+
 /** #475.9: distinguish reviewed native create fields from legacy mutable fields. */
 expect([] === Eduardo_Research_Manager_Research_Resource_Fields::creation_meta('post')
     && [] === Eduardo_Research_Manager_Research_Resource_Fields::creation_meta('page')
@@ -542,4 +575,4 @@ expect(error_code($read_reflection->invoke($mixed_executor, [
     'type'=>'post_meta','post_id'=>31,'key'=>'_research_doi',
 ]), 'research_manager_resource_not_allowed'), 'foreign Theme cannot read Research metadata via Research policy');
 
-echo "PASS: Research risk/evidence parity, object execution delegation, field schemas, resource ownership and alternate Theme policy\n";
+echo "PASS: Research risk/evidence parity, object and Insight execution delegation, field schemas, resource ownership and alternate Theme policy\n";
