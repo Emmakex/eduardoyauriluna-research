@@ -102,6 +102,10 @@ final class Eduardo_Research_Manager_Executor {
     private function read_state(array $action): array|WP_Error {
         $type = (string) ($action['type'] ?? '');
         if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research creation is outside the active Theme execution contract.'); }
+        if (in_array($type, array('post_meta','post_field'), true)) {
+            $resource_gate = Eduardo_Research_Manager_Plan::resource_mutation_gate($action, $this->mutation_policy, $this->theme_contract);
+            if (is_wp_error($resource_gate)) { return $resource_gate; }
+        }
         if ('option' === $type) {
             $marker = new stdClass(); $value = get_option($action['key'], $marker);
             return array('exists'=>$value !== $marker,'value'=>$value === $marker ? null : $value);
@@ -179,6 +183,10 @@ final class Eduardo_Research_Manager_Executor {
     private function write_action(array $action): bool|WP_Error {
         $type = (string) ($action['type'] ?? '');
         if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research creation is outside the active Theme execution contract.'); }
+        if (in_array($type, array('post_meta','post_field'), true)) {
+            $resource_gate = Eduardo_Research_Manager_Plan::resource_mutation_gate($action, $this->mutation_policy, $this->theme_contract);
+            if (is_wp_error($resource_gate)) { return $resource_gate; }
+        }
         if ('option' === $type) { update_option((string) $action['key'], $action['value'], false); }
         elseif ('post_meta' === $type) { update_post_meta((int) $action['post_id'], (string) $action['key'], $action['value']); }
         elseif ('post_field' === $type) {
@@ -244,6 +252,10 @@ final class Eduardo_Research_Manager_Executor {
             if (! is_array($record) || ! is_array($record['action'] ?? null) || ! is_array($record['state'] ?? null)) { continue; }
             $action = $record['action']; $state = $record['state']; $type = (string) ($action['type'] ?? '');
             if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research rollback is outside the active Theme execution contract.'); }
+            if (in_array($type, array('post_meta','post_field'), true)) {
+                $resource_gate = Eduardo_Research_Manager_Plan::resource_mutation_gate($action, $this->mutation_policy, $this->theme_contract);
+                if (is_wp_error($resource_gate)) { return $resource_gate; }
+            }
             if ('option' === $type) { empty($state['exists']) ? delete_option((string) $action['key']) : update_option((string) $action['key'], $state['value'], false); }
             elseif ('post_meta' === $type) { empty($state['exists']) ? delete_post_meta((int) $action['post_id'], (string) $action['key']) : update_post_meta((int) $action['post_id'], (string) $action['key'], $state['value']); }
             elseif ('post_field' === $type) {

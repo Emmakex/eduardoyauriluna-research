@@ -145,7 +145,8 @@ final class Eduardo_Research_Manager_Plan {
             $post_id = absint($action['post_id'] ?? 0);
             $key = sanitize_key((string) ($action['key'] ?? ''));
             if ($post_id <= 0 || ! get_post($post_id)) { return new WP_Error('research_manager_invalid_post', 'Post metadata mutation requires an existing WordPress resource.'); }
-            if (! self::allowed_meta_key($key, $policy)) { return new WP_Error('research_manager_meta_not_allowed', 'This metadata key is outside the Research Theme contract.'); }
+            $resource_gate = self::resource_mutation_gate(array('type'=>'post_meta','post_id'=>$post_id,'key'=>$key), $policy, $contract);
+            if (is_wp_error($resource_gate)) { return $resource_gate; }
             return array('type'=>'post_meta','post_id'=>$post_id,'key'=>$key,'value'=>$action['value'] ?? null);
         }
         if ('post_field' === $type) {
@@ -153,6 +154,8 @@ final class Eduardo_Research_Manager_Plan {
             $field = sanitize_key((string) ($action['field'] ?? ''));
             if ($post_id <= 0 || ! get_post($post_id)) { return new WP_Error('research_manager_invalid_post', 'Post-field mutation requires an existing WordPress resource.'); }
             if (! in_array($field, self::ALLOWED_POST_FIELDS, true)) { return new WP_Error('research_manager_post_field_not_allowed', 'This post field cannot be mutated by the Manager foundation.'); }
+            $resource_gate = self::resource_mutation_gate(array('type'=>'post_field','post_id'=>$post_id,'field'=>$field,'value'=>$action['value'] ?? null), $policy, $contract);
+            if (is_wp_error($resource_gate)) { return $resource_gate; }
             if ('post_status' === $field) {
                 $value = sanitize_key((string) ($action['value'] ?? ''));
                 if ('publish' !== $value || ! self::is_theme_owned_page($post_id)) {
@@ -226,6 +229,49 @@ final class Eduardo_Research_Manager_Plan {
             }
         }
         return false;
+    }
+
+    /**
+     * Shared ownership gate for Plan and Executor's read, write and rollback.
+     * Global allowlists never authorize another Theme or an unrelated resource.
+     */
+    public static function resource_mutation_gate(array $action, Site_Architect_Mutation_Policy $policy, Eduardo_Research_Manager_Contract $contract): bool|WP_Error {
+        $type = (string) ($action['type'] ?? '');
+        if (! in_array($type, array('post_meta','post_field'), true)
+            || ! in_array($type, $policy->allowed_action_types(), true)
+            || ! ($policy instanceof Site_Architect_Resource_Ownership_Policy)) {
+            return new WP_Error('research_manager_action_not_allowed', 'Post mutations require a reviewed resource ownership contract.');
+        }
+        $post_id = absint($action['post_id'] ?? 0);
+        $post = $post_id > 0 ? get_post($post_id) : null;
+        if (! $post instanceof WP_Post) {
+            return new WP_Error('research_manager_invalid_post', 'Post mutation requires an existing WordPress resource.');
+        }
+        $post_type = (string) $post->post_type;
+        $is_theme_page = self::is_theme_owned_page($post_id, $contract);
+        if (! $policy->owns_resource((string) ($contract->preset()['id'] ?? ''), $post_type, $is_theme_page)) {
+            return new WP_Error('research_manager_resource_not_allowed', 'Resource is outside the active Theme ownership contract.');
+        }
+        if ('post_meta' === $type) {
+            $original = (string) ($action['key'] ?? '');
+            $key = sanitize_key($original);
+            if ($key !== $original || ! self::allowed_meta_key($key, $policy)
+                || ! in_array($key, $policy->allowed_resource_meta_keys($post_type), true)) {
+                return new WP_Error('research_manager_meta_not_allowed', 'This metadata key is outside the Research Theme contract.');
+            }
+        } else {
+            $original = (string) ($action['field'] ?? '');
+            $field = sanitize_key($original);
+            if ($field !== $original || ! in_array($field, self::ALLOWED_POST_FIELDS, true)
+                || ! in_array($field, $policy->allowed_resource_post_fields($post_type), true)) {
+                return new WP_Error('research_manager_post_field_not_allowed', 'This post field cannot be mutated by the Manager foundation.');
+            }
+            if ('post_status' === $field
+                && ('publish' !== (string) ($action['value'] ?? '') || ! $is_theme_page)) {
+                return new WP_Error('research_manager_post_status_not_allowed', 'Research Manager may only publish an existing Theme-controlled Research Page during structural remediation.');
+            }
+        }
+        return true;
     }
 
     private static function allowed_meta_key(string $key, Site_Architect_Mutation_Policy $policy): bool {
