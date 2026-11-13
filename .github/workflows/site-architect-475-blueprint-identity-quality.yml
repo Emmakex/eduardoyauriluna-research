@@ -1,0 +1,77 @@
+name: Site Architect 475 Blueprint Identity Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - 'scripts/site-architect-475-blueprint-identity-contract-test.php'
+      - '.github/workflows/site-architect-475-blueprint-identity-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
+      - 'wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php'
+      - 'scripts/site-architect-475-blueprint-identity-contract-test.php'
+      - '.github/workflows/site-architect-475-blueprint-identity-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  identity-provider:
+    name: Theme-owned Blueprint identity PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1','8.2']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Lint and exercise identity rules and isolated Themes
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=wordpress/plugins/eduardo-research-manager
+          for file in includes/class-site-architect-blueprint-identity-resolver.php \
+                      includes/class-research-manager-research-blueprint-identity.php \
+                      includes/class-research-manager-blueprint-hydrator.php \
+                      includes/class-research-manager-blueprint.php \
+                      eduardo-research-manager.php; do
+            php -l "$ROOT/$file"
+          done
+          php -l scripts/site-architect-475-blueprint-identity-contract-test.php
+          php scripts/site-architect-475-blueprint-identity-contract-test.php
+      - name: Enforce Core/Research split and version compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('wordpress/plugins/eduardo-research-manager')
+          policy=(root/'includes/class-site-architect-blueprint-identity-resolver.php').read_text()
+          research=(root/'includes/class-research-manager-research-blueprint-identity.php').read_text()
+          core=(root/'includes/class-research-manager-blueprint-hydrator.php').read_text()
+          plugin=(root/'eduardo-research-manager.php').read_text()
+          blueprint=(root/'includes/class-research-manager-blueprint.php').read_text()
+          assert 'Eduardo_Research' not in policy and 'researcher-' not in policy
+          assert 'researcher-name' not in core and 'researcher-headline' not in core
+          assert 'researcher-name' in research and 'researcher-headline' in research
+          assert 'research_manager_blueprint_identity_mismatch' in research
+          assert '$this->identity_resolver->seed($normalized)' in core
+          assert core.count('$this->identity_authority()') == 3
+          assert 'public function theme_id(): string' in blueprint
+          assert 'Version: 0.11.1' in plugin and 'Plugin Name: Site Architect' in plugin
+          print('PASS: identity policy is vertical, Core retains gate, production version unchanged')
+          PY
