@@ -19,6 +19,9 @@ final class Eduardo_Research_Manager_Blueprint {
         $this->contract = $contract ?? new Eduardo_Research_Manager_Contract();
     }
 
+    /** Blueprint's explicitly selected Theme resource authority. */
+    public function theme_id(): string { return $this->resource_provider->theme_id(); }
+
     public function resource_keys(): array {
         return array_merge(array('pages'), $this->resource_provider->resource_keys());
     }
