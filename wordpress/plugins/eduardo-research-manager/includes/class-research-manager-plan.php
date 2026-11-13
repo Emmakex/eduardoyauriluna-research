@@ -30,7 +30,7 @@ final class Eduardo_Research_Manager_Plan {
             $signature = self::target_signature($normalized);
             if (isset($targets[$signature])) { return new WP_Error('research_manager_duplicate_target', 'A mutation plan may change each target only once.'); }
             $targets[$signature] = true;
-            $action_risk = self::action_risk($normalized);
+            $action_risk = self::action_risk($normalized, $policy, $contract);
             if ('evidence-required' === $action_risk) { $risk = 'evidence-required'; }
             elseif ('standard' === $risk && 'editorial-review' === $action_risk) { $risk = 'editorial-review'; }
             $clean[] = $normalized;
@@ -60,7 +60,10 @@ final class Eduardo_Research_Manager_Plan {
             'evidence_reference'=>(string) $plan['evidence_reference'],
         ), $policy, $contract);
         if (is_wp_error($rebuilt)) { return $rebuilt; }
-        if (! hash_equals((string) $rebuilt['checksum'], (string) $plan['checksum'])) {
+        if (! hash_equals((string) $rebuilt['checksum'], (string) $plan['checksum'])
+            || (string) $plan['risk'] !== (string) $rebuilt['risk']) {
+            // Risk is a derived security property. A caller must not downgrade
+            // evidence-required to standard while keeping a valid checksum.
             return new WP_Error('research_manager_plan_changed', 'Mutation plan checksum does not match its contents. Re-preview the change.');
         }
         return true;
@@ -69,53 +72,44 @@ final class Eduardo_Research_Manager_Plan {
     public static function apply_gate(array $plan, ?Site_Architect_Mutation_Policy $policy = null, ?Eduardo_Research_Manager_Contract $contract = null): bool|WP_Error {
         $valid = self::validate($plan, $policy, $contract);
         if (is_wp_error($valid)) { return $valid; }
+        $policy = $policy ?? new Eduardo_Research_Manager_Research_Mutation_Policy();
         if ('evidence-required' === (string) $plan['risk']) {
             if (empty($plan['evidence_confirmed'])) {
-                return new WP_Error('research_manager_evidence_required', 'This mutation changes an evidence-sensitive academic claim. Confirm evidence and rebuild the plan before Apply.');
+                return new WP_Error('research_manager_evidence_required', self::evidence_blocker_message($policy, 'confirmation'));
             }
             if ('' === trim((string) $plan['evidence_reference'])) {
-                return new WP_Error('research_manager_evidence_reference_required', 'Evidence-sensitive mutations require a source or verification reference before Apply.');
+                return new WP_Error('research_manager_evidence_reference_required', self::evidence_blocker_message($policy, 'reference'));
             }
         }
         return true;
     }
 
-    public static function action_risk(array $action): string {
-        $type = (string) ($action['type'] ?? '');
-        if ('create_page' === $type) { return 'standard'; }
-        if ('create_insight' === $type) { return 'editorial-review'; }
-        if (Eduardo_Research_Manager_Resource_Registry::by_creation_action($type)) { return 'evidence-required'; }
+    /**
+     * Generic risk gate; Research-only heuristics belong to the active policy.
+     * The default Research policy preserves the installed 0.11.1 behavior.
+     * Unregistered actions or invalid risk labels always require evidence.
+     */
+    public static function action_risk(array $action, ?Site_Architect_Mutation_Policy $policy = null, ?Eduardo_Research_Manager_Contract $contract = null): string {
+        $policy = $policy ?? new Eduardo_Research_Manager_Research_Mutation_Policy();
+        $type = sanitize_key((string) ($action['type'] ?? ''));
+        if ('' === $type || ! in_array($type, $policy->allowed_action_types(), true)) {
+            return 'evidence-required';
+        }
+        $contract = $contract ?? new Eduardo_Research_Manager_Contract();
+        $rated = $policy->risk_for_action(
+            $action,
+            static fn(int $post_id): bool => self::is_theme_owned_page($post_id, $contract)
+        );
+        return in_array($rated, array('standard','editorial-review','evidence-required'), true)
+            ? $rated
+            : 'evidence-required';
+    }
 
-        $key = strtolower((string) ($action['key'] ?? $action['field'] ?? ''));
-        $post_id = absint($action['post_id'] ?? 0);
-        if ('post_field' === $type && 'post_title' === $key) {
-            $post = get_post($post_id);
-            if ($post instanceof WP_Post && in_array((string) $post->post_type, Eduardo_Research_Manager_Resource_Registry::post_types(), true)) {
-                return 'evidence-required';
-            }
-        }
-        if ('post_field' === $type && 'post_status' === $key && self::is_theme_owned_page($post_id)) {
-            return 'standard';
-        }
-        if ('post_meta' === $type && in_array($key, array('_eduardo_research_role','_eduardo_research_model'), true) && self::is_theme_owned_page($post_id)) {
-            return 'standard';
-        }
-
-        foreach (array(
-            'doi','review_status','output_type','identifier','evidence','affiliation','award','grant',
-            'publication_date','venue','publisher','authors','line_ids','project_status','question','role',
-            'start_date','end_date','partner','funding','methods','project_url','software_status','software_version',
-            'release_date','repository_url','archive_url','documentation_url','programming_languages','license',
-            'dataset_version','repository','access_level','formats','methodology','provenance','ethics_notes','size',
-            'research_status','central_question','topics','research_order',
-        ) as $needle) {
-            if (str_contains($key, $needle)) { return 'evidence-required'; }
-        }
-        if (in_array($key, array('post_title','post_excerpt','post_content','_research_language','_research_insight_type'), true)
-            || str_starts_with($key, 'eduardo_research_model') || str_starts_with($key, 'eduardo_research_surface_')) {
-            return 'editorial-review';
-        }
-        return 'standard';
+    /** The policy supplies copy, but the Core enforces the evidence requirement. */
+    private static function evidence_blocker_message(Site_Architect_Mutation_Policy $policy, string $reason): string {
+        $message = $policy->evidence_blocker_message($reason);
+        if ('' !== trim($message)) { return $message; }
+        return 'Evidence confirmation and a source reference are required before Apply.';
     }
 
     private static function normalize_action(array $action, Site_Architect_Mutation_Policy $policy, Eduardo_Research_Manager_Contract $contract): array|WP_Error {
@@ -573,11 +567,11 @@ final class Eduardo_Research_Manager_Plan {
         return 1 === preg_match('/^[a-f0-9-]{32,64}$/i', $token);
     }
 
-    private static function is_theme_owned_page(int $post_id): bool {
+    private static function is_theme_owned_page(int $post_id, ?Eduardo_Research_Manager_Contract $contract = null): bool {
         if ($post_id <= 0) { return false; }
         $post = get_post($post_id);
         if (! $post instanceof WP_Post || 'page' !== $post->post_type) { return false; }
-        $contract = new Eduardo_Research_Manager_Contract();
+        $contract = $contract ?? new Eduardo_Research_Manager_Contract();
         foreach (array_keys($contract->pages()) as $key) {
             if ($contract->page_id((string) $key) === $post_id) { return true; }
         }

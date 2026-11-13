@@ -114,6 +114,33 @@ Not allowed:
 prefix match → writable option
 ```
 
+## Update — Site Architect #475.5 (12 November 2026)
+
+The Core `Plan::action_risk()` no longer owns scholarly risk needles, Research
+creation behavior or evidence-sensitive academic field semantics. The policy
+method `risk_for_action(action, is_theme_owned_page)` in the Research vertical
+keeps all existing Research classifications exactly as accepted in 0.11.1.
+The Theme ownership callback is supplied by `Plan` using the active Contract.
+
+`Plan` remains the **only** fail-closed checksum, evidence-confirmation and
+source-reference enforcement boundary. It accepts only the three known risk
+labels, promotes an unknown action or invalid policy classification to
+`evidence-required`, and recalculates risk on validation. No Theme preset or
+descriptive Registry entry can grant a mutation; a new policy is a reviewed PHP
+implementation, not client data. Existing Research error codes and exact
+academic messages are preserved through `evidence_blocker_message()`, which
+supplies **copy only**, never a bypass.
+
+`Executor::preview` uses the same injected policy and Theme Contract as Plan.
+The full Research old-risk behavior and alternative Theme (including evidence
+blocking, checksum and **derived-risk tamper rejection** and invalid-risk fallback)
+are regression tested. This cut also closed the original Plan validation gap:
+previously a caller could change only the stored `risk` field without touching
+the checksum and bypass the evidence gate. Validation now compares the submitted
+risk to the freshly reconstructed risk, returning the established
+`research_manager_plan_changed` code and unchanged message on drift. Remaining work: type-aware ownership and Research-specific normalizers
+still located in the generic Plan; this is **not** second-client acceptance.
+
 ## Update — Site Architect #475.4 (12 November 2026)
 
 The analysis in §4 records the **historical** prefix/policy concern. The current

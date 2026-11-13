@@ -14,6 +14,13 @@ final class WP_Post {
     public function __construct(public int $ID, public string $post_type = 'page') {}
 }
 final class Eduardo_Research_Manager_Snapshots {}
+/** Read-only DB stand-in: Executor Preview must never write during this offline test. */
+final class SiteArchitectPreviewReadOnlyDb {
+    public string $postmeta = 'wp_postmeta';
+    public function prepare(string $sql, mixed ...$values): string { return $sql; }
+    public function get_var(string $sql): mixed { return null; }
+}
+$GLOBALS['wpdb'] = new SiteArchitectPreviewReadOnlyDb();
 function is_wp_error(mixed $v): bool { return $v instanceof WP_Error; }
 function sanitize_key(string $v): string { return preg_replace('/[^a-z0-9_-]/', '', strtolower($v)) ?? ''; }
 function sanitize_text_field(string $v): string { return trim(strip_tags($v)); }
@@ -24,7 +31,10 @@ function get_page_by_path(string $path, string $output = OBJECT, string $type = 
     return $path === 'home' ? new WP_Post(17) : null;
 }
 function maybe_serialize(mixed $v): string { return serialize($v); }
-function get_post(int $post_id): ?WP_Post { return $post_id === 17 ? new WP_Post(17) : null; }
+function get_post(int $post_id): ?WP_Post {
+    if (17 === $post_id) { return new WP_Post(17); }
+    return 23 === $post_id ? new WP_Post(23, 'research_line') : null;
+}
 function eduardo_research_preset(): array {
     return ['id'=>'research','version'=>6,'frontend_authority'=>'theme','languages'=>['en','es'],
         'default_language'=>'en','pages'=>['home'=>['role'=>'front-page'],'about'=>['role'=>'profile']]];
@@ -114,6 +124,8 @@ final class OtherThemePolicy implements Site_Architect_Mutation_Policy {
     public function allowed_action_types(): array { return ['option']; }
     public function allowed_option_keys(): array { return ['sa_sample_preferences']; }
     public function allowed_meta_keys(): array { return []; }
+    public function risk_for_action(array $action, callable $is_theme_owned_page): string { return 'standard'; }
+    public function evidence_blocker_message(string $reason): string { return 'Alternate Theme evidence required'; }
 }
 final class OtherThemeProfile implements Site_Architect_Theme_Profile {
     public function available(): bool { return true; }
@@ -154,6 +166,8 @@ $foreign_meta = new class implements Site_Architect_Mutation_Policy {
     public function allowed_action_types(): array { return ['post_meta']; }
     public function allowed_option_keys(): array { return []; }
     public function allowed_meta_keys(): array { return ['sa_sample_flag']; }
+    public function risk_for_action(array $action, callable $is_theme_owned_page): string { return 'evidence-required'; }
+    public function evidence_blocker_message(string $reason): string { return 'Alternate Theme evidence required'; }
 };
 $foreign_plan = Eduardo_Research_Manager_Plan::create('foreign meta', [
     ['type'=>'post_meta','post_id'=>17,'key'=>'sa_sample_flag','value'=>'enabled'],
@@ -179,9 +193,92 @@ $unknown = new class implements Site_Architect_Mutation_Policy {
     public function allowed_action_types(): array { return ['run_php']; }
     public function allowed_option_keys(): array { return ['*']; }
     public function allowed_meta_keys(): array { return ['*']; }
+    public function risk_for_action(array $action, callable $is_theme_owned_page): string { return 'untrusted-risk'; }
+    public function evidence_blocker_message(string $reason): string { return ''; }
 };
 expect(error_code(Eduardo_Research_Manager_Plan::create('unsupported executor type', [
     ['type'=>'run_php','code'=>'phpinfo();'],
 ], [], $unknown, $other_contract), 'research_manager_action_not_allowed'), 'policy declarations cannot invent unimplemented executor types');
 
-echo "PASS: Research 0.11.1 allowlists exact; alternate policy and Executor are explicit/fail-closed\n";
+// The generic Plan now delegates academic heuristics without reducing risk.
+$risk_samples = [
+    [['type'=>'create_page'], 'standard'],
+    [['type'=>'create_insight'], 'editorial-review'],
+    [['type'=>'create_line'], 'evidence-required'],
+    [['type'=>'create_output'], 'evidence-required'],
+    [['type'=>'create_project'], 'evidence-required'],
+    [['type'=>'create_software'], 'evidence-required'],
+    [['type'=>'create_dataset'], 'evidence-required'],
+    [['type'=>'post_field','field'=>'post_title','post_id'=>23], 'evidence-required'],
+    [['type'=>'post_field','field'=>'post_title','post_id'=>17], 'editorial-review'],
+    [['type'=>'post_field','field'=>'post_status','post_id'=>17], 'standard'],
+    [['type'=>'post_meta','key'=>'_eduardo_research_role','post_id'=>17], 'standard'],
+    [['type'=>'post_meta','key'=>'_research_doi','post_id'=>23], 'evidence-required'],
+    [['type'=>'post_meta','key'=>'_research_review_status','post_id'=>23], 'evidence-required'],
+    [['type'=>'post_meta','key'=>'_research_insight_type','post_id'=>17], 'editorial-review'],
+    [['type'=>'option','key'=>'eduardo_research_surface_about_es'], 'editorial-review'],
+    [['type'=>'option','key'=>'eduardo_research_model_es'], 'editorial-review'],
+    [['type'=>'option','key'=>'show_on_front'], 'standard'],
+];
+foreach ($risk_samples as [$action, $expected]) {
+    expect(Eduardo_Research_Manager_Plan::action_risk($action) === $expected,
+        'Research risk parity for ' . ($action['type'] ?? '') . ':' . ($action['key'] ?? $action['field'] ?? ''));
+}
+expect(Eduardo_Research_Manager_Plan::action_risk(['type'=>'execute_php']) === 'evidence-required',
+    'unknown operation risk is always most restrictive');
+expect(Eduardo_Research_Manager_Plan::action_risk(['type'=>'option','key'=>'sa_sample_preferences'], $other_policy, $other_contract) === 'standard',
+    'other Theme policy controls only its explicitly provided risk classification');
+expect(Eduardo_Research_Manager_Plan::action_risk(['type'=>'option','key'=>'eduardo_research_model'], $other_policy, $other_contract) === 'standard',
+    'risk classification alone never authorizes a write; allowlist remains separate');
+expect(Eduardo_Research_Manager_Plan::action_risk(['type'=>'run_php'], $unknown, $other_contract) === 'evidence-required',
+    'invalid policy risk labels are promoted to strongest level');
+
+$legacy_evidence = Eduardo_Research_Manager_Plan::create('Evidence-sensitive Research metadata', [
+    ['type'=>'post_meta','post_id'=>17,'key'=>'_research_doi','value'=>'10.1000/test'],
+]);
+expect(is_array($legacy_evidence) && $legacy_evidence['risk'] === 'evidence-required',
+    'Research evidence-sensitive Plan risk remains unchanged');
+expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($legacy_evidence), 'research_manager_evidence_required'),
+    'Core still blocks Apply without evidence confirmation');
+$missing_evidence_message = Eduardo_Research_Manager_Plan::apply_gate($legacy_evidence);
+expect($missing_evidence_message->get_error_message() ===
+    'This mutation changes an evidence-sensitive academic claim. Confirm evidence and rebuild the plan before Apply.',
+    'Research 0.11.1 evidence blocker copy remains identical');
+$confirmed_only = Eduardo_Research_Manager_Plan::create('Missing evidence reference', [
+    ['type'=>'post_meta','post_id'=>17,'key'=>'_research_doi','value'=>'10.1000/test'],
+], ['evidence_confirmed'=>true]);
+expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($confirmed_only), 'research_manager_evidence_reference_required'),
+    'Core requires nonempty source even if confirmation was provided');
+expect(Eduardo_Research_Manager_Plan::apply_gate($confirmed_only)->get_error_message() ===
+    'Evidence-sensitive mutations require a source or verification reference before Apply.',
+    'Research reference blocker copy remains identical');
+$verified_evidence = Eduardo_Research_Manager_Plan::create('Verified Research metadata', [
+    ['type'=>'post_meta','post_id'=>17,'key'=>'_research_doi','value'=>'10.1000/test'],
+], ['evidence_confirmed'=>true,'evidence_reference'=>'https://doi.org/10.1000/test']);
+expect(Eduardo_Research_Manager_Plan::apply_gate($verified_evidence) === true,
+    'Core accepts a checksum-valid, explicitly evidenced Research Plan');
+$changed_risk = $verified_evidence;
+$changed_risk['risk'] = 'standard';
+expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($changed_risk), 'research_manager_plan_changed'),
+    'Risk may not be downgraded in a serialized Plan after creation');
+
+$foreign_evidence = Eduardo_Research_Manager_Plan::create('Other Theme strict meta', [
+    ['type'=>'post_meta','post_id'=>17,'key'=>'sa_sample_flag','value'=>'enabled'],
+], [], $foreign_meta, $other_contract);
+expect(is_array($foreign_evidence) && $foreign_evidence['risk'] === 'evidence-required',
+    'A distinct Theme can opt into strict evidence policy without Research semantics');
+expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($foreign_evidence, $foreign_meta, $other_contract),
+    'research_manager_evidence_required'), 'Evidence cannot be bypassed by alternate Theme');
+expect(Eduardo_Research_Manager_Plan::apply_gate($foreign_evidence, $foreign_meta, $other_contract)->get_error_message()
+    === 'Alternate Theme evidence required', 'Other Theme blocker text is contract-owned');
+$foreign_preview = (new Eduardo_Research_Manager_Executor(
+    new Eduardo_Research_Manager_Snapshots(), $foreign_meta, $other_contract
+))->preview($foreign_evidence);
+expect(is_array($foreign_preview) && $foreign_preview['risk'] === 'evidence-required'
+    && $foreign_preview['actions'][0]['risk'] === 'evidence-required'
+    && $foreign_preview['apply_allowed'] === false,
+    'Executor preview classifies and blocks the same explicit evidence-sensitive action');
+expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($foreign_evidence),
+    'research_manager_meta_not_allowed'), 'Default Research cannot validate foreign evidence Plan');
+
+echo "PASS: Research risk/evidence parity, non-degrading fallback and alternate Theme policy\n";

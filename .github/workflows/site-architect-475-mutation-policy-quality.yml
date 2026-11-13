@@ -66,6 +66,21 @@ jobs:
           assert '$policy->allowed_meta_keys()' in plan
           assert 'public function allowed_meta_keys(): array;' in generic
           assert 'public function allowed_meta_keys(): array' in vertical
+          assert 'public function risk_for_action(array $action, callable $is_theme_owned_page): string;' in generic
+          assert 'public function evidence_blocker_message(string $reason): string;' in generic
+          assert 'public function risk_for_action(array $action, callable $is_theme_owned_page): string' in vertical
+          assert 'public function evidence_blocker_message(string $reason): string' in vertical
+          risk = plan.split('public static function action_risk', 1)[1].split('private static function evidence_blocker_message', 1)[0]
+          assert '$policy->risk_for_action(' in risk and "'evidence-required'" in risk
+          assert 'Eduardo_Research_Manager_Resource_Registry' not in risk
+          assert 'str_contains($key' not in risk
+          assert "if (empty($plan['evidence_confirmed']))" in plan
+          assert "(string) $plan['risk'] !== (string) $rebuilt['risk']" in plan
+          assert "return new WP_Error('research_manager_plan_changed'" in plan
+          assert "trim((string) $plan['evidence_reference'])" in plan
+          assert "self::evidence_blocker_message($policy, 'confirmation')" in plan
+          assert "self::evidence_blocker_message($policy, 'reference')" in plan
+          assert "action_risk($action, $this->mutation_policy, $this->theme_contract)" in executor
           meta_gate = plan.split('private static function allowed_meta_key', 1)[1].split('private static function sanitize_post_field_value', 1)[0]
           assert 'in_array($key, $policy->allowed_meta_keys(), true)' in meta_gate
           assert 'Resource_Registry::all()' not in meta_gate
