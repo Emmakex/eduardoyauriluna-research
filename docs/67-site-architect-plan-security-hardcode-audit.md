@@ -271,3 +271,21 @@ The Plan cleanup is successful only if:
 - production acceptance is proven separately through Site Architect governance.
 
 The goal is a **smaller duplication surface with an equal-or-stronger security boundary**, not a more generic mutation engine.
+
+## Update — #475.6 Research creation schemas (13 November 2026)
+
+Six typed Research resource/Insight normalization methods and their scholarly
+sanitizers now reside in `Eduardo_Research_Manager_Research_Creation_Normalizer`
+instead of generic `Plan`. This includes unchanged bounds, DOI/date/URL parsing,
+verified line relations, authors/ORCID and their existing error codes.
+
+`Plan` still owns the **exact seven creation-action branches** (generic Page
+plus six Research actions), checksums, duplicate targets and the evidence gate.
+It dispatches to the vertical only when the injected mutation policy is the
+**actual Research policy**. A different Theme cannot claim `create_insight`
+by listing it in its own policy, even if the executor previously recognized
+that historical action name. Registry data still never confers write rights.
+
+This is **not** a generic typed-normalizer/executor plugin API yet; typed
+ownership and a reviewed second-Theme executor remain for future cuts.
+No Theme or production WordPress migration accompanies this source refactor.
