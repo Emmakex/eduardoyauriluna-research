@@ -101,8 +101,17 @@ check(false===stripos($resource,'wp/v2'),'Resource inventory must not proxy arbi
 
 $executor=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php');
 $researchExecutionSpec=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php');
-check(str_contains($executor,'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)'),
-    'Executor must delegate Research execution specs to the reviewed vertical owner');
+$researchObjectExecution=source('wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-object-execution.php');
+check(str_contains($executor,'return $this->research_objects->spec($action_type);')
+    && str_contains($executor,'$this->research_objects->read_state($action)')
+    && str_contains($executor,'$this->research_objects->create($action)')
+    && str_contains($executor,'$this->research_objects->restore($action, $state)')
+    && str_contains($executor,'$this->research_objects->desired_value($action)'),
+    'Generic Executor must delegate all five Research object execution routes to the Research adapter');
+check(str_contains($researchObjectExecution,'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)')
+    && str_contains($researchObjectExecution,'instanceof Eduardo_Research_Manager_Research_Mutation_Policy')
+    && str_contains($researchObjectExecution,"'research' !== (string) ($this->theme_contract->preset()['id'] ?? '')"),
+    'Research execution adapter must guard the exact Theme and policy before resolving a reviewed spec');
 check(str_contains($researchExecutionSpec,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),
     'Research execution adapter must preserve Registry metadata compatibility after exact-action checks');
 check(false===str_contains($executor,'Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type)'),
