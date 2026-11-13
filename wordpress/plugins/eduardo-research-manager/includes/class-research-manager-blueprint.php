@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 if (! defined('ABSPATH')) { exit; }
 
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-blueprint-resources.php';
+
 final class Eduardo_Research_Manager_Blueprint {
     private const VERSION = 1;
+    private Site_Architect_Blueprint_Resource_Provider $resource_provider;
+    private Eduardo_Research_Manager_Contract $contract;
 
-    private static function resource_keys(): array {
-        return array_merge(
-            array('pages'),
-            Eduardo_Research_Manager_Resource_Registry::vertical_blueprint_resource_keys()
-        );
+    public function __construct(
+        ?Site_Architect_Blueprint_Resource_Provider $resource_provider = null,
+        ?Eduardo_Research_Manager_Contract $contract = null
+    ) {
+        $this->resource_provider = $resource_provider ?? new Eduardo_Research_Manager_Research_Blueprint_Resources();
+        $this->contract = $contract ?? new Eduardo_Research_Manager_Contract();
+    }
+
+    public function resource_keys(): array {
+        return array_merge(array('pages'), $this->resource_provider->resource_keys());
     }
 
     public function validate(array $blueprint): array|WP_Error {
@@ -22,18 +31,21 @@ final class Eduardo_Research_Manager_Blueprint {
         if (self::VERSION !== $version) {
             return new WP_Error('research_manager_blueprint_version_unsupported', 'Unsupported Research blueprint version.');
         }
-        $resource_keys = self::resource_keys();
+        if (! $this->contract->compatible() || $this->resource_provider->theme_id() !== (string) ($this->contract->preset()['id'] ?? '')) {
+            return new WP_Error('research_manager_blueprint_catalog_mismatch', 'Blueprint resource catalog does not belong to the active Theme contract.');
+        }
+        $resource_keys = $this->resource_keys();
         $allowed = array_merge(array('version','site','languages'), $resource_keys);
         $unknown = array_diff(array_keys($blueprint), $allowed);
         if ($unknown) {
             return new WP_Error('research_manager_blueprint_key_unknown', 'Blueprint contains unsupported top-level keys: ' . implode(', ', $unknown));
         }
-        $languages = $blueprint['languages'] ?? Eduardo_Research_Manager::contract()->languages();
+        $languages = $blueprint['languages'] ?? $this->contract->languages();
         if (! is_array($languages) || ! $languages) {
             return new WP_Error('research_manager_blueprint_languages_invalid', 'Blueprint must declare at least one supported language.');
         }
         $languages = array_values(array_unique(array_map('sanitize_key', $languages)));
-        $unsupported = array_diff($languages, Eduardo_Research_Manager::contract()->languages());
+        $unsupported = array_diff($languages, $this->contract->languages());
         if ($unsupported) {
             return new WP_Error('research_manager_blueprint_language_unsupported', 'Blueprint requests languages outside the active Research Theme contract.');
         }
@@ -52,7 +64,7 @@ final class Eduardo_Research_Manager_Blueprint {
         $normalized = $this->validate($blueprint);
         if (is_wp_error($normalized)) { return $normalized; }
         $counts = array();
-        foreach (self::resource_keys() as $key) { $counts[$key] = count($normalized[$key]); }
+        foreach ($this->resource_keys() as $key) { $counts[$key] = count($normalized[$key]); }
         return array('version'=>$normalized['version'],'languages'=>$normalized['languages'],'resources'=>$counts,'total_resources'=>array_sum($counts),'requires_legacy_discovery'=>false,'requires_gutenberg_layout'=>false);
     }
 }
