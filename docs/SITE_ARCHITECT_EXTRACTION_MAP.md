@@ -216,3 +216,21 @@ Existing WordPress Greenfield/Blueprint tests are also required to pass.
 
 Not yet an independent installable distribution, WordPress-clone parity or
 a production cutover. Continue under issue #475 before extending to a client.
+
+
+## #475.13 — Explicit Theme-owned pairing and relation phases
+
+Greenfield Pipeline now depends on `Site_Architect_Greenfield_Relationship_Phase`
+for the vertical translation-pairing and resource-relation phases instead of
+requiring concrete Research classes. The exact Research adapters implement
+this narrow, bounded lifecycle contract and retain their existing EN/ES,
+Research Line, evidence, Plan/Verify, snapshot and rollback behavior.
+
+An explicit Blueprint resource provider supplies Theme ownership. Preview,
+Apply and Rollback reject missing or cross-Theme relationship adapters **before**
+calling any phase; a provider/adapter match is not a write grant.
+
+The standalone PHP 8.1/8.2 contract regression covers positive Research and
+independent second-Theme orchestration, rejected cross-Theme and empty authority,
+and zero phase calls on rejection. Production 0.11.1 and legacy identifiers stay
+unchanged. This does not certify an independent installable ZIP or clone parity.
