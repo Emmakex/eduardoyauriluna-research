@@ -5,6 +5,7 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
       - 'scripts/site-architect-475-mutation-policy-contract-test.php'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
       - 'scripts/site-architect-475-mutation-policy-contract-test.php'
@@ -43,6 +45,7 @@ jobs:
           ROOT=wordpress/plugins/eduardo-research-manager/includes
           php -l "$ROOT/class-site-architect-mutation-policy.php"
           php -l "$ROOT/class-research-manager-research-mutation-policy.php"
+          php -l "$ROOT/class-research-manager-research-creation-normalizer.php"
           php -l "$ROOT/class-research-manager-plan.php"
           php -l "$ROOT/class-research-manager-executor.php"
           php -l scripts/site-architect-475-mutation-policy-contract-test.php
@@ -86,6 +89,14 @@ jobs:
           assert 'Resource_Registry::all()' not in meta_gate
           assert 'str_starts_with' not in meta_gate
           assert "if ('create_dataset' === $type)" in plan
+          research_normalizer = (root/'includes/class-research-manager-research-creation-normalizer.php').read_text()
+          assert 'private static function normalize_insight_creation' not in plan
+          assert 'private static function normalize_dataset_creation' not in plan
+          assert 'Eduardo_Research_Manager_Research_Creation_Normalizer::normalize($type, $action)' in plan
+          assert 'instanceof Eduardo_Research_Manager_Research_Mutation_Policy' in plan
+          for type_name in ('insight', 'line', 'output', 'project', 'software', 'dataset'):
+              assert 'private static function normalize_' + type_name + '_creation' in research_normalizer
+          assert "return new WP_Error('research_manager_action_not_allowed'" in research_normalizer
           assert "if ('create_insight' === $type)" in plan
           assert 'Eduardo_Research_Manager_Plan::apply_gate($plan, $this->mutation_policy, $this->theme_contract)' in executor
           assert 'Eduardo_Research_Manager_Plan::validate($plan, $this->mutation_policy, $this->theme_contract)' in executor
