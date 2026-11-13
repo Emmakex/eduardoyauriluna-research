@@ -164,3 +164,24 @@ Goal:
 > make the Research vertical registry/contract the single authority for the current Research resource set, while keeping `pages` and other generic mechanics explicitly separated and preserving the exact current Blueprint behavior.
 
 This is a centralization seam, not a product extraction and not a compatibility rename.
+
+
+## Microcorte #475.11 — Insight execution leaves common Executor (candidate)
+
+The Research Insight creation action (create_insight) targets WordPress post,
+but remains Research-specific. Eduardo_Research_Manager_Research_Insight_Execution
+now owns read/create/restore/desired_value, moved from the 0.11.1 Executor.
+
+The generic Executor still owns Plan validation, Preview/Apply/Verify/Rollback,
+permissions, stale-state and snapshots. The new adapter requires the exact
+research Theme id, the concrete Research mutation policy and an allowed
+create_insight action. No Registry-driven or prefix-driven grants are added.
+
+Historical parity targets: post type, metadata keys, readback/defaults, slug
+and token collision semantics, provenance-only rollback, route refresh and
+error codes. The post_meta/post_field 49-key legacy authorization remains intact.
+
+Pending: complete extraction of remaining Research services, independent
+installable packaging of the REAL current product, isolated Theme Research
+clone parity, and reversible Eduardo cutover only after equivalence.
+Site Architect 0.11.1 in Eduardo production is not changed by this cut.
