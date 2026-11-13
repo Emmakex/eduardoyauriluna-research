@@ -311,3 +311,23 @@ This step does **not** change existing post_meta/post_field resource ownership
 or make arbitrary second-Theme types executable. Those require a separate
 typed-resource compatibility inventory and a reviewed executor extension seam.
 No Theme, REST/MCP, storage, version or production WordPress change.
+
+
+## Microcorte #475.8 — autoridad de propiedad de recursos para post_meta y post_field (2026-11-13)
+
+- **CORE**: nueva interfaz opcional `Site_Architect_Resource_Ownership_Policy`, obligatoria en la práctica para mutaciones de `post_meta` / `post_field`. La existencia de una acción o clave en una política no basta: Plan exige también Theme id, tipo de recurso y, para Page, pertenencia a páginas del Theme Contract.
+- **VERTICAL RESEARCH**: la política Research reconoce únicamente `page` controlada por el contrato, `post` legado y los cinco CPTs Research existentes (`research_line`, `research_output`, `research_project`, `research_software`, `research_dataset`). No concede acceso a CPTs desconocidos, ni a páginas ajenas. El `post` legado **no prueba por sí solo identidad de Insight**; no estrechar todavía sin inventario productivo.
+- **LEGACY COMPAT**: para los tipos de recurso ya reconocidos, se conserva el conjunto exacto de **49 claves metadata** históricas y los cinco post fields bounded. Este microcorte no convierte el mapa descriptivo por CPT del Registry en una autorización automática ni pretende que sus campos sean editables por separado: ese estrechamiento necesita evidencia distinta, para no romper Eduardo.
+- **Executor**: lectura de estado, escritura y rollback vuelven a pasar la misma comprobación, incluso si se invocan sus rutas privadas. `post_status` sigue restringido a publicar la página controlada. `Plan::validate` recompone la acción y mantiene checksum/evidencia/anti-drift.
+- **Segundo Theme**: muestra un ejemplo positivo con `sample` + Page `landing` realmente controlada, clave `sa_sample_flag`, y casos negativos de mezcla de políticas, CPT ajeno, Page sin contrato y key fuera de allowlist.
+- **No despliegue**: Site Architect 0.11.1 en eduardoyauriluna.com, Theme, API REST/MCP, scopes, versionado y almacenamiento continúan intactos.
+
+**No declarar portabilidad completa**: las opciones `show_on_front` / `page_on_front` y la creación de páginas conservan supuestos Research, y la separación de rutas ejecutoras y la distribución empaquetada requieren microcortes posteriores. #475 permanece abierto hasta equivalencia en clon aislado.
+
+### Evidencia añadida: aceptación histórica de Pages editoriales
+
+El workflow `Research Manager Identity Policy` prueba cambios y rollback de `post_title` tanto para `post` como para páginas `page` de WordPress creadas fuera de las páginas estructurales del Theme. El gate #475.8 **no debe romper esa aceptación**: se autoriza ese `post_field` heredado bajo la política y Theme Research correctos, con los límites y riesgos existentes. Esto no autoriza `post_meta` en páginas ajenas; `post_status` mantiene la guarda exacta `publish` + Page del contrato. Una futura reducción deberá tener su propia compatibilidad y prueba productiva.
+
+### Compatibilidad adicional M4: rollback del estado de Insights
+
+El gate `Research Manager Remote M4 Insight Status Quality` demuestra que `InsightEditor` guarda snapshots con acción `post_field/post_status` para publicar/despublicar y delega su rollback a `Executor`, sin usar un Plan genérico de publicación de páginas. La nueva comprobación de **pertenencia** permite ese read/write/rollback en recursos `post` del vertical Research, pero la restricción preexistente de `Plan::normalize_action` sigue impidiendo construir nuevas acciones genéricas `post_status` sobre Insights. No redefinir el contrato M4 ni reimplementar su motor.

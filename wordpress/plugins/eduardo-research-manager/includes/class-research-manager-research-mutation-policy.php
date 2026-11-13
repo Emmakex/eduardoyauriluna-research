@@ -5,8 +5,9 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-mutation-policy.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-resource-ownership-policy.php';
 
-final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Architect_Mutation_Policy {
+final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Architect_Mutation_Policy, Site_Architect_Resource_Ownership_Policy {
     public function allowed_action_types(): array {
         return array(
             'option','post_meta','post_field',
@@ -81,6 +82,43 @@ final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Ar
             '_research_topics',
             '_research_venue',
         );
+    }
+
+    /**
+     * Retain the established Research 0.11.1 resource families; an actual Page
+     * must be named by the active Theme contract. The descriptive Registry
+     * cannot add a new mutable post type.
+     */
+    public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page, string $action_type): bool {
+        if ('research' !== $theme_id) { return false; }
+        // Historical 0.11.1 editorial edits may target ordinary Pages.
+        // Metadata and structural publish still require the exact Theme Page.
+        if ('page' === $post_type) { return $is_theme_owned_page || 'post_field' === $action_type; }
+        return in_array($post_type, array(
+            'post','research_line','research_output','research_project',
+            'research_software','research_dataset',
+        ), true);
+    }
+
+    /**
+     * Compatibility: retain all 49 historical exact metadata keys on owned
+     * resource families until separate per-CPT write narrowing is accepted.
+     * This is NOT a grant from Resource_Registry.
+     */
+    public function allowed_resource_meta_keys(string $post_type): array {
+        if (! in_array($post_type, array(
+            'page','post','research_line','research_output','research_project',
+            'research_software','research_dataset',
+        ), true)) { return array(); }
+        return $this->allowed_meta_keys();
+    }
+
+    public function allowed_resource_post_fields(string $post_type): array {
+        if (! in_array($post_type, array(
+            'page','post','research_line','research_output','research_project',
+            'research_software','research_dataset',
+        ), true)) { return array(); }
+        return array('post_title','post_excerpt','post_content','menu_order','post_status');
     }
 
     /**

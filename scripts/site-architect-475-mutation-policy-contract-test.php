@@ -33,12 +33,16 @@ function eduardo_research_insight_types(string $language): array { return ['rese
 function wp_json_encode(mixed $v, int $opts = 0): string|false { return json_encode($v, $opts); }
 function get_option(string $key, mixed $default = false): mixed { return $default; }
 function get_page_by_path(string $path, string $output = OBJECT, string $type = 'page'): ?WP_Post {
-    return $path === 'home' ? new WP_Post(17) : null;
+    if ('home' === $path) { return new WP_Post(17); }
+    return 'landing' === $path ? new WP_Post(31) : null;
 }
 function maybe_serialize(mixed $v): string { return serialize($v); }
 function get_post(int $post_id): ?WP_Post {
     if (17 === $post_id) { return new WP_Post(17); }
-    return 23 === $post_id ? new WP_Post(23, 'research_line') : null;
+    if (23 === $post_id) { return new WP_Post(23, 'research_line'); }
+    if (53 === $post_id) { return new WP_Post(53, 'post'); }
+    if (in_array($post_id, [31, 32], true)) { return new WP_Post($post_id); }
+    return 45 === $post_id ? new WP_Post(45, 'product') : null;
 }
 function eduardo_research_preset(): array {
     return ['id'=>'research','version'=>6,'frontend_authority'=>'theme','languages'=>['en','es'],
@@ -167,24 +171,29 @@ foreach (['siteurl','eduardo_research_model','sa_sample_unknown_de','sa_sample_a
     ], [], $other_policy, $other_contract), 'research_manager_option_not_allowed'), "foreign option $key rejected");
 }
 // A distinct Theme may explicitly opt in to one metadata field without inheriting Research.
-$foreign_meta = new class implements Site_Architect_Mutation_Policy {
+$foreign_meta = new class implements Site_Architect_Mutation_Policy, Site_Architect_Resource_Ownership_Policy {
     public function allowed_action_types(): array { return ['post_meta']; }
     public function allowed_option_keys(): array { return []; }
     public function allowed_meta_keys(): array { return ['sa_sample_flag']; }
+    public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page, string $action_type): bool {
+        return 'sample' === $theme_id && 'page' === $post_type && $is_theme_owned_page;
+    }
+    public function allowed_resource_meta_keys(string $post_type): array { return 'page' === $post_type ? ['sa_sample_flag'] : []; }
+    public function allowed_resource_post_fields(string $post_type): array { return []; }
     public function risk_for_action(array $action, callable $is_theme_owned_page): string { return 'evidence-required'; }
     public function evidence_blocker_message(string $reason): string { return 'Alternate Theme evidence required'; }
 };
 $foreign_plan = Eduardo_Research_Manager_Plan::create('foreign meta', [
-    ['type'=>'post_meta','post_id'=>17,'key'=>'sa_sample_flag','value'=>'enabled'],
+    ['type'=>'post_meta','post_id'=>31,'key'=>'sa_sample_flag','value'=>'enabled'],
 ], [], $foreign_meta, $other_contract);
 expect(is_array($foreign_plan) &&
     Eduardo_Research_Manager_Plan::validate($foreign_plan, $foreign_meta, $other_contract) === true,
     'other Theme allows one exact own metadata field');
-expect(error_code(Eduardo_Research_Manager_Plan::validate($foreign_plan), 'research_manager_meta_not_allowed'),
+expect(error_code(Eduardo_Research_Manager_Plan::validate($foreign_plan), 'research_manager_resource_not_allowed'),
     'Research default cannot validate foreign metadata');
 foreach (['_research_doi','_eduardo_research_model','sa_sample_flag_extra','_wp_capabilities'] as $key) {
     expect(error_code(Eduardo_Research_Manager_Plan::create('forbid unrelated meta', [
-        ['type'=>'post_meta','post_id'=>17,'key'=>$key,'value'=>'x'],
+        ['type'=>'post_meta','post_id'=>31,'key'=>$key,'value'=>'x'],
     ], [], $foreign_meta, $other_contract), 'research_manager_meta_not_allowed'),
         "foreign Theme cannot write $key");
 }
@@ -268,7 +277,7 @@ expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($changed_risk), 'res
     'Risk may not be downgraded in a serialized Plan after creation');
 
 $foreign_evidence = Eduardo_Research_Manager_Plan::create('Other Theme strict meta', [
-    ['type'=>'post_meta','post_id'=>17,'key'=>'sa_sample_flag','value'=>'enabled'],
+    ['type'=>'post_meta','post_id'=>31,'key'=>'sa_sample_flag','value'=>'enabled'],
 ], [], $foreign_meta, $other_contract);
 expect(is_array($foreign_evidence) && $foreign_evidence['risk'] === 'evidence-required',
     'A distinct Theme can opt into strict evidence policy without Research semantics');
@@ -284,7 +293,7 @@ expect(is_array($foreign_preview) && $foreign_preview['risk'] === 'evidence-requ
     && $foreign_preview['apply_allowed'] === false,
     'Executor preview classifies and blocks the same explicit evidence-sensitive action');
 expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($foreign_evidence),
-    'research_manager_meta_not_allowed'), 'Default Research cannot validate foreign evidence Plan');
+    'research_manager_resource_not_allowed'), 'Default Research cannot validate foreign evidence Plan');
 
 
 /** #475.6: Research typed schemas live in the vertical, and remain fail-closed. */
@@ -378,4 +387,79 @@ foreach ([$foreign_executor, $mixed_executor, $borrowed_executor] as $outsider) 
     ]), 'research_manager_action_not_allowed'), 'Research Insight rollback is not inherited by another Theme');
 }
 
-echo "PASS: Research risk/evidence parity, non-degrading fallback and alternate Theme policy\n";
+
+/** #475.8: no Theme can inherit post fields from a global action/key allowlist. */
+expect($research instanceof Site_Architect_Resource_Ownership_Policy, 'Research declares resource ownership explicitly');
+expect($research->owns_resource('research','page',true,'post_meta'), 'Research owns only contracted Theme Pages');
+expect(! $research->owns_resource('research','page',false,'post_meta'), 'unowned WordPress Pages have no Research metadata rights');
+expect($research->owns_resource('research','page',false,'post_field'),
+    'legacy editorial Page fields remain accepted without widening metadata');
+expect($research->owns_resource('research','research_line',false,'post_field'), 'known Research CPT belongs to Research');
+expect(! $research->owns_resource('sample','research_line',false,'post_meta'), 'Research CPT cannot be borrowed by sample Theme');
+expect(! $research->owns_resource('research','product',false,'post_field'), 'unknown CPT cannot inherit metadata rights');
+expect($research->allowed_resource_meta_keys('research_line') === $research->allowed_meta_keys(),
+    'the historical finite metadata set is unchanged on owned resources');
+expect($research->allowed_resource_post_fields('research_line') === [
+    'post_title','post_excerpt','post_content','menu_order','post_status',
+], 'the five bounded post fields are unchanged');
+expect([] === $research->allowed_resource_meta_keys('product')
+    && [] === $research->allowed_resource_post_fields('product'), 'unknown CPT has no Research mutations');
+
+foreach ([
+    ['post_meta', ['key'=>'_research_doi','value'=>'10.1000/example']],
+    ['post_field', ['field'=>'post_title','value'=>'New title']],
+] as [$type, $fields]) {
+    expect(error_code(Eduardo_Research_Manager_Plan::create('Foreign Theme cannot borrow Research', [
+        array_merge(['type'=>$type,'post_id'=>31], $fields),
+    ], [], $research, $other_contract), 'research_manager_resource_not_allowed'),
+        'Research policy + foreign Theme rejected for ' . $type);
+    $unowned_page = Eduardo_Research_Manager_Plan::create('Unowned WordPress Page', [
+        array_merge(['type'=>$type,'post_id'=>32], $fields),
+    ]);
+    if ('post_meta' === $type) {
+        expect(error_code($unowned_page, 'research_manager_resource_not_allowed'),
+            'unowned Page cannot inherit Research metadata keys');
+    } else {
+        expect(is_array($unowned_page) && 'editorial-review' === $unowned_page['risk'],
+            'existing editorial post_field on ordinary Page remains accepted');
+    }
+    expect(error_code(Eduardo_Research_Manager_Plan::create('Unknown WordPress CPT', [
+        array_merge(['type'=>$type,'post_id'=>45], $fields),
+    ]), 'research_manager_resource_not_allowed'), 'unknown CPT denied for ' . $type);
+}
+expect(is_array(Eduardo_Research_Manager_Plan::create('Owned Research CPT', [
+    ['type'=>'post_field','post_id'=>23,'field'=>'post_title','value'=>'Research title'],
+])), 'owned Research line retains bounded post_field authorization');
+expect(Eduardo_Research_Manager_Plan::resource_mutation_gate([
+    'type'=>'post_field','post_id'=>53,'field'=>'post_status','value'=>'publish',
+], $research, new Eduardo_Research_Manager_Contract()) === true,
+    'existing Insight post_status rollback can still inspect an owned post');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Non Page status mutation remains blocked', [
+    ['type'=>'post_field','post_id'=>53,'field'=>'post_status','value'=>'publish'],
+]), 'research_manager_post_status_not_allowed'),
+    'new generic Plan cannot directly publish an Insight instead of using its lifecycle');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Foreign Theme targets Research page', [
+    ['type'=>'post_meta','post_id'=>17,'key'=>'sa_sample_flag','value'=>'1'],
+], [], $foreign_meta, $other_contract), 'research_manager_resource_not_allowed'),
+    'sample Theme cannot mutate Eduardo Research Home');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Research policy on sample Theme', [
+    ['type'=>'post_meta','post_id'=>31,'key'=>'_research_doi','value'=>'x'],
+], [], $research, $other_contract), 'research_manager_resource_not_allowed'), 'Research meta grant is Theme-bound');
+
+foreach ([
+    ['type'=>'post_meta','post_id'=>32,'key'=>'_research_doi','value'=>'x'],
+    ['type'=>'post_field','post_id'=>45,'field'=>'post_title','value'=>'x'],
+] as $foreign_resource) {
+    expect(error_code($read_reflection->invoke($research_executor, $foreign_resource), 'research_manager_resource_not_allowed'),
+        'Executor private read rejects unowned post mutation');
+    expect(error_code($write_reflection->invoke($research_executor, $foreign_resource), 'research_manager_resource_not_allowed'),
+        'Executor private write rejects unowned post mutation before WP writes');
+    expect(error_code($restore_reflection->invoke($research_executor, [
+        ['action'=>$foreign_resource,'state'=>['exists'=>false,'value'=>null]],
+    ]), 'research_manager_resource_not_allowed'), 'Executor private rollback rejects unowned post mutation');
+}
+expect(error_code($read_reflection->invoke($mixed_executor, [
+    'type'=>'post_meta','post_id'=>31,'key'=>'_research_doi',
+]), 'research_manager_resource_not_allowed'), 'foreign Theme cannot read Research metadata via Research policy');
+
+echo "PASS: Research risk/evidence parity, resource ownership and alternate Theme policy\n";
