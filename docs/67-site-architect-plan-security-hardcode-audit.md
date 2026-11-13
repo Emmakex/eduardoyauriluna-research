@@ -344,3 +344,16 @@ La política Research delega el reconocimiento de los siete tipos WordPress acep
 **Tests de aceptación:** comparación exacta de cinco mapas con el comportamiento aceptado; negativos de campo desconocido, omitido, reordenado, remapeado, tipo ajeno; matrices positivas de compatibilidad; segunda política/Theme, riesgo/evidencia, Preview/Apply/Verify/Rollback y PHP 8.1/8.2. Se conserva la edición de títulos editorial y el rollback M4 de Insights.
 
 **Límite:** únicamente contratos Research, adaptador Research de ejecución, test offline, CI y auditoría. Sin modificación de la cabecera 0.11.1, Theme, Blueprint, Bootstrap, REST/MCP, credenciales, almacenamiento ni producción de Eduardo. No implica una nueva distribución instalable ni una segunda instancia probada. Siguiente microcorte posible: separar las rutas de ejecución Research de la mecánica genérica, y después demostrar equivalencia en clon aislado antes de cutover.
+
+
+## Microcorte #475.10 — extraer rutas ejecutables de cinco objetos Research del Executor CORE
+
+**Dependencia observada:** en 0.11.1 el `Executor` orquesta `Plan → Preview → Apply → Verify → Rollback`; todavía contenía lecturas de estado, metadatos, escritura `wp_insert_post`, colisiones y rollback por provenance de los cinco tipos `research_line/output/project/software/dataset`. En #475.7 se extrajo el catálogo cerrado de tipos y en #475.9 se certificaron mapas nativos `field => meta_key`.
+
+**Cambio:** un adaptador de ejecución **Research-only**, `Eduardo_Research_Manager_Research_Object_Execution`, recibe `Site_Architect_Mutation_Policy` y `Eduardo_Research_Manager_Contract` concretos. Cada ruta pública `spec/read_state/create/restore/desired_value` comprueba **política Research real**, **Theme id exacto `research`**, acción incluida en la política y schema cerrado de `Research_Execution_Spec`; no basta añadir un tipo al Registry ni reutilizar una política del otro Theme. El `Executor` delega read/create/restore/desired de cinco CPTs conservando Preview, Apply, Verify, snapshots y checksum en su mecanismo existente.
+
+**Parity:** estado missing/exists, orden y defaults de valores, consulta SQL privada de primera fila de postmeta, nombres de metadatos, ausencia de overwrite al encontrar slug ocupado, colisión de token, actualización de caché/rutas y rollback que solo borra el recurso con token propio. `create_page` y `create_insight` NO cambian; su propia extracción requerirá otro corte. El comportamiento de `Plan`, del `post_field` y `post_meta`, y de los snapshots M4 de Insights queda intacto.
+
+**Pruebas:** test offline de cinco familias y cuatro rutas que niega otro Theme, otra política o una política Research falsa **antes de operaciones WordPress**, compara specs, states missing y desired fields; WP CI conserva los acceptance tests legados. Nuevos lint/static checks de PHP 8.1/8.2 en workflow acotado; seis archivos en alcance.
+
+**Sin instalación productiva**, sin cambio de header/site versión 0.11.1, sin alterar el Theme ni migrar datos. #475 sigue abierto: extraer otras rutas Research donde la auditoría justifique compatibilidad, empaquetar Site Architect independiente y verificar paridad completa en un clon aislado de Eduardo antes de un cutover reversible.
