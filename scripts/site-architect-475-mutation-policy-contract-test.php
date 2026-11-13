@@ -174,7 +174,7 @@ $foreign_meta = new class implements Site_Architect_Mutation_Policy, Site_Archit
     public function allowed_action_types(): array { return ['post_meta']; }
     public function allowed_option_keys(): array { return []; }
     public function allowed_meta_keys(): array { return ['sa_sample_flag']; }
-    public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page): bool {
+    public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page, string $action_type): bool {
         return 'sample' === $theme_id && 'page' === $post_type && $is_theme_owned_page;
     }
     public function allowed_resource_meta_keys(string $post_type): array { return 'page' === $post_type ? ['sa_sample_flag'] : []; }
@@ -389,11 +389,13 @@ foreach ([$foreign_executor, $mixed_executor, $borrowed_executor] as $outsider) 
 
 /** #475.8: no Theme can inherit post fields from a global action/key allowlist. */
 expect($research instanceof Site_Architect_Resource_Ownership_Policy, 'Research declares resource ownership explicitly');
-expect($research->owns_resource('research','page',true), 'Research owns only contracted Theme Pages');
-expect(! $research->owns_resource('research','page',false), 'unowned WordPress pages fail closed');
-expect($research->owns_resource('research','research_line',false), 'known Research CPT belongs to Research');
-expect(! $research->owns_resource('sample','research_line',false), 'Research CPT cannot be borrowed by sample Theme');
-expect(! $research->owns_resource('research','product',false), 'unknown CPT cannot inherit metadata rights');
+expect($research->owns_resource('research','page',true,'post_meta'), 'Research owns only contracted Theme Pages');
+expect(! $research->owns_resource('research','page',false,'post_meta'), 'unowned WordPress Pages have no Research metadata rights');
+expect($research->owns_resource('research','page',false,'post_field'),
+    'legacy editorial Page fields remain accepted without widening metadata');
+expect($research->owns_resource('research','research_line',false,'post_field'), 'known Research CPT belongs to Research');
+expect(! $research->owns_resource('sample','research_line',false,'post_meta'), 'Research CPT cannot be borrowed by sample Theme');
+expect(! $research->owns_resource('research','product',false,'post_field'), 'unknown CPT cannot inherit metadata rights');
 expect($research->allowed_resource_meta_keys('research_line') === $research->allowed_meta_keys(),
     'the historical finite metadata set is unchanged on owned resources');
 expect($research->allowed_resource_post_fields('research_line') === [
@@ -410,9 +412,16 @@ foreach ([
         array_merge(['type'=>$type,'post_id'=>31], $fields),
     ], [], $research, $other_contract), 'research_manager_resource_not_allowed'),
         'Research policy + foreign Theme rejected for ' . $type);
-    expect(error_code(Eduardo_Research_Manager_Plan::create('Unowned WordPress Page', [
+    $unowned_page = Eduardo_Research_Manager_Plan::create('Unowned WordPress Page', [
         array_merge(['type'=>$type,'post_id'=>32], $fields),
-    ]), 'research_manager_resource_not_allowed'), 'unowned Page denied for ' . $type);
+    ]);
+    if ('post_meta' === $type) {
+        expect(error_code($unowned_page, 'research_manager_resource_not_allowed'),
+            'unowned Page cannot inherit Research metadata keys');
+    } else {
+        expect(is_array($unowned_page) && 'editorial-review' === $unowned_page['risk'],
+            'existing editorial post_field on ordinary Page remains accepted');
+    }
     expect(error_code(Eduardo_Research_Manager_Plan::create('Unknown WordPress CPT', [
         array_merge(['type'=>$type,'post_id'=>45], $fields),
     ]), 'research_manager_resource_not_allowed'), 'unknown CPT denied for ' . $type);

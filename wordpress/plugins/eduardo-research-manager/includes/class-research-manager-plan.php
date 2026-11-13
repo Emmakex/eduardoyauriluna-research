@@ -249,7 +249,7 @@ final class Eduardo_Research_Manager_Plan {
         }
         $post_type = (string) $post->post_type;
         $is_theme_page = self::is_theme_owned_page($post_id, $contract);
-        if (! $policy->owns_resource((string) ($contract->preset()['id'] ?? ''), $post_type, $is_theme_page)) {
+        if (! $policy->owns_resource((string) ($contract->preset()['id'] ?? ''), $post_type, $is_theme_page, $type)) {
             return new WP_Error('research_manager_resource_not_allowed', 'Resource is outside the active Theme ownership contract.');
         }
         if ('post_meta' === $type) {

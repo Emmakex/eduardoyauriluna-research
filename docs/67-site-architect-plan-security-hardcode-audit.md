@@ -323,3 +323,7 @@ No Theme, REST/MCP, storage, version or production WordPress change.
 - **No despliegue**: Site Architect 0.11.1 en eduardoyauriluna.com, Theme, API REST/MCP, scopes, versionado y almacenamiento continúan intactos.
 
 **No declarar portabilidad completa**: las opciones `show_on_front` / `page_on_front` y la creación de páginas conservan supuestos Research, y la separación de rutas ejecutoras y la distribución empaquetada requieren microcortes posteriores. #475 permanece abierto hasta equivalencia en clon aislado.
+
+### Evidencia añadida: aceptación histórica de Pages editoriales
+
+El workflow `Research Manager Identity Policy` prueba cambios y rollback de `post_title` tanto para `post` como para páginas `page` de WordPress creadas fuera de las páginas estructurales del Theme. El gate #475.8 **no debe romper esa aceptación**: se autoriza ese `post_field` heredado bajo la política y Theme Research correctos, con los límites y riesgos existentes. Esto no autoriza `post_meta` en páginas ajenas; `post_status` mantiene la guarda exacta `publish` + Page del contrato. Una futura reducción deberá tener su propia compatibilidad y prueba productiva.

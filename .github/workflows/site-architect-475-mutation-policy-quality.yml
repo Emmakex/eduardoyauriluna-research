@@ -75,7 +75,7 @@ jobs:
           assert '$policy->allowed_action_types()' in plan
           assert '$policy->allowed_meta_keys()' in plan
           assert 'public function allowed_meta_keys(): array;' in generic
-          assert 'public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page): bool;' in ownership
+          assert 'public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page, string $action_type): bool;' in ownership
           assert 'interface Site_Architect_Resource_Ownership_Policy' in ownership
           assert 'Research_Manager' not in ownership and 'eduardo_research' not in ownership
           assert 'implements Site_Architect_Mutation_Policy, Site_Architect_Resource_Ownership_Policy' in vertical

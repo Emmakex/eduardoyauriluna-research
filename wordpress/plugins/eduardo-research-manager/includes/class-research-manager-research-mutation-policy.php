@@ -89,9 +89,11 @@ final class Eduardo_Research_Manager_Research_Mutation_Policy implements Site_Ar
      * must be named by the active Theme contract. The descriptive Registry
      * cannot add a new mutable post type.
      */
-    public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page): bool {
+    public function owns_resource(string $theme_id, string $post_type, bool $is_theme_owned_page, string $action_type): bool {
         if ('research' !== $theme_id) { return false; }
-        if ('page' === $post_type) { return $is_theme_owned_page; }
+        // Historical 0.11.1 editorial edits may target ordinary Pages.
+        // Metadata and structural publish still require the exact Theme Page.
+        if ('page' === $post_type) { return $is_theme_owned_page || 'post_field' === $action_type; }
         return in_array($post_type, array(
             'post','research_line','research_output','research_project',
             'research_software','research_dataset',
