@@ -19,6 +19,8 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-resource-provider.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php'
@@ -45,6 +47,8 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-resource-provider.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-relations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-identity-profile.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-identity-profile-rest.php'
@@ -255,16 +259,30 @@ jobs:
           if "'languages'=>array('en','es')" in identity_rest:
               raise SystemExit('Remote Identity REST must not restore a parallel Identity language catalogue')
 
-          forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']")
+          # #475.14: Research legacy identity rules moved out of generic Page Hydrator.
+          # Retain the *same* authority restrictions in the exact Research adapter.
+          research_identity = (root / 'class-research-manager-research-blueprint-identity.php').read_text(encoding='utf-8')
+          identity_resolver = (root / 'class-site-architect-blueprint-identity-resolver.php').read_text(encoding='utf-8')
+          forbidden_hydrator = ("$slots['en']", "$slots['es']", "$seed['headline']", "$seed['headline_es']",
+                                'researcher-name', 'researcher-headline', "'eduardo_research_identity'")
           leaked_hydrator = [token for token in forbidden_hydrator if token in hydrator]
           if leaked_hydrator:
-              raise SystemExit('Blueprint Hydrator reconstructs language storage directly: ' + ', '.join(leaked_hydrator))
-          if '$contract->identity_headline_field($language)' not in hydrator:
-              raise SystemExit('Blueprint Hydrator must resolve Identity headline storage through Contract')
-          if "'eduardo_research_identity'" in hydrator:
-              raise SystemExit('Blueprint Hydrator must not hardcode the canonical Identity option key')
-          if 'Eduardo_Research_Manager_Identity_Profile::option_key()' not in hydrator:
-              raise SystemExit('Blueprint Hydrator must derive Identity option storage from Identity Profile')
+              raise SystemExit('Blueprint Hydrator reconstructed Research identity directly: ' + ', '.join(leaked_hydrator))
+          if '$contract->identity_headline_field($language)' not in research_identity:
+              raise SystemExit('Research identity resolver must resolve headline storage through Theme Contract')
+          if 'Eduardo_Research_Manager_Identity_Profile::option_key()' not in research_identity:
+              raise SystemExit('Research identity resolver must derive storage from canonical Identity Profile')
+          if "'eduardo_research_identity'" in research_identity:
+              raise SystemExit('Research resolver must not hardcode Identity Profile option storage')
+          if "return 'research';" not in research_identity:
+              raise SystemExit('Research identity resolver lost exact Theme ownership')
+          for token in ('researcher-name', 'researcher-headline', 'research_manager_blueprint_identity_mismatch'):
+              if token not in research_identity:
+                  raise SystemExit('Research identity resolver dropped a legacy compatibility guard: ' + token)
+          if 'Eduardo_Research' in identity_resolver or 'researcher-name' in identity_resolver:
+              raise SystemExit('Core identity resolver contract must not depend on the Research vertical')
+          if '$this->identity_resolver->seed($normalized)' not in hydrator or hydrator.count('$this->identity_authority()') != 3:
+              raise SystemExit('Blueprint Hydrator must delegate and Theme-guard identity on preview/apply/rollback')
           PY
 
       - name: Verify Research descriptor semantics
