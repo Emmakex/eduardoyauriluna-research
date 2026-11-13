@@ -9,6 +9,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-object-execution.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-insight-execution.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-resource-fields.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
@@ -23,6 +24,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-object-execution.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-insight-execution.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-resource-fields.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
@@ -57,6 +59,7 @@ jobs:
           php -l "$ROOT/class-research-manager-research-creation-normalizer.php"
           php -l "$ROOT/class-research-manager-research-execution-spec.php"
           php -l "$ROOT/class-research-manager-research-object-execution.php"
+          php -l "$ROOT/class-research-manager-research-insight-execution.php"
           php -l "$ROOT/class-research-manager-research-resource-fields.php"
           php -l "$ROOT/class-research-manager-plan.php"
           php -l "$ROOT/class-research-manager-executor.php"
@@ -131,6 +134,16 @@ jobs:
               assert '$this->research_objects->' + route + '(' in executor
           assert 'return $this->research_objects->spec($action_type);' in executor
           assert "private function research_execution_allowed(): bool" in executor
+          insight_execution = (root/'includes/class-research-manager-research-insight-execution.php').read_text()
+          assert 'class Eduardo_Research_Manager_Research_Insight_Execution' in insight_execution
+          assert "instanceof Eduardo_Research_Manager_Research_Mutation_Policy" in insight_execution
+          assert "'research' === (string) ($this->theme_contract->preset()['id'] ?? '')" in insight_execution
+          assert "in_array('create_insight', $this->mutation_policy->allowed_action_types(), true)" in insight_execution
+          for route in ('read_state', 'create', 'restore', 'desired_value'):
+              assert 'public function ' + route + '(' in insight_execution
+              assert '$this->research_insights->' + route + '(' in executor
+          assert 'private function create_insight(' not in executor
+          assert 'private function read_insight_creation_state(' not in executor
           resource_fields = (root/'includes/class-research-manager-research-resource-fields.php').read_text()
           assert 'Resource_Registry' not in resource_fields and '$_REQUEST' not in resource_fields
           assert 'private const CREATION_META' in resource_fields
