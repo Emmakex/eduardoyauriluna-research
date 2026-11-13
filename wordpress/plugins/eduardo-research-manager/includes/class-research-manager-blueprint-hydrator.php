@@ -9,28 +9,33 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
     private Eduardo_Research_Manager_Page_Resource $pages;
     private Eduardo_Research_Manager_Executor $executor;
     private Eduardo_Research_Manager_Identity_Profile $identity;
+    private Site_Architect_Blueprint_Identity_Resolver $identity_resolver;
 
     public function __construct(
         ?Eduardo_Research_Manager_Blueprint $blueprints = null,
         ?Eduardo_Research_Manager_Page_Resource $pages = null,
         ?Eduardo_Research_Manager_Executor $executor = null,
-        ?Eduardo_Research_Manager_Identity_Profile $identity = null
+        ?Eduardo_Research_Manager_Identity_Profile $identity = null,
+        ?Site_Architect_Blueprint_Identity_Resolver $identity_resolver = null
     ) {
         $this->blueprints = $blueprints ?: Eduardo_Research_Manager::blueprint();
         $this->pages = $pages ?: Eduardo_Research_Manager::pages();
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
         $this->identity = $identity ?: new Eduardo_Research_Manager_Identity_Profile($this->executor, Eduardo_Research_Manager::evidence_editor());
+        $this->identity_resolver = $identity_resolver ?: new Eduardo_Research_Manager_Research_Blueprint_Identity();
     }
 
     public function preview(array $blueprint): array|WP_Error {
         $normalized = $this->blueprints->validate($blueprint);
         if (is_wp_error($normalized)) { return $normalized; }
+        $authority = $this->identity_authority();
+        if (is_wp_error($authority)) { return $authority; }
 
         $operations = array();
         $skipped = array();
         $apply_allowed = true;
 
-        $identity = $this->identity_seed($normalized);
+        $identity = $this->identity_resolver->seed($normalized);
         if (is_wp_error($identity)) { return $identity; }
         if ($identity) {
             $prepared = $this->identity->preview_update($identity, true, 'Greenfield canonical blueprint v1');
@@ -41,7 +46,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
                 'status'=>(string) ($prepared['status'] ?? 'change'),'apply_allowed'=>! empty($prepared['apply_allowed']),
                 'plan_id'=>(string) ($prepared['plan_id'] ?? ''),'preview'=>$prepared['preview'] ?? array(),
             );
-        } elseif ($this->has_identity_seed_data($normalized)) {
+        } elseif ($this->identity_resolver->has_seed_data($normalized)) {
             $skipped[] = array('resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','reason'=>'canonical_identity_already_initialized');
         }
 
@@ -83,11 +88,13 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
 
         $normalized = $this->blueprints->validate($blueprint);
         if (is_wp_error($normalized)) { return $normalized; }
+        $authority = $this->identity_authority();
+        if (is_wp_error($authority)) { return $authority; }
 
         $applied = array();
         $skipped = array();
 
-        $identity = $this->identity_seed($normalized);
+        $identity = $this->identity_resolver->seed($normalized);
         if (is_wp_error($identity)) { return $identity; }
         if ($identity) {
             $prepared = $this->identity->preview_update($identity, true, 'Greenfield canonical blueprint v1');
@@ -99,7 +106,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
                 'status'=>(string) ($result['status'] ?? 'applied'),'plan_id'=>(string) ($prepared['plan_id'] ?? ''),
                 'snapshot_id'=>(string) ($result['snapshot_id'] ?? ''),'verification'=>$result['verification'] ?? array(),
             );
-        } elseif ($this->has_identity_seed_data($normalized)) {
+        } elseif ($this->identity_resolver->has_seed_data($normalized)) {
             $skipped[] = array('resource'=>'identity-profile','index'=>-1,'key'=>'researcher-identity','reason'=>'canonical_identity_already_initialized');
         }
 
@@ -184,6 +191,8 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
         if (! current_user_can('manage_options')) {
             return new WP_Error('research_manager_forbidden', 'You are not allowed to rollback blueprint hydration.');
         }
+        $authority = $this->identity_authority();
+        if (is_wp_error($authority)) { return $authority; }
         $results = array();
         foreach (array_reverse($snapshot_ids) as $snapshot_id) {
             $snapshot_id = sanitize_text_field((string) $snapshot_id);
@@ -241,94 +250,22 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
             if (! is_array($values)) {
                 return $this->record_error($index, sprintf('Page slots for language "%s" must be an object-like array.', $language));
             }
-            if ('home' === $key) {
-                unset($values['researcher-name'], $values['researcher-headline']);
-            }
+            $values = $this->identity_resolver->filter_page_slots($key, $values);
             if ($values) { $clean[$language] = $values; }
         }
         return array('key'=>$key,'slots'=>$clean);
     }
 
-    /**
-     * Seed canonical Identity once from instance data in the active blueprint.
-     * Canonical site.identity is authoritative when present. Legacy Home
-     * identity aliases remain only a v1 fallback when that block is absent.
-     */
-    private function identity_seed(array $normalized): array|WP_Error {
-        $stored = get_option(Eduardo_Research_Manager_Identity_Profile::option_key(), array());
-        if (is_array($stored) && $stored) { return array(); }
-
-        $seed = array();
-        $site = is_array($normalized['site'] ?? null) ? $normalized['site'] : array();
-        $has_canonical_identity = array_key_exists('identity', $site) && is_array($site['identity']);
-        $identity = $has_canonical_identity ? $site['identity'] : array();
-        $name = is_scalar($identity['name'] ?? null)
-            ? trim(sanitize_text_field((string) $identity['name']))
-            : '';
-        if ('' !== $name) { $seed['name'] = $name; }
-
-        $contract = Eduardo_Research_Manager::contract();
-        $headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
-        foreach ((array) ($normalized['languages'] ?? array()) as $language) {
-            $language = sanitize_key((string) $language);
-            $headline = is_scalar($headlines[$language] ?? null)
-                ? trim(sanitize_text_field((string) $headlines[$language]))
-                : '';
-            if ('' === $headline) { continue; }
-            $field = $contract->identity_headline_field($language);
-            if (is_wp_error($field)) { return $field; }
-            $seed[$field] = $headline;
+    /** A resolver may only interpret the Blueprint of its exact selected Theme. */
+    private function identity_authority(): bool|WP_Error {
+        $theme_id = $this->blueprints->theme_id();
+        if ('' === $theme_id || $theme_id !== $this->identity_resolver->theme_id()) {
+            return new WP_Error(
+                'research_manager_blueprint_identity_theme_mismatch',
+                'Blueprint identity resolver does not belong to the active Theme resource contract.'
+            );
         }
-
-        if (! $has_canonical_identity) {
-            $legacy_names = array();
-            foreach ((array) ($normalized['pages'] ?? array()) as $record) {
-                if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
-                $slots = is_array($record['slots'] ?? null) ? $record['slots'] : array();
-                foreach ($contract->languages() as $language) {
-                    $language = sanitize_key((string) $language);
-                    $values = is_array($slots[$language] ?? null) ? $slots[$language] : array();
-                    $legacy_name = trim(sanitize_text_field((string) ($values['researcher-name'] ?? '')));
-                    if ('' !== $legacy_name) { $legacy_names[$language] = $legacy_name; }
-
-                    $legacy_headline = trim(sanitize_text_field((string) ($values['researcher-headline'] ?? '')));
-                    if ('' === $legacy_headline) { continue; }
-                    $field = $contract->identity_headline_field($language);
-                    if (is_wp_error($field)) { return $field; }
-                    $seed[$field] = $legacy_headline;
-                }
-                break;
-            }
-
-            $unique_names = array_values(array_unique(array_values($legacy_names)));
-            if (count($unique_names) > 1) {
-                return new WP_Error('research_manager_blueprint_identity_mismatch', 'Greenfield blueprint researcher name differs between EN and ES.');
-            }
-            if ($unique_names) { $seed['name'] = (string) $unique_names[0]; }
-        }
-        return $seed;
-    }
-
-    private function has_identity_seed_data(array $normalized): bool {
-        $site = is_array($normalized['site'] ?? null) ? $normalized['site'] : array();
-        $has_canonical_identity = array_key_exists('identity', $site) && is_array($site['identity']);
-        $identity = $has_canonical_identity ? $site['identity'] : array();
-        $name = is_scalar($identity['name'] ?? null) ? trim((string) $identity['name']) : '';
-        if ('' !== $name) { return true; }
-        $headlines = is_array($identity['headlines'] ?? null) ? $identity['headlines'] : array();
-        foreach ((array) ($normalized['languages'] ?? array()) as $language) {
-            $language = sanitize_key((string) $language);
-            if (is_scalar($headlines[$language] ?? null) && '' !== trim((string) $headlines[$language])) { return true; }
-        }
-        if ($has_canonical_identity) { return false; }
-
-        foreach ((array) ($normalized['pages'] ?? array()) as $record) {
-            if (! is_array($record) || 'home' !== sanitize_key((string) ($record['key'] ?? ''))) { continue; }
-            foreach ((array) ($record['slots'] ?? array()) as $values) {
-                if (is_array($values) && (array_key_exists('researcher-name', $values) || array_key_exists('researcher-headline', $values))) { return true; }
-            }
-        }
-        return false;
+        return true;
     }
 
     private function abort(WP_Error $error, array $applied): WP_Error {

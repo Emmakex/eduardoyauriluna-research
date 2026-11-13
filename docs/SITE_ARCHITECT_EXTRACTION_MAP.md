@@ -234,3 +234,26 @@ The standalone PHP 8.1/8.2 contract regression covers positive Research and
 independent second-Theme orchestration, rejected cross-Theme and empty authority,
 and zero phase calls on rejection. Production 0.11.1 and legacy identifiers stay
 unchanged. This does not certify an independent installable ZIP or clone parity.
+
+
+## #475.14 — Blueprint researcher identity and legacy Home aliases
+
+The 0.11.1 `Blueprint_Hydrator` no longer owns the Research-specific
+canonical identity seeding rules, the EN/ES legacy researcher-name mismatch
+check, or the Home `researcher-name` / `researcher-headline` Page aliases.
+Those behavior-preserving rules have moved verbatim into
+`Eduardo_Research_Manager_Research_Blueprint_Identity`, implementing the
+narrow `Site_Architect_Blueprint_Identity_Resolver` contract. Both canonical
+`site.identity` precedence and first-time-only seeding remain unchanged.
+
+The Hydrator keeps the existing identity Profile service, Preview/Apply/Verify,
+Plan, snapshots and rollback, including public constructor compatibility.
+The exact active Blueprint Theme catalog must match the selected resolver in
+Preview, Apply and Rollback or all fail closed **before any write**. A second
+Theme can explicitly provide its own resolver; there is no implicit fallback
+permission or change to Resource Registry, scopes, evidence or persistence.
+
+CI includes isolated PHP 8.1/8.2 canonical/legacy behavior, second-Theme and
+cross-Theme negative tests alongside existing hydration/Greenfield suites.
+This is another seam in the REAL plugin, not independent packaging, isolated
+Theme Research clone parity or production cutover. Eduardo stays on 0.11.1.
