@@ -5,16 +5,19 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) { exit; }
 
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-execution-spec.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-object-execution.php';
 
 final class Eduardo_Research_Manager_Executor {
     private Eduardo_Research_Manager_Snapshots $snapshots;
     private Site_Architect_Mutation_Policy $mutation_policy;
     private Eduardo_Research_Manager_Contract $theme_contract;
+    private Eduardo_Research_Manager_Research_Object_Execution $research_objects;
 
     public function __construct(?Eduardo_Research_Manager_Snapshots $snapshots = null, ?Site_Architect_Mutation_Policy $mutation_policy = null, ?Eduardo_Research_Manager_Contract $theme_contract = null) {
         $this->snapshots = $snapshots ?: new Eduardo_Research_Manager_Snapshots();
         $this->mutation_policy = $mutation_policy ?? new Eduardo_Research_Manager_Research_Mutation_Policy();
         $this->theme_contract = $theme_contract ?? new Eduardo_Research_Manager_Contract();
+        $this->research_objects = new Eduardo_Research_Manager_Research_Object_Execution($this->mutation_policy, $this->theme_contract);
     }
 
     public function preview(array $plan): array|WP_Error {
@@ -119,7 +122,7 @@ final class Eduardo_Research_Manager_Executor {
         }
         if ('create_page' === $type) { return $this->read_page_creation_state($action); }
         if ('create_insight' === $type) { return $this->read_insight_creation_state($action); }
-        if ($this->research_object_spec($type)) { return $this->read_research_object_creation_state($action); }
+        if ($this->research_object_spec($type)) { return $this->research_objects->read_state($action); }
         return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.');
     }
 
@@ -159,27 +162,6 @@ final class Eduardo_Research_Manager_Executor {
         ));
     }
 
-    private function read_research_object_creation_state(array $action): array {
-        $spec = $this->research_object_spec((string) ($action['type'] ?? ''));
-        if (! $spec) { return array('exists'=>false,'value'=>null); }
-        $post_type = (string) $spec['post_type'];
-        $post = $this->find_post_by_creation_token((string) $action['creation_token'], $post_type);
-        if (! $post instanceof WP_Post) { $post = $this->find_post_by_slug((string) $action['slug'], $post_type); }
-        if (! $post instanceof WP_Post) { return array('exists'=>false,'value'=>null); }
-        $value = array(
-            'post_id'=>(int) $post->ID,'post_type'=>$post_type,'status'=>(string) $post->post_status,
-            'slug'=>(string) $post->post_name,'title'=>(string) $post->post_title,'excerpt'=>(string) $post->post_excerpt,
-            'content'=>(string) $post->post_content,'language'=>$this->private_meta_string((int) $post->ID, '_research_language', Eduardo_Research_Manager::contract()->default_language()),
-        );
-        foreach ((array) $spec['meta'] as $field => $meta_key) {
-            $default = in_array($field, (array) ($spec['array_fields'] ?? array()), true) ? array() : ('0' === (string) ($spec['defaults'][$field] ?? '') ? '0' : '');
-            $value[$field] = $this->private_meta_value((int) $post->ID, (string) $meta_key, $default);
-        }
-        $value['creation_token'] = $this->private_meta_string((int) $post->ID, '_eduardo_research_manager_creation_token');
-        $value['url'] = (string) get_permalink($post);
-        return array('exists'=>true,'value'=>$value);
-    }
-
     private function write_action(array $action): bool|WP_Error {
         $type = (string) ($action['type'] ?? '');
         if ($this->research_creation_blocked($type)) { return new WP_Error('research_manager_action_not_allowed', 'Research creation is outside the active Theme execution contract.'); }
@@ -195,7 +177,7 @@ final class Eduardo_Research_Manager_Executor {
         }
         elseif ('create_page' === $type) { $result = $this->create_page($action); if (is_wp_error($result)) { return $result; } }
         elseif ('create_insight' === $type) { $result = $this->create_insight($action); if (is_wp_error($result)) { return $result; } }
-        elseif ($this->research_object_spec($type)) { $result = $this->create_research_object($action); if (is_wp_error($result)) { return $result; } }
+        elseif ($this->research_object_spec($type)) { $result = $this->research_objects->create($action); if (is_wp_error($result)) { return $result; } }
         else { return new WP_Error('research_manager_action_not_allowed', 'Unsupported mutation action type.'); }
 
         $state = $this->read_state($action);
@@ -222,26 +204,6 @@ final class Eduardo_Research_Manager_Executor {
             'post_type'=>'post','post_status'=>$action['status'],'post_name'=>$action['slug'],'post_title'=>$action['title'],
             'post_excerpt'=>$action['excerpt'],'post_content'=>$action['content'],
             'meta_input'=>array('_research_language'=>$action['language'],'_research_insight_type'=>$action['insight_type'],'_eduardo_research_manager_creation_token'=>$action['creation_token']),
-        ), true);
-        if (is_wp_error($id)) { return $id; }
-        clean_post_cache((int) $id); $this->refresh_theme_routes(); return true;
-    }
-
-    private function create_research_object(array $action): bool|WP_Error {
-        $spec = $this->research_object_spec((string) ($action['type'] ?? ''));
-        if (! $spec) { return new WP_Error('research_manager_action_not_allowed', 'Unsupported Research object creation action.'); }
-        $post_type = (string) $spec['post_type'];
-        if ($this->find_post_by_slug((string) $action['slug'], $post_type) instanceof WP_Post) {
-            return new WP_Error((string) $spec['creation_conflict'], 'A Research resource already occupies the planned slug. Nothing was overwritten.');
-        }
-        if ($this->find_post_by_creation_token((string) $action['creation_token'], $post_type) instanceof WP_Post) {
-            return new WP_Error('research_manager_creation_token_collision', 'The Research resource provenance token is already in use.');
-        }
-        $meta = array('_research_language'=>$action['language'],'_eduardo_research_manager_creation_token'=>$action['creation_token']);
-        foreach ((array) $spec['meta'] as $field => $meta_key) { $meta[(string) $meta_key] = $action[$field]; }
-        $id = wp_insert_post(array(
-            'post_type'=>$post_type,'post_status'=>$action['status'],'post_name'=>$action['slug'],'post_title'=>$action['title'],
-            'post_excerpt'=>$action['excerpt'],'post_content'=>$action['content'],'meta_input'=>$meta,
         ), true);
         if (is_wp_error($id)) { return $id; }
         clean_post_cache((int) $id); $this->refresh_theme_routes(); return true;
@@ -276,10 +238,9 @@ final class Eduardo_Research_Manager_Executor {
                 if (is_wp_error($result)) { return $result; }
                 $this->refresh_theme_routes();
             }
-            elseif ($spec = $this->research_object_spec($type)) {
-                $result = $this->restore_created_resource($action, $state, (string) $spec['post_type'], (string) $spec['rollback_conflict']);
+            elseif ($this->research_object_spec($type)) {
+                $result = $this->research_objects->restore($action, $state);
                 if (is_wp_error($result)) { return $result; }
-                $this->refresh_theme_routes();
             }
 
             $restored = $this->read_state($action);
@@ -310,16 +271,7 @@ final class Eduardo_Research_Manager_Executor {
         if ('create_insight' === $type) {
             return array('post_type'=>'post','status'=>$action['status'],'slug'=>$action['slug'],'title'=>$action['title'],'excerpt'=>$action['excerpt'],'content'=>$action['content'],'language'=>$action['language'],'insight_type'=>$action['insight_type'],'creation_token'=>$action['creation_token']);
         }
-        $spec = $this->research_object_spec($type);
-        if ($spec) {
-            $value = array(
-                'post_type'=>$spec['post_type'],'status'=>$action['status'],'slug'=>$action['slug'],'title'=>$action['title'],
-                'excerpt'=>$action['excerpt'],'content'=>$action['content'],'language'=>$action['language'],
-            );
-            foreach ((array) $spec['meta'] as $field => $_) { $value[$field] = $action[$field]; }
-            $value['creation_token'] = $action['creation_token'];
-            return $value;
-        }
+        if ($this->research_object_spec($type)) { return $this->research_objects->desired_value($action); }
         return $action['value'] ?? null;
     }
 
@@ -356,11 +308,7 @@ final class Eduardo_Research_Manager_Executor {
 
     /** Compatibility delegate; Research post types are now owned by the vertical. */
     private function research_object_spec(string $action_type): array {
-        if (! $this->research_execution_allowed()
-            || ! in_array($action_type, $this->mutation_policy->allowed_action_types(), true)) {
-            return array();
-        }
-        return Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type);
+        return $this->research_objects->spec($action_type);
     }
 
     private function states_equal(array $left, array $right): bool {

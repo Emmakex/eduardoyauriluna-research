@@ -37,6 +37,8 @@ function get_page_by_path(string $path, string $output = OBJECT, string $type = 
     return 'landing' === $path ? new WP_Post(31) : null;
 }
 function maybe_serialize(mixed $v): string { return serialize($v); }
+/** No production WordPress writes or rows during this offline delegation gate. */
+function get_posts(array $args): array { return []; }
 function get_post(int $post_id): ?WP_Post {
     if (17 === $post_id) { return new WP_Post(17); }
     if (23 === $post_id) { return new WP_Post(23, 'research_line'); }
@@ -356,6 +358,10 @@ $research_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_
 $foreign_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $other_policy, $other_contract);
 $mixed_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $research, $other_contract);
 $borrowed_executor = new Eduardo_Research_Manager_Executor(new Eduardo_Research_Manager_Snapshots(), $forged_research_policy, new Eduardo_Research_Manager_Contract());
+$research_objects = new Eduardo_Research_Manager_Research_Object_Execution($research, new Eduardo_Research_Manager_Contract());
+$foreign_objects = new Eduardo_Research_Manager_Research_Object_Execution($other_policy, $other_contract);
+$mixed_objects = new Eduardo_Research_Manager_Research_Object_Execution($research, $other_contract);
+$borrowed_objects = new Eduardo_Research_Manager_Research_Object_Execution($forged_research_policy, new Eduardo_Research_Manager_Contract());
 foreach ($expected_research_post_types as $action_type => $post_type) {
     $spec = Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type);
     $registry = Eduardo_Research_Manager_Resource_Registry::by_creation_action($action_type);
@@ -384,12 +390,44 @@ foreach ($expected_research_post_types as $action_type => $post_type) {
         && $spec['defaults'] === $registry['defaults']
         && $spec['creation_conflict'] === $registry['creation_conflict']
         && $spec['rollback_conflict'] === $registry['rollback_conflict']
-        && $spec_reflection->invoke($research_executor, $action_type) === $spec,
+        && $spec_reflection->invoke($research_executor, $action_type) === $spec
+        && $research_objects->spec($action_type) === $spec,
         'Research execution retains exactly the accepted schema for ' . $action_type);
     expect([] === $spec_reflection->invoke($foreign_executor, $action_type)
         && [] === $spec_reflection->invoke($mixed_executor, $action_type)
-        && [] === $spec_reflection->invoke($borrowed_executor, $action_type),
+        && [] === $spec_reflection->invoke($borrowed_executor, $action_type)
+        && [] === $foreign_objects->spec($action_type)
+        && [] === $mixed_objects->spec($action_type)
+        && [] === $borrowed_objects->spec($action_type),
         'foreign Theme or mutation policy cannot resolve Research spec for ' . $action_type);
+    $sample_action = [
+        'type'=>$action_type,'slug'=>'unwritten-fixture','status'=>'draft',
+        'title'=>'Evidence-based sample','excerpt'=>'Fixture','content'=>'Academic content',
+        'language'=>'en','creation_token'=>str_repeat('c', 32),
+    ];
+    foreach ($spec['meta'] as $field => $_) {
+        $sample_action[$field] = in_array($field, $spec['array_fields'], true) ? ['sample'] : 'sample';
+    }
+    $desired = $research_objects->desired_value($sample_action);
+    expect(is_array($desired) && $desired['post_type'] === $post_type
+        && $desired['status'] === 'draft' && $desired['creation_token'] === str_repeat('c', 32),
+        'Research adapter retains expected create/Verify desired state of ' . $action_type);
+    foreach (array_keys($spec['meta']) as $field) {
+        expect($desired[$field] === $sample_action[$field], 'Research adapter preserves ' . $action_type . ' field ' . $field);
+    }
+    $missing = $research_objects->read_state($sample_action);
+    expect($missing === ['exists'=>false,'value'=>null],
+        'Research adapter preserves no-write Preview state for absent ' . $action_type);
+    foreach ([$foreign_objects, $mixed_objects, $borrowed_objects] as $outside_adapter) {
+        expect(error_code($outside_adapter->read_state($sample_action), 'research_manager_action_not_allowed'),
+            'Research read must deny foreign policy/Theme before WordPress lookup');
+        expect(error_code($outside_adapter->create($sample_action), 'research_manager_action_not_allowed'),
+            'Research write must deny foreign policy/Theme before WordPress insert');
+        expect(error_code($outside_adapter->restore($sample_action, ['exists'=>false,'value'=>null]), 'research_manager_action_not_allowed'),
+            'Research rollback must deny foreign policy/Theme before WordPress delete');
+        expect(error_code($outside_adapter->desired_value($sample_action), 'research_manager_action_not_allowed'),
+            'Research preview target must deny foreign policy/Theme');
+    }
 }
 foreach (['create_arbitrary','create_insight','option','post_meta'] as $action_type) {
     expect([] === Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type),
@@ -504,4 +542,4 @@ expect(error_code($read_reflection->invoke($mixed_executor, [
     'type'=>'post_meta','post_id'=>31,'key'=>'_research_doi',
 ]), 'research_manager_resource_not_allowed'), 'foreign Theme cannot read Research metadata via Research policy');
 
-echo "PASS: Research risk/evidence parity, code-owned native field schemas, resource ownership and alternate Theme policy\n";
+echo "PASS: Research risk/evidence parity, object execution delegation, field schemas, resource ownership and alternate Theme policy\n";

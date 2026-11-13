@@ -47,6 +47,7 @@ jobs:
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-contract.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-resource-registry.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php
+          php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-object-execution.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-resource.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-page-state-editor.php
           php -l wordpress/plugins/eduardo-research-manager/includes/class-research-manager-remote-page-state-operations.php

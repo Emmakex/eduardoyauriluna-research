@@ -8,6 +8,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-object-execution.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-resource-fields.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
@@ -21,6 +22,7 @@ on:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-mutation-policy.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-creation-normalizer.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-execution-spec.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-object-execution.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-resource-fields.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-plan.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-executor.php'
@@ -54,6 +56,7 @@ jobs:
           php -l "$ROOT/class-research-manager-research-mutation-policy.php"
           php -l "$ROOT/class-research-manager-research-creation-normalizer.php"
           php -l "$ROOT/class-research-manager-research-execution-spec.php"
+          php -l "$ROOT/class-research-manager-research-object-execution.php"
           php -l "$ROOT/class-research-manager-research-resource-fields.php"
           php -l "$ROOT/class-research-manager-plan.php"
           php -l "$ROOT/class-research-manager-executor.php"
@@ -114,6 +117,20 @@ jobs:
               assert 'private static function normalize_' + type_name + '_creation' in research_normalizer
           assert "return new WP_Error('research_manager_action_not_allowed'" in research_normalizer
           execution_spec = (root/'includes/class-research-manager-research-execution-spec.php').read_text()
+          object_execution = (root/'includes/class-research-manager-research-object-execution.php').read_text()
+          assert 'class Eduardo_Research_Manager_Research_Object_Execution' in object_execution
+          assert "instanceof Eduardo_Research_Manager_Research_Mutation_Policy" in object_execution
+          assert "'research' !== (string) ($this->theme_contract->preset()['id'] ?? '')" in object_execution
+          assert "Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)" in object_execution
+          for method in ('read_state', 'create', 'restore', 'desired_value'):
+              assert 'public function ' + method + '(' in object_execution
+              assert '$this->spec((string) ($action[\'type\'] ?? \'\'))' in object_execution
+          assert 'public function ' + 'create_research_object(' not in executor
+          assert 'private function read_research_object_creation_state(' not in executor
+          for route in ('read_state', 'create', 'restore', 'desired_value'):
+              assert '$this->research_objects->' + route + '(' in executor
+          assert 'return $this->research_objects->spec($action_type);' in executor
+          assert "private function research_execution_allowed(): bool" in executor
           resource_fields = (root/'includes/class-research-manager-research-resource-fields.php').read_text()
           assert 'Resource_Registry' not in resource_fields and '$_REQUEST' not in resource_fields
           assert 'private const CREATION_META' in resource_fields
@@ -123,7 +140,7 @@ jobs:
           assert 'Eduardo_Research_Manager_Research_Resource_Fields::legacy_post_fields' in vertical
           assert 'Eduardo_Research_Manager_Research_Resource_Fields::' not in executor
           assert 'Eduardo_Research_Manager_Resource_Registry::' not in executor
-          assert 'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)' in executor
+          assert 'Eduardo_Research_Manager_Research_Execution_Spec::for_action($action_type)' in object_execution
           assert executor.count('research_creation_blocked($type)') == 3
           assert 'instanceof Eduardo_Research_Manager_Research_Mutation_Policy' in executor
           for action in ('create_line','create_output','create_project','create_software','create_dataset'):
