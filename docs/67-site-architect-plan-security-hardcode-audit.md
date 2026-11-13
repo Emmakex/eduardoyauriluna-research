@@ -331,3 +331,16 @@ El workflow `Research Manager Identity Policy` prueba cambios y rollback de `pos
 ### Compatibilidad adicional M4: rollback del estado de Insights
 
 El gate `Research Manager Remote M4 Insight Status Quality` demuestra que `InsightEditor` guarda snapshots con acción `post_field/post_status` para publicar/despublicar y delega su rollback a `Executor`, sin usar un Plan genérico de publicación de páginas. La nueva comprobación de **pertenencia** permite ese read/write/rollback en recursos `post` del vertical Research, pero la restricción preexistente de `Plan::normalize_action` sigue impidiendo construir nuevas acciones genéricas `post_status` sobre Insights. No redefinir el contrato M4 ni reimplementar su motor.
+
+
+## Microcorte #475.9 — propiedad nativa de campos en creaciones Research
+
+**Origen de los hechos:** #475.8 preservó las listas históricas de 49 `post_meta` keys y cinco `post_field` fields, mientras que #475.7 movió el catálogo de tipos de creación a `Research_Execution_Spec`. Quedaba una dependencia: la especificación de creación aceptaba el mapa `meta` del Registry descriptivo si coincidía el post type, sin comparar cada campo con una autoridad ejecutable independiente.
+
+**Cambio revisado:** `Eduardo_Research_Manager_Research_Resource_Fields` declara por código el mapa exacto de `field => meta_key` de cinco recursos académicos: `research_line`, `research_output`, `research_project`, `research_software` y `research_dataset`. `Research_Execution_Spec::for_action` comprueba igualdad estricta de ese mapa **antes** de permitir crear/verificar/restaurar objetos académicos. Un campo añadido, omitido, reordenado o remapeado en el Registry sin aprobación queda **fail-closed**. El Registry sigue describiendo recursos, no autorizando escrituras.
+
+La política Research delega el reconocimiento de los siete tipos WordPress aceptados (`page`, `post` y cinco Research CPTs), y las listas legacy de campos, al mismo componente del vertical. Los 49 `post_meta` históricos y cinco `post_field` históricos **siguen siendo compatibles** en recursos cuya propiedad ya está autorizada: este microcorte no estrecha ni expande la superficie de mutación genérica. Para Pages ajenas, solo se preserva la excepción editorial de `post_field` aprobada en #475.8.
+
+**Tests de aceptación:** comparación exacta de cinco mapas con el comportamiento aceptado; negativos de campo desconocido, omitido, reordenado, remapeado, tipo ajeno; matrices positivas de compatibilidad; segunda política/Theme, riesgo/evidencia, Preview/Apply/Verify/Rollback y PHP 8.1/8.2. Se conserva la edición de títulos editorial y el rollback M4 de Insights.
+
+**Límite:** únicamente contratos Research, adaptador Research de ejecución, test offline, CI y auditoría. Sin modificación de la cabecera 0.11.1, Theme, Blueprint, Bootstrap, REST/MCP, credenciales, almacenamiento ni producción de Eduardo. No implica una nueva distribución instalable ni una segunda instancia probada. Siguiente microcorte posible: separar las rutas de ejecución Research de la mecánica genérica, y después demostrar equivalencia en clon aislado antes de cutover.
