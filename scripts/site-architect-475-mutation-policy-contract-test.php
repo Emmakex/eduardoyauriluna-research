@@ -25,6 +25,11 @@ function is_wp_error(mixed $v): bool { return $v instanceof WP_Error; }
 function sanitize_key(string $v): string { return preg_replace('/[^a-z0-9_-]/', '', strtolower($v)) ?? ''; }
 function sanitize_text_field(string $v): string { return trim(strip_tags($v)); }
 function absint(mixed $v): int { return abs((int) $v); }
+function sanitize_title(string $v): string { return trim(strtolower(preg_replace('/[^a-z0-9-]/i', '-', $v) ?? ''), '-'); }
+function sanitize_textarea_field(string $v): string { return trim(strip_tags($v)); }
+function wp_kses_post(string $v): string { return $v; }
+function eduardo_research_insight_types(string $language): array { return ['research_note'=>'Research note']; }
+
 function wp_json_encode(mixed $v, int $opts = 0): string|false { return json_encode($v, $opts); }
 function get_option(string $key, mixed $default = false): mixed { return $default; }
 function get_page_by_path(string $path, string $output = OBJECT, string $type = 'page'): ?WP_Post {
@@ -280,5 +285,41 @@ expect(is_array($foreign_preview) && $foreign_preview['risk'] === 'evidence-requ
     'Executor preview classifies and blocks the same explicit evidence-sensitive action');
 expect(error_code(Eduardo_Research_Manager_Plan::apply_gate($foreign_evidence),
     'research_manager_meta_not_allowed'), 'Default Research cannot validate foreign evidence Plan');
+
+
+/** #475.6: Research typed schemas live in the vertical, and remain fail-closed. */
+$insight = Eduardo_Research_Manager_Plan::create('Research Insight normalizer parity', [
+    ['type'=>'create_insight','title'=>'Academic note','slug'=>'academic-note','excerpt'=>'Summary',
+     'content'=>'<p>Evidence coming</p>','language'=>'es','status'=>'draft',
+     'insight_type'=>'research_note','creation_token'=>str_repeat('a', 32)],
+]);
+expect(is_array($insight) && $insight['risk'] === 'editorial-review'
+    && $insight['actions'][0]['language'] === 'es'
+    && $insight['actions'][0]['slug'] === 'academic-note'
+    && Eduardo_Research_Manager_Plan::validate($insight) === true,
+    'Research Insight creation retains normalized fields, checksum and risk');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Invalid Research provenance', [
+    ['type'=>'create_insight','title'=>'Academic note','slug'=>'academic-note',
+     'creation_token'=>'invalid-token'],
+]), 'research_manager_invalid_insight_creation'), 'Research Insight creation token remains bounded');
+expect(error_code(Eduardo_Research_Manager_Plan::create('Long Research content', [
+    ['type'=>'create_insight','title'=>str_repeat('A', 201),'slug'=>'academic-note',
+     'creation_token'=>str_repeat('a', 32)],
+]), 'research_manager_insight_content_too_large'), 'Research vertical preserves content byte bounds');
+
+$forged_research_policy = new class implements Site_Architect_Mutation_Policy {
+    public function allowed_action_types(): array { return ['create_insight']; }
+    public function allowed_option_keys(): array { return []; }
+    public function allowed_meta_keys(): array { return []; }
+    public function risk_for_action(array $action, callable $is_theme_owned_page): string { return 'standard'; }
+    public function evidence_blocker_message(string $reason): string { return ''; }
+};
+expect(error_code(Eduardo_Research_Manager_Plan::create('Foreign policy cannot claim Research normalizer', [
+    ['type'=>'create_insight','title'=>'Borrowed','slug'=>'borrowed',
+     'creation_token'=>str_repeat('a', 32)],
+], [], $forged_research_policy, $other_contract), 'research_manager_action_not_allowed'),
+    'merely declaring Research creation does not authorize another Theme');
+expect(error_code(Eduardo_Research_Manager_Research_Creation_Normalizer::normalize('create_arbitrary', []),
+    'research_manager_action_not_allowed'), 'Research normalizer has no dynamic Registry fallback');
 
 echo "PASS: Research risk/evidence parity, non-degrading fallback and alternate Theme policy\n";
