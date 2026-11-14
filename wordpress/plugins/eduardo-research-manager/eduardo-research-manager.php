@@ -66,6 +66,8 @@ require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blu
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-compiler.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-bootstrap.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-blueprint-identity-resolver.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-blueprint-identity-operations.php';
+require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-blueprint-identity-operations.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-research-blueprint-identity.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-research-manager-blueprint-hydrator.php';
 require_once EDUARDO_RESEARCH_MANAGER_DIR . 'includes/class-site-architect-greenfield-relationship-phase.php';
