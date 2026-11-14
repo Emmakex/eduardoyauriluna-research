@@ -28,6 +28,8 @@ export function decodeResult(raw) {
       } catch { /* text-only responses are not evidence */ }
     }
   }
+  // An MCP text envelope that cannot be decoded is NOT an observed payload.
+  if (!obj && Array.isArray(response.content)) return null;
   if (!obj) obj = response;
   // The existing bridge wraps some payloads with { ok, data }.
   if (obj.ok === false || obj.isError === true) return null;
