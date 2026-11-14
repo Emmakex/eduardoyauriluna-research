@@ -148,4 +148,4 @@ function main(){
   console.log('RESEARCH_COLLECTION_READBACK='+report.result+
     ' query_receipts='+report.verified_queries+'/12');
 }
-if(process.argv[1]?.endsWith('site-architect-47527-research-inventory.mjs'))main();
+if(path.basename(process.argv[1]||'')==='site-architect-47527-research-inventory.mjs')main();
