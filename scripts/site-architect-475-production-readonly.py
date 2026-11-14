@@ -276,6 +276,13 @@ def main() -> None:
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print("PASS: read-only production HTTP survey attempted exactly 24 Research Theme routes; "
           + json.dumps(count, sort_keys=True))
+    deltas = [{"page": row["id"], "clone_http": row["clone_http"],
+               "production_http": row["production_http"]}
+              for row in results if row["http_delta"]]
+    flags = [{"page": row["id"], "flags": row["editorial_flags"]}
+             for row in results if row["editorial_flags"]]
+    print("PUBLIC_HTTP_DELTAS=" + json.dumps(deltas, sort_keys=True))
+    print("PUBLIC_EDITORIAL_FLAGS=" + json.dumps(flags, sort_keys=True))
     if not report["complete_http_observation"]:
         print("UNVERIFIED: public HTTP survey incomplete; do not claim production parity.")
 
