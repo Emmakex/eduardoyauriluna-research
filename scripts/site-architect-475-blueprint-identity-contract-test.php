@@ -91,6 +91,8 @@ final class Eduardo_Research_Manager_Executor {
 $includes=EDUARDO_RESEARCH_MANAGER_DIR.'includes/';
 require_once $includes.'class-site-architect-blueprint-identity-resolver.php';
 require_once $includes.'class-research-manager-research-blueprint-identity.php';
+require_once $includes.'class-site-architect-blueprint-identity-operations.php';
+require_once $includes.'class-research-manager-research-blueprint-identity-operations.php';
 require_once $includes.'class-research-manager-blueprint-hydrator.php';
 
 $resolver = new Eduardo_Research_Manager_Research_Blueprint_Identity();
@@ -132,6 +134,8 @@ $pages = new Eduardo_Research_Manager_Page_Resource();
 $executor = new Eduardo_Research_Manager_Executor();
 $profile = new Eduardo_Research_Manager_Identity_Profile();
 $hydrator = new Eduardo_Research_Manager_Blueprint_Hydrator($bp,$pages,$executor,$profile,$resolver);
+$research_actions = new Eduardo_Research_Manager_Research_Blueprint_Identity_Operations($profile);
+expect($research_actions->theme_id() === 'research', 'Research identity actions belong to exact Theme');
 $payload=$canonical;
 $payload['pages'][0]['slots']['en']['heading']='Welcome';
 $preview=$hydrator->preview($payload);
@@ -154,12 +158,27 @@ final class AlternateIdentity implements Site_Architect_Blueprint_Identity_Resol
     public function has_seed_data(array $normalized): bool { $this->calls++; return false; }
     public function filter_page_slots(string $page_key, array $values): array { $this->calls++; return $values; }
 }
+final class AlternateIdentityOperations implements Site_Architect_Blueprint_Identity_Operations {
+    public int $preview_calls = 0;
+    public int $apply_calls = 0;
+    public function __construct(private string $id) {}
+    public function theme_id(): string { return $this->id; }
+    public function preview_update(array $changes, bool $confirmed, string $reference): array|WP_Error {
+        $this->preview_calls++;
+        return ['status'=>'change','apply_allowed'=>true,'plan_id'=>'alternate-id','preview'=>$changes];
+    }
+    public function apply_preview(array $prepared): array|WP_Error {
+        $this->apply_calls++;
+        return ['status'=>'applied','snapshot_id'=>'alternate-s1','verification'=>['verified'=>true]];
+    }
+}
 $alt=new AlternateIdentity('second-theme');
 $altPages=new Eduardo_Research_Manager_Page_Resource();
 $altExecutor=new Eduardo_Research_Manager_Executor();
 $altProfile=new Eduardo_Research_Manager_Identity_Profile();
 $independent=new Eduardo_Research_Manager_Blueprint_Hydrator(
-    new Eduardo_Research_Manager_Blueprint('second-theme'), $altPages, $altExecutor, $altProfile, $alt
+    new Eduardo_Research_Manager_Blueprint('second-theme'), $altPages, $altExecutor, $altProfile, $alt,
+    new AlternateIdentityOperations('second-theme')
 );
 $empty=['languages'=>['fr'], 'pages'=>[]];
 expect(is_array($independent->preview($empty)), 'Explicit second Theme resolver can preview its own Blueprint');
@@ -181,4 +200,36 @@ foreach (['preview','apply','rollback'] as $action) {
         && $wrongExecutor->preview_calls===0 && $wrongExecutor->apply_calls===0
         && $wrongExecutor->rollback_calls===0, 'Cross-Theme denial before any phase or mutation');
 }
-echo "PASS: Research canonical+legacy Blueprint identity parity; second-Theme positive; cross-Theme fail closed; snapshot rollback\n";
+// A correct identity resolver must not grant access to a foreign identity executor.
+foreach (['preview','apply','rollback'] as $action) {
+    $foreign = new AlternateIdentityOperations('other-theme');
+    $blockedExecutor = new Eduardo_Research_Manager_Executor();
+    $blockedProfile = new Eduardo_Research_Manager_Identity_Profile();
+    $blocked = new Eduardo_Research_Manager_Blueprint_Hydrator(
+        new Eduardo_Research_Manager_Blueprint('research'),
+        new Eduardo_Research_Manager_Page_Resource(),
+        $blockedExecutor, $blockedProfile,
+        new Eduardo_Research_Manager_Research_Blueprint_Identity(), $foreign
+    );
+    $result = $action === 'rollback' ? $blocked->rollback(['s1']) : $blocked->$action($payload);
+    expect(is_wp_error($result) && $result->get_error_code() === 'research_manager_blueprint_identity_theme_mismatch',
+        'Foreign identity operations denied before ' . $action);
+    expect($foreign->preview_calls === 0 && $foreign->apply_calls === 0
+        && $blockedProfile->preview_calls === 0 && $blockedProfile->apply_calls === 0
+        && $blockedExecutor->preview_calls === 0 && $blockedExecutor->apply_calls === 0
+        && $blockedExecutor->rollback_calls === 0,
+        'Foreign identity adapter rejected before side effects');
+}
+// Explicit second-Theme identity actions still use the existing bounded pipeline.
+$secondProfile = new Eduardo_Research_Manager_Identity_Profile();
+$secondOps = new AlternateIdentityOperations('second-theme');
+$secondHydrator = new Eduardo_Research_Manager_Blueprint_Hydrator(
+    new Eduardo_Research_Manager_Blueprint('second-theme'),
+    new Eduardo_Research_Manager_Page_Resource(), new Eduardo_Research_Manager_Executor(),
+    $secondProfile, new AlternateIdentity('second-theme'), $secondOps
+);
+$seedless = ['pages'=>[],'site'=>[],'languages'=>['fr']];
+expect(is_array($secondHydrator->apply($seedless)) && $secondProfile->apply_calls === 0,
+    'Second-Theme empty identity never calls Research Profile');
+
+echo "PASS: Research identity actions preserve service and snapshot parity; explicit second Theme; cross-Theme fail closed\n";
