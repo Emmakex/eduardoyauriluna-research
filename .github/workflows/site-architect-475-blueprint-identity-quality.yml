@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
@@ -14,6 +16,8 @@ on:
     branches: [main]
     paths:
       - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-resolver.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-site-architect-blueprint-identity-operations.php'
+      - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity-operations.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-research-blueprint-identity.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint-hydrator.php'
       - 'wordpress/plugins/eduardo-research-manager/includes/class-research-manager-blueprint.php'
@@ -45,6 +49,8 @@ jobs:
           set -euo pipefail
           ROOT=wordpress/plugins/eduardo-research-manager
           for file in includes/class-site-architect-blueprint-identity-resolver.php \
+                      includes/class-site-architect-blueprint-identity-operations.php \
+                      includes/class-research-manager-research-blueprint-identity-operations.php \
                       includes/class-research-manager-research-blueprint-identity.php \
                       includes/class-research-manager-blueprint-hydrator.php \
                       includes/class-research-manager-blueprint.php \
@@ -63,12 +69,21 @@ jobs:
           policy=(root/'includes/class-site-architect-blueprint-identity-resolver.php').read_text()
           research=(root/'includes/class-research-manager-research-blueprint-identity.php').read_text()
           core=(root/'includes/class-research-manager-blueprint-hydrator.php').read_text()
+          actions=(root/'includes/class-site-architect-blueprint-identity-operations.php').read_text()
+          research_actions=(root/'includes/class-research-manager-research-blueprint-identity-operations.php').read_text()
           plugin=(root/'eduardo-research-manager.php').read_text()
           blueprint=(root/'includes/class-research-manager-blueprint.php').read_text()
           assert 'Eduardo_Research' not in policy and 'researcher-' not in policy
           assert 'researcher-name' not in core and 'researcher-headline' not in core
           assert 'researcher-name' in research and 'researcher-headline' in research
           assert 'research_manager_blueprint_identity_mismatch' in research
+          assert 'Eduardo_Research' not in actions and 'researcher-' not in actions
+          assert 'private Site_Architect_Blueprint_Identity_Operations $identity' in core
+          assert 'implements Site_Architect_Blueprint_Identity_Operations' in research_actions
+          assert "return 'research';" in research_actions
+          assert '$this->profile->preview_update(' in research_actions
+          assert '$this->profile->apply_preview(' in research_actions
+          assert '$theme_id !== $this->identity->theme_id()' in core
           assert '$this->identity_resolver->seed($normalized)' in core
           assert core.count('$this->identity_authority()') == 3
           assert 'public function theme_id(): string' in blueprint

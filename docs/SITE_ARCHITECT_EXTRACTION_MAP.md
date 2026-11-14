@@ -257,3 +257,20 @@ CI includes isolated PHP 8.1/8.2 canonical/legacy behavior, second-Theme and
 cross-Theme negative tests alongside existing hydration/Greenfield suites.
 This is another seam in the REAL plugin, not independent packaging, isolated
 Theme Research clone parity or production cutover. Eduardo stays on 0.11.1.
+
+
+## #475.15 — Identity Profile actions behind a Theme-scoped contract
+
+The real 0.11.1 Blueprint Hydrator now types its identity update service as
+`Site_Architect_Blueprint_Identity_Operations`. The Research adapter delegates
+Preview and Apply **unchanged** to `Eduardo_Research_Manager_Identity_Profile`.
+The legacy fourth constructor parameter and default Research path remain
+compatible; a second Theme may explicitly supply its own bounded action
+service as the sixth parameter. Identity Resolver and Operations must both
+match the active Blueprint Theme id, or Preview, Apply and Rollback deny before
+any service calls. An interface instance never itself grants mutation rights.
+
+The existing Executor still performs all snapshots, verification and rollback;
+Identity Profile still authorizes and records its mutation using its existing
+evidence, revision, storage and plan semantics. This seam does not change
+Eduardo's plugin 0.11.1 or install anything in production.
