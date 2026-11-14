@@ -115,3 +115,23 @@ private WordPress data is not yet read back*. Actual production requires
 explicitly authorized, host-pinned, protected WP-CLI read-only invocation.
 No CI secret or public WordPress endpoint is created. Never treat this
 as permission to update/redeploy the already functioning installation.
+
+
+## #475.23 — Existing protected production MCP readback, strictly read-only
+
+The repository already has an OVH Phase 2C Eduardo-reference MCP and a
+phase2d-production principal used by its accepted deployment workflow.
+The new guarded read-only workflow and report contract are detailed in
+docs/SITE_ARCHITECT_MCP_READONLY_READBACK.md. Its six fixed existing
+read tools require no new WordPress tokens, endpoints or plugin mutation.
+
+**Acceptance split:** offline sanitizer and CI can pass before merge; the
+live production MCP result may be observed only after the protected main
+push job runs (or a separate authorized workflow_dispatch). Green CI alone
+does NOT certify that live access, the installed Plugin version or its
+private resource totals match the independent source export.
+
+#475.22 native MySQL private inventory, visual mobile/desktop, doctoral CV
+content, legal review, external private source repository and reversible
+cutover remain open until separately evidenced. A successful MCP inventory
+is not a full underlying WordPress/Media database audit.
