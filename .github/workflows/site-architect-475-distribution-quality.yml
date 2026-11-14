@@ -1,0 +1,166 @@
+name: Site Architect 475 Full Distribution Quality
+
+on:
+  pull_request:
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'wordpress/themes/eduardo-research/**'
+      - 'scripts/build-site-architect-distribution.py'
+      - 'scripts/test-site-architect-distribution.py'
+      - 'docs/SITE_ARCHITECT_DISTRIBUTION_CANDIDATE.md'
+      - '.github/workflows/site-architect-475-distribution-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'scripts/build-site-architect-distribution.py'
+      - 'scripts/test-site-architect-distribution.py'
+      - '.github/workflows/site-architect-475-distribution-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Full 0.11.1 source parity and candidate ZIP
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Lint every real plugin module
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress/plugins/eduardo-research-manager -type f -name '*.php' -print0 |
+            xargs -0 -n1 php -l >/tmp/site-architect-php-lint.log
+          echo "PHP lint completed: $(wc -l </tmp/site-architect-php-lint.log) modules"
+      - name: Build exact-head WordPress plugin candidate
+        shell: bash
+        env:
+          SOURCE_COMMIT: \${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          python3 scripts/build-site-architect-distribution.py --source-commit "$SOURCE_COMMIT"
+          python3 scripts/test-site-architect-distribution.py
+          (cd dist/site-architect && sha256sum -c site-architect-0.11.1-research-candidate.zip.sha256)
+          unzip -l dist/site-architect/site-architect-0.11.1-research-candidate.zip |
+            grep -F 'eduardo-research-manager/eduardo-research-manager.php'
+      - name: Upload exact 0.11.1 Site Architect candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-architect-0.11.1-research-candidate
+          path: |
+            dist/site-architect/site-architect-0.11.1-research-candidate.zip
+            dist/site-architect/site-architect-0.11.1-research-candidate.zip.sha256
+            dist/site-architect/site-architect-0.11.1-research-candidate.manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  isolated-wordpress:
+    name: Install packaged ZIP on isolated \${{ matrix.profile }} WordPress
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [research-theme, generic-wordpress]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-architect-0.11.1-research-candidate
+          path: dist/site-architect
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Ensure WP CLI and verify distributable checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .github/scripts/ensure-wp-cli.sh
+          (cd dist/site-architect && sha256sum -c site-architect-0.11.1-research-candidate.zip.sha256)
+      - name: Install pristine WordPress and exact candidate ZIP
+        shell: bash
+        env:
+          PROFILE: \${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/site-architect-candidate-wp
+          cd /tmp/site-architect-candidate-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Site Architect isolated candidate' \
+            --admin_user=admin --admin_password='site-architect-ci-only' --admin_email=site-architect@example.test \
+            --skip-email --allow-root
+          if [ "$PROFILE" = "research-theme" ]; then
+            mkdir -p wp-content/themes/eduardo-research
+            cp -a "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+            wp theme activate eduardo-research --allow-root
+          fi
+          wp plugin install \
+            "$GITHUB_WORKSPACE/dist/site-architect/site-architect-0.11.1-research-candidate.zip" \
+            --activate --allow-root
+          wp plugin status eduardo-research-manager --allow-root
+      - name: Check full runtime Profile and fail-closed Blueprint authority
+        shell: bash
+        env:
+          PROFILE: \${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          cd /tmp/site-architect-candidate-wp
+          wp eval '
+            require_once ABSPATH . "wp-admin/includes/plugin.php";
+            require_once WP_PLUGIN_DIR . "/eduardo-research-manager/includes/class-research-manager-site-profile.php";
+            $expected = (string) getenv("PROFILE");
+            if (! is_plugin_active("eduardo-research-manager/eduardo-research-manager.php")) { exit(1); }
+            if (EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME !== "Site Architect"
+                || EDUARDO_RESEARCH_MANAGER_VERSION !== "0.11.1") { exit(1); }
+            $profile = new Eduardo_Research_Manager_Site_Profile();
+            if ($profile->id() !== $expected) {
+                fwrite(STDERR, "Incorrect installed profile: " . $profile->id()); exit(1);
+            }
+            $compatible = Eduardo_Research_Manager::contract()->compatible();
+            $blueprint = array("version"=>1, "site"=>array(), "pages"=>array());
+            $preview = Eduardo_Research_Manager::hydrator()->preview($blueprint);
+            if ($expected === "research-theme") {
+                if (! $compatible || is_wp_error($preview)
+                    || ! isset($preview["apply_allowed"])) {
+                    fwrite(STDERR, is_wp_error($preview) ? $preview->get_error_message() : "Research Theme ZIP preview unavailable");
+                    exit(1);
+                }
+            } else {
+                if ($compatible || ! is_wp_error($preview)
+                    || $preview->get_error_code() !== "research_manager_blueprint_catalog_mismatch") {
+                    fwrite(STDERR, "Generic profile unexpectedly granted Research Blueprint operations");
+                    exit(1);
+                }
+            }
+            echo "PASS: packaged Site Architect " . EDUARDO_RESEARCH_MANAGER_VERSION
+                . " profile=" . $profile->id() . " Theme authority correctly bounded\n";
+          ' --allow-root
