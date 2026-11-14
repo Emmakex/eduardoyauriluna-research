@@ -64,6 +64,18 @@ with TemporaryDirectory() as tmp:
             exported = "wordpress/plugins/eduardo-research-manager/" + relative
             check(content.get(exported) == source.read_bytes(), "Exact full live plugin bytes: " + relative)
         check(content["SOURCE_COMMIT"] == (REVISION + "\n").encode(), "Upstream identity in export")
+        ci = content[".github/workflows/ci.yml"].decode("utf-8")
+        check("generic-wordpress-smoke:" in ci and "needs: complete-product-source" in ci,
+              "Exported repo CI independently checks generic WordPress runtime")
+        check("site-architect-0.11.1-standalone-installable-candidate" in ci
+              and "sha256sum -c site-architect-0.11.1-research-candidate.zip.sha256" in ci,
+              "Runtime job consumes the exact packaged artifact with integrity validation")
+        check("generic-wordpress" in ci and 'array("preview", "apply")' in ci
+              and "Generic WordPress changed after rejected Research operation" in ci,
+              "Runtime gate refuses both Research writes and checks no state mutation")
+        check("github.token" not in ci and "contents: write" not in ci,
+              "Exported CI does not request GitHub mutation privileges")
+
         check(b"Plugin Name: Site Architect" in content["wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php"],
               "Real plugin product preserved")
         z.extractall(base / "outside-original")
