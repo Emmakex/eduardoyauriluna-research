@@ -45,6 +45,8 @@ with TemporaryDirectory() as tmp:
     check(manifest["original_source"]["commit"] == REVISION, "Exact upstream SHA")
     check(manifest["archive"]["sha256"] == digest(z1.read_bytes()), "Complete source checksum")
     check(manifest["requires_external_repository_creation"], "Do not pretend repository exists")
+    check(manifest["upstream_plugin_inventory_embedded"], "Exact source inventory included in external tree")
+    check(manifest["upstream_source_drift_verified_in_exported_ci"], "External CI checks upstream file drift")
     check(not manifest["production_cutover_certified"], "Cutover not certified")
     expected = {x["path"]: x["sha256"] for x in manifest["file_inventory"]}
     check(len(expected) == manifest["archive"]["file_count"], "Full file inventory")
@@ -55,7 +57,7 @@ with TemporaryDirectory() as tmp:
         check(all(p.startswith("site-architect/") for p in names), "Single root directory")
         check({p: digest(blob) for p, blob in content.items()} == expected, "Per-file provenance")
         check(all(p.startswith(("wordpress/plugins/eduardo-research-manager/", "scripts/", "docs/", ".github/")) or p in
-                  ("README.md", ".gitignore", "SOURCE_COMMIT") for p in content), "No private project data")
+                  ("README.md", ".gitignore", "SOURCE_COMMIT", "UPSTREAM_PROVENANCE.json") for p in content), "No private project data")
         check(not any(p.startswith(("wordpress/themes/", "config/", "bridge/")) for p in content), "Theme/instance/bridge excluded")
         for source in SOURCE.rglob("*"):
             if not source.is_file():
@@ -64,7 +66,16 @@ with TemporaryDirectory() as tmp:
             exported = "wordpress/plugins/eduardo-research-manager/" + relative
             check(content.get(exported) == source.read_bytes(), "Exact full live plugin bytes: " + relative)
         check(content["SOURCE_COMMIT"] == (REVISION + "\n").encode(), "Upstream identity in export")
+        upstream = json.loads(content["UPSTREAM_PROVENANCE.json"])
+        check(upstream["source_commit"] == REVISION and upstream["plugin_version"] == "0.11.1",
+              "Embedded upstream commit and product version")
+        check({item["path"]: item["sha256"] for item in upstream["plugin_files"]} ==
+              {p.removeprefix("wordpress/plugins/eduardo-research-manager/"): digest(blob)
+               for p, blob in content.items() if p.startswith("wordpress/plugins/eduardo-research-manager/")},
+              "Embedded upstream plugin inventory is complete and exact")
         ci = content[".github/workflows/ci.yml"].decode("utf-8")
+        check("python3 scripts/verify-site-architect-provenance.py" in ci,
+              "Exported CI enforces upstream plugin source provenance")
         check("generic-wordpress-smoke:" in ci and "needs: complete-product-source" in ci,
               "Exported repo CI independently checks generic WordPress runtime")
         check("site-architect-0.11.1-standalone-installable-candidate" in ci
@@ -82,6 +93,27 @@ with TemporaryDirectory() as tmp:
     standalone = base / "outside-original/site-architect"
     check((standalone / "scripts/build-site-architect-distribution.py").is_file(), "Standalone builder present")
     check((standalone / ".github/workflows/ci.yml").is_file(), "Self-contained CI present")
+    verify_path = standalone / "scripts/verify-site-architect-provenance.py"
+    check(verify_path.is_file(), "Standalone exact-source verifier present")
+    run(str(verify_path), cwd=standalone)
+    entry = standalone / "wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php"
+    original_entry = entry.read_bytes()
+    try:
+        entry.write_bytes(original_entry + b"\\n# source drift check\\n")
+        failed = subprocess.run([sys.executable, str(verify_path)], cwd=standalone,
+                                capture_output=True, check=False)
+        check(failed.returncode != 0, "Verifier refuses modified WordPress plugin entrypoint")
+    finally:
+        entry.write_bytes(original_entry)
+    extra = standalone / "wordpress/plugins/eduardo-research-manager/unapproved-extra.php"
+    try:
+        extra.write_bytes(b"<?php // extra source file")
+        failed = subprocess.run([sys.executable, str(verify_path)], cwd=standalone,
+                                capture_output=True, check=False)
+        check(failed.returncode != 0, "Verifier refuses unapproved plugin file")
+    finally:
+        extra.unlink(missing_ok=True)
+    run(str(verify_path), cwd=standalone)
     run("scripts/test-site-architect-distribution.py", cwd=standalone)
     run("scripts/build-site-architect-distribution.py", "--source-commit", REVISION, cwd=standalone)
     run(str(BASE_BUILDER), "--source-commit", REVISION, "--output", str(base / "direct"), cwd=ROOT)
