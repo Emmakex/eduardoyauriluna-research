@@ -60,3 +60,35 @@ This extends clone **functional** confidence only. It does not prove actual
 HTTP-rendered SEO/GEO, Media ingest/assignment, all REST credentials, or
 complete production-versus-clone state/render parity. Reusing this evidence
 must not be described as permission for production cutover.
+
+
+## #475.19 — Real HTTP rendering, not an inferred SEO flag
+
+The isolated Research-Theme WordPress now starts a loopback-only PHP server at
+127.0.0.1:8080, using a temporary front-controller router only in the
+disposable WordPress clone. The exact independently rebuilt Site Architect
+0.11.1 plugin is used to hydrate the canonical Blueprint in the clone.
+
+The actual **Rendered Verifier** requests the frontend URLs over HTTP. Each
+publicly available Theme-owned EN/ES Page must pass HTTP 200, self-canonical,
+HTML language, current language hreflang, both alternate languages, x-default,
+OG URL and JSON-LD presence. The response must contain the real Theme
+stylesheet, header, both navigation regions and an HTML5 doctype.
+
+A Research collection with no public content and a draft legal Page are
+reported separately as **not public**, never silently counted as HTTP-200
+or published by CI. Required Home/About/CV/Contact pages cannot be skipped.
+The test also reorders the bounded footer navigation, calls the real
+**Navigation Verify with include_rendered=true** (both languages), restores
+the original state and rolls back all hydration snapshots.
+
+All HTTP addresses must match 127.0.0.1:8080. PHP test and router files
+are not distributed with the plugin, nor installed on Eduardo production.
+The CI uploads a bounded JSON proof containing only local URL status and
+Boolean SEO/rollback checks; no page text or credentials.
+
+This is HTTP-rendered **clone functionality**, not screenshot/pixel-diff
+certification or production vs clone parity. Outstanding: Media lifecycle
+and source provenance, complete remote REST capability checks, real
+production inventory parity, external repository setup and reversible
+cutover rehearsal.
