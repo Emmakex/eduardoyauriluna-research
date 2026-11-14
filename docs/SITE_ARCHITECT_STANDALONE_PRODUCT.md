@@ -195,3 +195,28 @@ execution of Actions in that future separate repository, Research writes on
 arbitrary Themes, actual production database readback, or live cutover.
 Site Architect 0.11.1 and Eduardo Theme 1.1.3 (production) remain untouched.
 The Theme 1.1.4 source is only a versioned candidate in GitHub.
+
+## #475.33 — Embedded upstream source inventory for future repository imports
+
+The independent source archive includes `UPSTREAM_PROVENANCE.json` and the
+offline `scripts/verify-site-architect-provenance.py` tool. The inventory
+records the original Eduardo repository commit and the exact SHA-256 of
+**every file** in the real Site Architect 0.11.1 plugin. It excludes the
+Theme, Blueprint, WordPress site content and all credentials.
+
+The exported standalone CI checks every plugin byte and rejects any missing,
+extra or modified plugin file **before building the installable ZIP**. The
+upstream export acceptance also exercises both negative cases by tampering
+with one plugin file and injecting an untracked PHP file in an extracted copy,
+then confirms that the restored source passes.
+
+This is a **deterministic integrity and accidental-drift control**, not a
+cryptographic signature or independent proof that someone could not change
+the manifest and code together. The recorded `SOURCE_COMMIT` is the upstream
+Eduardo revision, not the future external Git commit.
+
+The actual `Emmakex/site-architect` repository is still unavailable through
+the current GitHub connection and is **not** declared created, imported, or
+tested. Production Site Architect 0.11.1, production Theme 1.1.3 and the
+versioned Theme 1.1.4 candidate are untouched. No Theme write permissions
+are added.
