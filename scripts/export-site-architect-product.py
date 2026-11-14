@@ -45,7 +45,11 @@ Requires Python 3.9+ and PHP 8.1+. From the extracted repository root:
 
 The generated candidate WordPress ZIP and SHA-256 manifest are in
 dist/site-architect/. Its complete source inventory is also verifiable.
-The .github/workflows/ci.yml workflow runs those checks independently.
+The .github/workflows/ci.yml workflow runs those checks independently,
+then installs the exact ZIP on a disposable generic WordPress + MySQL site.
+That smoke verifies the read-only generic profile and denies Research
+Preview/Apply without changing site state. It does NOT certify custom-Theme
+write authority or production cutover.
 
 ## Repository independence
 
