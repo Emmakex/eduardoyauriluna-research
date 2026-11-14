@@ -1,0 +1,98 @@
+name: Site Architect 47528 Eduardo Privacy EN Targeted Read-Only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-47528-targeted-private-recheck.mjs'
+      - 'scripts/test-site-architect-47528-privacy-recheck.mjs'
+      - '.github/workflows/site-architect-47528-privacy-recheck.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-architect-eduardo-privacy-en-read-only
+  cancel-in-progress: false
+
+jobs:
+  targeted-page:
+    name: Private Eduardo privacy-policy EN one-page readback
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: phase2d-production
+    env:
+      SA47528_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - name: Prove bounded sanitizer rejects false Page success and private text
+        run: node --test scripts/test-site-architect-47528-privacy-recheck.mjs
+      - name: Inspect exactly one Theme page with existing production read principal
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_REPOSITORY" = 'Emmakex/eduardoyauriluna-research'
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          : "${SA47528_MCP_TOKEN:?Existing protected MCP read principal is mandatory}"
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          export MCP_STORAGE_DIR="$temp/storage"
+          export MCP_INSPECTOR_OAUTH_STATE_PATH="$temp/oauth.json"
+          mkdir -p "$MCP_STORAGE_DIR" "$RUNNER_TEMP/sa47528"
+          chmod 700 "$RUNNER_TEMP/sa47528"
+          config="$temp/mcp.json"
+          node - "$config" <<'NODE'
+          const fs=require('node:fs');
+          const token=process.env.SA47528_MCP_TOKEN||'';
+          if(!token)throw Error('No protected read principal');
+          fs.writeFileSync(process.argv[2],JSON.stringify({mcpServers:{eduardo:{
+            type:'http',url:'https://mcp.kairoseth.com/mcp/eduardo-research',
+            headers:{Authorization:'Bearer '+token},
+            connectionTimeout:10000,requestTimeout:45000
+          }}}),{mode:0o600});
+          NODE
+          mcp_read() {
+            local tool="$1" args="$2" filename="$3"
+            case "$tool:$args:$filename" in
+              'research_status:{}:status'|'site_page_inspect:{"key":"privacy-policy","language":"en"}:page') ;;
+              *) echo 'Refusing non-allowlisted MCP method/arguments' >&2; exit 2 ;;
+            esac
+            if timeout 65s npx --yes '@modelcontextprotocol/inspector@2.5.0' --cli \
+              --config "$config" --server eduardo --stored-auth-only --format json \
+              --method tools/call --tool-name "$tool" --tool-args-json "$args" \
+              > "$temp/$filename.json" 2> "$temp/$filename.err"; then
+              echo "READ_ONLY_CALL_COMPLETED=$filename"
+            else
+              echo "READ_ONLY_CALL_UNVERIFIED=$filename"
+              printf '{"result":{"isError":true,"content":[]}}\n' > "$temp/$filename.json"
+            fi
+          }
+          mcp_read research_status '{}' status
+          mcp_read site_page_inspect '{"key":"privacy-policy","language":"en"}' page
+          node scripts/site-architect-47528-targeted-private-recheck.mjs \
+            --status "$temp/status.json" \
+            --page "$temp/page.json" \
+            --output "$RUNNER_TEMP/sa47528/sa47528-privacy-readback.json" \
+            --source-sha "$GITHUB_SHA"
+          if grep -F -- "$SA47528_MCP_TOKEN" "$RUNNER_TEMP/sa47528/sa47528-privacy-readback.json" >/dev/null 2>&1; then
+            echo 'Credential leaked into sanitized report' >&2
+            rm -f "$RUNNER_TEMP/sa47528/sa47528-privacy-readback.json"
+            exit 1
+          fi
+      - name: Upload only fixed-schema privacy EN result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-architect-47528-eduardo-privacy-en-redacted
+          path: ${{ runner.temp }}/sa47528/sa47528-privacy-readback.json
+          if-no-files-found: warn
+          retention-days: 14
