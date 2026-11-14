@@ -312,3 +312,16 @@ must fail closed for Research writes. No production installation is touched.
 requires an actual GitHub repository. Candidate source portability also
 does not prove complete rendered parity, arbitrary custom-Theme governance or
 a safe live cutover. See docs/SITE_ARCHITECT_STANDALONE_PRODUCT.md.
+
+
+## #475.18 — Clone Design/Navigation/SEO-GEO bounds
+
+Extend the exported, installed Site Architect 0.11.1 clone acceptance with
+readback for 24 Research Theme Page/language surfaces, an SEO/GEO structural
+capability inspection, reversible Theme Design and Navigation transitions and
+negative authorization checks. All mutations occur exclusively in a disposable
+GitHub Actions WordPress, not on Eduardo production. Distinguish the **state
+Verify** of navigation from separately pending rendered HTTP verification.
+The generic profile must reject Research surfaces without side effects.
+External product repository creation, complete visual/media/REST parity and
+an approved reversible cutover remain open in #475.
