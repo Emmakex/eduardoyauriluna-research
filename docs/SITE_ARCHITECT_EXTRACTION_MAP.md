@@ -274,3 +274,21 @@ The existing Executor still performs all snapshots, verification and rollback;
 Identity Profile still authorizes and records its mutation using its existing
 evidence, revision, storage and plan semantics. This seam does not change
 Eduardo's plugin 0.11.1 or install anything in production.
+
+
+## #475.16 — Full Site Architect 0.11.1 distribution candidate
+
+A reproducible builder now packages **the entire real Site Architect plugin**
+from `wordpress/plugins/eduardo-research-manager`, preserving its WordPress
+slug and all existing Core/Research/legacy modules. The ZIP is accompanied by
+an exact source commit, full SHA-256 per-file inventory, archive checksum and
+explicit supported-profile boundaries. Credential/database exports are rejected.
+The packaged ZIP — **not just the source checkout** — is installed and tested
+on fresh, isolated WordPress Research-Theme and generic read-only sites.
+
+This is **distribution packaging/parity validation**, not certification that
+Research has been eliminated from Core, not an external product repository,
+not approval of arbitrary custom-Theme writes, and not permission to replace
+the installed Site Architect 0.11.1 on eduardoyauriluna.com. The manifest
+explicitly marks production cutover and custom Theme parity as unapproved.
+See `docs/SITE_ARCHITECT_DISTRIBUTION_CANDIDATE.md`.
