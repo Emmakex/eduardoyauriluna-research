@@ -178,3 +178,18 @@ private production Site Architect version, actual read access and resource
 counts remain unconfirmed. If the workflow is pending on protected-environment
 approval, request approval through the existing GitHub control; do not
 reuse another tenant or modify permissions.
+
+## #475.26 — real bounded Theme governance observations
+
+See docs/SITE_ARCHITECT_LIVE_GOVERNANCE_READBACK.md. The existing protected
+Eduardo MCP read-only workflow now additionally inspects all 12 registered
+Theme Page keys in EN+ES (24 direct per-language inspections), plus Design,
+Design variants and rendered readiness, SEO/GEO site + indexability, and
+Media diagnostics. It emits a closed-schema counts/flags-only sanitized JSON
+without content, credential details or post IDs.
+
+**Status before actual protected main run:** unverified. A green PR or clone
+job proves only observer/sanitizer code. The real protected workflow artifact
+must be inspected and any mismatch/partial response recorded. Full MySQL
+inventory, actual mobile/desktop visual evaluation, editorial CV/privacy/legal
+approval and reversible cutover remain OPEN even if all 24 read endpoints respond.
