@@ -8,7 +8,7 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
     private Eduardo_Research_Manager_Blueprint $blueprints;
     private Eduardo_Research_Manager_Page_Resource $pages;
     private Eduardo_Research_Manager_Executor $executor;
-    private Eduardo_Research_Manager_Identity_Profile $identity;
+    private Site_Architect_Blueprint_Identity_Operations $identity;
     private Site_Architect_Blueprint_Identity_Resolver $identity_resolver;
 
     public function __construct(
@@ -16,12 +16,17 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
         ?Eduardo_Research_Manager_Page_Resource $pages = null,
         ?Eduardo_Research_Manager_Executor $executor = null,
         ?Eduardo_Research_Manager_Identity_Profile $identity = null,
-        ?Site_Architect_Blueprint_Identity_Resolver $identity_resolver = null
+        ?Site_Architect_Blueprint_Identity_Resolver $identity_resolver = null,
+        ?Site_Architect_Blueprint_Identity_Operations $identity_operations = null
     ) {
         $this->blueprints = $blueprints ?: Eduardo_Research_Manager::blueprint();
         $this->pages = $pages ?: Eduardo_Research_Manager::pages();
         $this->executor = $executor ?: Eduardo_Research_Manager::executor();
-        $this->identity = $identity ?: new Eduardo_Research_Manager_Identity_Profile($this->executor, Eduardo_Research_Manager::evidence_editor());
+        // Preserve the legacy fourth argument for Eduardo while allowing an explicit
+        // non-Research identity service for a different known Greenfield Theme.
+        $this->identity = $identity_operations ?? new Eduardo_Research_Manager_Research_Blueprint_Identity_Operations(
+            $identity ?: new Eduardo_Research_Manager_Identity_Profile($this->executor, Eduardo_Research_Manager::evidence_editor())
+        );
         $this->identity_resolver = $identity_resolver ?: new Eduardo_Research_Manager_Research_Blueprint_Identity();
     }
 
@@ -259,7 +264,9 @@ final class Eduardo_Research_Manager_Blueprint_Hydrator {
     /** A resolver may only interpret the Blueprint of its exact selected Theme. */
     private function identity_authority(): bool|WP_Error {
         $theme_id = $this->blueprints->theme_id();
-        if ('' === $theme_id || $theme_id !== $this->identity_resolver->theme_id()) {
+        if ('' === $theme_id
+            || $theme_id !== $this->identity_resolver->theme_id()
+            || $theme_id !== $this->identity->theme_id()) {
             return new WP_Error(
                 'research_manager_blueprint_identity_theme_mismatch',
                 'Blueprint identity resolver does not belong to the active Theme resource contract.'
