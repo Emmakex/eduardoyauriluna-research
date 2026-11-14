@@ -81,7 +81,7 @@ for key in home about research publications projects software datasets cv insigh
       *) exit 2 ;;
     esac
     # Keys and languages are constant Theme-owned public identifiers only.
-    args="$(printf '{\"key\":\"%s\",\"language\":\"%s\"}' "$key" "$lang")"
+    args="$(printf '{"key":"%s","language":"%s"}' "$key" "$lang")"
     sa47526_read site_page_inspect "$args" "site_page_inspect-$key-$lang"
   done
 done
