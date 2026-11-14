@@ -292,3 +292,23 @@ not approval of arbitrary custom-Theme writes, and not permission to replace
 the installed Site Architect 0.11.1 on eduardoyauriluna.com. The manifest
 explicitly marks production cutover and custom Theme parity as unapproved.
 See `docs/SITE_ARCHITECT_DISTRIBUTION_CANDIDATE.md`.
+
+
+## #475.17 — Independent source/release preparation (no repository claimed)
+
+The complete 0.11.1 plugin, with unchanged PHP bytes, can now be exported into
+a self-contained source tree with its own CI, builder, tests, WordPress plugin
+directory, instructions and pinned original Git commit. Each exported file is
+inventoried by SHA-256. The exported tree is rebuilt outside the Eduardo
+monorepo, proving that Site Architect's **complete installable WordPress ZIP**
+is byte-for-byte identical to the original input.
+
+An isolated WordPress test installs a ZIP rebuilt from this autonomous source
+tree and checks a working Research Blueprint (eight verified lines, canonical
+identity, bilingual Pages, idempotency, rollback); a generic WordPress profile
+must fail closed for Research writes. No production installation is touched.
+
+**Emmakex/site-architect is NOT created** by this cut; creating/importing it
+requires an actual GitHub repository. Candidate source portability also
+does not prove complete rendered parity, arbitrary custom-Theme governance or
+a safe live cutover. See docs/SITE_ARCHITECT_STANDALONE_PRODUCT.md.
