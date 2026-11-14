@@ -309,7 +309,6 @@ jobs:
             --source-sha "$SOURCE_COMMIT"
           jq -e '.read_only == true and .counts.audited == 24 and .parity_status == "PUBLIC_HTTP_COMPARABLE_ONLY"' \
             /tmp/sa-47521-production-http-readonly.json
-            /tmp/sa-47522-clone-private.json
           # Transport errors are UNVERIFIED, not successful production parity.
       - name: Read private WordPress clone data only inside MySQL read-only transaction
         if: matrix.profile == 'research-theme'
@@ -337,5 +336,6 @@ jobs:
             /tmp/sa-47519-http-report.json
             /tmp/sa-47520-media-rest-report.json
             /tmp/sa-47521-production-http-readonly.json
+            /tmp/sa-47522-clone-private.json
           if-no-files-found: error
           retention-days: 30
