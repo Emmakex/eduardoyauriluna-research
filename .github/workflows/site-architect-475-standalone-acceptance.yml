@@ -33,6 +33,9 @@ on:
       - 'scripts/site-architect-47529-public-browser-audit.cjs'
       - 'scripts/site-architect-47529-validate-browser-audit.cjs'
       - 'scripts/test-site-architect-47529-browser-audit.cjs'
+      - 'scripts/site-architect-47530-theme-a11y-fixture.cjs'
+      - 'wordpress/themes/eduardo-research/assets/research-navigation.css'
+      - 'wordpress/themes/eduardo-research/assets/visual-polish.css'
       - '.github/workflows/site-architect-47529-browser-visual.yml'
       - 'docs/SITE_ARCHITECT_EDUARDO_VISUAL_ACCEPTANCE.md'
       - '.github/workflows/site-architect-47528-privacy-recheck.yml'
@@ -75,6 +78,9 @@ on:
       - 'scripts/site-architect-47529-public-browser-audit.cjs'
       - 'scripts/site-architect-47529-validate-browser-audit.cjs'
       - 'scripts/test-site-architect-47529-browser-audit.cjs'
+      - 'scripts/site-architect-47530-theme-a11y-fixture.cjs'
+      - 'wordpress/themes/eduardo-research/assets/research-navigation.css'
+      - 'wordpress/themes/eduardo-research/assets/visual-polish.css'
       - '.github/workflows/site-architect-47529-browser-visual.yml'
       - 'docs/SITE_ARCHITECT_EDUARDO_VISUAL_ACCEPTANCE.md'
       - '.github/workflows/site-architect-47528-privacy-recheck.yml'
@@ -115,6 +121,7 @@ jobs:
           node --test scripts/test-site-architect-47528-privacy-recheck.mjs
           node --check scripts/site-architect-47529-public-browser-audit.cjs
           node --test scripts/test-site-architect-47529-browser-audit.cjs
+          node --check scripts/site-architect-47530-theme-a11y-fixture.cjs
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/site-architect-47529-browser-visual.yml
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/site-architect-47528-privacy-recheck.yml
           find wordpress/plugins/eduardo-research-manager -name '*.php' -type f -print0 |
