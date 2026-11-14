@@ -11,6 +11,9 @@ on:
       - 'scripts/site-architect-475-media-rest-acceptance.php'
       - 'scripts/site-architect-475-production-readonly.py'
       - 'scripts/test-site-architect-production-readonly.py'
+      - 'scripts/site-architect-475-private-readonly-inventory.php'
+      - 'scripts/site-architect-475-validate-private-inventory.py'
+      - 'scripts/test-site-architect-475-private-inventory.py'
       - 'docs/SITE_ARCHITECT_STANDALONE_PRODUCT.md'
       - '.github/workflows/site-architect-475-standalone-acceptance.yml'
       - 'wordpress/plugins/eduardo-research-manager/**'
@@ -28,6 +31,9 @@ on:
       - 'scripts/site-architect-475-media-rest-acceptance.php'
       - 'scripts/site-architect-475-production-readonly.py'
       - 'scripts/test-site-architect-production-readonly.py'
+      - 'scripts/site-architect-475-private-readonly-inventory.php'
+      - 'scripts/site-architect-475-validate-private-inventory.py'
+      - 'scripts/test-site-architect-475-private-inventory.py'
       - '.github/workflows/site-architect-475-standalone-acceptance.yml'
       - 'wordpress/plugins/eduardo-research-manager/**'
 
@@ -54,6 +60,8 @@ jobs:
           python3 scripts/test-site-architect-product-export.py
           python3 -m py_compile scripts/site-architect-475-production-readonly.py scripts/test-site-architect-production-readonly.py
           python3 scripts/test-site-architect-production-readonly.py
+          python3 -m py_compile scripts/site-architect-475-validate-private-inventory.py scripts/test-site-architect-475-private-inventory.py
+          python3 scripts/test-site-architect-475-private-inventory.py
           find wordpress/plugins/eduardo-research-manager -name '*.php' -type f -print0 |
             xargs -0 -n1 php -l >/tmp/sa-lint.log
       - name: Build exact-head standalone source export
@@ -301,12 +309,30 @@ jobs:
             --source-sha "$SOURCE_COMMIT"
           jq -e '.read_only == true and .counts.audited == 24 and .parity_status == "PUBLIC_HTTP_COMPARABLE_ONLY"' \
             /tmp/sa-47521-production-http-readonly.json
+            /tmp/sa-47522-clone-private.json
           # Transport errors are UNVERIFIED, not successful production parity.
+      - name: Read private WordPress clone data only inside MySQL read-only transaction
+        if: matrix.profile == 'research-theme'
+        shell: bash
+        env:
+          SA47522_ORIGIN: clone
+          SA47522_OUTPUT: /tmp/sa-47522-clone-private.json
+        run: |
+          set -euo pipefail
+          cd /tmp/sa-wp
+          php -l "$GITHUB_WORKSPACE/scripts/site-architect-475-private-readonly-inventory.php"
+          wp eval-file "$GITHUB_WORKSPACE/scripts/site-architect-475-private-readonly-inventory.php" --allow-root
+          cd "$GITHUB_WORKSPACE"
+          python3 scripts/site-architect-475-validate-private-inventory.py \
+            --origin clone --report /tmp/sa-47522-clone-private.json \
+            --clone-http /tmp/sa-47519-http-report.json
+          jq -e '.read_only_transaction == true and .origin == "clone" and .plugin.active == true and .plugin.version == "0.11.1" and .page_language_count == 24 and .aligned_page_language_count == 24' \
+            /tmp/sa-47522-clone-private.json
       - name: Publish bounded clone HTTP evidence
         if: matrix.profile == 'research-theme'
         uses: actions/upload-artifact@v4
         with:
-          name: site-architect-47519-47521-parity-evidence
+          name: site-architect-47519-47522-parity-evidence
           path: |
             /tmp/sa-47519-http-report.json
             /tmp/sa-47520-media-rest-report.json
