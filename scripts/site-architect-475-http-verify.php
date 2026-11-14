@@ -70,7 +70,23 @@ try {
                 // Suppressed empty Research collections and draft legal Pages
                 // are not falsely represented as HTTP-200 ready.
                 $reason = ! $published ? 'draft' : 'collection_without_public_records';
-                $report['pages_not_public'][$key . '/' . $language] = $reason;
+                $negative_response = wp_remote_get($url, array(
+                    'timeout'=>12, 'redirection'=>0,
+                    'headers'=>array('Accept'=>'text/html'),
+                    'user-agent'=>'SiteArchitectCloneHTTP/0.11.1',
+                ));
+                if (is_wp_error($negative_response)) {
+                    throw new RuntimeException('Negative HTTP probe failed for ' . $key . '/' . $language
+                        . ': ' . $negative_response->get_error_message());
+                }
+                $negative_status = (int) wp_remote_retrieve_response_code($negative_response);
+                $report['pages_not_public'][$key . '/' . $language] = array(
+                    'reason'=>$reason,'http_status'=>$negative_status,
+                );
+                if (200 === $negative_status || 404 !== $negative_status) {
+                    throw new RuntimeException('Suppressed Page leaked or has unexpected HTTP status: '
+                        . $key . '/' . $language . ' HTTP=' . $negative_status . ' reason=' . $reason);
+                }
                 if (in_array($key, $mandatory, true)) {
                     throw new RuntimeException('Mandatory Page unavailable: ' . $key . '/' . $language . ' reason=' . $reason);
                 }
@@ -102,8 +118,8 @@ try {
             foreach (array_keys($checks + $extra) as $check) { $report['rendered_checks'][$check] = true; }
         }
     }
-    sa_47519_assert(count($report['pages_verified']) >= 8,
-        'at least eight rendered language/page URLs must pass real HTTP assertions');
+    sa_47519_assert(count($report['pages_verified']) >= 14,
+        'at least fourteen rendered language/page URLs must pass real HTTP assertions');
     sa_47519_assert(isset($report['pages_not_public']['privacy-policy/en']),
         'WordPress draft Privacy page must not be mislabeled as published');
 
