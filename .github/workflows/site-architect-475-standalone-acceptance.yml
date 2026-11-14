@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
+      - 'scripts/verify-site-architect-provenance.py'
       - 'scripts/site-architect-475-clone-governance.php'
       - 'scripts/site-architect-475-http-router.php'
       - 'scripts/site-architect-475-http-verify.php'
@@ -50,6 +51,7 @@ on:
     paths:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
+      - 'scripts/verify-site-architect-provenance.py'
       - 'scripts/site-architect-475-clone-governance.php'
       - 'scripts/site-architect-475-http-router.php'
       - 'scripts/site-architect-475-http-verify.php'
