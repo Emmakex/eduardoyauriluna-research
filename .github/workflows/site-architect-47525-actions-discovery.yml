@@ -1,0 +1,42 @@
+name: Site Architect 47525 Read-Only Actions Run Discovery
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-47525-discover-workflow.mjs'
+      - 'scripts/test-site-architect-47525-discovery.mjs'
+      - '.github/workflows/site-architect-47525-actions-discovery.yml'
+
+permissions:
+  contents: read
+  actions: read
+  statuses: read
+
+jobs:
+  inspect:
+    name: Discover main MCP observation run without production secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      SA47525_OUTPUT: /tmp/sa-47525-actions-discovered.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - name: Validate strict API and secret-free metadata reduction
+        run: node --test scripts/test-site-architect-47525-discovery.mjs
+      - name: Inspect GitHub Actions metadata only
+        run: node scripts/site-architect-47525-discover-workflow.mjs
+      - name: Preserve bounded run IDs/statuses only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-architect-47525-main-workflow-discovery
+          path: /tmp/sa-47525-actions-discovered.json
+          retention-days: 7
+          if-no-files-found: warn
