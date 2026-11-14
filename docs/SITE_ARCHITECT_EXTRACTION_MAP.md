@@ -349,3 +349,32 @@ EN/ES HTTP 200** with complete SEO/HTML checks; the remaining **10/24**
 are recorded as not public with actual HTTP 404 and reason (legal draft or
 no published collection objects). These are **launch/content readiness
 blockers**, not fully delivered public pages.
+
+
+## #475.20 — Managed Media and REST least-privilege clone gates
+
+The same exact 0.11.1 WordPress ZIP rebuilt from autonomous source now runs a
+full Media lifecycle in an isolated WordPress Research Theme clone:
+
+- Preview synthetic 1x1 PNG with mandatory reviewed alt text, MIME validation,
+  SHA-256 checksum and privately staged binary;
+- reject spoofed binary, missing alt text, cross-connection Apply and Apply
+  without confirmation; Apply and Verify checksum and provenance;
+- update title and alt through the real remote Media Metadata operations,
+  then restore exactly with rollback;
+- assign the image to Theme-owned Home/EN primary Media, verify the rendered
+  figure and attachment marker over loopback HTTP, and rollback the relation;
+- reject deleting the ingested Media while assigned; after detaching,
+  rollback the original ingest and confirm the owned attachment is gone.
+
+The test dispatches the ACTUAL registered WordPress REST routes, verifying:
+anonymous requests are rejected; a temporary read-only token with only
+site.read/media.read cannot execute Media mutations; a consumed nonce
+cannot be replayed; revocation makes the token unusable. Tokens never
+enter test reports and are revoked even on failure. HTTPS simulation is
+restricted to in-process REST dispatch in the disposable CI clone.
+
+Tests and generated Media are NOT shipped in the installable plugin. There
+is no production upload, authority expansion or runtime Plugin/Theme change.
+A small CI JSON report complements the prior HTTP proof. Full production
+parity, external source repository and reversible cutover remain unverified.
