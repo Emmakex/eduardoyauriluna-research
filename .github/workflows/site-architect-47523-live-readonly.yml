@@ -11,6 +11,9 @@ on:
       - 'scripts/site-architect-47524-status-contract.mjs'
       - 'scripts/site-architect-47524-post-github-status.sh'
       - 'scripts/test-site-architect-47524-status.mjs'
+      - 'scripts/site-architect-47526-sanitize-governance.mjs'
+      - 'scripts/site-architect-47526-validate-governance.mjs'
+      - 'scripts/test-site-architect-47526-governance.mjs'
       - '.github/workflows/site-architect-47523-live-readonly.yml'
   workflow_dispatch:
 
@@ -50,7 +53,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: report-pending
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     environment: phase2d-production
     env:
       SA47523_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
@@ -67,6 +70,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/site-architect-47523-live-mcp-readonly.sh
           node --test scripts/test-site-architect-47523-mcp.mjs
+          node --test scripts/test-site-architect-47526-governance.mjs
       - name: Observe existing Eduardo MCP read tools, never WordPress writes
         env:
           SA47523_EVIDENCE_DIR: ${{ runner.temp }}/sa47523-redacted
@@ -79,7 +83,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: site-architect-47523-live-mcp-redacted
-          path: ${{ runner.temp }}/sa47523-redacted/live-mcp-readback.json
+          path: |
+            ${{ runner.temp }}/sa47523-redacted/live-mcp-readback.json
+            ${{ runner.temp }}/sa47523-redacted/live-governance-readback.json
           if-no-files-found: warn
           retention-days: 14
 
