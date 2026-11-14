@@ -35,7 +35,8 @@ async function main(){
  const result=[];
  try{
   for(const width of [390,480]){
-   const page=await browser.newPage({viewport:{width,height:844},reducedMotion:'reduce'});
+   const context=await browser.newContext({viewport:{width,height:844},reducedMotion:'reduce'});
+   const page=await context.newPage();
    await page.setContent('<!doctype html><html lang="es"><head><title>Theme accessibility source smoke</title></head>'+
      '<body><header class="research-site-header research-nav-enhanced" data-menu-open="false">'+
      '<button class="research-menu-toggle" type="button" aria-expanded="false" '+
@@ -63,7 +64,7 @@ async function main(){
      'One of the previously confirmed browser a11y rules still fails');
    result.push({width,accessible_button:true,section_number_computed_color:actualColor,
       axe_previous_rule_blockers:blockers.length});
-   await page.close();
+   await context.close();
   }
  }finally{await browser.close();}
  console.log('PASS: EDUARDO_THEME_A11Y_SOURCE_FIX='+result.length+'/2'+
