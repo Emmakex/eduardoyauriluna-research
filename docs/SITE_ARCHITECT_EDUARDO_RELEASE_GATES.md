@@ -193,3 +193,18 @@ job proves only observer/sanitizer code. The real protected workflow artifact
 must be inspected and any mismatch/partial response recorded. Full MySQL
 inventory, actual mobile/desktop visual evaluation, editorial CV/privacy/legal
 approval and reversible cutover remain OPEN even if all 24 read endpoints respond.
+
+## #475.27 — Evidence for missing Research collections
+
+The existing protected read-only Site Architect MCP observes all four
+Research collection types in EN/ES with **12 total bounded listing calls**,
+redacting all academic content and personal identifiers. See
+`docs/SITE_ARCHITECT_EDUARDO_RESEARCH_COLLECTION_GATES.md` for the exact
+Theme and WordPress semantics (EN default includes absent-language meta,
+explicit filtered EN does not, and editor lists are capped at 100).
+
+No-GO until actual production artifact identifies the published counts
+and they are reconciled against a fresh HTTP survey. No speculative paper,
+project, software or dataset creation. Nothing is installed or published
+on Eduardo production. This is not a native SQL census or an end-to-end
+mutable Site Architect acceptance.

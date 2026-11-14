@@ -60,7 +60,7 @@ done
 sa47526_read() {
   local tool="$1" args="$2" filename="$3"
   case "$tool" in
-    site_page_inspect|site_design_inspect|site_design_variants|site_design_readiness|site_seo_geo_site|site_seo_geo_indexability|site_media_diagnostics) ;;
+    site_page_inspect|site_design_inspect|site_design_variants|site_design_readiness|site_seo_geo_site|site_seo_geo_indexability|site_media_diagnostics|site_research_objects_list) ;;
     *) echo 'Refusing MCP tool outside read-only governance allowlist' >&2; exit 2 ;;
   esac
   if timeout 45s npx --yes "@modelcontextprotocol/inspector@$INSPECTOR_VERSION" \
@@ -96,6 +96,29 @@ node "$GITHUB_WORKSPACE/scripts/site-architect-47526-sanitize-governance.mjs" \
   --source-sha "$SA47523_SOURCE_SHA"
 node "$GITHUB_WORKSPACE/scripts/site-architect-47526-validate-governance.mjs" \
   "$SA47523_EVIDENCE_DIR/live-governance-readback.json"
+# #475.27: four Research collections, unfiltered + explicit EN/ES lists.
+# The existing remote editor caps every list at 100; no full-DB claims.
+# EN public Theme also accepts records WITHOUT _research_language meta.
+for kind in output project software dataset; do
+  for filter in all en es; do
+    case "$kind:$filter" in
+      output:all|output:en|output:es|project:all|project:en|project:es|software:all|software:en|software:es|dataset:all|dataset:en|dataset:es) ;;
+      *) echo 'Refusing non-Research collection inventory' >&2; exit 2 ;;
+    esac
+    if [ "$filter" = 'all' ]; then
+      args="$(printf '{"kind":"%s"}' "$kind")"
+    else
+      args="$(printf '{"kind":"%s","language":"%s"}' "$kind" "$filter")"
+    fi
+    sa47526_read site_research_objects_list "$args" "site_research_objects_list-$kind-$filter"
+  done
+done
+node "$GITHUB_WORKSPACE/scripts/site-architect-47527-research-inventory.mjs" \
+  --input "$WORK_DIR" \
+  --output "$SA47523_EVIDENCE_DIR/live-research-collection-readback.json" \
+  --source-sha "$SA47523_SOURCE_SHA"
+node "$GITHUB_WORKSPACE/scripts/site-architect-47527-validate-research-inventory.mjs" \
+  "$SA47523_EVIDENCE_DIR/live-research-collection-readback.json"
 node "$GITHUB_WORKSPACE/scripts/site-architect-47523-sanitize-mcp.mjs" \
   --input "$WORK_DIR" \
   --output "$SA47523_EVIDENCE_DIR/live-mcp-readback.json" \
@@ -108,7 +131,7 @@ node "$GITHUB_WORKSPACE/scripts/site-architect-47523-validate-mcp.mjs" \
 
 if grep -R -F -- "$SA47523_MCP_TOKEN" "$SA47523_EVIDENCE_DIR" >/dev/null 2>&1; then
   echo 'Credential leaked into sanitized evidence; aborting upload' >&2
-  rm -f "$SA47523_EVIDENCE_DIR/live-mcp-readback.json" "$SA47523_EVIDENCE_DIR/live-governance-readback.json"
+  rm -f "$SA47523_EVIDENCE_DIR/live-mcp-readback.json" "$SA47523_EVIDENCE_DIR/live-governance-readback.json" "$SA47523_EVIDENCE_DIR/live-research-collection-readback.json"
   exit 1
 fi
 echo 'PASS: production MCP READ operations attempted; inspect sanitized report status.'
