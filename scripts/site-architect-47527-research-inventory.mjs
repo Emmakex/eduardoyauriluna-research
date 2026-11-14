@@ -43,13 +43,13 @@ export function summarize(raw,kind,filter) {
   let unexpected=0;
   for (const item of data.items) {
     if(!record(item)||item.post_type!==expected.post_type||
-      !statusSet.has(item.status)||!LANGUAGES.has(item.language)) {
+      !statusSet.has(item.status)||!LANGUAGES.has(item.language)||
+      (filter!=='all'&&item.language!==filter)) {
       unexpected++;
       continue;
     }
     statuses[item.status]++;
     languageCounts[item.language][item.status]++;
-    if(filter!=='all'&&item.language!==filter) unexpected++;
   }
   return {
     observed:unexpected===0,
