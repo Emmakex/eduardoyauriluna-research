@@ -33,6 +33,10 @@ def inventory() -> list[tuple[str, bytes]]:
         relative = path.relative_to(SOURCE).as_posix()
         if ".." in Path(relative).parts or not relative or relative.startswith("/"):
             raise SystemExit(f"Unsafe release path: {relative}")
+        forbidden_names = {".env", ".env.local", "wp-config.php", "id_rsa", "id_ed25519"}
+        forbidden_extensions = {".pem", ".pfx", ".p12", ".key", ".sqlite", ".sql"}
+        if Path(relative).name.lower() in forbidden_names or Path(relative).suffix.lower() in forbidden_extensions:
+            raise SystemExit(f"Secret or instance data must never be shipped: {relative}")
         files.append((relative, path.read_bytes()))
     main = dict(files).get(PLUGIN_FILE, b"").decode("utf-8", errors="replace")
     if (
