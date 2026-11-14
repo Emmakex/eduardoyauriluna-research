@@ -55,7 +55,6 @@ jobs:
     env:
       SA47523_MCP_TOKEN: ${{ format('{0}.phase2d-v2-20261019', secrets.PHASE2D_MCP_TOKEN) }}
       SA47523_SOURCE_SHA: ${{ github.sha }}
-      SA47523_EVIDENCE_DIR: ${{ runner.temp }}/sa47523-redacted
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,6 +68,8 @@ jobs:
           bash -n scripts/site-architect-47523-live-mcp-readonly.sh
           node --test scripts/test-site-architect-47523-mcp.mjs
       - name: Observe existing Eduardo MCP read tools, never WordPress writes
+        env:
+          SA47523_EVIDENCE_DIR: ${{ runner.temp }}/sa47523-redacted
         shell: bash
         run: |
           set -euo pipefail
@@ -91,7 +92,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       SA47524_PROTECTED_JOB_RESULT: ${{ needs.observed-production.result }}
-      SA47524_REDACTED_REPORT: ${{ runner.temp }}/sa47524-evidence/live-mcp-readback.json
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,6 +106,8 @@ jobs:
           name: site-architect-47523-live-mcp-redacted
           path: ${{ runner.temp }}/sa47524-evidence
       - name: Register bounded status with source Actions run URL
+        env:
+          SA47524_REDACTED_REPORT: ${{ runner.temp }}/sa47524-evidence/live-mcp-readback.json
         shell: bash
         run: |
           set -euo pipefail
