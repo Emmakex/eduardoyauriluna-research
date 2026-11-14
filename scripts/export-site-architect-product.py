@@ -16,6 +16,7 @@ INNER = "site-architect"
 ARCHIVE = "site-architect-0.11.1-standalone-source-candidate.zip"
 SOURCE_BUILDER = ROOT / "scripts/build-site-architect-distribution.py"
 SOURCE_TEST = ROOT / "scripts/test-site-architect-distribution.py"
+SOURCE_VERIFY = ROOT / "scripts/verify-site-architect-provenance.py"
 SOURCE_DOC = ROOT / "docs/SITE_ARCHITECT_DISTRIBUTION_CANDIDATE.md"
 SOURCE_PATH = "wordpress/plugins/eduardo-research-manager"
 
@@ -45,7 +46,9 @@ Requires Python 3.9+ and PHP 8.1+. From the extracted repository root:
 
 The generated candidate WordPress ZIP and SHA-256 manifest are in
 dist/site-architect/. Its complete source inventory is also verifiable.
-The .github/workflows/ci.yml workflow runs those checks independently,
+The .github/workflows/ci.yml first checks UPSTREAM_PROVENANCE.json against
+all plugin file bytes and SOURCE_COMMIT, rejecting missing/extra/changed files.
+It then runs those checks independently,
 then installs the exact ZIP on a disposable generic WordPress + MySQL site.
 That smoke verifies the read-only generic profile and denies Research
 Preview/Apply without changing site state. It does NOT certify custom-Theme
@@ -97,6 +100,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/verify-site-architect-provenance.py
           python3 scripts/test-site-architect-distribution.py
           python3 scripts/build-site-architect-distribution.py --source-commit "$(cat SOURCE_COMMIT)"
           (cd dist/site-architect && sha256sum -c site-architect-0.11.1-research-candidate.zip.sha256)
@@ -217,12 +221,27 @@ def payload(source_commit: str) -> dict[str, bytes]:
         "SOURCE_COMMIT": (source_commit + "\n").encode(),
         "scripts/build-site-architect-distribution.py": SOURCE_BUILDER.read_bytes(),
         "scripts/test-site-architect-distribution.py": SOURCE_TEST.read_bytes(),
+        "scripts/verify-site-architect-provenance.py": SOURCE_VERIFY.read_bytes(),
         "docs/SITE_ARCHITECT_DISTRIBUTION_CANDIDATE.md": SOURCE_DOC.read_bytes(),
     })
+    provenance = {
+        "schema_version": 1,
+        "product": "Site Architect",
+        "plugin_version": "0.11.1",
+        "source_repository": "Emmakex/eduardoyauriluna-research",
+        "source_commit": source_commit,
+        "plugin_path": SOURCE_PATH,
+        "plugin_files": [
+            {"path": path, "sha256": sha(data)} for path, data in source_files
+        ],
+    }
+    files["UPSTREAM_PROVENANCE.json"] = (
+        json.dumps(provenance, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
     for name in files:
         if not name or name.startswith("/") or ".." in Path(name).parts:
             raise SystemExit(f"Invalid standalone source path: {name}")
-    if len(source_files) < 50 or len(files) != len(source_files) + 7:
+    if len(source_files) < 50 or len(files) != len(source_files) + 9:
         raise SystemExit("Incomplete source export")
     return files
 
@@ -259,6 +278,8 @@ def build(source_commit: str, output: Path) -> None:
             {"path": path, "sha256": sha(blob)} for path, blob in sorted(files.items())
         ],
         "requires_external_repository_creation": True,
+        "upstream_plugin_inventory_embedded": True,
+        "upstream_source_drift_verified_in_exported_ci": True,
         "independent_runtime_source": True,
         "includes_theme": False,
         "includes_instance_blueprint": False,
