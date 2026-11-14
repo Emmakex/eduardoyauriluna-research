@@ -325,3 +325,27 @@ Verify** of navigation from separately pending rendered HTTP verification.
 The generic profile must reject Research surfaces without side effects.
 External product repository creation, complete visual/media/REST parity and
 an approved reversible cutover remain open in #475.
+
+
+## #475.19 — Independent ZIP with genuine HTTP-rendered Research verification
+
+Extend #475.17/#475.18 with a disposable loopback WordPress PHP server.
+The **real** Site Architect Rendered Verifier checks 200/SEO/hreflang and
+JSON-LD presence in EN/ES for each publicly available Research Theme Page.
+A temporary footer reorder is verified in rendered HTML for both languages
+through Navigation's include_rendered=true mode, then rolled back; the
+canonical Blueprint hydration is also rolled back. Draft legal and empty
+collection surfaces are recorded as not public, never forced into 200.
+
+This tests actual HTTP response semantics on a fresh clone using the plugin
+rebuilt from the standalone export, not a production deployment nor a proof
+of visual pixel parity. Do not certify production cutover or another Theme
+on the strength of this gate alone.
+
+The #475.19 hardened gate also sends real anonymous HTTP requests to every
+Theme-suppressed URL and requires **404**, not merely a PHP-side unavailable
+flag. The currently accepted clone baseline is at least **14/24 rendered
+EN/ES HTTP 200** with complete SEO/HTML checks; the remaining **10/24**
+are recorded as not public with actual HTTP 404 and reason (legal draft or
+no published collection objects). These are **launch/content readiness
+blockers**, not fully delivered public pages.
