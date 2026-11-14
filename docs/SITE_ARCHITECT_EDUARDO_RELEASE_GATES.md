@@ -98,3 +98,20 @@ This read-only result is a public-surface comparison only: it does not prove
 that production uses the source ZIP validated in CI, nor reveal its database,
 private Media/REST connection state, full content parity or screenshot layout.
 No changes have been made to the live Privacy pages, CV or Site Architect.
+
+
+## #475.22 — Private WordPress readback, explicitly not live yet
+
+The full read-only inventory observer is in
+docs/SITE_ARCHITECT_PRIVATE_READONLY_INVENTORY.md.
+The exported real Site Architect 0.11.1 plugin is audited in the disposable
+WordPress clone inside a MySQL READ ONLY transaction: active plugin SHA/version,
+Theme contract and 24 Page/language slots, aggregate post/Media records, and
+only non-sensitive remote connection posture. The schema validator prohibits
+credential/user/content leakage and matches clone HTML/visibility evidence.
+
+**Status:** observer/clone acceptance can be certified by CI; *real Eduardo
+private WordPress data is not yet read back*. Actual production requires
+explicitly authorized, host-pinned, protected WP-CLI read-only invocation.
+No CI secret or public WordPress endpoint is created. Never treat this
+as permission to update/redeploy the already functioning installation.

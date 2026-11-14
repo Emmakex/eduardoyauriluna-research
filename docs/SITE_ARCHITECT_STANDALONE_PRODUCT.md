@@ -137,3 +137,20 @@ A single release/no-go evidence matrix now lives in
 HTTP survey compares 24 Theme route/language surfaces with #475.19's clone
 outcome, preserving all unverified private/visual/cutover gates as OPEN.
 Neither a public 200 nor a reproducible ZIP certifies live control of Eduardo.
+
+
+## #475.22 — Private WordPress readback, explicitly not live yet
+
+The full read-only inventory observer is in
+docs/SITE_ARCHITECT_PRIVATE_READONLY_INVENTORY.md.
+The exported real Site Architect 0.11.1 plugin is audited in the disposable
+WordPress clone inside a MySQL READ ONLY transaction: active plugin SHA/version,
+Theme contract and 24 Page/language slots, aggregate post/Media records, and
+only non-sensitive remote connection posture. The schema validator prohibits
+credential/user/content leakage and matches clone HTML/visibility evidence.
+
+**Status:** observer/clone acceptance can be certified by CI; *real Eduardo
+private WordPress data is not yet read back*. Actual production requires
+explicitly authorized, host-pinned, protected WP-CLI read-only invocation.
+No CI secret or public WordPress endpoint is created. Never treat this
+as permission to update/redeploy the already functioning installation.
