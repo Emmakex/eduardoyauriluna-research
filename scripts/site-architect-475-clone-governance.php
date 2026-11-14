@@ -4,8 +4,6 @@
  * Invoke through wp eval-file after installing the independent source candidate ZIP.
  * This test MUST NEVER run on a production WordPress installation.
  */
-declare(strict_types=1);
-
 if (! defined('ABSPATH') || ! defined('WP_CLI') || ! WP_CLI) {
     throw new RuntimeException('Isolated WP-CLI only');
 }
@@ -27,6 +25,7 @@ function site_architect_47518_ok(mixed $result, string $action): array {
 }
 
 wp_set_current_user(1);
+require_once WP_PLUGIN_DIR . '/eduardo-research-manager/includes/class-research-manager-site-profile.php';
 $profile = (new Eduardo_Research_Manager_Site_Profile())->id();
 site_architect_47518_assert($profile === getenv('PROFILE'), 'expected WordPress profile');
 
