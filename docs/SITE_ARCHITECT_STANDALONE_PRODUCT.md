@@ -54,6 +54,8 @@ Navigation inspection without changing state. The isolated CI test is explicitly
 blocked outside disposable WP-CLI. Test:
 `scripts/site-architect-475-clone-governance.php`.
 
+The clone may expose a legal/Privacy Page in **draft** state while its Theme-owned role, model, URL and slots are valid. #475.18 explicitly preserves such drafts; it does not publish legally sensitive content just to satisfy a test. Legal draft readiness must be reviewed separately before a public release.
+
 This extends clone **functional** confidence only. It does not prove actual
 HTTP-rendered SEO/GEO, Media ingest/assignment, all REST credentials, or
 complete production-versus-clone state/render parity. Reusing this evidence
