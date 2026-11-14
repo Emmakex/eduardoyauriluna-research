@@ -1,0 +1,195 @@
+name: Site Architect 475 Standalone Export and Clone
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/export-site-architect-product.py'
+      - 'scripts/test-site-architect-product-export.py'
+      - 'docs/SITE_ARCHITECT_STANDALONE_PRODUCT.md'
+      - '.github/workflows/site-architect-475-standalone-acceptance.yml'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+      - 'scripts/build-site-architect-distribution.py'
+      - 'scripts/test-site-architect-distribution.py'
+      - 'docs/SITE_ARCHITECT_DISTRIBUTION_CANDIDATE.md'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/export-site-architect-product.py'
+      - 'scripts/test-site-architect-product-export.py'
+      - '.github/workflows/site-architect-475-standalone-acceptance.yml'
+      - 'wordpress/plugins/eduardo-research-manager/**'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Full independent source and reproducible 0.11.1
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - name: Certify independent build outside Eduardo repository
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/export-site-architect-product.py scripts/test-site-architect-product-export.py
+          python3 scripts/test-site-architect-product-export.py
+          find wordpress/plugins/eduardo-research-manager -name '*.php' -type f -print0 |
+            xargs -0 -n1 php -l >/tmp/sa-lint.log
+      - name: Build exact-head standalone source export
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          python3 scripts/export-site-architect-product.py --source-commit "$SOURCE_COMMIT"
+          (cd dist/site-architect-standalone && sha256sum -c site-architect-0.11.1-standalone-source-candidate.zip.sha256)
+          jq -e '.requires_external_repository_creation == true and .production_cutover_certified == false and .custom_theme_mutations_certified == false' dist/site-architect-standalone/site-architect-0.11.1-standalone-source-candidate.manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-architect-0.11.1-standalone-source
+          path: dist/site-architect-standalone/
+          if-no-files-found: error
+          retention-days: 30
+
+  isolated-wordpress:
+    name: Standalone import on ${{ matrix.profile }}
+    needs: export
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [research-theme, generic-wordpress]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-architect-0.11.1-standalone-source
+          path: dist/site-architect-standalone
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Rebuild WordPress ZIP strictly from standalone exported source
+        run: |
+          set -euo pipefail
+          bash .github/scripts/ensure-wp-cli.sh
+          (cd dist/site-architect-standalone && sha256sum -c site-architect-0.11.1-standalone-source-candidate.zip.sha256)
+          mkdir -p /tmp/sa-external
+          unzip -q dist/site-architect-standalone/site-architect-0.11.1-standalone-source-candidate.zip -d /tmp/sa-external
+          cd /tmp/sa-external/site-architect
+          test ! -d config && test ! -d wordpress/themes
+          python3 scripts/test-site-architect-distribution.py
+          python3 scripts/build-site-architect-distribution.py --source-commit "$(cat SOURCE_COMMIT)"
+          (cd dist/site-architect && sha256sum -c site-architect-0.11.1-research-candidate.zip.sha256)
+      - name: Fresh isolated WordPress with exported plugin release
+        env:
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/sa-wp
+          cd /tmp/sa-wp
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Site Architect isolated clone' \
+            --admin_user=admin --admin_password='ci-only-not-prod' --admin_email=ci@example.test \
+            --skip-email --allow-root
+          if [ "$PROFILE" = "research-theme" ]; then
+            mkdir -p wp-content/themes/eduardo-research
+            cp -a "$GITHUB_WORKSPACE/wordpress/themes/eduardo-research/." wp-content/themes/eduardo-research/
+            wp theme activate eduardo-research --allow-root
+          fi
+          wp plugin install /tmp/sa-external/site-architect/dist/site-architect/site-architect-0.11.1-research-candidate.zip --activate --allow-root
+          wp plugin status eduardo-research-manager --allow-root
+      - name: Accept Research Blueprint mutation lifecycle or reject generic writes
+        env:
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          cd /tmp/sa-wp
+          wp eval '
+            wp_set_current_user(1);
+            require_once ABSPATH."wp-admin/includes/plugin.php";
+            require_once WP_PLUGIN_DIR."/eduardo-research-manager/includes/class-research-manager-site-profile.php";
+            $profile=(new Eduardo_Research_Manager_Site_Profile())->id();
+            if ($profile!==getenv("PROFILE") || !is_plugin_active("eduardo-research-manager/eduardo-research-manager.php")
+                || EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME!=="Site Architect"
+                || EDUARDO_RESEARCH_MANAGER_VERSION!=="0.11.1") { fwrite(STDERR,"Product/profile wrong"); exit(1); }
+            $blueprint=json_decode((string)file_get_contents(getenv("GITHUB_WORKSPACE")."/config/research-site-blueprint.json"),true);
+            if (!is_array($blueprint)) { fwrite(STDERR,"Blueprint unreadable"); exit(1); }
+            if ($profile==="generic-wordpress") {
+                $original=get_option("eduardo_research_identity",false);
+                foreach (["preview","apply"] as $action) {
+                    $result=Eduardo_Research_Manager::hydrator()->$action($blueprint);
+                    if (!is_wp_error($result) || $result->get_error_code()!=="research_manager_blueprint_catalog_mismatch"
+                        || get_option("eduardo_research_identity",false)!==$original) {
+                        fwrite(STDERR,"Generic profile mutation authority escaped"); exit(1);
+                    }
+                }
+                echo "PASS: exported standalone plugin rejects Research writes on generic WordPress\n";
+                exit;
+            }
+            $bootPreview=Eduardo_Research_Manager::bootstrap()->preview($blueprint);
+            if (is_wp_error($bootPreview) || empty($bootPreview["apply_allowed"])
+                || (int)$bootPreview["operation_count"]!==8 || (int)$bootPreview["skipped_count"]!==12) {
+                fwrite(STDERR,is_wp_error($bootPreview)?$bootPreview->get_error_message():wp_json_encode($bootPreview)); exit(1);
+            }
+            $boot=Eduardo_Research_Manager::bootstrap()->apply($blueprint);
+            if (is_wp_error($boot) || empty($boot["verified"]) || (int)$boot["operation_count"]!==8) {
+                fwrite(STDERR,is_wp_error($boot)?$boot->get_error_message():wp_json_encode($boot)); exit(1);
+            }
+            $lines=get_posts(["post_type"=>"research_line","post_status"=>"publish","posts_per_page"=>20,"suppress_filters"=>true]);
+            if (count($lines)!==8) { fwrite(STDERR,"Lines count drift"); exit(1); }
+            foreach ($lines as $line) {
+                if ((string)get_post_meta($line->ID,"_research_evidence_status",true)!=="verified") {
+                    fwrite(STDERR,"Evidence drift"); exit(1);
+                }
+            }
+            $preview=Eduardo_Research_Manager::hydrator()->preview($blueprint);
+            if (is_wp_error($preview) || empty($preview["apply_allowed"])
+                || (int)$preview["operation_count"]!==25 || ($preview["operations"][0]["resource"]??"")!=="identity-profile") {
+                fwrite(STDERR,is_wp_error($preview)?$preview->get_error_message():wp_json_encode($preview)); exit(1);
+            }
+            $apply=Eduardo_Research_Manager::hydrator()->apply($blueprint);
+            if (is_wp_error($apply) || empty($apply["verified"]) || (int)$apply["operation_count"]!==25
+                || count($apply["snapshot_ids"])!==25) {
+                fwrite(STDERR,is_wp_error($apply)?$apply->get_error_message():wp_json_encode($apply)); exit(1);
+            }
+            $identity=(new Eduardo_Research_Manager_Identity_Profile())->inspect();
+            if (is_wp_error($identity) || ($identity["name"]??"")!=="Eduardo Jose Yauri Luna"
+                || empty($identity["verified_at"])) { fwrite(STDERR,"Identity readback drift"); exit(1); }
+            $repeat=Eduardo_Research_Manager::hydrator()->preview($blueprint);
+            if (is_wp_error($repeat) || (int)$repeat["operation_count"]!==24) { fwrite(STDERR,"Idempotency drift"); exit(1); }
+            foreach ($repeat["operations"] as $op) {
+                if (($op["status"]??"")!=="already-matching") { fwrite(STDERR,"Page hydration drift"); exit(1); }
+            }
+            $rolled=Eduardo_Research_Manager::hydrator()->rollback($apply["snapshot_ids"]);
+            if (is_wp_error($rolled) || (int)$rolled["snapshot_count"]!==25
+                || get_option("eduardo_research_identity",false)!==false) {
+                fwrite(STDERR,"Identity/Page rollback drift"); exit(1);
+            }
+            echo "PASS: independent source plugin Research Bootstrap/Apply/Verify/Idempotent Preview/Rollback\n";
+          ' --allow-root
