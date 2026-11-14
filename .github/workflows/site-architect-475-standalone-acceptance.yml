@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
+      - 'scripts/site-architect-475-clone-governance.php'
       - 'docs/SITE_ARCHITECT_STANDALONE_PRODUCT.md'
       - '.github/workflows/site-architect-475-standalone-acceptance.yml'
       - 'wordpress/plugins/eduardo-research-manager/**'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
+      - 'scripts/site-architect-475-clone-governance.php'
       - '.github/workflows/site-architect-475-standalone-acceptance.yml'
       - 'wordpress/plugins/eduardo-research-manager/**'
 
@@ -193,3 +195,13 @@ jobs:
             }
             echo "PASS: independent source plugin Research Bootstrap/Apply/Verify/Idempotent Preview/Rollback\n";
           ' --allow-root
+
+      - name: Audit complete bounded Theme governance on the isolated installed clone
+        shell: bash
+        env:
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          cd /tmp/sa-wp
+          php -l "$GITHUB_WORKSPACE/scripts/site-architect-475-clone-governance.php"
+          wp eval-file "$GITHUB_WORKSPACE/scripts/site-architect-475-clone-governance.php" --allow-root
