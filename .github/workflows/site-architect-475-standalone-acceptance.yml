@@ -236,7 +236,7 @@ jobs:
             exit 1
           fi
           PROFILE=research-theme wp eval-file "$GITHUB_WORKSPACE/scripts/site-architect-475-http-verify.php" --allow-root
-          jq -e '.pass == true and .navigation.rendered_en_es == true and .navigation.rollback_verified == true and .hydrate_rollback_verified == true and (.pages_verified | length) >= 8'             /tmp/sa-47519-http-report.json
+          jq -e '.pass == true and .navigation.rendered_en_es == true and .navigation.rollback_verified == true and .hydrate_rollback_verified == true and (.pages_verified | length) >= 14 and ((.pages_not_public | to_entries | all(.value.http_status == 404)))'             /tmp/sa-47519-http-report.json
       - name: Publish bounded clone HTTP evidence
         if: matrix.profile == 'research-theme'
         uses: actions/upload-artifact@v4
