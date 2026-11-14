@@ -159,7 +159,8 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/site-architect-standalone-generic
-          # shellcheck disable=SC2016 -- WordPress evaluates the PHP code, not Bash.
+          # WordPress evaluates this PHP code; Bash must keep its variables literal.
+          # shellcheck disable=SC2016
           wp eval '
             wp_set_current_user(1);
             require_once ABSPATH . "wp-admin/includes/plugin.php";
