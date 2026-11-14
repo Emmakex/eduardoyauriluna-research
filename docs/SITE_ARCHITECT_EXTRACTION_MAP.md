@@ -341,3 +341,11 @@ This tests actual HTTP response semantics on a fresh clone using the plugin
 rebuilt from the standalone export, not a production deployment nor a proof
 of visual pixel parity. Do not certify production cutover or another Theme
 on the strength of this gate alone.
+
+The #475.19 hardened gate also sends real anonymous HTTP requests to every
+Theme-suppressed URL and requires **404**, not merely a PHP-side unavailable
+flag. The currently accepted clone baseline is at least **14/24 rendered
+EN/ES HTTP 200** with complete SEO/HTML checks; the remaining **10/24**
+are recorded as not public with actual HTTP 404 and reason (legal draft or
+no published collection objects). These are **launch/content readiness
+blockers**, not fully delivered public pages.
