@@ -6,6 +6,8 @@ on:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
       - 'scripts/site-architect-475-clone-governance.php'
+      - 'scripts/site-architect-475-http-router.php'
+      - 'scripts/site-architect-475-http-verify.php'
       - 'docs/SITE_ARCHITECT_STANDALONE_PRODUCT.md'
       - '.github/workflows/site-architect-475-standalone-acceptance.yml'
       - 'wordpress/plugins/eduardo-research-manager/**'
@@ -18,6 +20,8 @@ on:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
       - 'scripts/site-architect-475-clone-governance.php'
+      - 'scripts/site-architect-475-http-router.php'
+      - 'scripts/site-architect-475-http-verify.php'
       - '.github/workflows/site-architect-475-standalone-acceptance.yml'
       - 'wordpress/plugins/eduardo-research-manager/**'
 
@@ -205,3 +209,39 @@ jobs:
           cd /tmp/sa-wp
           php -l "$GITHUB_WORKSPACE/scripts/site-architect-475-clone-governance.php"
           wp eval-file "$GITHUB_WORKSPACE/scripts/site-architect-475-clone-governance.php" --allow-root
+
+      - name: Start real HTTP server and verify Research SEO, languages, rendered navigation and rollback
+        if: matrix.profile == 'research-theme'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/sa-wp
+          wp rewrite structure '/%postname%/' --hard --allow-root
+          wp rewrite flush --hard --allow-root
+          cp "$GITHUB_WORKSPACE/scripts/site-architect-475-http-router.php" /tmp/sa-wp/.site-architect-ci-router.php
+          php -l "$GITHUB_WORKSPACE/scripts/site-architect-475-http-verify.php"
+          php -S 127.0.0.1:8080 -t /tmp/sa-wp /tmp/sa-wp/.site-architect-ci-router.php             > /tmp/sa-47519-http-server.log 2>&1 &
+          http_pid=$!
+          trap 'kill "$http_pid" 2>/dev/null || true; tail -35 /tmp/sa-47519-http-server.log || true' EXIT
+          ready=0
+          for i in $(seq 1 45); do
+            if curl --silent --show-error --fail --max-time 2 http://127.0.0.1:8080/ >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo 'Isolated WordPress HTTP server failed to serve the front page' >&2
+            exit 1
+          fi
+          PROFILE=research-theme wp eval-file "$GITHUB_WORKSPACE/scripts/site-architect-475-http-verify.php" --allow-root
+          jq -e '.pass == true and .navigation.rendered_en_es == true and .navigation.rollback_verified == true and .hydrate_rollback_verified == true and (.pages_verified | length) >= 8'             /tmp/sa-47519-http-report.json
+      - name: Publish bounded clone HTTP evidence
+        if: matrix.profile == 'research-theme'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-architect-47519-isolated-http-evidence
+          path: /tmp/sa-47519-http-report.json
+          if-no-files-found: error
+          retention-days: 30
