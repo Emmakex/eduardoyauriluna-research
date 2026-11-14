@@ -76,3 +76,25 @@ slug/classes remain compatible and are not renamed during extraction.
 production state after public survey. Where access is unavailable, keep the
 private gates explicitly OPEN. Do not interpret a public HTTP 200 as proof
 of private operation authority or final delivery.
+
+## First real production HTTP observation (2026-11-14 18:10 UTC)
+
+GitHub Actions run 43624953472 queried exactly 24 routes read-only with zero
+transport errors: **16 HTTP 200 with all SEO/HTML checks passing, 8 HTTP 404**.
+The temporary Research clone from the *same* exact plugin export had 14 HTTP
+200 and 10 HTTP 404. The only status differences are:
+
+| Theme surface | Fresh clone | Real production | Interpretation |
+|---|---|---|---|
+| privacy-policy/en | 404 (draft) | 200 | Existing public Privacy page; preserve its state; legal review still needed |
+| privacy-policy/es | 404 (draft) | 200 | Existing Spanish public Privacy page; preserve its state; legal review still needed |
+
+The audit also detected **public CV placeholder markers in both EN and ES**.
+These are explicitly **editorial readiness blockers**; do not fabricate
+academic credentials, credentials verification, or completed doctoral work to
+replace the placeholders. The remaining 22 route statuses matched the clone.
+
+This read-only result is a public-surface comparison only: it does not prove
+that production uses the source ZIP validated in CI, nor reveal its database,
+private Media/REST connection state, full content parity or screenshot layout.
+No changes have been made to the live Privacy pages, CV or Site Architect.
