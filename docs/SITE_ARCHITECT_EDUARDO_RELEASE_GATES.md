@@ -219,3 +219,14 @@ workflow now checks ONLY that precise Page plus the established Eduardo
 runtime identity using existing MCP read tools, and publishes a
 redacted status/slot-count-only report. Do not infer absence of legal
 Page or cutover readiness until this report is actually observed.
+
+## #475.29 — Desktop/mobile screenshot and WCAG observation
+
+Public real-browser automated inspection is defined in
+`docs/SITE_ARCHITECT_EDUARDO_VISUAL_ACCEPTANCE.md`. A dedicated Playwright
+GitHub Actions job audits all 24 public Theme routes at desktop and mobile
+(48 visits), takes screenshots only of HTTP 200 pages, records horizontal
+overflow, H1, navigation, mobile menu interaction and axe-core A/AA rule IDs
+without exporting private content. It does **not** certify visual design or
+WCAG compliance: the actual screenshot artifact must be reviewed before
+closing the visual gate. No production writes and no credentials needed.

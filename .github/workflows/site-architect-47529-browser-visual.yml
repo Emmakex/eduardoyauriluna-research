@@ -1,0 +1,80 @@
+name: Site Architect 47529 Eduardo Public Browser Visual Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/site-architect-47529-public-browser-audit.cjs'
+      - 'scripts/site-architect-47529-validate-browser-audit.cjs'
+      - 'scripts/test-site-architect-47529-browser-audit.cjs'
+      - 'docs/SITE_ARCHITECT_EDUARDO_VISUAL_ACCEPTANCE.md'
+      - '.github/workflows/site-architect-47529-browser-visual.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-architect-47529-public-browser-audit.cjs'
+      - 'scripts/site-architect-47529-validate-browser-audit.cjs'
+      - 'scripts/test-site-architect-47529-browser-audit.cjs'
+      - '.github/workflows/site-architect-47529-browser-visual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-architect-47529-public-browser-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  public-browser:
+    name: 24 Eduardo public routes x desktop/mobile screenshots + WCAG
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SA47529_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SA47529_OUTPUT_DIR: /tmp/sa47529
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - name: Validate static source and fixed-schema negative tests before browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/site-architect-47529-public-browser-audit.cjs
+          node --check scripts/site-architect-47529-validate-browser-audit.cjs
+          node --test scripts/test-site-architect-47529-browser-audit.cjs
+      - name: Install pinned ephemeral Chromium and axe-core only for runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/sa47529-npm
+          cd /tmp/sa47529-npm
+          npm init -y >/dev/null
+          npm install --no-save --no-package-lock --no-audit --no-fund \
+            playwright@1.56.1 @axe-core/playwright@4.11.0
+          ./node_modules/.bin/playwright install --with-deps chromium
+      - name: Observe public Eduardo Theme only without WordPress credentials
+        shell: bash
+        env:
+          NODE_PATH: /tmp/sa47529-npm/node_modules
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'Emmakex/eduardoyauriluna-research'
+          test -n "$SA47529_SOURCE_SHA"
+          node scripts/site-architect-47529-public-browser-audit.cjs
+          node scripts/site-architect-47529-validate-browser-audit.cjs \
+            /tmp/sa47529/site-architect-47529-public-browser-report.json
+      - name: Publish only public screenshots and closed-schema metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-architect-47529-eduardo-public-visual-evidence
+          path: |
+            /tmp/sa47529/site-architect-47529-public-browser-report.json
+            /tmp/sa47529/screenshots/
+          if-no-files-found: warn
+          retention-days: 14
