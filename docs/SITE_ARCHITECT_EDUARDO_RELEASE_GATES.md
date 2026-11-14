@@ -208,3 +208,14 @@ and they are reconciled against a fresh HTTP survey. No speculative paper,
 project, software or dataset creation. Nothing is installed or published
 on Eduardo production. This is not a native SQL census or an end-to-end
 mutable Site Architect acceptance.
+
+## #475.28 — transient English Privacy Page inspection recheck
+
+See `docs/SITE_ARCHITECT_EDUARDO_TARGETED_PRIVACY_READBACK.md`. After
+#475.27's 12/12 Research object queries returned empty inventories, the
+only non-green private governance inspection was `privacy-policy/en`
+(23/24, compared with a prior real 24/24 success). A tiny protected
+workflow now checks ONLY that precise Page plus the established Eduardo
+runtime identity using existing MCP read tools, and publishes a
+redacted status/slot-count-only report. Do not infer absence of legal
+Page or cutover readiness until this report is actually observed.
