@@ -63,15 +63,26 @@ $inspected = 0;
 foreach (array_keys($pages) as $key) {
     foreach ($languages as $language) {
         $page = site_architect_47518_ok(Eduardo_Research_Manager::pages()->inspect((string) $key, $language), 'Page inspect');
+        $checks = array(
+            'key'=>(string) $page['key'] === (string) $key,
+            'language'=>(string) $page['language'] === $language,
+            'published'=>! empty($page['published']),
+            'contract_aligned'=>! empty($page['contract_aligned']),
+            'url'=>! empty($page['url']),
+            'option_key'=>! empty($page['option_key']),
+            'allowed_slots'=>is_array($page['allowed_slots']),
+            'effective_slots'=>is_array($page['effective_slots']),
+        );
+        if (in_array(false, $checks, true)) {
+            fwrite(STDERR, 'Page contract probe: '. wp_json_encode(array(
+                'key'=>$key,'language'=>$language,'checks'=>$checks,
+                'status'=>$page['status'] ?? '',
+                'role'=>$page['role'] ?? '', 'expected_role'=>$page['expected_role'] ?? '',
+                'model'=>$page['model'] ?? '', 'expected_model'=>$page['expected_model'] ?? '',
+            )) . "\n");
+        }
         site_architect_47518_assert(
-            (string) $page['key'] === (string) $key
-            && (string) $page['language'] === $language
-            && ! empty($page['published'])
-            && ! empty($page['contract_aligned'])
-            && ! empty($page['url'])
-            && ! empty($page['option_key'])
-            && is_array($page['allowed_slots'])
-            && is_array($page['effective_slots']),
+            ! in_array(false, $checks, true),
             'Theme-owned Page state/route/storage parity for ' . $key . '/' . $language
         );
         $inspected++;
