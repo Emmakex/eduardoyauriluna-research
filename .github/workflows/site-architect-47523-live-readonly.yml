@@ -8,20 +8,47 @@ on:
       - 'scripts/site-architect-47523-sanitize-mcp.mjs'
       - 'scripts/site-architect-47523-validate-mcp.mjs'
       - 'scripts/test-site-architect-47523-mcp.mjs'
+      - 'scripts/site-architect-47524-status-contract.mjs'
+      - 'scripts/site-architect-47524-post-github-status.sh'
+      - 'scripts/test-site-architect-47524-status.mjs'
       - '.github/workflows/site-architect-47523-live-readonly.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: site-architect-eduardo-private-readback
   cancel-in-progress: false
 
 jobs:
+  report-pending:
+    name: Record protected readback awaiting result
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - name: Register bounded pending status at exact main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/site-architect-47524-post-github-status.sh
+          node --test scripts/test-site-architect-47524-status.mjs
+          bash scripts/site-architect-47524-post-github-status.sh pending
+
   observed-production:
     name: Eduardo existing MCP -- six read tools, sanitized evidence only
     if: github.ref == 'refs/heads/main'
+    needs: report-pending
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: phase2d-production
@@ -54,3 +81,32 @@ jobs:
           path: ${{ runner.temp }}/sa47523-redacted/live-mcp-readback.json
           if-no-files-found: warn
           retention-days: 14
+
+  report-outcome:
+    name: Publish only sanitized readback outcome on main commit
+    if: always() && github.ref == 'refs/heads/main'
+    needs: [report-pending, observed-production]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SA47524_PROTECTED_JOB_RESULT: ${{ needs.observed-production.result }}
+      SA47524_REDACTED_REPORT: ${{ runner.temp }}/sa47524-evidence/live-mcp-readback.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - name: Read only validated redacted artifact from same workflow
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: site-architect-47523-live-mcp-redacted
+          path: ${{ runner.temp }}/sa47524-evidence
+      - name: Register bounded status with source Actions run URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/site-architect-47524-post-github-status.sh outcome

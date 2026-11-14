@@ -93,3 +93,46 @@ the #475.22 isolated native WordPress report and #475.21 public HTTP
 survey. A native private readback from actual Eduardo WordPress is
 still needed for DB-level provenance. Preserve the live Site Architect
 0.11.1 installation until all release gates are independently green.
+
+
+## #475.24 — Finding protected push runs without publishing private read data
+
+The GitHub integration can retrieve ordinary PR CI, GitHub commit statuses,
+and the jobs/artifacts of a **known** run ID, but it does not directly list
+the protected \`main\` push-triggered workflow runs. This is an observability
+gap, not evidence that the previously configured MCP principal is broken.
+
+The existing protected workflow now has a tiny independent **report-pending**
+job using the GitHub-provided token and GitHub Status API. It posts the exact
+\`main\` SHA context \`site-architect/eduardo-mcp-readback\` with state
+\`pending\` and its own Actions run URL. This job has **no access to the MCP
+environment secret**. While GitHub environment approval is waiting, the
+status remains \`pending\`, never "passed".
+
+An **observed-production** job still uses the existing protected
+\`phase2d-production\` environment, its unchanged existing principal, and
+the six read-only MCP operations. No write operations or WordPress access
+are added.
+
+Finally a separate **report-outcome** job obtains only the sanitized
+\`live-mcp-readback.json\` from the same run, validates its closed schema
+and posts one of four coarse commit statuses:
+- \`success\`: an actual coherent MCP read of versions + Pages/Media
+  lists occurred, explicitly **not** full DB or cutover certification;
+- \`failure\`: incomplete read, version drift or only partial private data;
+- \`error\`: protected job failed/cancelled, missing or invalid evidence;
+- \`pending\`: protected job has not reported yet or needs approval.
+
+The status carries a direct known GitHub Actions run URL, so authorized
+GitHub tools can inspect that run and its **redacted-only artifact** without
+guessing run IDs or exporting credentials. The reporter's token has only
+\`contents:read\` and GitHub \`statuses:write\` scoped to this repository,
+never new WordPress/MCP scopes. New offline tests reject fabricated cutover
+certification and untrusted status data.
+
+**Important:** the first **verifiable live observation** is the latest
+\`main\` commit status after #475.24 merges. Until that status is observed,
+private production Site Architect version, actual read access and resource
+counts remain unconfirmed. If the workflow is pending on protected-environment
+approval, request approval through the existing GitHub control; do not
+reuse another tenant or modify permissions.
