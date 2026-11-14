@@ -99,7 +99,7 @@ with TemporaryDirectory() as tmp:
     entry = standalone / "wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php"
     original_entry = entry.read_bytes()
     try:
-        entry.write_bytes(original_entry + b"\\n# source drift check\\n")
+        entry.write_bytes(original_entry + b"\n# source drift check\n")
         failed = subprocess.run([sys.executable, str(verify_path)], cwd=standalone,
                                 capture_output=True, check=False)
         check(failed.returncode != 0, "Verifier refuses modified WordPress plugin entrypoint")
