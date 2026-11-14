@@ -226,7 +226,7 @@ jobs:
           if "#536763" not in inventory["assets/visual-polish.css"].decode("utf-8"):
               raise SystemExit("Source contrast fix missing")
           nav_css = inventory["assets/research-navigation.css"].decode("utf-8")
-          if "research-menu-toggle-label" not in nav_css or "clip-path" not in nav_css:
+          if "research-menu-toggle-label" not in nav_css or "clip:rect(0,0,0,0)" not in nav_css:
               raise SystemExit("Accessible mobile menu source fix missing")
 
           def make_zip():
