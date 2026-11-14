@@ -221,7 +221,7 @@ jobs:
           if not expected.issubset(inventory) or len(entries) < 30:
               raise SystemExit("Incomplete Theme distribution")
           header = inventory["style.css"].decode("utf-8")
-          if not re.search(r"(?m)^Version: 1\\.1\\.4\\s*$", header):
+          if not re.search(r"(?m)^Version: 1\.1\.4\s*$", header):
               raise SystemExit("Theme header does not declare 1.1.4")
           if "#536763" not in inventory["assets/visual-polish.css"].decode("utf-8"):
               raise SystemExit("Source contrast fix missing")
@@ -245,7 +245,7 @@ jobs:
               raise SystemExit("Nondeterministic archive")
           digest = hashlib.sha256(first).hexdigest()
           (target / name).write_bytes(first)
-          (target / (name + ".sha256")).write_text(f"{digest}  {name}\\n")
+          (target / (name + ".sha256")).write_text(f"{digest}  {name}\n")
           with zipfile.ZipFile(io.BytesIO(first)) as archive:
               if archive.testzip() is not None:
                   raise SystemExit("Corrupt candidate archive")
@@ -268,7 +268,7 @@ jobs:
               "production_accessibility_certified": False,
           }
           (target / "eduardo-research-1.1.4.manifest.json").write_text(
-              json.dumps(manifest, indent=2, sort_keys=True) + "\\n"
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n"
           )
           print(f"THEME_114_CANDIDATE_REPRODUCIBLE files={len(entries)} sha256={digest}")
           PY
