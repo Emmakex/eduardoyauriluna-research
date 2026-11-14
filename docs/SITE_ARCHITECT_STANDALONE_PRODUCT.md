@@ -129,3 +129,11 @@ Tests and generated Media are NOT shipped in the installable plugin. There
 is no production upload, authority expansion or runtime Plugin/Theme change.
 A small CI JSON report complements the prior HTTP proof. Full production
 parity, external source repository and reversible cutover remain unverified.
+
+## #475.21 — Eduardo release authority
+
+A single release/no-go evidence matrix now lives in
+`docs/SITE_ARCHITECT_EDUARDO_RELEASE_GATES.md`. A read-only public production
+HTTP survey compares 24 Theme route/language surfaces with #475.19's clone
+outcome, preserving all unverified private/visual/cutover gates as OPEN.
+Neither a public 200 nor a reproducible ZIP certifies live control of Eduardo.
