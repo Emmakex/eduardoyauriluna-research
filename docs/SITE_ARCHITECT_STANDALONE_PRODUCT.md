@@ -174,3 +174,24 @@ private resource totals match the independent source export.
 content, legal review, external private source repository and reversible
 cutover remain open until separately evidenced. A successful MCP inventory
 is not a full underlying WordPress/Media database audit.
+
+## #475.32 — External-source CI must exercise WordPress, not just build ZIP
+
+The standalone source export now includes a second CI job
+`generic-wordpress-smoke`, independent of Eduardo's Theme/Blueprint.
+It downloads the previous job's exact installable ZIP, verifies SHA-256,
+installs it on disposable WordPress with MySQL, checks the active Site
+Architect 0.11.1 identity and `generic-wordpress` profile, and rejects
+Research Preview/Apply. The test also checks that page and identity state
+remain unchanged after refused operations.
+
+The upstream source-export test requires this job to be present, and upstream
+acceptance lints the **exported workflow itself** with actionlint, rather
+than trusting only this monorepo's workflow file. The already established
+isolated Research Theme / generic WordPress acceptance remains unchanged.
+
+**Not certified by this change:** creation of `Emmakex/site-architect`,
+execution of Actions in that future separate repository, Research writes on
+arbitrary Themes, actual production database readback, or live cutover.
+Site Architect 0.11.1 and Eduardo Theme 1.1.3 (production) remain untouched.
+The Theme 1.1.4 source is only a versioned candidate in GitHub.
