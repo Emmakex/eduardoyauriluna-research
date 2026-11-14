@@ -45,7 +45,11 @@ Requires Python 3.9+ and PHP 8.1+. From the extracted repository root:
 
 The generated candidate WordPress ZIP and SHA-256 manifest are in
 dist/site-architect/. Its complete source inventory is also verifiable.
-The .github/workflows/ci.yml workflow runs those checks independently.
+The .github/workflows/ci.yml workflow runs those checks independently,
+then installs the exact ZIP on a disposable generic WordPress + MySQL site.
+That smoke verifies the read-only generic profile and denies Research
+Preview/Apply without changing site state. It does NOT certify custom-Theme
+write authority or production cutover.
 
 ## Repository independence
 
@@ -102,6 +106,88 @@ jobs:
           path: dist/site-architect/
           if-no-files-found: error
           retention-days: 30
+
+  generic-wordpress-smoke:
+    name: Install standalone Site Architect on clean generic WordPress (fail closed)
+    needs: complete-product-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-architect-0.11.1-standalone-installable-candidate
+          path: dist/site-architect
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli,mbstring
+          coverage: none
+          tools: wp-cli
+      - name: Verify original source commit and install packaged ZIP in disposable WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat SOURCE_COMMIT)" != ""
+          (cd dist/site-architect && sha256sum -c site-architect-0.11.1-research-candidate.zip.sha256)
+          mkdir -p /tmp/site-architect-standalone-generic
+          cd /tmp/site-architect-standalone-generic
+          wp core download --allow-root
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --allow-root
+          wp core install --url=http://127.0.0.1:8080 --title='Standalone Generic CI' \
+            --admin_user=admin --admin_password='standalone-ci-only-not-prod' \
+            --admin_email=ci@example.test --skip-email --allow-root
+          wp plugin install "$GITHUB_WORKSPACE/dist/site-architect/site-architect-0.11.1-research-candidate.zip" \
+            --activate --allow-root
+          wp plugin status eduardo-research-manager --allow-root
+      - name: Prove generic WordPress is READ ONLY and Research Preview/Apply never mutate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/site-architect-standalone-generic
+          # WordPress evaluates this PHP code; Bash must keep its variables literal.
+          # shellcheck disable=SC2016
+          wp eval '
+            wp_set_current_user(1);
+            require_once ABSPATH . "wp-admin/includes/plugin.php";
+            require_once WP_PLUGIN_DIR . "/eduardo-research-manager/includes/class-research-manager-site-profile.php";
+            if (!is_plugin_active("eduardo-research-manager/eduardo-research-manager.php")) { exit(1); }
+            if (EDUARDO_RESEARCH_MANAGER_PRODUCT_NAME !== "Site Architect"
+                || EDUARDO_RESEARCH_MANAGER_VERSION !== "0.11.1") { exit(1); }
+            $profile = new Eduardo_Research_Manager_Site_Profile();
+            if ($profile->id() !== "generic-wordpress"
+                || Eduardo_Research_Manager::contract()->compatible()) { exit(1); }
+            $before_identity = get_option("eduardo_research_identity", false);
+            $before_pages = (int) wp_count_posts("page")->publish;
+            $blueprint = array("version"=>1,"site"=>array(),"pages"=>array());
+            foreach (array("preview", "apply") as $action) {
+                $result = Eduardo_Research_Manager::hydrator()->$action($blueprint);
+                if (!is_wp_error($result)) {
+                    fwrite(STDERR, "Generic Research " . $action . " unexpectedly allowed");
+                    exit(1);
+                }
+            }
+            if (get_option("eduardo_research_identity", false) !== $before_identity
+                || (int) wp_count_posts("page")->publish !== $before_pages) {
+                fwrite(STDERR, "Generic WordPress changed after rejected Research operation");
+                exit(1);
+            }
+            echo "PASS: standalone 0.11.1 installed; generic Research preview/apply denied without state mutation";
+          ' --allow-root
 """
 
 GITIGNORE = "dist/\n__pycache__/\n*.pyc\n.env\n.env.*\n"

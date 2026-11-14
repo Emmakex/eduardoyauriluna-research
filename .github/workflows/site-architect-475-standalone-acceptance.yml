@@ -134,6 +134,15 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           python3 scripts/export-site-architect-product.py --source-commit "$SOURCE_COMMIT"
           (cd dist/site-architect-standalone && sha256sum -c site-architect-0.11.1-standalone-source-candidate.zip.sha256)
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          archive = Path("dist/site-architect-standalone/site-architect-0.11.1-standalone-source-candidate.zip")
+          with ZipFile(archive) as zf:
+              workflow = zf.read("site-architect/.github/workflows/ci.yml")
+          Path("/tmp/sa47532-independent-ci.yml").write_bytes(workflow)
+          PY
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 /tmp/sa47532-independent-ci.yml
           jq -e '.requires_external_repository_creation == true and .production_cutover_certified == false and .custom_theme_mutations_certified == false' dist/site-architect-standalone/site-architect-0.11.1-standalone-source-candidate.manifest.json
       - uses: actions/upload-artifact@v4
         with:
