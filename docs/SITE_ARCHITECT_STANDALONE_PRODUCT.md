@@ -92,3 +92,11 @@ certification or production vs clone parity. Outstanding: Media lifecycle
 and source provenance, complete remote REST capability checks, real
 production inventory parity, external repository setup and reversible
 cutover rehearsal.
+
+The #475.19 hardened gate also sends real anonymous HTTP requests to every
+Theme-suppressed URL and requires **404**, not merely a PHP-side unavailable
+flag. The currently accepted clone baseline is at least **14/24 rendered
+EN/ES HTTP 200** with complete SEO/HTML checks; the remaining **10/24**
+are recorded as not public with actual HTTP 404 and reason (legal draft or
+no published collection objects). These are **launch/content readiness
+blockers**, not fully delivered public pages.
