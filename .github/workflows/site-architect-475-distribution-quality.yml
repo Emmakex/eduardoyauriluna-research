@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
@@ -44,7 +44,7 @@ jobs:
       - name: Build exact-head WordPress plugin candidate
         shell: bash
         env:
-          SOURCE_COMMIT: \${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
@@ -65,7 +65,7 @@ jobs:
           retention-days: 30
 
   isolated-wordpress:
-    name: Install packaged ZIP on isolated \${{ matrix.profile }} WordPress
+    name: Install packaged ZIP on isolated ${{ matrix.profile }} WordPress
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/download-artifact@v4
         with:
           name: site-architect-0.11.1-research-candidate
@@ -108,7 +108,7 @@ jobs:
       - name: Install pristine WordPress and exact candidate ZIP
         shell: bash
         env:
-          PROFILE: \${{ matrix.profile }}
+          PROFILE: ${{ matrix.profile }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/site-architect-candidate-wp
@@ -130,7 +130,7 @@ jobs:
       - name: Check full runtime Profile and fail-closed Blueprint authority
         shell: bash
         env:
-          PROFILE: \${{ matrix.profile }}
+          PROFILE: ${{ matrix.profile }}
         run: |
           set -euo pipefail
           cd /tmp/site-architect-candidate-wp
