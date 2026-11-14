@@ -54,6 +54,48 @@ for tool in research_status research_versions research_capabilities site_pages_l
   fi
 done
 
+# Additional exact #475.26 read-only governance verification of the live
+# Theme contract: 12 allowed Page keys x 2 languages, then six safe surfaces.
+# Do not extract or print post bodies, raw slots, authors, tokens or URLs.
+sa47526_read() {
+  local tool="$1" args="$2" filename="$3"
+  case "$tool" in
+    site_page_inspect|site_design_inspect|site_design_variants|site_design_readiness|site_seo_geo_site|site_seo_geo_indexability|site_media_diagnostics) ;;
+    *) echo 'Refusing MCP tool outside read-only governance allowlist' >&2; exit 2 ;;
+  esac
+  if timeout 45s npx --yes "@modelcontextprotocol/inspector@$INSPECTOR_VERSION" \
+    --cli --config "$CONFIG" --server eduardo \
+    --stored-auth-only --format json \
+    --method tools/call --tool-name "$tool" --tool-args-json "$args" \
+    > "$WORK_DIR/$filename.json" 2> "$WORK_DIR/$filename-stderr.txt"; then
+    printf '%s\tok\n' "$filename" >> "$WORK_DIR/call-status.tsv"
+  else
+    printf '%s\tfailed\n' "$filename" >> "$WORK_DIR/call-status.tsv"
+    printf '{"result":{"isError":true,"content":[]}}\n' > "$WORK_DIR/$filename.json"
+  fi
+}
+for key in home about research publications projects software datasets cv insights contact privacy-policy legal-notice; do
+  for lang in en es; do
+    case "$key" in
+      home|about|research|publications|projects|software|datasets|cv|insights|contact|privacy-policy|legal-notice) ;;
+      *) exit 2 ;;
+    esac
+    # Keys and languages are constant Theme-owned public identifiers only.
+    args="$(printf '{\"key\":\"%s\",\"language\":\"%s\"}' "$key" "$lang")"
+    sa47526_read site_page_inspect "$args" "site_page_inspect-$key-$lang"
+  done
+done
+for tool in site_design_inspect site_design_variants site_design_readiness site_seo_geo_site site_seo_geo_indexability site_media_diagnostics; do
+  args='{}'
+  if [ "$tool" = site_design_readiness ]; then args='{"rendered":true}'; fi
+  sa47526_read "$tool" "$args" "$tool"
+done
+node "$GITHUB_WORKSPACE/scripts/site-architect-47526-sanitize-governance.mjs" \
+  --input "$WORK_DIR" \
+  --output "$SA47523_EVIDENCE_DIR/live-governance-readback.json" \
+  --source-sha "$SA47523_SOURCE_SHA"
+node "$GITHUB_WORKSPACE/scripts/site-architect-47526-validate-governance.mjs" \
+  "$SA47523_EVIDENCE_DIR/live-governance-readback.json"
 node "$GITHUB_WORKSPACE/scripts/site-architect-47523-sanitize-mcp.mjs" \
   --input "$WORK_DIR" \
   --output "$SA47523_EVIDENCE_DIR/live-mcp-readback.json" \
@@ -64,9 +106,9 @@ node "$GITHUB_WORKSPACE/scripts/site-architect-47523-sanitize-mcp.mjs" \
 node "$GITHUB_WORKSPACE/scripts/site-architect-47523-validate-mcp.mjs" \
   "$SA47523_EVIDENCE_DIR/live-mcp-readback.json"
 
-if grep -F -- "$SA47523_MCP_TOKEN" "$SA47523_EVIDENCE_DIR/live-mcp-readback.json" >/dev/null 2>&1; then
+if grep -R -F -- "$SA47523_MCP_TOKEN" "$SA47523_EVIDENCE_DIR" >/dev/null 2>&1; then
   echo 'Credential leaked into sanitized evidence; aborting upload' >&2
-  rm -f "$SA47523_EVIDENCE_DIR/live-mcp-readback.json"
+  rm -f "$SA47523_EVIDENCE_DIR/live-mcp-readback.json" "$SA47523_EVIDENCE_DIR/live-governance-readback.json"
   exit 1
 fi
 echo 'PASS: production MCP READ operations attempted; inspect sanitized report status.'
