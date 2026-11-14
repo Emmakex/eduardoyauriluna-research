@@ -8,7 +8,7 @@
 .research-language-switcher a[aria-current="true"]{background:var(--research-ink);color:var(--research-surface)}
 .research-language-switcher a:hover{background:var(--research-soft);color:var(--research-ink)}
 .research-language-switcher a[aria-current="true"]:hover{background:var(--research-petrol);color:var(--research-surface)}
-.research-section-number{color:#6F7F7C;font-size:.78rem}
+.research-section-number{color:#536763;font-size:.78rem}
 .research-section-heading{margin-bottom:2.35rem}
 .research-section-heading>p,.research-card p,.research-lead{line-height:1.72}
 .research-card p{font-size:.96rem}
