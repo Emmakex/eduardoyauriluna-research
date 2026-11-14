@@ -39,3 +39,22 @@ No se ha certificado todo el contenido/renders de producción ni el cutover
 reversible, ni la escritura de un segundo Theme arbitrario. La web de Eduardo
 conserva Site Architect 0.11.1 intacto. El SOURCE_COMMIT es la revisión de
 origen, no un supuesto commit del futuro repositorio de producto.
+
+
+## #475.18 — Bounded governance clone acceptance
+
+The standalone product's actual ZIP is installed in fresh isolated WordPress
+with Research Theme. The next CI gate verifies all 12 Theme-owned Pages across
+EN/ES (24 inspect states, Theme roles, slots, routes and storage), SEO/GEO's
+structural verification policy and reversible **Design** and **Navigation**
+operations through their real Preview, explicit confirmation, Apply, Verify
+and Rollback services. Negative tests reject arbitrary CSS and unregistered
+navigation targets; a generic WordPress profile rejects Research Design and
+Navigation inspection without changing state. The isolated CI test is explicitly
+blocked outside disposable WP-CLI. Test:
+`scripts/site-architect-475-clone-governance.php`.
+
+This extends clone **functional** confidence only. It does not prove actual
+HTTP-rendered SEO/GEO, Media ingest/assignment, all REST credentials, or
+complete production-versus-clone state/render parity. Reusing this evidence
+must not be described as permission for production cutover.
