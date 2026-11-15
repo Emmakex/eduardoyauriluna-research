@@ -6,6 +6,8 @@ on:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
       - 'scripts/verify-site-architect-provenance.py'
+      - 'scripts/bootstrap-site-architect-private-repo.py'
+      - 'scripts/test-site-architect-private-bootstrap.py'
       - 'scripts/site-architect-475-clone-governance.php'
       - 'scripts/site-architect-475-http-router.php'
       - 'scripts/site-architect-475-http-verify.php'
@@ -52,6 +54,8 @@ on:
       - 'scripts/export-site-architect-product.py'
       - 'scripts/test-site-architect-product-export.py'
       - 'scripts/verify-site-architect-provenance.py'
+      - 'scripts/bootstrap-site-architect-private-repo.py'
+      - 'scripts/test-site-architect-private-bootstrap.py'
       - 'scripts/site-architect-475-clone-governance.php'
       - 'scripts/site-architect-475-http-router.php'
       - 'scripts/site-architect-475-http-verify.php'
@@ -134,6 +138,13 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          python3 -m py_compile scripts/bootstrap-site-architect-private-repo.py scripts/test-site-architect-private-bootstrap.py
+          python3 scripts/test-site-architect-private-bootstrap.py
+          python3 scripts/bootstrap-site-architect-private-repo.py --prepare-only \
+            --source-commit "$SOURCE_COMMIT" --output "$RUNNER_TEMP/sa47534-independent-import"
+          (cd "$RUNNER_TEMP/sa47534-independent-import" && python3 scripts/verify-site-architect-provenance.py)
+          test ! -e "$RUNNER_TEMP/sa47534-independent-import/wordpress/themes"
+          test ! -e "$RUNNER_TEMP/sa47534-independent-import/config"
           python3 scripts/export-site-architect-product.py --source-commit "$SOURCE_COMMIT"
           (cd dist/site-architect-standalone && sha256sum -c site-architect-0.11.1-standalone-source-candidate.zip.sha256)
           python3 - <<'PY'
