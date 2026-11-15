@@ -19,7 +19,7 @@ may be described as supported before Eduardo meets the release gates.
 | Least privilege REST | Actual WordPress REST permissions tested for absent bearer, read-only write denial, nonce replay and credential revocation (#475.20) | **PASS: isolated** |
 | Production public HTTP and SEO | #475.21 fetches only 24 Theme-owned public URLs; evaluates real HTTP, canonical, alternate language, OG and JSON-LD; compares anonymous surface to clone manifest | **OBSERVATIONAL, not production ownership proof** |
 | Production content/legal completeness | Review currently public content, ten clone-not-public surfaces, public legal pages, real CV and verifiable academic claims | **OPEN** |
-| Production private plugin/DB/media inventory | Read-only authenticated readback of installed Site Architect version, active Theme, WordPress pages/posts/media, role ownership, tokens/scopes and authored evidence | **OPEN — no private read access** |
+| Production private plugin/DB/media inventory | Protected authenticated Eduardo MCP readback: plugin/Theme versions, 12 Theme Pages × EN/ES, bounded Media and 27 scope summary confirmed (#475.25–28); native WordPress WP-CLI full database/media/roles inventory and plugin entrypoint checksum still missing | **PARTIAL — MCP confirmed; native DB/Media OPEN** |
 | Screenshot/accessibility/mobile/desktop parity | Real browser desktop/mobile render on both languages, visual layout and interaction evidence from production + candidate | **OPEN** |
 | External product source repository | Private `Emmakex/site-architect`; 146/146 source-export Git blob hashes identical; own CI 2/2 jobs successful on `9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14` | **PASS — independent CI #43697784377** |
 | Cutover rehearsal and rollback | Isolated copy of real production backup, immutable before-state, reversible Apply/Verify, test rollback to byte/state baseline; scheduled live window after approval | **OPEN** |
@@ -37,6 +37,45 @@ may be described as supported before Eduardo meets the release gates.
 This does not certify generic Theme write authority, production private
 WordPress data/media ownership, editorial/legal readiness, visual review, or
 production cutover and rollback. Original installed Site Architect stays 0.11.1.
+
+## #475.36 — Recovered ACTUAL protected MCP evidence (2026-11-15)
+
+The #475.25–28 observations already **proved** authenticated, bounded private
+production read access on 2026-11-14; the previous matrix wording
+"no private read access" was stale. The source release gate was corrected
+after retrieving the original **sanitized** protected GitHub Actions artifacts,
+rather than assuming the existence of unverified admin/SSH/DB credentials.
+
+| Evidence | Real production observation | Scope limit |
+|---|---|---|
+| [run #43634273968](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43634273968), artifact #14129556031 | Site Architect 0.11.1, Theme 1.1.3, `research` contract v6 compatible; 6/6 core MCP read tools, **24/24** EN/ES Page inspections aligned and published; navigation **5 primary + 2 footer**; design/SEO/Media diagnostic reads 6/6 | 12 Theme-owned Pages, not a complete WordPress `wp_posts` census |
+| Same protected artifact | **1 managed Media resource**, 27 granted permission scopes, 16 write/mutable classified, writes enabled | Managed Media != all WP attachment binaries; unknown exact high-impact privilege distribution until targeted read-only check |
+| [run #43636519572](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43636519572), artifact #14130188988 | 12/12 scoped Research collection queries: **0 output, 0 project, 0 software, 0 dataset** across all/en/es | Excludes trash; bounded listing != full SQL audit |
+| Same research run | One intermittent Page inspection was unverified (**23/24**, privacy-policy/en) | Not evidence of permanent drift |
+| [run #43637411910](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43637411910), artifact #14129709441 | Independent targeted privacy-policy/en read **CONFIRMED**, published and contract aligned | Does not replace legal editorial approval |
+
+Verified downloaded artifact ZIP SHA-256 fingerprints, respectively:
+`5033c5ebb3b4ee4f1d4b4d918d4a7c992d374b9b7214a849be9d4e3cf3e0bf7d`,
+`e5db8d833229f68daf497cffac3a3557f1f4545a3b0073f8b7a64b5ebbf7495c`,
+`0226a9500320a2ca0cb2b16dc34ade889cc1b8dc9aecd84c9d1f59bf4de72ee2`.
+
+**Scope and authorization safety:** 27 granted scopes were observed, of
+which 16 classified as mutable. These numbers must not be called
+least-privilege-certified. The targeted protected read-only capabilities
+sanitizer now emits **presence booleans only** for six sensitive operation
+classes (credential management, external publishing, software update,
+destructive delete, Apply, Rollback), never names from the remote response,
+connection identities, bearer headers, user IDs or WP content. Even a green
+report is **not authorization** to exercise those operations. Scopes are not
+changed, added or revoked by this audit.
+
+**Still open:** authenticated *native* production WordPress WP-CLI on the
+actual site, with read-only DB transaction and attachment/post census
+using `scripts/site-architect-475-private-readonly-inventory.php`;
+full plugin file checksum, role ownership, reviewed doctoral CV/legal text,
+human visual sign-off and rehearsal against a real restored backup.
+No presumed WP-CLI or site SSH credentials have been invented. No
+production source, plugin, Theme or content mutation occurs.
 
 ## Read-only production survey
 

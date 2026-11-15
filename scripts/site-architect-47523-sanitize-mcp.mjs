@@ -82,6 +82,16 @@ function extractCapabilities(value) {
     write_scope_count: scopes ? firstInt(write) : null,
     writes_enabled: boolOrNull(value?.writes_enabled),
     mutation_endpoint_declared: boolOrNull(value?.mutation_transport?.available),
+    // Presence-only flags: never export bearer, connection IDs, granted scope names,
+    // user identity or WordPress content into the protected Actions artifact.
+    sensitive_authority: {
+      credential_admin: scopes ? scopes.includes('credentials.manage') : null,
+      external_publish: scopes ? scopes.includes('external_publish.execute') : null,
+      software_update: scopes ? scopes.includes('software_update.execute') : null,
+      destructive_delete: scopes ? scopes.includes('destructive_delete.execute') : null,
+      operation_apply: scopes ? scopes.includes('operations.apply') : null,
+      operation_rollback: scopes ? scopes.includes('operations.rollback') : null,
+    },
   };
 }
 
@@ -168,7 +178,7 @@ export function sanitizeObserved(rawByTool, sourceSha, observedAt = new Date().t
       'authenticated_native_wordpress_aggregate_inventory',
       'production_visual_mobile_desktop_acceptance',
       'cv_and_legal_editorial_approval',
-      'independent_private_repository_ci',
+      'least_privilege_authority_review',
       'reversible_cutover_rehearsal',
     ],
   };

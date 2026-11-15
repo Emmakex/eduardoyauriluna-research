@@ -44,6 +44,10 @@ test('complete good data is redacted and never certified for cutover', () => {
   }
   assert.equal(report.pages_summary.total,24);
   assert.equal(report.media_summary.total,9);
+  assert.deepEqual(report.granted_capability_summary.sensitive_authority, {
+    credential_admin:false, external_publish:false, software_update:false,
+    destructive_delete:false, operation_apply:true, operation_rollback:false,
+  });
 });
 
 test('unreadable and failed live calls cannot be described as verified', () => {
@@ -86,4 +90,36 @@ test('tool error wrapper never counts as successful read', () => {
   assert.equal(report.tool_call_states.site_pages_list,'unverified');
   assert.equal(report.outcome,'MCP_VERSION_CAPABILITIES_ONLY');
   validate(report);
+});
+
+test('six high-impact scope grants are observed as safe booleans, never raw scope names', () => {
+  const raw=full();
+  const granted=['credentials.manage','external_publish.execute',
+    'software_update.execute','destructive_delete.execute',
+    'operations.apply','operations.rollback'];
+  raw.research_capabilities=wrap({granted_scopes:granted,
+    writes_enabled:true,mutation_transport:{available:true},
+    connection_id:'DO_NOT_EXPORT'});
+  const report=sanitizeObserved(raw,sha);
+  assert.equal(validate(report).total_tools_read,6);
+  assert.equal(report.granted_capability_summary.write_scope_count,6);
+  assert.ok(Object.values(report.granted_capability_summary.sensitive_authority)
+    .every(v => v === true));
+  const encoded=JSON.stringify(report);
+  for (const sensitive of [...granted,'DO_NOT_EXPORT','connection_id']) {
+    assert.ok(!encoded.includes(sensitive), 'Raw sensitive field leaked: ' + sensitive);
+  }
+});
+
+test('sensitive flags are fail-closed on injected names, values, and false totals', () => {
+  const report=sanitizeObserved(full(),sha);
+  const flags=report.granted_capability_summary.sensitive_authority;
+  flags.operation_apply='operations.apply';
+  assert.throws(() => validate(report));
+  flags.operation_apply=true;
+  flags.another_permission=true;
+  assert.throws(() => validate(report));
+  delete flags.another_permission;
+  report.granted_capability_summary.write_scope_count=0;
+  assert.throws(() => validate(report));
 });
