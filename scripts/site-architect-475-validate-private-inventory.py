@@ -7,6 +7,7 @@ Production snapshots remain separately unverified until explicitly obtained.
 """
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -42,7 +43,8 @@ def reject_sensitive(node: object, location: str = "root") -> None:
         for index, item in enumerate(node):
             reject_sensitive(item, location + "[" + str(index) + "]")
 
-def validate(report: dict, *, expected_origin: str, clone_http: dict | None = None) -> dict:
+def validate(report: dict, *, expected_origin: str, clone_http: dict | None = None,
+             source_entrypoint: Path | None = None) -> dict:
     if not isinstance(report, dict) or set(report) != REQUIRED_TOP_LEVEL:
         raise ValueError("Unexpected or incomplete private inventory envelope")
     reject_sensitive(report)
@@ -105,7 +107,25 @@ def validate(report: dict, *, expected_origin: str, clone_http: dict | None = No
     if any(not isinstance(x, int) or x < 0 for x in report["media_type_counts"].values()):
         raise ValueError("Media count invalid")
 
-    result = {"origin":expected_origin,"record_count":len(pages),"public_http_consistency":None}
+    result = {
+        "origin": expected_origin,
+        "record_count": len(pages),
+        "public_http_consistency": None,
+        "entrypoint_integrity": "NOT_CHECKED",
+    }
+    if expected_origin == "production":
+        # Validate the *source* entrypoint independently from the live WP file.
+        # An otherwise valid read-only report does not certify product source parity.
+        if source_entrypoint is None:
+            result["entrypoint_integrity"] = "UNVERIFIED"
+        else:
+            if not source_entrypoint.is_file():
+                raise ValueError("Canonical Site Architect source entrypoint unavailable")
+            source_sha256 = hashlib.sha256(source_entrypoint.read_bytes()).hexdigest()
+            observed_sha256 = plugin["entrypoint_sha256"]
+            result["entrypoint_integrity"] = (
+                "MATCH" if observed_sha256 == source_sha256 else "DRIFT_REVIEW"
+            )
     if expected_origin == "clone":
         if not (plugin["active"] and plugin["product"] == "Site Architect"
                 and plugin["version"] == "0.11.1" and theme["stylesheet"] == "eduardo-research"
@@ -138,10 +158,23 @@ def main() -> None:
     parser.add_argument("--report", required=True, type=Path)
     parser.add_argument("--origin", required=True, choices=["clone","production"])
     parser.add_argument("--clone-http", type=Path)
+    parser.add_argument("--source-entrypoint", type=Path)
     args = parser.parse_args()
     report = json.loads(args.report.read_text(encoding="utf-8"))
     clone = json.loads(args.clone_http.read_text(encoding="utf-8")) if args.clone_http else None
-    result = validate(report, expected_origin=args.origin, clone_http=clone)
+    result = validate(
+        report, expected_origin=args.origin, clone_http=clone,
+        source_entrypoint=args.source_entrypoint,
+    )
+    if args.origin == "production" and result["entrypoint_integrity"] != "MATCH":
+        print(
+            "DRIFT_REVIEW: native readback schema is valid, but canonical "
+            "Site Architect source integrity is not verified. "
+            "No plugin replacement or production cutover authorized. "
+            + json.dumps(result, sort_keys=True),
+            file=sys.stderr,
+        )
+        sys.exit(2)
     print("PASS: #475.22 redact-only private inventory validation: "
           + json.dumps(result, sort_keys=True))
     if args.origin == "production":
