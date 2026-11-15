@@ -36,7 +36,7 @@ export function validate(report) {
        'contract_compatible','readiness','runtime_host_is_eduardo'],
     runtime_versions: ['manager','theme','wordpress','php','preset_compatible'],
     granted_capability_summary: ['granted_scope_count','write_scope_count',
-       'writes_enabled','mutation_endpoint_declared'],
+       'writes_enabled','mutation_endpoint_declared','sensitive_authority'],
     pages_summary: ['visible_item_count','total','reported_page','pagination_total_pages','visible_status_counts'],
     media_summary: ['visible_item_count','total','reported_page','pagination_total_pages','visible_status_counts'],
     navigation_summary: ['primary_count','footer_count'],
@@ -46,6 +46,25 @@ export function validate(report) {
     if (!report[field] || typeof report[field] !== 'object' || Array.isArray(report[field])
         || JSON.stringify(Object.keys(report[field]).sort()) !== JSON.stringify(keys.sort())) {
       fail('unexpected ' + field + ' contents');
+    }
+  }
+  // Fail closed on unexpected authority fields or strings in the redacted file.
+  if (report.granted_capability_summary !== null) {
+    const summary = report.granted_capability_summary;
+    const flags = summary.sensitive_authority;
+    const keys = ['credential_admin','external_publish','software_update',
+      'destructive_delete','operation_apply','operation_rollback'].sort();
+    if (!flags || typeof flags !== 'object' || Array.isArray(flags)
+      || JSON.stringify(Object.keys(flags).sort()) !== JSON.stringify(keys)) {
+      fail('unexpected sensitive authority fields');
+    }
+    const vals = Object.values(flags);
+    if (summary.granted_scope_count === null) {
+      if (vals.some(x => x !== null)) fail('scope evidence with no scope inventory');
+    } else if (vals.some(x => typeof x !== 'boolean')
+      || !Number.isSafeInteger(summary.write_scope_count)
+      || vals.filter(x => x === true).length > summary.write_scope_count) {
+      fail('sensitive authority flags contradict scope counts');
     }
   }
   const serialized = JSON.stringify(report);
