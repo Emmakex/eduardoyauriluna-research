@@ -7,7 +7,7 @@ This file is the single graduation checklist. **Cloned contract acceptance and
 independent source ZIP are not a live product cutover**. No other Theme/client
 may be described as supported before Eduardo meets the release gates.
 
-## Evidence matrix (2026-11-14)
+## Evidence matrix (updated 2026-11-15)
 
 | Gate | Authority and measurable evidence | Status |
 |---|---|---|
@@ -21,8 +21,22 @@ may be described as supported before Eduardo meets the release gates.
 | Production content/legal completeness | Review currently public content, ten clone-not-public surfaces, public legal pages, real CV and verifiable academic claims | **OPEN** |
 | Production private plugin/DB/media inventory | Read-only authenticated readback of installed Site Architect version, active Theme, WordPress pages/posts/media, role ownership, tokens/scopes and authored evidence | **OPEN — no private read access** |
 | Screenshot/accessibility/mobile/desktop parity | Real browser desktop/mobile render on both languages, visual layout and interaction evidence from production + candidate | **OPEN** |
-| External product source repository | Private `Emmakex/site-architect` Git repository, exact exported source imported there with own CI passing | **OPEN — repository not yet accessible** |
+| External product source repository | Private `Emmakex/site-architect`; 146/146 source-export Git blob hashes identical; own CI 2/2 jobs successful on `9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14` | **PASS — independent CI #43697784377** |
 | Cutover rehearsal and rollback | Isolated copy of real production backup, immutable before-state, reversible Apply/Verify, test rollback to byte/state baseline; scheduled live window after approval | **OPEN** |
+
+## #475.35 — Evidence for independent product repository (2026-11-15)
+
+- Private repository: [Emmakex/site-architect](https://github.com/Emmakex/site-architect).
+- Exact Eduardo source SHA: `24ed067d1543833d123ac48e9b05546a11fd5e75` in `SOURCE_COMMIT`.
+- Imported full standalone source: **137 original plugin files + 9 packaging/CI/provenance files = 146/146**, Git blobs identical to the certified source artifact, no Theme/Blueprint or credentials.
+- Independent `main` source import commit: `9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14`.
+- **Separate repository Actions run SUCCESS:** [Site Architect Standalone Product CI #43697784377](https://github.com/Emmakex/site-architect/actions/runs/43697784377): both jobs pass (complete product source/checksum/ZIP and clean WordPress/MySQL install with Research mutations denied under generic profile).
+- Independent WordPress ZIP build artifact: `site-architect-0.11.1-standalone-installable-candidate`, Actions artifact `14154374970`.
+
+**Only the external product-source independence gate changes to PASS.**
+This does not certify generic Theme write authority, production private
+WordPress data/media ownership, editorial/legal readiness, visual review, or
+production cutover and rollback. Original installed Site Architect stays 0.11.1.
 
 ## Read-only production survey
 
