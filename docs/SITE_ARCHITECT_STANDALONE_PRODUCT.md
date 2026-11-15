@@ -259,3 +259,29 @@ After the private repo is actually created, verify the imported tree matches
 the exact SOURCE_COMMIT and run the new repo's own GitHub Actions CI before
 moving any deployment gate to PASS. Eduardo's installed Site Architect 0.11.1
 remains operational and untouched.
+
+## #475.35 — Separate GitHub product source exists and its own CI passes
+
+The prior #475.17–34 statements about `Emmakex/site-architect` being
+unavailable or requiring local CLI import describe **historical** blockers.
+They were resolved on 2026-11-15 through the connected GitHub API.
+
+The actual **PRIVATE** repository
+[Emmakex/site-architect](https://github.com/Emmakex/site-architect)
+now contains the complete real 0.11.1 plugin and its independent source CI.
+All 146 exported files have matching Git blob hashes to the exact upstream
+artifact sourced at `24ed067d1543833d123ac48e9b05546a11fd5e75`.
+Independent product `main` import commit:
+`9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14`.
+
+**Proof in that private repository:** [run #43697784377](https://github.com/Emmakex/site-architect/actions/runs/43697784377),
+2/2 jobs **SUCCESS**. CI verifies the complete standalone source and builds
+an exact ZIP; then installs that ZIP on disposable WordPress + MySQL and
+checks generic read-only fail-closed handling of Research Preview/Apply.
+The real Research Theme acceptance still derives from the original
+upstream isolated clone CI; it has **not** been invented as an additional
+job in the independent repository.
+
+This certifies the **source separation + autonomous CI** gate only.
+Production `eduardoyauriluna.com` is untouched; no plugin or Theme
+upgrade, no broadened write authorization, and no site cutover.
