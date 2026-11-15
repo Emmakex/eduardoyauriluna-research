@@ -178,7 +178,7 @@ export function sanitizeObserved(rawByTool, sourceSha, observedAt = new Date().t
       'authenticated_native_wordpress_aggregate_inventory',
       'production_visual_mobile_desktop_acceptance',
       'cv_and_legal_editorial_approval',
-      'independent_private_repository_ci',
+      'least_privilege_authority_review',
       'reversible_cutover_rehearsal',
     ],
   };
