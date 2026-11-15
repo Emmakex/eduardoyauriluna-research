@@ -220,3 +220,42 @@ the current GitHub connection and is **not** declared created, imported, or
 tested. Production Site Architect 0.11.1, production Theme 1.1.3 and the
 versioned Theme 1.1.4 candidate are untouched. No Theme write permissions
 are added.
+
+
+## #475.34 — One-command PRIVATE repository creation and exact source import
+
+**Blocked external action, not a WordPress update.** Current GitHub connector
+cannot create GitHub repositories; therefore it cannot manufacture a
+\`Emmakex/site-architect\` repository or claim its CI already ran.
+
+To eliminate manual upload and file-by-file import, the Eduardo engineering
+repository includes a reproducible local bootstrap:
+
+    # In a clean local checkout at the current origin/main revision:
+    python3 scripts/bootstrap-site-architect-private-repo.py
+
+Requires authenticated GitHub CLI (\`gh\`), \`git\` with an existing author
+identity and Python 3.9+. It verifies clean origin/main identity, builds the
+source archive from the REAL plugin, checks SHA-256 archive/manifest/per-file
+identity, forbids accidental Theme/Blueprint/instance files and verifies
+UPSTREAM_PROVENANCE.json. **Only after these checks** it creates
+\`Emmakex/site-architect\` as a PRIVATE repository, commits the standalone
+source tree and pushes to its main. It rejects an existing destination repo
+instead of overwriting it. No WordPress site, production credentials, plugin
+installation or Theme is touched.
+
+An offline CI path needs no GitHub authentication or repo creation:
+
+    python3 scripts/bootstrap-site-architect-private-repo.py \
+      --prepare-only --source-commit "$(git rev-parse HEAD)" \
+      --output /tmp/site-architect-import-candidate
+
+It is tested alongside adversarial archive and manifest cases. This proves
+that the import process will produce the expected complete independent source
+tree; it **does not** prove the external GitHub repo exists, external CI
+passes, legal contents are ready or production cutover is safe.
+
+After the private repo is actually created, verify the imported tree matches
+the exact SOURCE_COMMIT and run the new repo's own GitHub Actions CI before
+moving any deployment gate to PASS. Eduardo's installed Site Architect 0.11.1
+remains operational and untouched.
