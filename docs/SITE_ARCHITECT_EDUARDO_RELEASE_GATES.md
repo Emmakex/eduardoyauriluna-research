@@ -20,6 +20,7 @@ may be described as supported before Eduardo meets the release gates.
 | Production public HTTP and SEO | #475.21 fetches only 24 Theme-owned public URLs; evaluates real HTTP, canonical, alternate language, OG and JSON-LD; compares anonymous surface to clone manifest | **OBSERVATIONAL, not production ownership proof** |
 | Production content/legal completeness | Review currently public content, ten clone-not-public surfaces, public legal pages, real CV and verifiable academic claims | **OPEN** |
 | Production private plugin/DB/media inventory | Protected authenticated Eduardo MCP readback: plugin/Theme versions, 12 Theme Pages × EN/ES, bounded Media and 27 scope summary confirmed (#475.25–28); native WordPress WP-CLI full database/media/roles inventory and plugin entrypoint checksum still missing | **PARTIAL — MCP confirmed; native DB/Media OPEN** |
+| Sensitive mutable authority / least privilege | Actual protected production report confirms all six high-impact authority grants including credentials, external publishing, software update, destructive delete, Apply and Rollback; no proof of bypass nor use | **OPEN — privilege review and authorized scope narrowing plan** |
 | Screenshot/accessibility/mobile/desktop parity | Real browser desktop/mobile render on both languages, visual layout and interaction evidence from production + candidate | **OPEN** |
 | External product source repository | Private `Emmakex/site-architect`; 146/146 source-export Git blob hashes identical; own CI 2/2 jobs successful on `9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14` | **PASS — independent CI #43697784377** |
 | Cutover rehearsal and rollback | Isolated copy of real production backup, immutable before-state, reversible Apply/Verify, test rollback to byte/state baseline; scheduled live window after approval | **OPEN** |
@@ -49,7 +50,7 @@ rather than assuming the existence of unverified admin/SSH/DB credentials.
 | Evidence | Real production observation | Scope limit |
 |---|---|---|
 | [run #43634273968](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43634273968), artifact #14129556031 | Site Architect 0.11.1, Theme 1.1.3, `research` contract v6 compatible; 6/6 core MCP read tools, **24/24** EN/ES Page inspections aligned and published; navigation **5 primary + 2 footer**; design/SEO/Media diagnostic reads 6/6 | 12 Theme-owned Pages, not a complete WordPress `wp_posts` census |
-| Same protected artifact | **1 managed Media resource**, 27 granted permission scopes, 16 write/mutable classified, writes enabled | Managed Media != all WP attachment binaries; unknown exact high-impact privilege distribution until targeted read-only check |
+| Same protected artifact | **1 managed Media resource**, 27 granted permission scopes, 16 write/mutable classified, writes enabled | Managed Media != all WP attachment binaries; high-risk flags explicitly confirmed 2026-11-15 (#475.37) |
 | [run #43636519572](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43636519572), artifact #14130188988 | 12/12 scoped Research collection queries: **0 output, 0 project, 0 software, 0 dataset** across all/en/es | Excludes trash; bounded listing != full SQL audit |
 | Same research run | One intermittent Page inspection was unverified (**23/24**, privacy-policy/en) | Not evidence of permanent drift |
 | [run #43637411910](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43637411910), artifact #14129709441 | Independent targeted privacy-policy/en read **CONFIRMED**, published and contract aligned | Does not replace legal editorial approval |
@@ -76,6 +77,48 @@ full plugin file checksum, role ownership, reviewed doctoral CV/legal text,
 human visual sign-off and rehearsal against a real restored backup.
 No presumed WP-CLI or site SSH credentials have been invented. No
 production source, plugin, Theme or content mutation occurs.
+
+## #475.37 — Verified six sensitive authority grants (2026-11-15)
+
+Protected **real** Eduardo MCP run
+[43700489721](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43700489721)
+is **SUCCESS 3/3** after the source-only redacted capability patch #475.36.
+The `site-architect-47523-live-mcp-redacted` artifact
+[#14155724810](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43700489721/artifacts/14155724810)
+was downloaded and parsed. Archive SHA-256:
+`14a7dc795d7d8b98620bd15932c4aedf8dfda1f63c5bd33ce01997e682da26ca`.
+Observed at `2026-11-15T09:45:14.016Z`.
+
+All six **permission-presence** flags in the authenticated capability response
+were `true`: `credential_admin`, `external_publish`, `software_update`,
+`destructive_delete`, `operation_apply` and `operation_rollback`.
+The source exposes these as **redacted booleans**, never raw remote scope
+strings, credentials, identities, URLs, post bodies or media paths.
+The live connection remains at **27 grants, 16 mutable by classification**
+and `writes_enabled=true`. A grant's presence **does not establish** that a
+particular endpoint exists, a write can bypass Preview/confirmation/contract
+guards, or that any write was exercised. None were executed.
+
+The same run reconfirmed actual Eduardo Theme Research:
+`MCP_PRIVATE_READBACK_OBSERVED`, core reads **6/6**,
+`MCP_GOVERNANCE_COVERAGE_OBSERVED` **24/24** language Views aligned,
+primary nav **5**, footer **2**;
+`BOUNDED_RESEARCH_INVENTORY_OBSERVED` **12/12** queries,
+four Research collection types remain empty; one **managed Media** item,
+not full WordPress attachment census.
+Sanitizer explicitly reported `production_mutations_performed=false`,
+`raw_mcp_payloads_exported=false` and
+`native_db_full_census=false`. The independent WordPress/Theme clone
+postmerge workflow [43700489689](https://github.com/Emmakex/eduardoyauriluna-research/actions/runs/43700489689)
+also passed **3/3** jobs.
+
+**Release blocker:** review and narrow the production principal's scope
+according to approved user tasks and least privilege, ensuring an explicit
+owner-authorized rollback path. Do **not** revoke/rotate/write credentials or
+permission settings automatically, since the existing live Site Architect
+connection is in use. The native database WP-CLI inventory and production
+backup rehearsal remain separate NO-GO checks. Neither Site Architect
+0.11.1 nor Theme 1.1.3 is deployed or changed by these read-only results.
 
 ## Read-only production survey
 
