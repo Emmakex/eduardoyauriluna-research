@@ -19,7 +19,7 @@ may be described as supported before Eduardo meets the release gates.
 | Least privilege REST | Actual WordPress REST permissions tested for absent bearer, read-only write denial, nonce replay and credential revocation (#475.20) | **PASS: isolated** |
 | Production public HTTP and SEO | #475.21 fetches only 24 Theme-owned public URLs; evaluates real HTTP, canonical, alternate language, OG and JSON-LD; compares anonymous surface to clone manifest | **OBSERVATIONAL, not production ownership proof** |
 | Production content/legal completeness | Review currently public content, ten clone-not-public surfaces, public legal pages, real CV and verifiable academic claims | **OPEN** |
-| Production private plugin/DB/media inventory | Protected authenticated Eduardo MCP readback: plugin/Theme versions, 12 Theme Pages × EN/ES, bounded Media and 27 scope summary confirmed (#475.25–28); native WordPress WP-CLI full database/media/roles inventory and plugin entrypoint checksum still missing | **PARTIAL — MCP confirmed; native DB/Media OPEN** |
+| Production private plugin/DB/media inventory | Authenticated MCP + real Hostinger WP-CLI read-only transaction (#475.38): Site Architect 0.11.1, Theme 1.1.3, 24/24 EN/ES contract views aligned; bounded WP post/media census and connection counts; installed plugin SHA-256 differs from certified source, native role ownership and complete binary Media verification not evidenced | **PARTIAL — native census observed; source drift/roles OPEN** |
 | Sensitive mutable authority / least privilege | Actual protected production report confirms all six high-impact authority grants including credentials, external publishing, software update, destructive delete, Apply and Rollback; no proof of bypass nor use | **OPEN — privilege review and authorized scope narrowing plan** |
 | Screenshot/accessibility/mobile/desktop parity | Real browser desktop/mobile render on both languages, visual layout and interaction evidence from production + candidate | **OPEN** |
 | External product source repository | Private `Emmakex/site-architect`; 146/146 source-export Git blob hashes identical; own CI 2/2 jobs successful on `9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14` | **PASS — independent CI #43697784377** |
@@ -119,6 +119,77 @@ permission settings automatically, since the existing live Site Architect
 connection is in use. The native database WP-CLI inventory and production
 backup rehearsal remain separate NO-GO checks. Neither Site Architect
 0.11.1 nor Theme 1.1.3 is deployed or changed by these read-only results.
+
+## #475.38 — Native Hostinger WP-CLI production inventory (2026-11-15)
+
+**Real operator-supplied WP-CLI output, not a disposable clone or an MCP
+simulation.** Site `eduardoyauriluna.com` on its confirmed Hostinger
+WordPress installation, observed UTC `2026-11-15T12:12:43+00:00`.
+The read-only inventory script at GitHub commit
+`0bb5cee6e6c3ce6b887c3684259d9db3652747fe`,
+`scripts/site-architect-475-private-readonly-inventory.php`,
+completed with explicit `origin=production`,
+`read_only_transaction=true`, `site_host_verified=true`
+and `certification=PRIVATE_READBACK_ONLY_NOT_CUTOVER`.
+WP-CLI required PHP **8.5.12**; the SSH default PHP **7.4.33**
+was incompatible with the installed plugin's PHP 8.1+ source syntax.
+Neither production PHP settings nor WordPress source were changed.
+
+| Native readback field | Observed |
+|---|---|
+| Active plugin | `Site Architect` **0.11.1**, active |
+| Active Theme Contract | `eduardo-research` **1.1.3**, preset `research` v6, compatible, languages EN/ES |
+| Theme Pages | **12** WP Page posts published; **24/24** Theme Page-language inspections exist, published and contract-aligned |
+| Theme Home slots | EN **11/14** stored; ES **11/14** stored, remaining slots may resolve defaults (not automatically missing content) |
+| Standard WP Posts | **2 publish**, **1 auto-draft** |
+| Research lines | **8 publish** |
+| Attachment rows | **1 image** attachment with status `inherit`, **0 application/other** in the inventoried WP post types |
+| Navigation | **5 primary** items, **2 footer** |
+| Authenticated remote connection | primary configured/enabled, credential present (no token exposed); **27 total granted scopes**, **16 classified mutable**, **1 active temporary connection** |
+
+These counts reconcile the earlier live MCP evidence. **A Site Architect
+managed-media listing is not necessarily the complete WordPress Media
+library**, but the native `wp_posts` attachment census currently also
+returned one image. The inventory queries the standard post types and
+Site Architect Resource Registry types; it does not assert a census of
+arbitrary third-party custom tables or uploads existing outside the
+database. No raw posts, URLs, titles, authors, user IDs, file paths or
+credential material were exported.
+
+### Integrity gate — source mismatch, no automatic overwrite
+
+The installed WordPress plugin entrypoint was hashed **on Hostinger**:
+
+- Production PHP file SHA-256:
+  `d3465fe6bc81e0ed88822d47ffcce4cee4298dbc94263230335817c6755ea643`
+- Certified canonical entrypoint SHA-256 from GitHub
+  `wordpress/plugins/eduardo-research-manager/eduardo-research-manager.php`
+  (identical Git blob `513c608f27eff7ee98d2defcd97409ccd117f401`
+  in both Eduardo main and standalone product main):
+  `cc39419deb31f0fb0d581822ca5c8fe79cc1704bb7debfb563bd5ea84abd943f`
+
+**SHA-256 DOES NOT MATCH**; simple CRLF/newline/BOM conversions of the
+canonical source also do not match. This identifies **unexplained
+entrypoint drift**, not confirmed malicious modification or a broken
+running site. Version strings and 24/24 contract alignment alone cannot
+establish source-byte parity. Do not replace the installed plugin or
+change any live feature until a bounded read-only source diff establishes
+the cause and a reversible upgrade plan is approved.
+
+The validator
+`scripts/site-architect-475-validate-private-inventory.py` now accepts
+a canonical `--source-entrypoint` reference for production validation,
+returns `DRIFT_REVIEW` when the reported source hash differs, and
+**does not produce a production PASS without an exact source comparison**.
+The broader cutover release remains NO-GO even when the file eventually
+matches.
+
+**Still open:** explain installed file drift (read-only comparison),
+review temporary and high-risk permission grants before limiting access,
+verify actual role-to-resource ownership, inspect uploaded binaries and
+native backup/restore readiness; editorial CV/legal and human rendered
+accessibility acceptance. Do not rotate credentials or modify WordPress
+on the basis of this inventory.
 
 ## Read-only production survey
 

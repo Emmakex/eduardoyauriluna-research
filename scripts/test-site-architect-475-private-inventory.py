@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Offline negative validation cases for #475.22 private aggregate inventory."""
 import copy
+import hashlib
 import importlib.util
 import pathlib
 import sys
+import tempfile
 import unittest
 
 p = pathlib.Path(__file__).resolve().parent / "site-architect-475-validate-private-inventory.py"
@@ -58,6 +60,45 @@ class ReadOnlyInventoryTest(unittest.TestCase):
     def test_refuse_unsafe_report_origin(self):
         with self.assertRaises(ValueError):
             audit.validate(sample(), expected_origin="production")
+
+    def test_production_integrity_requires_comparison_against_source(self):
+        report = sample()
+        report["origin"] = "production"
+        self.assertEqual(
+            audit.validate(report, expected_origin="production")["entrypoint_integrity"],
+            "UNVERIFIED",
+        )
+        with tempfile.TemporaryDirectory() as dirname:
+            canonical = pathlib.Path(dirname) / "canonical-plugin.php"
+            canonical.write_bytes(b"<?php // certified product entrypoint\\n")
+            report["plugin"]["entrypoint_sha256"] = hashlib.sha256(
+                canonical.read_bytes()
+            ).hexdigest()
+            aligned = audit.validate(
+                report, expected_origin="production", source_entrypoint=canonical
+            )
+            self.assertEqual(aligned["entrypoint_integrity"], "MATCH")
+            self.assertEqual(report["certification"], "PRIVATE_READBACK_ONLY_NOT_CUTOVER")
+            report["plugin"]["entrypoint_sha256"] = "d" * 64
+            mismatch = audit.validate(
+                report, expected_origin="production", source_entrypoint=canonical
+            )
+            self.assertEqual(mismatch["entrypoint_integrity"], "DRIFT_REVIEW")
+            report["plugin"]["entrypoint_sha256"] = None
+            missing = audit.validate(
+                report, expected_origin="production", source_entrypoint=canonical
+            )
+            self.assertEqual(missing["entrypoint_integrity"], "DRIFT_REVIEW")
+
+    def test_production_refuses_missing_reference_entrypoint(self):
+        report = sample()
+        report["origin"] = "production"
+        with tempfile.TemporaryDirectory() as dirname:
+            with self.assertRaises(ValueError):
+                audit.validate(
+                    report, expected_origin="production",
+                    source_entrypoint=pathlib.Path(dirname) / "missing.php",
+                )
 
     def test_refuse_draft_shown_http_200(self):
         bad = sample()
