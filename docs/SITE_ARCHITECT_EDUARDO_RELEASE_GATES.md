@@ -19,7 +19,7 @@ may be described as supported before Eduardo meets the release gates.
 | Least privilege REST | Actual WordPress REST permissions tested for absent bearer, read-only write denial, nonce replay and credential revocation (#475.20) | **PASS: isolated** |
 | Production public HTTP and SEO | #475.21 fetches only 24 Theme-owned public URLs; evaluates real HTTP, canonical, alternate language, OG and JSON-LD; compares anonymous surface to clone manifest | **OBSERVATIONAL, not production ownership proof** |
 | Production content/legal completeness | Review currently public content, ten clone-not-public surfaces, public legal pages, real CV and verifiable academic claims | **OPEN** |
-| Production private plugin/DB/media inventory | Authenticated MCP + real Hostinger WP-CLI read-only transaction (#475.38): Site Architect 0.11.1, Theme 1.1.3, 24/24 EN/ES contract views aligned; bounded WP post/media census and connection counts; installed plugin SHA-256 differs from certified source, native role ownership and complete binary Media verification not evidenced | **PARTIAL — native census observed; source drift/roles OPEN** |
+| Production private plugin/DB/media inventory | Hostinger WP-CLI read-only census confirmed (#475.38); exact installed entrypoint fingerprint matches historical 2026-11-01 source (#475.39), 5 later include statements absent from deployed 0.11.1; complete plugin-tree parity, native roles and binary Media still unverified | **PARTIAL — historic revision proven; update/roles OPEN** |
 | Sensitive mutable authority / least privilege | Actual protected production report confirms all six high-impact authority grants including credentials, external publishing, software update, destructive delete, Apply and Rollback; no proof of bypass nor use | **OPEN — privilege review and authorized scope narrowing plan** |
 | Screenshot/accessibility/mobile/desktop parity | Real browser desktop/mobile render on both languages, visual layout and interaction evidence from production + candidate | **OPEN** |
 | External product source repository | Private `Emmakex/site-architect`; 146/146 source-export Git blob hashes identical; own CI 2/2 jobs successful on `9b2ef2f81fb4b204a5b553bab2fcd21c4ca11b14` | **PASS — independent CI #43697784377** |
@@ -156,7 +156,7 @@ arbitrary third-party custom tables or uploads existing outside the
 database. No raw posts, URLs, titles, authors, user IDs, file paths or
 credential material were exported.
 
-### Integrity gate — source mismatch, no automatic overwrite
+### Integrity gate — historic source revision fully identified, update still NO-GO
 
 The installed WordPress plugin entrypoint was hashed **on Hostinger**:
 
@@ -168,13 +168,46 @@ The installed WordPress plugin entrypoint was hashed **on Hostinger**:
   in both Eduardo main and standalone product main):
   `cc39419deb31f0fb0d581822ca5c8fe79cc1704bb7debfb563bd5ea84abd943f`
 
-**SHA-256 DOES NOT MATCH**; simple CRLF/newline/BOM conversions of the
-canonical source also do not match. This identifies **unexplained
-entrypoint drift**, not confirmed malicious modification or a broken
-running site. Version strings and 24/24 contract alignment alone cannot
-establish source-byte parity. Do not replace the installed plugin or
-change any live feature until a bounded read-only source diff establishes
-the cause and a reversible upgrade plan is approved.
+**Historical provenance resolved (#475.39):** the authenticated Hostinger
+operator ran a read-only `diff -U0` of the pinned canonical source versus
+the installed entrypoint. The only differences were **five deleted
+`require_once` instructions** in the installed file: original source
+lines **68–71** (four) and **73** (one); file sizes exactly **16,965 B**
+(current) versus **16,401 B** (installed) and **206** versus **201** lines.
+Rebuilding the current canonical file with only these five declarations
+removed reproduces **exactly** the installed SHA-256
+`d3465fe6bc81e0ed88822d47ffcce4cee4298dbc94263230335817c6755ea643`.
+
+Furthermore, historical file readback at repository commit
+`16ee430844a5a23ea36a70460afa515b25c42ade`
+(**2026-11-01**, original 0.11.1 release) returns **byte-identical**
+contents to that reconstructed live file (historical Git blob
+`ee52181cb565156c85a35fe31871070094e2a116`).
+The installed file mtime reported by Hostinger was
+`2026-11-04T18:10:19.516421576Z`, consistent with that earlier release.
+Later changes introduced the five additional includes in source commits
+`2237af132699641f23273ca567f87ce2f4f96c4a` (Nov 13),
+`b809b3b87810a452a5666708b4e849569a9e0b38` (Nov 13),
+and `f6f8df8b885c92946bfb5cb1789b6c91a7d99558` (Nov 14).
+
+The exact five declarations missing in the **old installed entrypoint**
+load: `class-site-architect-blueprint-identity-resolver.php`,
+`class-site-architect-blueprint-identity-operations.php`,
+`class-research-manager-research-blueprint-identity-operations.php`,
+`class-research-manager-research-blueprint-identity.php`, and
+`class-site-architect-greenfield-relationship-phase.php`.
+These belong to new Theme-contract Blueprint identity and Greenfield
+relationship abstractions. The live site being readable does NOT establish
+that those newer functions work on the old deployed version.
+
+**This is now a known, versioned deployment lag, not unexplained drift.**
+However, live 0.11.1 still differs from today's canonical product and
+production upgrade remains **NO-GO**. Do NOT edit the five lines alone:
+their dependency PHP files and every other package file must first be
+present and verified in the target installation. Preserve the full real
+production backup; rehearse complete installable package update, unchanged
+Research behavior and rollback on an isolated restoration before any
+owner-authorized live installation.
 
 The validator
 `scripts/site-architect-475-validate-private-inventory.py` now accepts
@@ -184,12 +217,13 @@ returns `DRIFT_REVIEW` when the reported source hash differs, and
 The broader cutover release remains NO-GO even when the file eventually
 matches.
 
-**Still open:** explain installed file drift (read-only comparison),
-review temporary and high-risk permission grants before limiting access,
-verify actual role-to-resource ownership, inspect uploaded binaries and
-native backup/restore readiness; editorial CV/legal and human rendered
-accessibility acceptance. Do not rotate credentials or modify WordPress
-on the basis of this inventory.
+**Still open:** inventory all installed Site Architect package files
+against the certified ZIP (the historical **entrypoint alone** is proven);
+review temporary and high-risk permission grants, actual role-to-resource
+ownership, uploaded binaries, real backup/restore rehearsal and approval;
+editorial CV/legal and human rendered accessibility acceptance. Do not
+rotate credentials, patch a single `require_once`, or modify WordPress
+on the basis of this read-only diagnosis.
 
 ## Read-only production survey
 
